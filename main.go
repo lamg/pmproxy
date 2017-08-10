@@ -23,7 +23,6 @@ func main() {
 }
 
 func loginHandler(req *http.Request, ctx *proxy.ProxyCtx) {
-
 }
 
 func quotaHandler(req *http.Request, ctx *proxy.ProxyCtx) {
