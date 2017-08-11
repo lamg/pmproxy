@@ -29,8 +29,9 @@ func (l *LdapUPR) Authenticate(user Name,
 }
 
 const (
-	MemberOf = "memberOf"
-	GrpPref  = "UPR-Internet-"
+	memberOf = "memberOf"
+	grpPref  = "UPR-Internet-"
+	baseDN   = "dc=upr,dc=edu,dc=cu"
 )
 
 func (l *LdapUPR) GetUserGroup(user Name) (g Name, e error) {
@@ -44,12 +45,12 @@ func (l *LdapUPR) GetUserGroup(user Name) (g Name, e error) {
 	n, e = SearchOne(filter, atts, c)
 	var mb []string
 	if e == nil {
-		mb = n.GetAttributeValues(MemberOf)
+		mb = n.GetAttributeValues(memberOf)
 		var i int
 		var b bool
 		i, b = 0, true
 		for b && i != len(mb) {
-			i, b = i+1, !strings.StartWith(GrpPref, mb[i])
+			i, b = i+1, !strings.StartWith(grpPref, mb[i])
 		}
 		if b {
 			g = mb[i]
@@ -57,7 +58,8 @@ func (l *LdapUPR) GetUserGroup(user Name) (g Name, e error) {
 			e = fmt.Errorf("Not found group for %s", user)
 		}
 	}
-	// TODO ver como van a repartir las cuotas por grupos
+	// TODO hacer coincidir los grupos de cuotas en el
+	// campo memberOf del AD, con el formato "UPR-Internet-"
 	return
 }
 
@@ -76,15 +78,14 @@ func SearchOne(f string, ats []string, c *ldap.Conn) (n *ldap.Entry, e error) {
 
 func SearchFilter(f string, ats []string, c *ldap.Conn) (n []*ldap.Entry, e error) {
 	var (
-		baseDN                = "dc=upr,dc=edu,dc=cu"
-		scope                 = ldap.ScopeWholeSubtree
-		deref                 = ldap.NeverDerefAliases
-		sizel                 = 0
-		timel                 = 0
-		tpeol                 = false //TypesOnly
-		conts  []ldap.Control = nil   //[]Control
-		s      *ldap.SearchRequest
-		r      *ldap.SearchResult
+		scope                = ldap.ScopeWholeSubtree
+		deref                = ldap.NeverDerefAliases
+		sizel                = 0
+		timel                = 0
+		tpeol                = false //TypesOnly
+		conts []ldap.Control = nil   //[]Control
+		s     *ldap.SearchRequest
+		r     *ldap.SearchResult
 	)
 	s = ldap.NewSearchRequest(baseDN, scope, deref,
 		sizel, timel, tpeol, f, ats, conts)

@@ -14,8 +14,9 @@ type QPrs struct {
 }
 
 type QMaps struct {
-	Grp map[Name]Quota `json:"grp"`
-	Usr map[Name]Quota `json:"usr"`
+	Grp map[Name]Bytes `json:"grp"`
+	Usr map[Name]Bytes `json:"usr"`
+	Cns map[Name]Bytes `json:"consumption"`
 }
 
 func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
@@ -26,30 +27,49 @@ func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
 		e = json.Unmarshal(bs, q)
 	}
 	if e != nil {
-		qm = &QMaps{make(map[Name]Quota), make(map[Name]Quota)}
+		qm = &QMaps{
+			make(map[Name]Bytes),
+			make(map[Name]Bytes),
+			make(map[Name]Bytes),
+		}
 	}
 	q = &QPrs{qm, rw, time.Now()}
 	return
 }
 
-func (q *QPrs) SetGroupQuota(group Name, qt Quota) {
+func (q *QPrs) SetGroupQuota(group Name, qt Bytes) {
 	q.Grp[group] = qt
 	q.persist()
 }
 
-func (q *QPrs) GetGroupQuota(group Name) (qt Quota) {
+func (q *QPrs) GetGroupQuota(group Name) (qt Bytes) {
 	qt = q.Grp[group]
 	return
 }
 
-func (q *QPrs) SetUserQuota(user Name, qt Quota) {
+func (q *QPrs) SetUserQuota(user Name, qt Bytes) {
 	q.Usr[Name] = qt
 	q.persist()
 }
 
-func (q *QPrs) GetUserQuota(user Name) (qt Quota) {
+func (q *QPrs) GetUserQuota(user Name) (qt Bytes) {
 	qt = q.Usr[user]
 	return
+}
+
+func (q *QPrs) GetUserConsumption(user Name) (qt Bytes) {
+	qt = q.Cns[user]
+	return
+}
+
+func (q *QPrs) AddUserConsumption(user Name, qt Bytes) {
+	var ok bool
+	var q Bytes
+	q, ok = q.Cns[user]
+	if ok {
+		q.Cns[user] = q + qt
+		q.persist()
+	}
 }
 
 const (
