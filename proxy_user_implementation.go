@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"time"
 )
 
 type PrxIm struct {
@@ -18,19 +19,29 @@ func NewProxyIm(sm SessionManager, q QuotaUser,
 }
 
 func (p *PrxIm) CanReq(user Name, addr IP) (b bool) {
-	b = p.Logged(user, addr) &&
+	b = p.Logged(user) &&
 		p.GetUserConsumption(user) < p.GetUserQuota(user)
 	return
 }
 
 const (
-	//TODO write according squid log format
-	logFormat = "%s"
+	// timestamp delay IP src status size method uri user
+	logFormat = "%d.%d %d %s TCP_TUNNEL/%d %d %s HIER_DIRECT/%s -"
 )
 
-func (p *PrxIm) LogRes(user Name, addr IP, meth, uri,
-	proto string, sc int, sz uint64, dt time.Time) (e error) {
-	_, e = fmt.Fprintf(p.w, logFormat, user, addr, meth, uri,
-		proto, sc, sz, dt.String())
+func (p *PrxIm) LogRes(dt time.Time, delay int, src IP, sc int,
+	sz uint64, meth, uri, user string, dest IP) (e error) {
+	_, e = fmt.Fprintf(p.w, logFormat, dt.Unix(), dt.UnixNano(),
+		delay, src, sc, sz, meth, uri, user, dest)
 	return
 }
+
+// "%{INT:timestamp}.%{INT}\s*%{NUMBER:request_msec:float}
+// %{IPORHOST:src_ip}
+// %{WORD:cache_result}/%{NUMBER:response_status:int}
+// %{NUMBER:response_size:int} %{WORD:http_method}
+// (%{URIPROTO:http_proto}://)?%{IPORHOST:dst_host}
+//   (?::%{POSINT:port})?(?:%{DATA:uri_param})?
+// %{USERNAME:cache_user}
+// %{WORD:request_route}/(%{IPORHOST:forwarded_to}|-)
+// %{GREEDYDATA:content_type}"

@@ -9,8 +9,11 @@ import (
 
 type QPrs struct {
 	*QMaps
-	rw  io.Writer
-	lst time.Time
+	rw io.Writer
+	// lst: five minute counter
+	// wk: week counter
+	// rd: last week reset
+	lst, wk, rd time.Time
 }
 
 type QMaps struct {
@@ -21,6 +24,7 @@ type QMaps struct {
 
 func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
 	var bs []byte
+	var qm *QMaps
 	qm = new(QMaps)
 	bs, e = ioutil.ReadAll(rw)
 	if e == nil {
@@ -33,7 +37,10 @@ func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
 			make(map[Name]Bytes),
 		}
 	}
-	q = &QPrs{qm, rw, time.Now()}
+	var nw, lss time.Time
+	nw = time.Now()
+	lss = lastSaturday(nw)
+	q = &QPrs{qm, rw, nw, nw, lss}
 	return
 }
 
@@ -48,7 +55,7 @@ func (q *QPrs) GetGroupQuota(group Name) (qt Bytes) {
 }
 
 func (q *QPrs) SetUserQuota(user Name, qt Bytes) {
-	q.Usr[Name] = qt
+	q.Usr[user] = qt
 	q.persist()
 }
 
@@ -62,27 +69,48 @@ func (q *QPrs) GetUserConsumption(user Name) (qt Bytes) {
 	return
 }
 
-func (q *QPrs) AddUserConsumption(user Name, qt Bytes) {
-	var ok bool
-	var q Bytes
-	q, ok = q.Cns[user]
-	if ok {
-		q.Cns[user] = q + qt
-		q.persist()
-	}
+func (q *QPrs) SetUserConsumption(user Name, qt Bytes) {
+	q.Cns[user] = qt
+	q.persist()
 }
 
 const (
-	// Five minutes in nanoseconds
-	fvMin = 300000000000
+	fvMin   = 5 * time.Minute
+	oneDay  = 24 * time.Hour
+	oneWeek = 7 * oneDay
 )
 
 func (q *QPrs) persist() {
-	if q.lst.Add(fvMin).Before(time.Now()) {
-		// { it has been more of five minutes since
-		//   last persist call}
+	var nw time.Time
+	nw = time.Now()
+	var fv, ow bool
+	fv, ow = q.lst.Add(fvMin).Before(nw), q.rd.Sub(nw) >= oneWeek
+	if ow {
+		q.rd = lastSaturday(nw)
+		for k := range q.Cns {
+			q.Cns[k] = 0
+		}
+		// { account consume is made 0 for every one of them }
+	}
+	if fv || ow {
+		// { it has been more than five minutes since
+		//   last persist call ∨ a reset was made for every account}
+		q.lst = nw
 		var bs []byte
 		bs, _ = json.Marshal(q.QMaps)
 		q.rw.Write(bs)
 	}
+}
+
+func lastSaturday(t time.Time) (lss time.Time) {
+	// days since Saturday
+	var dss time.Weekday
+	dss = t.Weekday() + 1
+	lss = t.Add(-1 * time.Duration(dss) * oneDay)
+	lss = lss.Add(-1 *
+		(time.Duration(lss.Hour())*time.Hour +
+			time.Duration(lss.Minute())*time.Minute +
+			time.Duration(lss.Second())*time.Second +
+			time.Duration(lss.Nanosecond())*time.Nanosecond))
+	return
 }

@@ -29,7 +29,7 @@ type ProxyUser interface {
 type QuotaUser interface {
 	GetUserQuota(Name) Bytes
 	GetUserConsumption(Name) Bytes
-	AddUserConsumption(Name, Bytes)
+	SetUserConsumption(Name, Bytes)
 }
 
 type SessionManager interface {
@@ -44,11 +44,11 @@ type Authenticator interface {
 
 type ProxyAdministrator interface {
 	SessionManager
-	QuotaAdm
+	QuotaAdministrator
 }
 
 type QuotaAdministrator interface {
-	SetGroupQuota(group Name, group Bytes)
+	SetGroupQuota(group Name, q Bytes)
 	GetGroupQuota(group Name) Bytes
 	SetUserQuota(user Name, q Bytes)
 	GetUserQuota(user Name) Bytes

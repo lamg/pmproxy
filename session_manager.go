@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 )
 
 type SMng struct {
@@ -10,7 +10,7 @@ type SMng struct {
 }
 
 func NewSMng(a Authenticator) (s *SMng) {
-	s = &SMng{make(map[IP]Name), a}
+	s = &SMng{make(map[Name]IP), a}
 	return
 }
 
@@ -22,16 +22,14 @@ func (s *SMng) Login(user Name, addr IP, pass string) (e error) {
 	return
 }
 
-const (
-	NotOpenedErr = fmt.Errorf(
-		"Usuario %s no tiene su cuenta abierta",
-		user)
+var (
+	NotOpenedErr error
 )
 
 func (s *SMng) Logout(user Name, pass string) (e error) {
 	e = s.auth.Authenticate(user, pass)
 	var ok bool
-	ok = Logged(user)
+	ok = s.Logged(user)
 	if e == nil && ok {
 		delete(s.sessions, user)
 	} else if e == nil && !ok {
@@ -40,9 +38,11 @@ func (s *SMng) Logout(user Name, pass string) (e error) {
 	return
 }
 
-func (s *SMng) Logged(user Name, addr IP) (b bool) {
-	var r IP
-	r, b = s.sessions[user]
-	b = b && r == IP
+func (s *SMng) Logged(user Name) (b bool) {
+	_, b = s.sessions[user]
 	return
+}
+
+func init() {
+	NotOpenedErr = errors.New("No tiene cuenta abierta")
 }

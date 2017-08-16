@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/go-ldap/ldap"
 	"strings"
@@ -17,14 +18,14 @@ func NewLdapUPR(addr string) (l *LdapUPR, e error) {
 	var cfg *tls.Config
 	cfg = &tls.Config{InsecureSkipVerify: true}
 	l = new(LdapUPR)
-	l.c, e = ldap.DialTLS("tcp", lda, cfg)
+	l.c, e = ldap.DialTLS("tcp", addr, cfg)
 	l.sf = "@upr.edu.cu"
 	return
 }
 
 func (l *LdapUPR) Authenticate(user Name,
 	pass string) (e error) {
-	e = l.c.Bind(u+l.sf, p)
+	e = l.c.Bind(string(user)+l.sf, pass)
 	return
 }
 
@@ -41,8 +42,8 @@ func (l *LdapUPR) GetUserGroup(user Name) (g Name, e error) {
 	filter, atts =
 		fmt.Sprintf("(&(objectClass=user)(sAMAccountName=%s))",
 			user),
-		[]string{MemberOf}
-	n, e = SearchOne(filter, atts, c)
+		[]string{memberOf}
+	n, e = SearchOne(filter, atts, l.c)
 	var mb []string
 	if e == nil {
 		mb = n.GetAttributeValues(memberOf)
@@ -50,10 +51,10 @@ func (l *LdapUPR) GetUserGroup(user Name) (g Name, e error) {
 		var b bool
 		i, b = 0, true
 		for b && i != len(mb) {
-			i, b = i+1, !strings.StartWith(grpPref, mb[i])
+			i, b = i+1, !strings.HasPrefix(mb[i], grpPref)
 		}
 		if b {
-			g = mb[i]
+			g = Name(mb[i])
 		} else {
 			e = fmt.Errorf("Not found group for %s", user)
 		}

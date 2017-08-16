@@ -1,3 +1,4 @@
+// TODO study examples
 package main
 
 import (
@@ -12,21 +13,23 @@ func main() {
 	var addr *string
 	vb = flag.Bool("v", false, "Log request to stdout")
 	addr = flag.String("addr", ":8080", "proxy listen address")
+	// TODO serve login page in another port (80 for production)
 	flag.Parse()
 	var pr *proxy.ProxyHttpServer
-	pr = goproxy.NewProxyHttpServer()
-	pr.OnRequest().DoFunc(loginHandler)
-	pr.OnRequest().DoFunc(quotaHandler)
-	pr.OnRequest().DoFunc(logoutHandler)
+	pr = proxy.NewProxyHttpServer()
+	pr.OnRequest().DoFunc(collector)
 	pr.Verbose = *vb
-	log.Fatal(http.ListenAndServe(*addr, proxy))
+	log.Fatal(http.ListenAndServe(*addr, pr))
+	//use HijackConnect ?
+	//goproxy-stats example
 }
 
-func loginHandler(req *http.Request, ctx *proxy.ProxyCtx) {
-}
-
-func quotaHandler(req *http.Request, ctx *proxy.ProxyCtx) {
-}
-
-func logoutHandler(req *http.Request, ctx *proxy.ProxyCtx) {
+func collector(req *http.Request,
+	ctx *proxy.ProxyCtx) (r *http.Request, p *http.Response) {
+	println("request made " + req.URL.String())
+	//authorize request
+	//make request
+	//collect response
+	//return
+	return
 }
