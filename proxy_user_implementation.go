@@ -19,8 +19,8 @@ func NewProxyIm(sm SessionManager, q QuotaUser,
 }
 
 func (p *PrxIm) CanReq(user Name, addr IP) (b bool) {
-	b = p.Logged(user) &&
-		p.GetUserConsumption(user) < p.GetUserQuota(user)
+	b = p.Logged(user, addr) &&
+		p.GetUserConsumption(addr) < p.GetUserQuota(addr)
 	return
 }
 
@@ -29,8 +29,8 @@ const (
 	logFormat = "%d.%d %d %s TCP_TUNNEL/%d %d %s HIER_DIRECT/%s -"
 )
 
-func (p *PrxIm) LogRes(dt time.Time, delay int, src IP, sc int,
-	sz uint64, meth, uri, user string, dest IP) (e error) {
+func (p *PrxIm) LogRes(dest, addr IP, meth, uri, proto string,
+	sc int, sz uint64, dt time.Time) (e error) {
 	_, e = fmt.Fprintf(p.w, logFormat, dt.Unix(), dt.UnixNano(),
 		delay, src, sc, sz, meth, uri, user, dest)
 	return

@@ -1,4 +1,4 @@
-// TODO study examples
+//TODO implement proxy
 package main
 
 import (
@@ -31,5 +31,6 @@ func collector(req *http.Request,
 	//make request
 	//collect response
 	//return
+	r, p = req, new(http.Response)
 	return
 }

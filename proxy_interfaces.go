@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"time"
 )
 
@@ -10,11 +11,13 @@ type (
 	Name  string
 )
 
-type ProxyUser interface {
-	SessionManager
-	QuotaUser
-	CanReq(user Name, addr IP) (b bool)
-	// user: Username
+type Proxy interface {
+	SessionHandler(http.ResponseWriter, *http.Request)
+	RequestHandler(http.ResponseWriter, *http.Request)
+}
+
+type RequestLogger interface {
+	// user: User name
 	// addr: Client address
 	// meth: HTTP method
 	// uri: Accessed URI
@@ -22,11 +25,13 @@ type ProxyUser interface {
 	// sc: Response status code
 	// sz: Response size
 	// dt: Response date-time
-	LogRes(user Name, addr IP, meth, uri, proto string,
+	LogRes(user Name, dest, addr IP, meth, uri, proto string,
 		sc int, sz uint64, dt time.Time) (e error)
 }
 
 type QuotaUser interface {
+	GetUserName(IP) Name
+	CanReq(Name) (b bool)
 	GetUserQuota(Name) Bytes
 	GetUserConsumption(Name) Bytes
 	SetUserConsumption(Name, Bytes)
@@ -35,16 +40,11 @@ type QuotaUser interface {
 type SessionManager interface {
 	Login(user Name, addr IP, pass string) error
 	Logout(user Name, addr IP, pass string) error
-	Logged(user Name) bool
+	Logged(user Name, addr IP) bool
 }
 
 type Authenticator interface {
 	Authenticate(user Name, pass string) error
-}
-
-type ProxyAdministrator interface {
-	SessionManager
-	QuotaAdministrator
 }
 
 type QuotaAdministrator interface {
