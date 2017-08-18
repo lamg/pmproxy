@@ -1,4 +1,4 @@
-package main
+package pmproxy
 
 import (
 	"encoding/json"
@@ -17,9 +17,9 @@ type QPrs struct {
 }
 
 type QMaps struct {
-	Grp map[Name]Bytes `json:"grp"`
-	Usr map[Name]Bytes `json:"usr"`
-	Cns map[Name]Bytes `json:"consumption"`
+	Grp map[Name]uint64 `json:"grp"`
+	Usr map[Name]uint64 `json:"usr"`
+	Cns map[Name]uint64 `json:"consumption"`
 }
 
 func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
@@ -32,9 +32,9 @@ func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
 	}
 	if e != nil {
 		qm = &QMaps{
-			make(map[Name]Bytes),
-			make(map[Name]Bytes),
-			make(map[Name]Bytes),
+			make(map[Name]uint64),
+			make(map[Name]uint64),
+			make(map[Name]uint64),
 		}
 	}
 	var nw, lss time.Time
@@ -44,32 +44,32 @@ func NewQPrs(rw io.ReadWriter) (q *QPrs, e error) {
 	return
 }
 
-func (q *QPrs) SetGroupQuota(group Name, qt Bytes) {
+func (q *QPrs) SetGroupQuota(group Name, qt uint64) {
 	q.Grp[group] = qt
 	q.persist()
 }
 
-func (q *QPrs) GetGroupQuota(group Name) (qt Bytes) {
+func (q *QPrs) GetGroupQuota(group Name) (qt uint64) {
 	qt = q.Grp[group]
 	return
 }
 
-func (q *QPrs) SetUserQuota(user Name, qt Bytes) {
+func (q *QPrs) SetUserQuota(user Name, qt uint64) {
 	q.Usr[user] = qt
 	q.persist()
 }
 
-func (q *QPrs) GetUserQuota(user Name) (qt Bytes) {
+func (q *QPrs) GetUserQuota(user Name) (qt uint64) {
 	qt = q.Usr[user]
 	return
 }
 
-func (q *QPrs) GetUserConsumption(user Name) (qt Bytes) {
+func (q *QPrs) GetUserConsumption(user Name) (qt uint64) {
 	qt = q.Cns[user]
 	return
 }
 
-func (q *QPrs) SetUserConsumption(user Name, qt Bytes) {
+func (q *QPrs) SetUserConsumption(user Name, qt uint64) {
 	q.Cns[user] = qt
 	q.persist()
 }

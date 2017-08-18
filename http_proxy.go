@@ -1,7 +1,7 @@
-package main
+package pmproxy
 
 import (
-	"net/http"
+	_ "net/http"
 )
 
 type Port string

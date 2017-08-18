@@ -1,40 +1,54 @@
-package main
+package pmproxy
 
 import (
 	"net/http"
+	"strings"
+	"time"
+)
+
+const (
+	HttpsPort = "443"
 )
 
 type ReqHandler struct {
-	l  LogRes
+	l  RequestLogger
 	qu QuotaUser
 }
 
-func NewReqHandler(l LogRes, qu QuotaUser) (r *ReqHandler) {
-	r = &ReqHandler{l, qu}
-	return
+func (q *ReqHandler) Init(qu QuotaUser, l RequestLogger) {
+	q.qu, q.l = qu, l
 }
 
-func (r *ReqHandler) Handle(w http.ResponseWriter,
+func (r *ReqHandler) ServeHTTP(w http.ResponseWriter,
 	q *http.Request) {
 	if q.RemoteAddr != "" {
 		var ip IP
-		ip = strings.SplitN(q.RemoteAddr, ":", 2)[0]
-		var user Name
-		user = r.qu.GetUserName(ip)
-		if r.qu.CanReq(user) {
+		var e error
+		ip = IP(strings.SplitN(q.RemoteAddr, ":", 2)[0])
+		if r.qu.CanReq(ip) {
+			var dt time.Time
+			dt = time.Now()
 			//make request
 			var p *http.Response
-			if q.Method == http.METHOD_CONNECT {
+			if q.Method == http.MethodConnect {
+				if q.URL.Port() == HttpsPort {
+					//do HTTPS connection
+				} else {
+					//not authorized
+				}
 			} else {
+				p, e = http.DefaultClient.Do(q)
 			}
 			if e == nil {
-				r.qu.SetUserConsumption(r.qu.GetUserConsumption(user) +
-					uint64(p.ContentLength))
+				r.qu.AddConsumption(ip, uint64(p.ContentLength))
 				//log response
+				r.l.LogRes(ip, q.URL.String(), q.Method, q.Proto,
+					p.StatusCode, uint64(p.ContentLength), dt)
 				//write response
+				p.Write(w)
 			}
 		}
 	} else {
-		//invalid request
+		w.WriteHeader(http.StatusBadRequest)
 	}
 }
