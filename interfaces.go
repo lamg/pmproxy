@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -54,7 +55,7 @@ type RequestLogger interface {
 // Implemented in …
 type QuotaUser interface {
 	Init(IPUser, UserQPrs)
-	CanReq(IP) bool
+	CanReq(IP, *url.URL) bool
 	AddConsumption(IP, uint64)
 }
 
