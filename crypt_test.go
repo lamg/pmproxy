@@ -11,18 +11,23 @@ func TestCrypt(t *testing.T) {
 	j := new(JWTCrypt)
 	var pKey *rsa.PrivateKey
 	var e error
-	pKey, e = jwt.ParseRSAPrivateKeyFromPEM([]byte(pemKey))
+	pKey, e = parseKey()
 	require.NoError(t, e)
 	j.Init(pKey)
 	var u *User
-	u = &User{"coco", true}
+	u = &User{"coco"}
 	var s string
 	s, e = j.Encrypt(u)
 	require.NoError(t, e)
 	var du *User
 	du, e = j.Decrypt(s)
 	require.NoError(t, e)
-	require.True(t, du.Name == "coco" && du.IsAdmin)
+	require.True(t, du.Name == "coco")
+}
+
+func parseKey() (pKey *rsa.PrivateKey, e error) {
+	pKey, e = jwt.ParseRSAPrivateKeyFromPEM([]byte(pemKey))
+	return
 }
 
 var pemKey = `-----BEGIN RSA PRIVATE KEY-----

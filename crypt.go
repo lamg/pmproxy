@@ -56,8 +56,7 @@ func (j *JWTCrypt) Decrypt(s string) (u *User, e error) {
 	}
 	if e == nil {
 		u = &User{
-			Name:    usm["name"].(string),
-			IsAdmin: usm["isAdmin"].(bool),
+			Name: usm["name"].(string),
 		}
 	}
 	return

@@ -1,48 +1,66 @@
 package pmproxy
 
 import (
-	"errors"
+	"fmt"
 )
 
 type SMng struct {
-	sessions map[Name]IP
+	sessions map[Name]string
 	auth     Authenticator
+	crt      Crypt
 }
 
-func NewSMng(a Authenticator) (s *SMng) {
-	s = &SMng{make(map[Name]IP), a}
+func (s *SMng) Init(a Authenticator, c Crypt) {
+	s.sessions, s.auth, s.crt = make(map[Name]string), a, c
 	return
 }
 
-func (s *SMng) Login(user Name, addr IP, pass string) (e error) {
-	e = s.auth.Authenticate(user, pass)
+func (s *SMng) Login(u Name, a IP,
+	p string) (t string, e error) {
+	e = s.auth.Authenticate(u, p)
 	if e == nil {
-		s.sessions[user] = addr
+		t, e = s.crt.Encrypt(&User{Name: string(u)})
+	}
+	if e == nil {
+		s.sessions[u] = t
 	}
 	return
 }
-
-var (
-	NotOpenedErr error
-)
 
 func (s *SMng) Logout(user Name, pass string) (e error) {
-	e = s.auth.Authenticate(user, pass)
 	var ok bool
-	ok = s.Logged(user)
-	if e == nil && ok {
+	_, ok = s.sessions[user]
+	if !ok {
+		e = fmt.Errorf("User %s not logged", user)
+	}
+	if e == nil {
+		e = s.auth.Authenticate(user, pass)
+	}
+	if e == nil {
 		delete(s.sessions, user)
-	} else if e == nil && !ok {
-		e = NotOpenedErr
 	}
 	return
 }
 
-func (s *SMng) Logged(user Name) (b bool) {
-	_, b = s.sessions[user]
+func (s *SMng) Check(t string, user Name) (e error) {
+	var ok bool
+	var scrt string
+	scrt, ok = s.sessions[user]
+	if !ok {
+		e = fmt.Errorf("User %s not logged", user)
+	}
+	if e == nil {
+		ok = t == scrt
+		if !ok {
+			e = fmt.Errorf("Wrong secret for %s", user)
+		}
+	}
+	var u *User
+	if e == nil {
+		u, e = s.crt.Decrypt(t)
+	}
+	if e == nil && u.Name != string(user) {
+		e = fmt.Errorf("Internal error: wrong secret for %s", user)
+	}
 	return
-}
-
-func init() {
-	NotOpenedErr = errors.New("No tiene cuenta abierta")
 }

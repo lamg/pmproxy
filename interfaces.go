@@ -14,9 +14,44 @@ type (
 )
 
 // Implemented in session_handler.go
-type SessionHandler interface {
-	Init(Crypt, SessionManager, QuotaUser, QuotaAdministrator)
+type PMAdmin interface {
+	Init(UserInf, QuotaAdmin)
 	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
+// Implemented in quota_admin.go
+type QuotaAdmin interface {
+	Init(io.Reader, io.Writer, SessionManager)
+
+	//Exposed subset of SessionManager
+	Login(user Name, addr IP, pass string) (string, error)
+	Logout(user Name, pass string) error
+
+	SetGroupQuota(string, Name, uint64)
+	GetGroupQuota(string, Name) uint64
+	SetUserQuota(string, Name, uint64)
+	GetUserQuota(string, Name) uint64
+}
+
+// Implemented in user_inf.go
+// TODO add dependency on a persistence interface
+type UserInf interface {
+	Init(io.Reader, SessionManager)
+
+	//Exposed subset of SessionManager
+	Login(user Name, addr IP, pass string) (string, error)
+	Logout(user Name, pass string) error
+
+	UserQuota(string) uint64
+	UserConsumption(string) uint64
+}
+
+// Implemented in session_manager.go
+type SessionManager interface {
+	Init(Authenticator, Crypt)
+	Login(user Name, addr IP, pass string) (string, error)
+	Logout(user Name, pass string) error
+	Check(string, Name) error
 }
 
 // Implemented in crypt.go
@@ -27,8 +62,7 @@ type Crypt interface {
 }
 
 type User struct {
-	Name    string `json:"name"`
-	IsAdmin bool   `json:"isAdmin"`
+	Name string `json:"name"`
 }
 
 // Implemented in req_handler.go
@@ -38,8 +72,19 @@ type RequestHandler interface {
 	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
+// Implemented in …
+type QuotaUser interface {
+	CanReq(IP, *url.URL) bool
+	AddConsumption(IP, uint64)
+}
+
+// Implemented in ldap_upr.go
+type Authenticator interface {
+	Authenticate(user Name, pass string) error
+}
+
 type RequestLogger interface {
-	Init(io.Writer, IPUser)
+	Init(io.Writer)
 	// addr: Client address
 	// meth: HTTP method
 	// uri: Accessed URI
@@ -49,45 +94,4 @@ type RequestLogger interface {
 	// dt: Response date-time
 	LogRes(addr IP, dest, meth, proto string,
 		sc int, sz uint64, dt time.Time) (e error)
-}
-
-// Implemented in …
-type QuotaUser interface {
-	Init(IPUser, UserQPrs)
-	CanReq(IP, *url.URL) bool
-	AddConsumption(IP, uint64)
-}
-
-// Implemented in session_manager.go
-type SessionManager interface {
-	Init(Authenticator)
-	Login(user Name, addr IP, pass string) error
-	Logout(user Name, addr IP, pass string) error
-	IPUser
-}
-
-type IPUser interface {
-	User(IP) Name
-}
-
-// TODO add dependency on a persistence interface
-type UserQPrs interface {
-	Init(io.Reader, io.Writer)
-	UserQuota(Name) uint64
-	UserConsumption(Name) uint64
-	SetUserConsumption(Name, uint64)
-}
-
-// Implemented in ldap_upr.go
-// TODO get user?
-type Authenticator interface {
-	Authenticate(user Name, pass string) error
-}
-
-// Implemented in quota_persist.go
-type QuotaAdministrator interface {
-	SetGroupQuota(group Name, q uint64)
-	GetGroupQuota(group Name) uint64
-	SetUserQuota(user Name, q uint64)
-	GetUserQuota(user Name) uint64
 }
