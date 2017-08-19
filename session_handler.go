@@ -8,6 +8,8 @@ import (
 type PMSHandler struct {
 	mx    *ServeMux
 	sm    SessionManager
+	qu    QuotaUser
+	qa    QuotaAdministrator
 	crypt Crypt
 }
 
@@ -24,8 +26,10 @@ const (
 	jwtK = "jwtK"
 )
 
-func (p *PMSHandler) Init(sm SessionManager, crypt Crypt) {
-	p.mx, p.sm, p.crypt = NewServeMux(), sm, crypt
+func (p *PMSHandler) Init(crypt Crypt, sm SessionManager,
+	qu QuotaUser, qa QuotaAdministrator) {
+	p.mx, p.sm, p.crypt, p.qu, p.qa =
+		NewServeMux(), crypt, sm, qu, qa
 	//add handlers for user and admin session
 	p.mx.HandleFunc(groupQuota, p.groupQuotaH)
 	p.mx.HandleFunc(userQuota, p.userQuotaH)
@@ -85,35 +89,22 @@ func (p *PMSHandler) addCnsH(w ResponseWriter, r *Request) {
 }
 
 func (p *PMSHandler) gUsrMth(r *Request, w ResponseWriter,
-	ms ...string) (u *User, m int, ok bool) {
+	ms ...string) (u *User, m int, e error) {
 	m = 0
 	for m != len(ms) && ms[m] != r.Method {
 		m = m + 1
 	}
-	ok = m != len(ms)
-	var msg []byte
-	var st int
-	if !ok {
-		msg, st = []byte(
-			fmt.Sprintf("Not supported method %s", r.Method)),
-			StatusBadRequest
+	if m == len(ms) {
+		e = fmt.Errorf("Not supported method %s", r.Method)
 	}
-	var scrt string
-	if ok {
-		// get user
-		var e error
+	if e == nil {
+		var scrt string
 		scrt = r.Header.Get(jwtK)
-		// decrypt scrt
 		u, e = p.crypt.Decrypt(scrt)
-		ok, st = e == nil, StatusOK
 	}
-	if !ok && msg == nil {
-		msg, st = []byte(fmt.Sprintf("Invalid token %s", scrt)),
-			StatusBadRequest
-	}
-	if !ok {
-		w.Write(msg)
-		w.WriteHeader(st)
+	if e != nil {
+		w.Write(e.Error())
+		w.WriteHeader(StatusBadRequest)
 	}
 	return
 }

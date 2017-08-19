@@ -1,7 +1,7 @@
 package pmproxy
 
 import (
-	"crypto"
+	"crypto/rsa"
 	"io"
 	"net/http"
 	"net/url"
@@ -15,14 +15,13 @@ type (
 
 // Implemented in session_handler.go
 type SessionHandler interface {
-	Init(SessionManager, Crypt)
+	Init(Crypt, SessionManager, QuotaUser, QuotaAdministrator)
 	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
 // Implemented in crypt.go
-// TODO test
 type Crypt interface {
-	Init(crypto.PrivateKey)
+	Init(*rsa.PrivateKey)
 	Encrypt(*User) (string, error)
 	Decrypt(string) (*User, error)
 }
