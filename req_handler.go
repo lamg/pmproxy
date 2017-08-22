@@ -7,13 +7,11 @@ import (
 )
 
 type ReqHandler struct {
-	l  RequestLogger
+	l  Recorder
 	qu QuotaUser
-	// register of TCP tunnels (client, server)
-	tcpCn map[string]string
 }
 
-func (q *ReqHandler) Init(qu QuotaUser, l RequestLogger) {
+func (q *ReqHandler) Init(qu QuotaUser, l LogRecorder) {
 	q.qu, q.l = qu, l
 }
 
@@ -33,8 +31,7 @@ func (r *ReqHandler) ServeHTTP(w http.ResponseWriter,
 			if e == nil {
 				r.qu.AddConsumption(ip, uint64(p.ContentLength))
 				//log response
-				r.l.LogRes(ip, q.URL.String(), q.Method, q.Proto,
-					p.StatusCode, uint64(p.ContentLength), dt)
+				r.l.Record(&Log{"", uint64(dt.Unix())})
 				//write response
 				p.Write(w)
 			}

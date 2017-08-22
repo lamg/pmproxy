@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"crypto/rsa"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -39,14 +38,4 @@ func TestSessionManager(t *testing.T) {
 	require.Error(t, e)
 	e = sm.Check(s1, pepe)
 	require.NoError(t, e)
-}
-
-type dAuth struct {
-}
-
-func (d *dAuth) Authenticate(user Name, pass string) (e error) {
-	if string(user) != pass {
-		e = fmt.Errorf("Wrong password for %s", user)
-	}
-	return
 }

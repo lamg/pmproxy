@@ -98,3 +98,13 @@ func SearchFilter(f string, ats []string, c *ldap.Conn) (n []*ldap.Entry, e erro
 	}
 	return
 }
+
+type dAuth struct {
+}
+
+func (d *dAuth) Authenticate(user Name, pass string) (e error) {
+	if string(user) != pass {
+		e = fmt.Errorf("Wrong password for %s", user)
+	}
+	return
+}
