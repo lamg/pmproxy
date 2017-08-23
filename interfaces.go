@@ -76,16 +76,19 @@ type User struct {
 
 // Implemented in req_handler.go
 // TODO find out how a proxy works
+// TODO update for new interfaces
+// WIP
 type RequestHandler interface {
-	Init(QuotaUser, Recorder)
+	Init(IPUser, ReqLim, Recorder)
 	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
-// Implemented in quota_user.go
+// Request Limiter
+// Implemented in req_lim.go
 // TODO
-type QuotaUser interface {
-	CanReq(IP, *url.URL) bool
-	AddConsumption(IP, uint64)
+// WIP
+type ReqLim interface {
+	CanReq(Name, *url.URL) bool
 }
 
 // Implemented in auth.go by
@@ -99,33 +102,14 @@ type Authenticator interface {
 // AZRec
 type AZRecorder interface {
 	Init(zTime time.Time, intv time.Duration, zp ZRecorder)
-	Record(*Log)
-}
-
-type Log struct {
-	// Request's user
-	User Name
-	// Client address
-	Addr IP
-	// HTTP method
-	Meth string
-	// Accessed URI
-	URI string
-	// HTTP version
-	Proto string
-	// Response status code
-	StatusCode int
-	// Response size
-	RespSize uint64
-	// Response date-time
-	Time time.Time
+	Recorder
 }
 
 // Implemented in zero_recorder.go by
-// dZP, QuotaRec, QuotaR, RLog
+// dZP, QuotaRec, QuotaRst, RLog
 type ZRecorder interface {
 	SetZero()
-	Record(*Log)
+	Recorder
 }
 
 type Recorder interface {

@@ -27,8 +27,8 @@ func (d *dWF) Current() (w io.Writer) {
 	return
 }
 
-func (d *dWF) Buffer() (w *bytes.Buffer) {
-	w = d.w
+func (d *dWF) Content() (r string) {
+	r = d.w.String()
 	return
 }
 

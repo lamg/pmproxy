@@ -42,7 +42,7 @@ func (q *QuotaRec) SetZero() {
 }
 
 func (q *QuotaRec) Record(l *Log) {
-	q.rqc[l.User] = q.rqc[l.User] + l.Cons
+	q.rqc[l.User] = q.rqc[l.User] + l.RespSize
 }
 
 // Quota reseter
@@ -82,7 +82,7 @@ func (rl *RLog) SetZero() {
 
 func (rl *RLog) Record(l *Log) {
 	//TODO log format
-	_, rl.e = rl.w.Write([]byte(l.User))
+	_, rl.e = rl.w.Write([]byte(l.String()))
 }
 
 func (rl *RLog) Err() (e error) {
