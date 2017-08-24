@@ -1,0 +1,482 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"s",
+				"s0\tstring ν"
+			],
+			[
+				"user",
+				"userGroup\t Ɩ"
+			],
+			[
+				"I",
+				"IUsrDict\tinterface ¡"
+			],
+			[
+				"adm",
+				"adminUserQuota\t Ɩ"
+			],
+			[
+				"Quo",
+				"QuotaAdmin\tinterface ¡"
+			],
+			[
+				"Ue",
+				"UserInf\tinterface ¡"
+			],
+			[
+				"Q",
+				"QuotaAdmin\tinterface ¡"
+			],
+			[
+				"U",
+				"UserInf\tinterface ¡"
+			],
+			[
+				"Req",
+				"ReqLim\tinterface ¡"
+			],
+			[
+				"IP",
+				"IPUser\tinterface ¡"
+			],
+			[
+				"dw",
+				"dwf\t*dWF ν"
+			],
+			[
+				"imp",
+				"import\timport (...) ʂ"
+			],
+			[
+				"fun",
+				"func main\tfunc main {...} ʂ"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "interfaces.go",
+			"settings":
+			{
+				"buffer_size": 2673,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "admin_handler.go",
+			"settings":
+			{
+				"buffer_size": 1654,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/Golang Build/Go.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					""
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Run"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Test"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Install"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Cross-Compile (Interactive)"
+				],
+				[
+					"Packages/Golang Build/Go.sublime-build",
+					"Clean"
+				]
+			],
+			[
+				"Packages/Golang Build/Go.sublime-build",
+				"Test"
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 92.0,
+		"last_filter": "Package Control: inst",
+		"selected_items":
+		[
+			[
+				"Package Control: inst",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: lis",
+				"Package Control: List Packages"
+			],
+			[
+				"go sublime",
+				"Build With: GoSublime"
+			],
+			[
+				"ter",
+				"Go: Open Terminal"
+			],
+			[
+				"GoSublime",
+				"GoSublime: Browse Packages"
+			],
+			[
+				"Package Control: ins",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: in",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 471.0
+	},
+	"console":
+	{
+		"height": 153.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = 'df21e130d211cfc94d9b0905775a7c0f' + '1e3d39e33b79698005270310898eea76'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/lamg/go/src/github.com/lamg",
+		"/home/lamg/go/src/github.com/lamg/pmproxy"
+	],
+	"file_history":
+	[
+		"/home/lamg/go/src/github.com/lamg/pmproxy/session_manager_test.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/session_manager.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/proxy_handler.go",
+		"/home/lamg/Música/Pink Floyd/pagina de PF en spanish/welcome_to_the_machine.crd.txt",
+		"/home/lamg/Música/Pink Floyd/pagina de PF en spanish/welcome_to_the_machine.tab.txt",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/admin_handler.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/pmproxy.go",
+		"/home/lamg/golang/src/net/http/doc.go",
+		"/home/lamg/golang/src/crypto/rsa/rsa.go",
+		"/home/lamg/.config/sublime-text-3/Packages/GoSublime/README.md",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/zero_recorder.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/az_recorder.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/req_handler.go",
+		"/home/lamg/cosas.org.gpg",
+		"/home/lamg/Documentos/Compose.pre",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/writer_factory.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/log.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/zero_recorder_test.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/interfaces.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/az_recorder_test.go",
+		"/home/lamg/go/src/github.com/stretchr/testify/require/require.go",
+		"/home/lamg/go/src/github.com/stretchr/testify/require/doc.go",
+		"/home/lamg/golang/src/encoding/json/decode.go",
+		"/home/lamg/.config/sublime-text-3/Packages/GoSublime/Default (Linux).sublime-keymap",
+		"/home/lamg/Descargas/coco.log",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/crypt.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/log_recorder.go",
+		"/home/lamg/interlingua.org",
+		"/usr/share/applications/sublime_text.desktop",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/az_persister_test.go",
+		"/home/lamg/.config/sublime-text-3/Packages/GoSublime/GoSublime.sublime-settings",
+		"/home/lamg/.config/sublime-text-3/Packages/User/GoSublime.sublime-settings",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/quota_persist_test.go",
+		"/home/lamg/.config/sublime-text-3/Packages/GoSublime/USAGE.md",
+		"/home/lamg/.config/sublime-text-3/Packages/User/GoSublime/linux-x64/log.txt",
+		"/home/lamg/.config/sublime-text-3/Packages/User/golang.sublime-settings",
+		"/home/lamg/go/src/github.com/lamg/mutex/main.go",
+		"/home/lamg/.config/sublime-text-3/Packages/GoSublime/CHANGELOG.md",
+		"/home/lamg/golang/src/sync/cond.go",
+		"/home/lamg/golang/src/sync/mutex.go",
+		"/home/lamg/go/src/github.com/lamg/tesis/sync/sync.go",
+		"/home/lamg/go/src/github.com/lamg/pmproxy/zero_persister.go"
+	],
+	"find":
+	{
+		"height": 36.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"mx.",
+			"return",
+			"import",
+			"}\n",
+			"doc",
+			"comp",
+			"import"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"p.mx."
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"folders":
+	[
+		{
+			"path": "/home/lamg/go/src/github.com/lamg"
+		}
+	],
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "interfaces.go",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2673,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								986,
+								986
+							]
+						],
+						"settings":
+						{
+							"history_list_is_closing": true,
+							"syntax": "Packages/GoSublime/syntax/GoSublime-Go.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 720.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 1,
+					"file": "admin_handler.go",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1654,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1639,
+								1639
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/GoSublime/syntax/GoSublime-Go.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1517.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 30.0
+	},
+	"input":
+	{
+		"height": 35.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			],
+			[
+				1,
+				0,
+				2,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			0.5,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.9o:///home/lamg/go/src/github.com/lamg/mutex":
+	{
+		"height": 197.0
+	},
+	"output.9o:///home/lamg/go/src/github.com/lamg/pmproxy":
+	{
+		"height": 314.0
+	},
+	"output.9o:///home/lamg/go/src/github.com/lamg/tesis":
+	{
+		"height": 305.0
+	},
+	"output.9o:///opt/sublime_text":
+	{
+		"height": 130.0
+	},
+	"output.GsDoc-output-output":
+	{
+		"height": 370.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.golang_build":
+	{
+		"height": 124.0
+	},
+	"pinned_build_system": "Packages/GoSublime/GoSublime.sublime-build",
+	"project": "",
+	"replace":
+	{
+		"height": 66.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"az",
+				"pmproxy/az_persister_test.go"
+			],
+			[
+				"zer",
+				"pmproxy/zero_persister.go"
+			],
+			[
+				"writer",
+				"pmproxy/writer_factory.go"
+			],
+			[
+				"req",
+				"pmproxy/req_handler.go"
+			],
+			[
+				"inter",
+				"pmproxy/interfaces.go"
+			],
+			[
+				"sync.",
+				"tesis/sync/sync.go"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 132.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"TestLast",
+				"TestLastSaturday"
+			]
+		],
+		"width": 392.0
+	},
+	"selected_group": 1,
+	"settings":
+	{
+	},
+	"show_minimap": false,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": false,
+	"side_bar_width": 166.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

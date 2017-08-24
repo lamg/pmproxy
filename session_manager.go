@@ -29,40 +29,32 @@ func (s *SMng) Login(u Name, a IP,
 	return
 }
 
-func (s *SMng) Logout(user Name, pass string) (e error) {
-	var ok bool
-	_, ok = s.sessions[user]
-	if !ok {
-		e = fmt.Errorf("User %s not logged", user)
-	}
-	if e == nil {
-		e = s.auth.Authenticate(user, pass)
-	}
+func (s *SMng) Logout(scrt string) (e error) {
+	var user Name
+	user, e = s.Check(scrt)
 	if e == nil {
 		delete(s.sessions, user)
 	}
 	return
 }
 
-func (s *SMng) Check(t string, user Name) (e error) {
-	var ok bool
-	var scrt string
-	scrt, ok = s.sessions[user]
-	if !ok {
-		e = fmt.Errorf("User %s not logged", user)
-	}
-	if e == nil {
-		ok = t == scrt
-		if !ok {
-			e = fmt.Errorf("Wrong secret for %s", user)
-		}
-	}
+func (s *SMng) Check(t string) (user Name, e error) {
 	var u *User
 	if e == nil {
 		u, e = s.crt.Decrypt(t)
 	}
-	if e == nil && u.Name != string(user) {
-		e = fmt.Errorf("Internal error: wrong secret for %s", user)
+	if e == nil {
+		var ok bool
+		var scrt string
+		scrt, ok = s.sessions[Name(u.Name)]
+		if !ok {
+			e = fmt.Errorf("User %s not logged", user)
+		} else if t != scrt {
+			e = fmt.Errorf("Wrong secret for %s", user)
+		}
+	}
+	if e == nil {
+		user = Name(u.Name)
 	}
 	return
 }

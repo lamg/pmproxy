@@ -8,44 +8,49 @@ import (
 	"time"
 )
 
+// The implementations of the two following interfaces
+// can be used by a single net/http.Server since requests
+// meant to be processed exclusively by both handlers are
+// easily distinguishable. AdminHandler process local
+// requests, and ProxyHandler process remote requests.
+// This is done in pmproxy.go
+
+// Implemented in admin_handler.go
+// This handler is meant to provide authentication, information
+// and administration interfaces
+// TODO implement routes
+type AdminHandler interface {
+	Init(QuotaAdmin)
+	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
+// Implemented in proxy_handler.go
+// This handler is meant to be an HTTP[S] proxy for
+// requests made by authenticated users.
+// TODO HTTPS proxy
+type ProxyHandler interface {
+	Init(IPUser, ReqLim, Recorder)
+	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
 type (
 	IP   string
 	Name string
 )
 
-// Implemented in session_handler.go
-// TODO
-type PMAdmin interface {
-	Init(UserInf, QuotaAdmin)
-	ServeHTTP(http.ResponseWriter, *http.Request)
-}
-
 // Implemented in quota_admin.go
-// TODO
+// TODO WIP
 type QuotaAdmin interface {
-	Init(io.Reader, io.Writer, SessionManager)
+	Init(SessionManager, UserGroup, UserInf)
 
 	//Exposed subset of SessionManager
 	Login(user Name, addr IP, pass string) (string, error)
-	Logout(user Name, pass string) error
+	Logout(string) error
 
-	SetGroupQuota(string, Name, uint64)
-	GetGroupQuota(string, Name) uint64
-	SetUserQuota(string, Name, uint64)
-	GetUserQuota(string, Name) uint64
-}
-
-// Implemented in user_inf.go
-// TODO
-type UserInf interface {
-	Init(io.Reader, SessionManager)
-
-	//Exposed subset of SessionManager
-	Login(user Name, addr IP, pass string) (string, error)
-	Logout(user Name, pass string) error
-
-	UserQuota(string) uint64
-	UserConsumption(string) uint64
+	SetGroupQuota(string, string, uint64)
+	GetGroupQuota(string, string) uint64
+	UserGroup
+	UserInf
 }
 
 // Implemented in session_manager.go by
@@ -53,13 +58,21 @@ type UserInf interface {
 type SessionManager interface {
 	Init(Authenticator, Crypt)
 	Login(user Name, addr IP, pass string) (string, error)
-	Logout(user Name, pass string) error
-	Check(string, Name) error
+	Logout(string) error
+	Check(string) (Name, error)
 	IPUser
 }
 
 type IPUser interface {
 	UserName(IP) Name
+}
+
+type UserInf interface {
+	UserCons(Name) uint64
+}
+
+type UserGroup interface {
+	GetGroup(Name) string
 }
 
 // Implemented in crypt.go by
@@ -74,21 +87,12 @@ type User struct {
 	Name string `json:"name"`
 }
 
-// Implemented in req_handler.go
-// TODO find out how a proxy works
-// TODO update for new interfaces
-// WIP
-type RequestHandler interface {
-	Init(IPUser, ReqLim, Recorder)
-	ServeHTTP(http.ResponseWriter, *http.Request)
-}
-
 // Request Limiter
 // Implemented in req_lim.go
 // TODO
 // WIP
 type ReqLim interface {
-	CanReq(Name, *url.URL) bool
+	CanReq(Name, *url.URL, time.Time) bool
 }
 
 // Implemented in auth.go by
@@ -122,4 +126,10 @@ type WriterFct interface {
 	Current() io.Writer
 	NextWriter()
 	Err() error
+}
+
+// Implemented in
+type INameDict interface {
+	Get(Name) uint64
+	Set(Name, uint64)
 }

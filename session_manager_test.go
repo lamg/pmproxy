@@ -23,19 +23,20 @@ func TestSessionManager(t *testing.T) {
 	var s0 string
 	s0, e = sm.Login(coco, "0.0.0.0", coco)
 	require.NoError(t, e)
-	e = sm.Check(s0, coco)
+	var nm Name
+	nm, e = sm.Check(s0)
 	require.NoError(t, e)
-	e = sm.Check(s0, pepe)
-	require.Error(t, e)
+	require.True(t, nm == Name(coco))
 	var s1 string
 	s1, e = sm.Login(pepe, "1.1.1.1", "bla")
 	require.Error(t, e)
 	s1, e = sm.Login(pepe, "2.2.2.2", pepe)
 	require.NoError(t, e)
-	e = sm.Logout(coco, coco)
+	e = sm.Logout(s0)
 	require.NoError(t, e)
-	e = sm.Check(s0, coco)
+	_, e = sm.Check(s0)
 	require.Error(t, e)
-	e = sm.Check(s1, pepe)
+	nm, e = sm.Check(s1)
 	require.NoError(t, e)
+	require.True(t, nm == Name(pepe))
 }

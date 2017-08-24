@@ -12,7 +12,7 @@ type ReqHandler struct {
 	rl ReqLim
 }
 
-func (q *ReqHandler) Init(iu IPUser, l Recorder, rl ReqLim) {
+func (q *ReqHandler) Init(iu IPUser, rl ReqLim, l Recorder) {
 	q.iu, q.l, q.rl = iu, l, rl
 }
 
@@ -22,11 +22,11 @@ func (r *ReqHandler) ServeHTTP(w http.ResponseWriter,
 		var ip IP
 		var usr Name
 		var e error
+		var dt time.Time
+		dt = time.Now()
 		ip = IP(strings.SplitN(q.RemoteAddr, ":", 2)[0])
 		usr = r.iu.UserName(ip)
-		if r.rl.CanReq(usr, q.URL) {
-			var dt time.Time
-			dt = time.Now()
+		if r.rl.CanReq(usr, q.URL, dt) {
 			//make request
 			var p *http.Response
 			// TODO is this correct for HTTPS tunneling?
