@@ -8,9 +8,9 @@ import (
 // Structure produced by requests made to the proxy server
 type Log struct {
 	// Request's user
-	User Name
+	User string
 	// Client address
-	Addr IP
+	Addr string
 	// HTTP method
 	Meth string
 	// Accessed URI

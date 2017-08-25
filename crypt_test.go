@@ -15,7 +15,7 @@ func TestCrypt(t *testing.T) {
 	require.NoError(t, e)
 	j.Init(pKey)
 	var u *User
-	u = &User{"coco"}
+	u = &User{Name: "coco"}
 	var s string
 	s, e = j.Encrypt(u)
 	require.NoError(t, e)

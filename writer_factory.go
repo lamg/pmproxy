@@ -14,6 +14,12 @@ type dWF struct {
 	w *bytes.Buffer
 }
 
+func NewDWF() (d *dWF) {
+	d = new(dWF)
+	d.Init()
+	return
+}
+
 func (d *dWF) Init() {
 	d.NextWriter()
 }
@@ -27,8 +33,8 @@ func (d *dWF) Current() (w io.Writer) {
 	return
 }
 
-func (d *dWF) Content() (r string) {
-	r = d.w.String()
+func (d *dWF) Content() (r []byte) {
+	r = d.w.Bytes()
 	return
 }
 

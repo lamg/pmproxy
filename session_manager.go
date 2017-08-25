@@ -4,62 +4,65 @@ import (
 	"fmt"
 )
 
+type Credentials struct {
+	User string `json:"user"`
+	Pass string `json:"pass"`
+}
+
 type SMng struct {
-	sessions map[Name]string
-	ipUsr    map[IP]Name
-	auth     Authenticator
-	crt      Crypt
+	// user-secret
+	sessions map[string]string
+	// ip-user
+	ipUsr map[string]string
+	auth  Authenticator
+	crt   Crypt
 }
 
 func (s *SMng) Init(a Authenticator, c Crypt) {
 	s.sessions, s.ipUsr, s.auth, s.crt =
-		make(map[Name]string), make(map[IP]Name), a, c
+		make(map[string]string), make(map[string]string), a, c
 	return
 }
 
-func (s *SMng) Login(u Name, a IP,
-	p string) (t string, e error) {
-	e = s.auth.Authenticate(u, p)
+func (s *SMng) Login(c *Credentials,
+	a string) (t string, e error) {
+	e = s.auth.Authenticate(c.User, c.Pass)
 	if e == nil {
-		t, e = s.crt.Encrypt(&User{Name: string(u)})
+		t, e = s.crt.Encrypt(&User{Name: c.User})
 	}
 	if e == nil {
-		s.sessions[u], s.ipUsr[a] = t, u
+		s.sessions[c.User], s.ipUsr[a] = t, c.User
 	}
 	return
 }
 
 func (s *SMng) Logout(scrt string) (e error) {
-	var user Name
-	user, e = s.Check(scrt)
+	var u *User
+	u, e = s.Check(scrt)
 	if e == nil {
-		delete(s.sessions, user)
+		delete(s.sessions, u.Name)
 	}
 	return
 }
 
-func (s *SMng) Check(t string) (user Name, e error) {
-	var u *User
+func (s *SMng) Check(t string) (u *User, e error) {
 	if e == nil {
 		u, e = s.crt.Decrypt(t)
 	}
 	if e == nil {
 		var ok bool
 		var scrt string
-		scrt, ok = s.sessions[Name(u.Name)]
+		scrt, ok = s.sessions[u.Name]
 		if !ok {
-			e = fmt.Errorf("User %s not logged", user)
+			e = fmt.Errorf("User %s not logged", u.Name)
 		} else if t != scrt {
-			e = fmt.Errorf("Wrong secret for %s", user)
+			e = fmt.Errorf("Wrong secret for %s", u.Name)
 		}
-	}
-	if e == nil {
-		user = Name(u.Name)
 	}
 	return
 }
 
-func (s *SMng) UserName(addr IP) (n Name) {
+func (s *SMng) UserName(addr string) (n string) {
 	n = s.ipUsr[addr]
 	return
 }

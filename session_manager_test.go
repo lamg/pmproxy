@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-const (
-	coco = "coco"
-	pepe = "pepe"
+var (
+	coco = &Credentials{"coco", "coco"}
+	pepe = &Credentials{"pepe", "pepe"}
 )
 
 func TestSessionManager(t *testing.T) {
@@ -21,16 +21,16 @@ func TestSessionManager(t *testing.T) {
 	sm := new(SMng)
 	sm.Init(a, c)
 	var s0 string
-	s0, e = sm.Login(coco, "0.0.0.0", coco)
+	s0, e = sm.Login(coco, "0.0.0.0")
 	require.NoError(t, e)
-	var nm Name
+	var nm *User
 	nm, e = sm.Check(s0)
 	require.NoError(t, e)
-	require.True(t, nm == Name(coco))
+	require.True(t, nm.Name == coco.User)
 	var s1 string
-	s1, e = sm.Login(pepe, "1.1.1.1", "bla")
+	s1, e = sm.Login(&Credentials{"a", "b"}, "1.1.1.1")
 	require.Error(t, e)
-	s1, e = sm.Login(pepe, "2.2.2.2", pepe)
+	s1, e = sm.Login(pepe, "2.2.2.2")
 	require.NoError(t, e)
 	e = sm.Logout(s0)
 	require.NoError(t, e)
@@ -38,5 +38,5 @@ func TestSessionManager(t *testing.T) {
 	require.Error(t, e)
 	nm, e = sm.Check(s1)
 	require.NoError(t, e)
-	require.True(t, nm == Name(pepe))
+	require.True(t, nm.Name == pepe.User)
 }

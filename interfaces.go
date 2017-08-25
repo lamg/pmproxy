@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -13,12 +14,11 @@ import (
 // meant to be processed exclusively by both handlers are
 // easily distinguishable. AdminHandler process local
 // requests, and ProxyHandler process remote requests.
-// This is done in pmproxy.go
+// This is done in pmproxy.go TODO
 
 // Implemented in admin_handler.go
 // This handler is meant to provide authentication, information
 // and administration interfaces
-// TODO implement routes
 type AdminHandler interface {
 	Init(QuotaAdmin)
 	ServeHTTP(http.ResponseWriter, *http.Request)
@@ -29,50 +29,44 @@ type AdminHandler interface {
 // requests made by authenticated users.
 // TODO HTTPS proxy
 type ProxyHandler interface {
-	Init(IPUser, ReqLim, Recorder)
+	Init(ReqLim, Recorder)
 	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
-type (
-	IP   string
-	Name string
-)
-
 // Implemented in quota_admin.go
-// TODO WIP
 type QuotaAdmin interface {
-	Init(SessionManager, UserGroup, UserInf)
+	Init(SessionManager, UserGroup, *sync.Map, *sync.Map)
 
 	//Exposed subset of SessionManager
-	Login(user Name, addr IP, pass string) (string, error)
+	Login(cr *Credentials, addr string) (string, error)
 	Logout(string) error
 
-	SetGroupQuota(string, string, uint64)
-	GetGroupQuota(string, string) uint64
-	UserGroup
-	UserInf
+	SetQuota(string, *GroupQuota)
+	GetQuota(string, *GroupQuota)
+	UserCons(string, *User)
+	ReqLim
 }
 
 // Implemented in session_manager.go by
 // SMng
 type SessionManager interface {
 	Init(Authenticator, Crypt)
-	Login(user Name, addr IP, pass string) (string, error)
+	Login(cr *Credentials, addr string) (string, error)
 	Logout(string) error
-	Check(string) (Name, error)
+	Check(string) (*User, error)
 	IPUser
 }
 
 type IPUser interface {
-	UserName(IP) Name
+	UserName(string) string
 }
 
 type UserInf interface {
-	UserCons(Name) uint64
+	UserCons(string) uint64
 }
 
 type UserGroup interface {
-	GetGroup(Name) string
+	GetGroup(string) (string, error)
 }
 
 // Implemented in crypt.go by
@@ -84,36 +78,28 @@ type Crypt interface {
 }
 
 type User struct {
-	Name string `json:"name"`
+	Name    string `json:"name"`
+	IsAdmin bool   `json:"isAdmin"`
+	Cons    uint64 `json:"cons"`
 }
 
 // Request Limiter
 // Implemented in req_lim.go
-// TODO
-// WIP
 type ReqLim interface {
-	CanReq(Name, *url.URL, time.Time) bool
+	CanReq(string, *url.URL, time.Time) bool
 }
 
 // Implemented in auth.go by
 // LdapUPR, dAuth
 type Authenticator interface {
-	Authenticate(user Name, pass string) error
+	Authenticate(user string, pass string) error
 }
 
-// AZRecorder is a context for ZRecorder
-// Implemented in az_recorder.go by
-// AZRec
-type AZRecorder interface {
-	Init(zTime time.Time, intv time.Duration, zp ZRecorder)
-	Recorder
-}
-
-// Implemented in zero_recorder.go by
-// dZP, QuotaRec, QuotaRst, RLog
-type ZRecorder interface {
+// TODO update tests
+// Implemented in zeroer.go by
+// dZP, QuotaRec, QuotaRst, RLog, AZr
+type Zeroer interface {
 	SetZero()
-	Recorder
 }
 
 type Recorder interface {
@@ -126,10 +112,4 @@ type WriterFct interface {
 	Current() io.Writer
 	NextWriter()
 	Err() error
-}
-
-// Implemented in
-type INameDict interface {
-	Get(Name) uint64
-	Set(Name, uint64)
 }

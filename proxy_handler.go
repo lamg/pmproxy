@@ -1,3 +1,4 @@
+// TODO
 package pmproxy
 
 import (
@@ -6,27 +7,24 @@ import (
 	"time"
 )
 
-type ReqHandler struct {
-	iu IPUser
+type PrxHnd struct {
 	l  Recorder
 	rl ReqLim
 }
 
-func (q *ReqHandler) Init(iu IPUser, rl ReqLim, l Recorder) {
-	q.iu, q.l, q.rl = iu, l, rl
+func (q *PrxHnd) Init(rl ReqLim, l Recorder) {
+	q.l, q.rl = l, rl
 }
 
-func (r *ReqHandler) ServeHTTP(w http.ResponseWriter,
+func (r *PrxHnd) ServeHTTP(w http.ResponseWriter,
 	q *http.Request) {
 	if q.RemoteAddr != "" {
-		var ip IP
-		var usr Name
+		var ip string
 		var e error
 		var dt time.Time
 		dt = time.Now()
-		ip = IP(strings.SplitN(q.RemoteAddr, ":", 2)[0])
-		usr = r.iu.UserName(ip)
-		if r.rl.CanReq(usr, q.URL, dt) {
+		ip = strings.SplitN(q.RemoteAddr, ":", 2)[0]
+		if r.rl.CanReq(ip, q.URL, dt) {
 			//make request
 			var p *http.Response
 			// TODO is this correct for HTTPS tunneling?
@@ -42,7 +40,6 @@ func (r *ReqHandler) ServeHTTP(w http.ResponseWriter,
 					StatusCode: p.StatusCode,
 					Time:       dt,
 					URI:        q.URL.String(),
-					User:       usr,
 				}
 				r.l.Record(lg)
 				//write response
