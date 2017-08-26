@@ -7,71 +7,35 @@ import (
 	"time"
 )
 
-// Dummy ZRecorder implementation
-type dZP struct {
-	pa, ra int
-}
-
-func (d *dZP) Init() {
-	d.pa, d.ra = 0, 0
-}
-
-func (d *dZP) SetZero() {
-	d.pa, d.ra = d.ra, 0
-}
-
-func (d *dZP) Add() {
-	d.ra = d.ra + 1
-}
-
-func (d *dZP) Count() (n int) {
-	n = d.pa
-	return
-}
-
 // Quota recorder
 type QuotaRec struct {
-	rqc *sync.Map
-	wf  WriterFct
+	rqc *MapPrs
 }
 
-func (q *QuotaRec) Init(rqc *sync.Map, wf WriterFct) {
-	q.rqc, q.wf = rqc, wf
+func (q *QuotaRec) Init(rqc *MapPrs) {
+	q.rqc = rqc
 }
 
 func (q *QuotaRec) SetZero() {
-	q.wf.NextWriter()
-	var e error
-	e = q.wf.Err()
-	mp := make(map[string]uint64)
-	var bs []byte
-	if e == nil {
-		q.rqc.Range(func(k, v interface{}) (b bool) {
-			mp[k.(string)], b = v.(uint64), true
-			return
-		})
-		bs, e = json.Marshal(mp)
-	}
-	if e == nil {
-		_, e = q.wf.Current().Write(bs)
-	}
+	q.rqc.Persist()
 }
 
 // Consumption reseter
 type ConsRst struct {
-	rqc *sync.Map
+	rqc *MapPrs
 }
 
-func (q *ConsRst) Init(rqc *sync.Map) {
+func (q *ConsRst) Init(rqc *MapPrs) {
 	q.rqc = rqc
 }
 
 func (q *ConsRst) SetZero() {
-	q.rqc.Range(func(k, v interface{}) (b bool) {
-		q.rqc.Store(k, 0)
+	q.rqc.mp.Range(func(k string, v uint64) (b bool) {
+		q.rqc.mp.Store(k, 0)
 		b = true
 		return
 	})
+	q.rqc.Persist()
 }
 
 // Log recorder
@@ -103,38 +67,46 @@ func (rl *RLog) Err() (e error) {
 	return
 }
 
-// Automatic Zeroer is a context for Zeroer,
-// it calls SetZero after intv duration starting
-// at zTime.
-type AZr struct {
+// Tells if time has passed after intv starting at zTime
+type Zeroer struct {
 	zTime time.Time
 	intv  time.Duration
-	zp    []Zeroer
 }
 
-func (az *AZr) Init(zTime time.Time, intv time.Duration,
-	z ...Zeroer) {
-	az.zTime, az.intv, az.zp = zTime, intv, z
-}
-
-func (az *AZr) SetZero() {
-	var ta time.Duration
-	ta = az.timesAfterZeroTime()
-	if ta >= 1 {
-		az.zTime = az.zTime.Add(az.intv * ta)
-		for _, j := range az.zp {
-			j.SetZero()
-		}
-	}
-}
-
-func (az *AZr) timesAfterZeroTime() (ta time.Duration) {
+func (az *Zeroer) ResetIfZero() (b bool) {
 	var nw time.Time
+	var ta time.Duration
 	nw = time.Now()
 	// { nw - az.zTime < 290 years (by time.Duration's doc.)}
 	var cintv time.Duration
 	cintv = nw.Sub(az.zTime)
 	// { cintv: interval between now and the last}
 	ta = cintv / az.intv
+	b = ta >= 1
+	if b {
+		az.zTime = az.zTime.Add(az.intv * ta)
+	}
+	return
+}
+
+// Dummy Zeroer implementation
+type dZP struct {
+	pa, ra int
+}
+
+func (d *dZP) Init() {
+	d.pa, d.ra = 0, 0
+}
+
+func (d *dZP) SetZero() {
+	d.pa, d.ra = d.ra, 0
+}
+
+func (d *dZP) Add() {
+	d.ra = d.ra + 1
+}
+
+func (d *dZP) Count() (n int) {
+	n = d.pa
 	return
 }

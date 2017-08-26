@@ -14,19 +14,19 @@ type SMng struct {
 	sessions map[string]string
 	// ip-user
 	ipUsr map[string]string
-	auth  Authenticator
+	udb   UserDB
 	crt   Crypt
 }
 
-func (s *SMng) Init(a Authenticator, c Crypt) {
-	s.sessions, s.ipUsr, s.auth, s.crt =
+func (s *SMng) Init(a UserDB, c Crypt) {
+	s.sessions, s.ipUsr, s.udb, s.crt =
 		make(map[string]string), make(map[string]string), a, c
 	return
 }
 
 func (s *SMng) Login(c *Credentials,
 	a string) (t string, e error) {
-	e = s.auth.Authenticate(c.User, c.Pass)
+	e = s.udb.Authenticate(c.User, c.Pass)
 	if e == nil {
 		t, e = s.crt.Encrypt(&User{Name: c.User})
 	}
@@ -64,5 +64,10 @@ func (s *SMng) Check(t string) (u *User, e error) {
 
 func (s *SMng) UserName(addr string) (n string) {
 	n = s.ipUsr[addr]
+	return
+}
+
+func (s *SMng) GetGroup(u string) (g string, e error) {
+	g, e = s.udb.GetGroup(u)
 	return
 }

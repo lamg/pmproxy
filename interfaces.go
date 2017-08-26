@@ -14,7 +14,7 @@ import (
 // meant to be processed exclusively by both handlers are
 // easily distinguishable. AdminHandler process local
 // requests, and ProxyHandler process remote requests.
-// This is done in pmproxy.go TODO
+// This is done in pmproxy.go
 
 // Implemented in admin_handler.go
 // This handler is meant to provide authentication, information
@@ -35,7 +35,7 @@ type ProxyHandler interface {
 
 // Implemented in quota_admin.go
 type QuotaAdmin interface {
-	Init(SessionManager, UserGroup, *sync.Map, *sync.Map)
+	Init(SessionManager, *sync.Map, *sync.Map, []AccRstr)
 
 	//Exposed subset of SessionManager
 	Login(cr *Credentials, addr string) (string, error)
@@ -50,11 +50,17 @@ type QuotaAdmin interface {
 // Implemented in session_manager.go by
 // SMng
 type SessionManager interface {
-	Init(Authenticator, Crypt)
+	Init(UserDB, Crypt)
 	Login(cr *Credentials, addr string) (string, error)
 	Logout(string) error
 	Check(string) (*User, error)
+	UserGroup
 	IPUser
+}
+
+type UserDB interface {
+	Authenticator
+	UserGroup
 }
 
 type IPUser interface {
@@ -93,13 +99,6 @@ type ReqLim interface {
 // LdapUPR, dAuth
 type Authenticator interface {
 	Authenticate(user string, pass string) error
-}
-
-// TODO update tests
-// Implemented in zeroer.go by
-// dZP, QuotaRec, QuotaRst, RLog, AZr
-type Zeroer interface {
-	SetZero()
 }
 
 type Recorder interface {

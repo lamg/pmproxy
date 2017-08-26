@@ -11,20 +11,50 @@ type PMProxy struct {
 	adm, prx Handler
 }
 
+// c: LDAP Connection used to authenticate
+// pk: private key used for encrypting JSON Web Tokens
+// gq: map of group quotas
+// uc: map of user consumption
+// qw: for gq's persistence
+// cw: for uc's persistence
+// lw: for log's persistence
+// al: list of access restrictions
 func (p *PMProxy) Init(c *ldap.Conn, pk *rsa.PrivateKey,
-	gq, uc *sync.Map, wr WriterFct) (e error) {
+	al []AccRstr, gq, uc *MapPrs, rl *RLog) (e error) {
+	// TODO automatic persistence of maps and log rotation
+	gqr, ucr := new(QuotaRec), new(ConsRst)
+	gqr.Init(gq, qw)
+	ucr.Init(uc)
+	// end
+
+	// ldp initialization (shared by sm and qAdm)
 	ldp := new(LdapUPR)
 	ldp.Init(c)
+	// end
+
+	// sm initialization (shared by prHnd and qAdm)
 	sm, crypt := new(SMng), new(JWTCrypt)
 	crypt.Init(pk)
 	sm.Init(ldp, crypt)
+	// end
+
+	// qAdm
 	qAdm := new(QAdm)
-	qAdm.Init(sm, ldp, gq, uc)
+	qAdm.Init(sm, gq, uc, al)
+	// end
+
+	// prHnd initialization
+	prHnd, rl := new(PrxHnd), new(RLog)
+	// sm as IPUser
+	rl.iu = sm
+	prHnd.Init(qAdm, rl)
+	// end
+
+	// adHnd initialization
 	adHnd := new(PMAdmin)
 	adHnd.Init(qAdm)
-	prHnd, rl := new(PrxHnd), new(RLog)
-	rl.Init(wr, sm)
-	prHnd.Init(qAdm, rl)
+	// end
+
 	p.adm, p.prx = adHnd, prHnd
 	return
 }

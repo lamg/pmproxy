@@ -11,7 +11,7 @@ type GroupQuota struct {
 	Value uint64 `json:"value"`
 }
 
-type Access struct {
+type AccRstr struct {
 	hostname   string
 	hasIntv    bool
 	start, end time.Time
@@ -19,16 +19,14 @@ type Access struct {
 
 type QAdm struct {
 	sm SessionManager
-	ug UserGroup
 	// Group Quota and User Consumption
-	gq, uc *sync.Map
-	al     []Access
+	gq, uc *MapPrs
+	al     []AccRstr
 }
 
-func (q *QAdm) Init(sm SessionManager, ug UserGroup,
-	gq, uc *sync.Map) {
-	//TODO initialize al
-	q.sm, q.ug, q.gq, q.uc = sm, ug, gq, uc
+func (q *QAdm) Init(sm SessionManager,
+	gq, uc *MapPrs, al []AccRstr) {
+	q.sm, q.gq, q.uc, q.al = sm, gq, uc, al
 }
 
 func (q *QAdm) Login(c *Credentials,
@@ -45,13 +43,10 @@ func (q *QAdm) Logout(s string) (e error) {
 func (q *QAdm) GetQuota(s string, g *GroupQuota) {
 	u, e := q.sm.Check(s)
 	if e == nil && g.Name == "" {
-		// get group for s
-		g.Name, _ = q.ug.GetGroup(u.Name)
+		g.Name, e = q.sm.GetGroup(u.Name)
 	}
 	if e == nil {
-		var v interface{}
-		v, _ = q.gq.Load(g.Name)
-		g.Value = v.(uint64)
+		g.Value, _ = q.gq.Load(g.Name)
 	}
 }
 
@@ -68,12 +63,7 @@ func (q *QAdm) UserCons(s string, u *User) {
 		u.Name = l.Name
 	}
 	if e == nil {
-		var v interface{}
-		var ok bool
-		v, ok = q.uc.Load(u.Name)
-		if ok {
-			u.Cons = v.(uint64)
-		}
+		u.Cons, _ = q.uc.Load(u.Name)
 	}
 }
 
@@ -81,19 +71,10 @@ func (q *QAdm) FinishedQuota(u string) (b bool) {
 	b = true
 	var gr string
 	var e error
-	gr, e = q.ug.GetGroup(u)
+	gr, e = q.sm.GetGroup(u)
 	if e == nil {
-		var ic, iq interface{}
-		var okc, okq bool
-		ic, okc = q.uc.Load(u)
-		iq, okq = q.gq.Load(gr)
-		var cons, quota uint64
-		if okc {
-			cons = ic.(uint64)
-		}
-		if okq {
-			quota = iq.(uint64)
-		}
+		cons, _ = q.uc.Load(u)
+		quota, _ = q.gq.Load(gr)
 		b = cons >= quota
 	}
 	return

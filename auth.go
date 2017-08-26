@@ -119,3 +119,7 @@ func (d *dAuth) Authenticate(user, pass string) (e error) {
 	}
 	return
 }
+
+func (d *dAuth) GetGroup(u string) (g string, e error) {
+	return
+}
