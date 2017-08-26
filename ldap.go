@@ -1,4 +1,4 @@
-package pmproxy
+package main
 
 import (
 	"crypto/tls"
@@ -110,6 +110,11 @@ func SearchFilter(f string, ats []string, c *ldap.Conn) (n []*ldap.Entry, e erro
 	return
 }
 
+type UserDB interface {
+	Authenticate(string, string) error
+	GetGroup(string) (string, error)
+}
+
 type dAuth struct {
 }
 
@@ -121,5 +126,10 @@ func (d *dAuth) Authenticate(user, pass string) (e error) {
 }
 
 func (d *dAuth) GetGroup(u string) (g string, e error) {
+	if len(u) != 0 {
+		g = string(u[0])
+	} else {
+		e = fmt.Errorf("Wrong")
+	}
 	return
 }

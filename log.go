@@ -1,4 +1,4 @@
-package pmproxy
+package main
 
 import (
 	"fmt"

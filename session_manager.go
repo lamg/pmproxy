@@ -1,4 +1,4 @@
-package pmproxy
+package main
 
 import (
 	"fmt"
@@ -15,10 +15,10 @@ type SMng struct {
 	// ip-user
 	ipUsr map[string]string
 	udb   UserDB
-	crt   Crypt
+	crt   *JWTCrypt
 }
 
-func (s *SMng) Init(a UserDB, c Crypt) {
+func (s *SMng) Init(a UserDB, c *JWTCrypt) {
 	s.sessions, s.ipUsr, s.udb, s.crt =
 		make(map[string]string), make(map[string]string), a, c
 	return

@@ -1,4 +1,4 @@
-package pmproxy
+package main
 
 import (
 	"crypto/rsa"
@@ -6,6 +6,12 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 )
+
+type User struct {
+	Name    string `json:"name"`
+	IsAdmin bool   `json:"isAdmin"`
+	Cons    uint64 `json:"cons"`
+}
 
 type JWTCrypt struct {
 	pKey *rsa.PrivateKey

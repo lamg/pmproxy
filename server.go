@@ -1,18 +1,8 @@
-package pmproxy
+package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
 	. "net/http"
 )
-
-type PMAdmin struct {
-	mx *ServeMux
-	ui UserInf
-	qa QuotaAdmin
-}
 
 const (
 	// POST, DELETE
@@ -24,15 +14,19 @@ const (
 	authHd   = "authHd"
 )
 
-func (p *PMAdmin) Init(qa QuotaAdmin) {
+type PMProxy struct {
+	mx *ServeMux
+	qa *QAdm
+}
+
+func Init(qa *QAdm) {
 	p.qa, p.mx = qa, NewServeMux()
 	p.mx.HandleFunc(logX, p.logXHF)
 	p.mx.HandleFunc(groupQuota, p.groupQuotaHF)
 	p.mx.HandleFunc(userCons, p.userConsHF)
-	// TODO implement routes
 }
 
-func (p *PMAdmin) logXHF(w ResponseWriter, r *Request) {
+func (p *PMProxy) logXHF(w ResponseWriter, r *Request) {
 	var e error
 	var scrt string
 	if r.Method == MethodPost {
@@ -55,7 +49,7 @@ func (p *PMAdmin) logXHF(w ResponseWriter, r *Request) {
 	writeErr(w, e)
 }
 
-func (p *PMAdmin) groupQuotaHF(w ResponseWriter, r *Request) {
+func (p *PMProxy) groupQuotaHF(w ResponseWriter, r *Request) {
 	s, e := getScrt(r.Header)
 	gr := new(GroupQuota)
 	if r.Method == MethodPost {
@@ -75,7 +69,7 @@ func (p *PMAdmin) groupQuotaHF(w ResponseWriter, r *Request) {
 	writeErr(w, e)
 }
 
-func (p *PMAdmin) userConsHF(w ResponseWriter, r *Request) {
+func (p *PMProxy) userConsHF(w ResponseWriter, r *Request) {
 	s, e := getScrt(r.Header)
 	usr := new(User)
 	if r.Method == MethodPost {
@@ -90,8 +84,16 @@ func (p *PMAdmin) userConsHF(w ResponseWriter, r *Request) {
 	writeErr(w, e)
 }
 
-func (p *PMAdmin) ServeHTTP(w ResponseWriter, r *Request) {
-	p.mx.ServeHTTP(w, r)
+func (p *PMProxy) ServeHTTP(w ResponseWriter, r *Request) {
+	if r.URL.Host == "" {
+		p.mx.ServeHTTP(w, r)
+	} else {
+		p.Proxy(w, r)
+	}
+}
+
+func (p *PMProxy) Proxy(w ResponseWriter, r *Request) {
+
 }
 
 func getScrt(h Header) (s string, e error) {

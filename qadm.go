@@ -1,4 +1,4 @@
-package pmproxy
+package main
 
 import (
 	"net/url"
@@ -18,13 +18,13 @@ type AccRstr struct {
 }
 
 type QAdm struct {
-	sm SessionManager
+	sm *SMng
 	// Group Quota and User Consumption
 	gq, uc *MapPrs
 	al     []AccRstr
 }
 
-func (q *QAdm) Init(sm SessionManager,
+func (q *QAdm) Init(sm *SMng,
 	gq, uc *MapPrs, al []AccRstr) {
 	q.sm, q.gq, q.uc, q.al = sm, gq, uc, al
 }
@@ -54,6 +54,8 @@ func (q *QAdm) SetQuota(s string, g *GroupQuota) {
 	u, e := q.sm.Check(s)
 	if e == nil && u.IsAdmin {
 		q.gq.Store(g.Name, g.Value)
+
+		// persist
 	}
 }
 
@@ -65,6 +67,16 @@ func (q *QAdm) UserCons(s string, u *User) {
 	if e == nil {
 		u.Cons, _ = q.uc.Load(u.Name)
 	}
+}
+
+func (q *QAdm) AddCons(u string, c uint64) {
+	var ok bool
+	var n uint64
+	n, ok = q.uc.Load(u)
+	if ok {
+		q.uc.Store(u, n+c)
+	}
+	// persist
 }
 
 func (q *QAdm) FinishedQuota(u string) (b bool) {
