@@ -1,8 +1,12 @@
-package main
+package pmproxy
 
 import (
 	"fmt"
 )
+
+type IPUser interface {
+	User(string) *User
+}
 
 type Credentials struct {
 	User string `json:"user"`
@@ -10,64 +14,53 @@ type Credentials struct {
 }
 
 type SMng struct {
-	// user-secret
-	sessions map[string]string
-	// ip-user
-	ipUsr map[string]string
-	udb   UserDB
-	crt   *JWTCrypt
+	// ip - *User
+	sessions map[string]*User
+	udb      UserDB
+	crt      *JWTCrypt
 }
 
 func (s *SMng) Init(a UserDB, c *JWTCrypt) {
-	s.sessions, s.ipUsr, s.udb, s.crt =
-		make(map[string]string), make(map[string]string), a, c
+	s.sessions, s.udb, s.crt = make(map[string]*User), a, c
 	return
 }
 
 func (s *SMng) Login(c *Credentials,
 	a string) (t string, e error) {
-	e = s.udb.Authenticate(c.User, c.Pass)
+	var usr *User
+	usr, e = s.udb.Login(c.User, c.Pass)
 	if e == nil {
-		t, e = s.crt.Encrypt(&User{Name: c.User})
+		t, e = s.crt.Encrypt(usr)
 	}
 	if e == nil {
-		s.sessions[c.User], s.ipUsr[a] = t, c.User
+		s.sessions[a] = usr
 	}
 	return
 }
 
-func (s *SMng) Logout(scrt string) (e error) {
+func (s *SMng) Logout(ip, scrt string) (e error) {
 	var u *User
-	u, e = s.Check(scrt)
+	u, e = s.Check(ip, scrt)
 	if e == nil {
 		delete(s.sessions, u.Name)
 	}
 	return
 }
 
-func (s *SMng) Check(t string) (u *User, e error) {
-	if e == nil {
-		u, e = s.crt.Decrypt(t)
-	}
+func (s *SMng) Check(ip, t string) (u *User, e error) {
+	u, e = s.crt.Decrypt(t)
 	if e == nil {
 		var ok bool
-		var scrt string
-		scrt, ok = s.sessions[u.Name]
-		if !ok {
+		var lu *User
+		lu, ok = s.sessions[ip]
+		if !(ok && u.Equal(lu)) {
 			e = fmt.Errorf("User %s not logged", u.Name)
-		} else if t != scrt {
-			e = fmt.Errorf("Wrong secret for %s", u.Name)
 		}
 	}
 	return
 }
 
-func (s *SMng) UserName(addr string) (n string) {
-	n = s.ipUsr[addr]
-	return
-}
-
-func (s *SMng) GetGroup(u string) (g string, e error) {
-	g, e = s.udb.GetGroup(u)
+func (s *SMng) User(ip string) (u *User) {
+	u, _ = s.sessions[ip]
 	return
 }

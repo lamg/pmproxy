@@ -1,4 +1,4 @@
-package main
+package pmproxy
 
 import (
 	"crypto/rsa"
@@ -8,9 +8,20 @@ import (
 )
 
 type User struct {
-	Name    string `json:"name"`
-	IsAdmin bool   `json:"isAdmin"`
-	Cons    uint64 `json:"cons"`
+	UserName   string `json:"userName"`
+	Name       string `json:"name"`
+	IsAdmin    bool   `json:"isAdmin"`
+	QuotaGroup string `json:"quotaGroup"`
+}
+
+func (u *User) Equal(v interface{}) (ok bool) {
+	var lu *User
+	lu, ok = v.(*User)
+	if ok {
+		ok = u.Name == lu.Name && u.IsAdmin == lu.IsAdmin &&
+			u.QuotaGroup == lu.QuotaGroup && u.UserName == lu.UserName
+	}
+	return
 }
 
 type JWTCrypt struct {
@@ -18,7 +29,7 @@ type JWTCrypt struct {
 }
 
 type JWTUser struct {
-	*User `json:"user"`
+	User *User `json:"user"`
 	jwt.StandardClaims
 }
 
@@ -37,7 +48,7 @@ func (j *JWTCrypt) Encrypt(u *User) (s string, e error) {
 
 func (j *JWTCrypt) Decrypt(s string) (u *User, e error) {
 	var t *jwt.Token
-	t, e = jwt.Parse(s,
+	t, e = jwt.ParseWithClaims(s, &JWTUser{},
 		func(x *jwt.Token) (a interface{}, d error) {
 			a, d = &j.pKey.PublicKey, nil
 			return
@@ -46,24 +57,15 @@ func (j *JWTCrypt) Decrypt(s string) (u *User, e error) {
 		e = fmt.Errorf("Invalid token in \"%s\"", s)
 	}
 	var ok bool
-	var clm jwt.MapClaims
+	var clm *JWTUser
 	if e == nil {
-		clm, ok = t.Claims.(jwt.MapClaims)
+		clm, ok = t.Claims.(*JWTUser)
 		if !ok {
 			e = errors.New("False jwt.MapClaims type assertion")
 		}
 	}
-	var usm map[string]interface{}
-	if ok {
-		usm, ok = clm["user"].(map[string]interface{})
-		if !ok {
-			e = errors.New("False *User type assertion")
-		}
-	}
 	if e == nil {
-		u = &User{
-			Name: usm["name"].(string),
-		}
+		u = clm.User
 	}
 	return
 }

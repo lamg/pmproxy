@@ -1,4 +1,4 @@
-package main
+package pmproxy
 
 import (
 	"crypto/rsa"
@@ -15,14 +15,15 @@ func TestCrypt(t *testing.T) {
 	require.NoError(t, e)
 	j.Init(pKey)
 	var u *User
-	u = &User{Name: "coco"}
+	u = &User{UserName: "coco", Name: "Coco"}
 	var s string
 	s, e = j.Encrypt(u)
 	require.NoError(t, e)
 	var du *User
 	du, e = j.Decrypt(s)
 	require.NoError(t, e)
-	require.True(t, du.Name == "coco")
+	require.True(t, du.UserName == "coco",
+		"du.Name = \"%s\"", du.UserName)
 }
 
 func parseKey() (pKey *rsa.PrivateKey, e error) {

@@ -1,4 +1,4 @@
-package main
+package pmproxy
 
 import (
 	"crypto/rsa"
@@ -7,8 +7,10 @@ import (
 )
 
 var (
-	coco = &Credentials{"coco", "coco"}
-	pepe = &Credentials{"pepe", "pepe"}
+	coco   = &Credentials{"coco", "coco"}
+	pepe   = &Credentials{"pepe", "pepe"}
+	cocoIP = "0.0.0.0"
+	pepeIP = "1.1.1.1"
 )
 
 func TestSessionManager(t *testing.T) {
@@ -21,22 +23,22 @@ func TestSessionManager(t *testing.T) {
 	sm := new(SMng)
 	sm.Init(a, c)
 	var s0 string
-	s0, e = sm.Login(coco, "0.0.0.0")
+	s0, e = sm.Login(coco, cocoIP)
 	require.NoError(t, e)
 	var nm *User
-	nm, e = sm.Check(s0)
+	nm, e = sm.Check(cocoIP, s0)
 	require.NoError(t, e)
 	require.True(t, nm.Name == coco.User)
 	var s1 string
-	s1, e = sm.Login(&Credentials{"a", "b"}, "1.1.1.1")
+	s1, e = sm.Login(&Credentials{"a", "b"}, pepeIP)
 	require.Error(t, e)
-	s1, e = sm.Login(pepe, "2.2.2.2")
+	s1, e = sm.Login(pepe, pepeIP)
 	require.NoError(t, e)
-	e = sm.Logout(s0)
+	e = sm.Logout(cocoIP, s0)
 	require.NoError(t, e)
-	_, e = sm.Check(s0)
+	_, e = sm.Check(pepeIP, s0)
 	require.Error(t, e)
-	nm, e = sm.Check(s1)
+	nm, e = sm.Check(pepeIP, s1)
 	require.NoError(t, e)
 	require.True(t, nm.Name == pepe.User)
 }

@@ -1,4 +1,4 @@
-package main
+package pmproxy
 
 import (
 	"fmt"
@@ -23,10 +23,24 @@ type Log struct {
 	RespSize uint64
 	// Response date-time
 	Time time.Time
+	// Elapsed time between request received and response sent
+	Elapsed time.Duration
+	// How the request was treated locally
+	Action string
+	// How and where the requested object was fetched.
+	Hierarchy string
+	// Hostname of the machine where we got the object
+	From string
+	// Content type from HTTP header
+	ContentType string
 }
 
-// TODO Returns a string with Squid log format
+// time elapsed remotehost code/status bytes method URL rfc931 peerstatus/peerhost type
 func (l *Log) String() (s string) {
-	s = fmt.Sprintf("%s", l.User)
+	s = fmt.Sprintf(
+		"%9d.%03d %6d %s %s/%03d %d %s %s %s %s/%s %s",
+		l.Time.Unix(), l.Time.UnixNano(), l.Elapsed, l.Addr,
+		l.Action, l.StatusCode, l.RespSize, l.Meth, l.URI, l.User,
+		l.Hierarchy, l.From, l.ContentType)
 	return
 }
