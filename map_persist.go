@@ -17,10 +17,11 @@ type MapPrs struct {
 }
 
 func NewMapPrs(rc io.Reader, wf WriterFct, dt time.Time,
-	iv time.Duration) (r *MapPrs) {
+	iv time.Duration) (r *MapPrs, e error) {
 	mp, dc, om := new(sync.Map), json.NewDecoder(rc),
 		make(map[string]uint64)
-	if e := dc.Decode(&om); e == nil {
+	e = dc.Decode(&om)
+	if e == nil {
 		for k, v := range om {
 			mp.Store(k, v)
 		}

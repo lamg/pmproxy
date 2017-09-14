@@ -15,15 +15,15 @@ type Proxy struct {
 
 func (p *Proxy) Init(qa *QAdm, rl *RLog) {
 	p.px, p.qa, p.rl = g.NewProxyHttpServer(), qa, rl
-	p.px.OnRequest().DoFunc(restrictAccess)
-	p.px.OnResponse().DoFunc(updateConsumption)
+	p.px.OnRequest().DoFunc(p.restrictAccess)
+	p.px.OnResponse().DoFunc(p.updateConsumption)
 }
 
 func (p *Proxy) restrictAccess(r *Request,
 	c *g.ProxyCtx) (x *Request, y *Response) {
 	ud := new(usrDt)
-	ud.cf, x = p.qa.CanReq(), r
-	if cf < 0 {
+	ud.cf, x = p.qa.CanReq(r.RemoteAddr, r.URL, time.Now()), r
+	if ud.cf < 0 {
 		y = g.NewResponse(r, g.ContentTypeText, StatusForbidden,
 			"No puede acceder al recurso")
 		// { c.UserData = nil }

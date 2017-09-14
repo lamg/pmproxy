@@ -80,7 +80,7 @@ func (d *dAuth) Login(u, p string) (r *User, e error) {
 		r = &User{
 			Name:       u,
 			UserName:   u,
-			IsAdmin:    len(u) == 2,
+			IsAdmin:    len(u) == 4,
 			QuotaGroup: "A",
 		}
 		d.us = append(d.us, r)

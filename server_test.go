@@ -33,13 +33,15 @@ func TestServer(t *testing.T) {
 	cry.Init(pKey)
 	sm.Init(dAuth, cry)
 
-	// init of gq
-	gq := NewMapPrs(bytes.NewBufferString(quota),
+	var gq *MapPrs
+	gq, e = NewMapPrs(bytes.NewBufferString(quota),
 		NewDWF(), time.Now(), time.Second)
+	require.NoError(t, e)
 
-	// init of uc
-	uc := NewMapPrs(bytes.NewBufferString(cons),
+	var uc *MapPrs
+	uc, e = NewMapPrs(bytes.NewBufferString(cons),
 		NewDWF(), time.Now(), time.Second)
+	require.NoError(t, e)
 
 	qa.Init(sm, gq, uc, l, time.Now(), time.Second)
 

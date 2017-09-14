@@ -55,6 +55,7 @@ are supplied in the QAdm's initializer as the parameters
 ~rd~ and ~cd~.
 
 *** TODO Test QAdm
+- What other tests can I do.
 
 *** Access restrictions
 It is implemented at qadm.go in the method *QAdm.CanReq.

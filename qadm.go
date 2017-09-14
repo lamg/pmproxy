@@ -17,7 +17,7 @@ type AccExcp struct {
 	HostName string    `json:"hostName"`
 	Start    time.Time `json:"start"`
 	End      time.Time `json:"end"`
-	ConsCfc  float64   `json:"consCfc"`
+	ConsCfc  float32   `json:"consCfc"`
 }
 
 type QAdm struct {
@@ -48,10 +48,9 @@ func (q *QAdm) Logout(ip, s string) (e error) {
 }
 
 func (q *QAdm) GetQuota(ip, s string, g *NameVal) {
-	u, e := q.sm.Check(ip, s)
+	_, e := q.sm.Check(ip, s)
 	if e == nil {
-		g.Name = u.QuotaGroup
-		g.Value, _ = q.gq.Load(u.QuotaGroup)
+		g.Value, _ = q.gq.Load(g.Name)
 	}
 }
 
@@ -61,6 +60,8 @@ func (q *QAdm) SetQuota(ip, s string, g *NameVal) (e error) {
 	if e == nil && u.IsAdmin {
 		q.gq.Store(g.Name, g.Value)
 		_, e = q.gq.PersistIfTime()
+	} else if e == nil && !u.IsAdmin {
+		e = fmt.Errorf("%s is not an administrator", u.UserName)
 	}
 	return
 }
@@ -117,13 +118,17 @@ func (r *QAdm) CanReq(ip string, l *url.URL,
 	var f bool
 	i, f, c = 0, false, 1
 	for !f && i != len(r.al) {
-		i, f = i+1, r.al[i].HostName == l.Host
+		f = r.al[i].HostName == l.Host
+		if !f {
+			i = i + 1
+		}
 	}
 	if f {
 		c = r.al[i].ConsCfc
 	}
-	if r.FinishedQuota(ip) || (d.After(r.al[i].Start) &&
-		d.Before(r.al[i].End)) {
+	if c != -1 && (r.FinishedQuota(ip) ||
+		(d.After(r.al[i].Start) &&
+			d.Before(r.al[i].End))) {
 		c = c * -1
 	}
 	return
@@ -132,6 +137,6 @@ func (r *QAdm) CanReq(ip string, l *url.URL,
 func ReadAccExcp(r io.Reader) (l []AccExcp, e error) {
 	var dc *json.Decoder
 	dc, l = json.NewDecoder(r), make([]AccExcp, 0)
-	e = dc.Decode(l)
+	e = dc.Decode(&l)
 	return
 }
