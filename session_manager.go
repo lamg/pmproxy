@@ -39,10 +39,9 @@ func (s *SMng) Login(c *Credentials,
 }
 
 func (s *SMng) Logout(ip, scrt string) (e error) {
-	var u *User
-	u, e = s.Check(ip, scrt)
+	_, e = s.Check(ip, scrt)
 	if e == nil {
-		delete(s.sessions, u.Name)
+		delete(s.sessions, ip)
 	}
 	return
 }

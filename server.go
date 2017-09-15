@@ -19,6 +19,7 @@ const (
 	accExcp = "/accessExceptions"
 	authHd  = "authHd"
 	userV   = "user"
+	groupV  = "group"
 )
 
 type PMProxy struct {
@@ -62,11 +63,9 @@ func (p *PMProxy) groupQuotaHF(w ResponseWriter, r *Request) {
 	s, e := getScrt(r.Header)
 	gr := new(NameVal)
 	if e == nil && r.Method == MethodGet {
-		gr.Name = r.URL.Query().Get(userV)
-		if e == nil {
-			p.qa.GetQuota(r.RemoteAddr, s, gr)
-			e = encode(w, gr)
-		}
+		gr.Name = r.URL.Query().Get(groupV)
+		p.qa.GetQuota(r.RemoteAddr, s, gr)
+		e = encode(w, gr)
 	} else if e == nil && r.Method == MethodPut {
 		e = decode(r.Body, gr)
 		if e == nil {
@@ -103,11 +102,9 @@ func (p *PMProxy) ServeHTTP(w ResponseWriter, r *Request) {
 }
 
 func getScrt(h Header) (s string, e error) {
-	sl, ok := h[authHd]
-	if !ok || len(s) != 1 {
+	s = h.Get(authHd)
+	if s == "" {
 		e = fmt.Errorf("Malformed header")
-	} else {
-		s = sl[0]
 	}
 	return
 }

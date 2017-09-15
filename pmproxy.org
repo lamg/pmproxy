@@ -22,8 +22,14 @@ Ríos's needs, which are the following:
   reseted.
 - Administration of quotas through an HTTP service.
 
-** TODO HTTP server
-Is implemented at server.go file. It handles the local requests. The former provide login and logout
+** TODO General Tasks
+- Improve test coverage (76%)
+- Integration
+- Improve document
+
+** HTTP server
+Is implemented at server.go file. It handles the local
+requests. The former provide login and logout
 functionality, through the POST and DELETE methods
 respectively at the route "/logX", information and change
 of group quotas, through the GET and PUT methods at the
@@ -37,12 +43,10 @@ whose consumption is equal or greater to their quotas are
 not served, unless the request is done to determined
 servers.
 
-- Fix handlers for dealing with current QAdm
-- Continue writing tests at server_test.go
 
 
 
-** TODO Quota administration
+** Quota administration
 - Improve description
 The assignated quotas are determined by the group an user
 belongs. The consumption is determined by the
@@ -73,12 +77,9 @@ url, then unless the coeficient is different from 0, the
 url cannot be requested.
 
 
-** TODO Session management
+** Session management
 - Description of session management
 
-** TODO Tests
-- HTTP server
-- Integration
 
 ** Writer Factory
 The implementation of WriterFactory in Truncater moves a
