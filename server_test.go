@@ -11,49 +11,60 @@ import (
 	"time"
 )
 
-func TestServer(t *testing.T) {
+func initPMProxy() (p *PMProxy, qa *QAdm, e error) {
 	// qa initialization
-	qa := new(QAdm)
+	qa = new(QAdm)
 
 	// init of l
 	var bf *bytes.Buffer
 	bf = bytes.NewBufferString(accR)
 	var l []AccExcp
-	var e error
 	l, e = ReadAccExcp(bf)
-	require.NoError(t, e)
-
-	// init of sm
-	sm, dAuth, cry := new(SMng), new(dAuth), new(JWTCrypt)
-	dAuth.Init()
-
 	var pKey *rsa.PrivateKey
-	pKey, e = parseKey()
-	require.NoError(t, e)
-	cry.Init(pKey)
-	sm.Init(dAuth, cry)
+	if e == nil {
+		pKey, e = parseKey()
+	}
+
+	var sm *SMng
+	if e == nil {
+		var da *dAuth
+		var cry *JWTCrypt
+		// init of sm
+		sm, da, cry = new(SMng), new(dAuth), new(JWTCrypt)
+		da.Init()
+		cry.Init(pKey)
+		sm.Init(da, cry)
+	}
 
 	var gq *MapPrs
-	gq, e = NewMapPrs(bytes.NewBufferString(quota),
-		NewDWF(), time.Now(), time.Second)
-	require.NoError(t, e)
+	if e == nil {
+		gq, e = NewMapPrs(bytes.NewBufferString(quota),
+			NewDWF(), time.Now(), time.Second)
+	}
 
 	var uc *MapPrs
-	uc, e = NewMapPrs(bytes.NewBufferString(cons),
-		NewDWF(), time.Now(), time.Second)
-	require.NoError(t, e)
+	if e == nil {
+		uc, e = NewMapPrs(bytes.NewBufferString(cons),
+			NewDWF(), time.Now(), time.Second)
+	}
 
-	qa.Init(sm, gq, uc, l, time.Now(), time.Second)
+	if e == nil {
+		qa.Init(sm, gq, uc, l, time.Now(), time.Second)
+		// lg initialization
+		lg := new(RLog)
+		lg.Init(NewDWF(), sm)
+		// pm initialization
+		p = new(PMProxy)
+		p.Init(qa, lg)
+	}
+	return
+}
 
-	// lg initialization
-	lg := new(RLog)
-	lg.Init(NewDWF(), sm)
-
-	// pm initialization
-	pm := new(PMProxy)
-	pm.Init(qa, lg)
-
-	// TODO
+func TestServerLogInOut(t *testing.T) {
+	var pm *PMProxy
+	var qa *QAdm
+	var e error
+	pm, qa, e = initPMProxy()
 	var bfrq *bytes.Buffer
 	bfrq = bytes.NewBufferString(`{"user":"a", "pass":"a"}`)
 	var rr *httptest.ResponseRecorder
@@ -61,5 +72,17 @@ func TestServer(t *testing.T) {
 	rr = httptest.NewRecorder()
 	rq, e = NewRequest(MethodPost, logX, bfrq)
 	require.NoError(t, e)
+	rq.RemoteAddr = cocoIP
 	pm.ServeHTTP(rr, rq)
+	require.Equal(t, rr.Code, StatusOK)
+	var scrt string
+	scrt = rr.Header().Get(authHd)
+	require.True(t, scrt != "")
+	var usr *User
+	usr, e = qa.sm.Check(cocoIP, scrt)
+	require.NoError(t, e)
+	require.True(t, usr.UserName == "a" &&
+		qa.sm.sessions[cocoIP].Equal(usr))
+
+	// TODO logout
 }

@@ -76,6 +76,10 @@ url cannot be requested.
 ** TODO Session management
 - Description of session management
 
+** TODO Tests
+- HTTP server
+- Integration
+
 ** Writer Factory
 The implementation of WriterFactory in Truncater moves a
 file with the supplied name to a file with the same name

@@ -45,7 +45,7 @@ func (p *PMProxy) logXHF(w ResponseWriter, r *Request) {
 			scrt, e = p.qa.Login(cr, r.RemoteAddr)
 		}
 		if e == nil {
-			w.Header()[authHd] = []string{scrt}
+			w.Header().Set(authHd, scrt)
 		}
 	} else if r.Method == MethodDelete {
 		scrt, e = getScrt(r.Header)
