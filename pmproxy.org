@@ -43,6 +43,7 @@ servers.
 
 
 ** TODO Quota administration
+- Improve description
 The assignated quotas are determined by the group an user
 belongs. The consumption is determined by the
 ContentLength of a response multiplied by the URL's
@@ -53,9 +54,6 @@ the users consumption each time a cycle of determined
 duration ends, starting in a determined date. These
 are supplied in the QAdm's initializer as the parameters
 ~rd~ and ~cd~.
-
-*** TODO Test QAdm
-- What other tests can I do.
 
 *** Access restrictions
 It is implemented at qadm.go in the method *QAdm.CanReq.

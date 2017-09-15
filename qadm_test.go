@@ -113,18 +113,53 @@ func TestAddCons(t *testing.T) {
 func TestCanReq(t *testing.T) {
 	var qa *QAdm
 	var e error
-	qa, _, e = initTestQAdm(coco, cocoIP)
+	qa, _, e = initTestQAdm(pepe, pepeIP)
 	require.NoError(t, e)
 	var u *url.URL
 	u, e = url.Parse("https://14ymedio.com/bla/bla")
 	require.NoError(t, e)
 	var c float32
-	c = qa.CanReq(cocoIP, u, time.Now())
+	c = qa.CanReq(pepeIP, u, time.Now())
 	require.True(t, c == -1, "%.1f ≠ -1", c)
 	u, e = url.Parse("https://google.com.cu/coco/pepe")
 	require.NoError(t, e)
-	c = qa.CanReq(cocoIP, u, time.Now())
+	c = qa.CanReq(pepeIP, u, time.Now())
 	require.True(t, c == 0, "%.1f ≠ 0", c)
+	var fpm time.Time
+	fpm, e = time.Parse(time.RFC3339, "2006-01-02T08:00:01-04:00")
+	require.NoError(t, e)
+	u, e = url.Parse("https://facebook.com/coco")
+	require.NoError(t, e)
+	c = qa.CanReq(pepeIP, u, fpm)
+	require.True(t, c == -1.5, "%.1f ≠ -1.5", c)
+	fpm, e = time.Parse(time.RFC3339, "2006-01-02T08:00:00-04:00")
+	require.NoError(t, e)
+	require.False(t, qa.FinishedQuota(pepeIP))
+	c = qa.CanReq(pepeIP, u, fpm)
+	require.True(t, c == 1.5, "%.1f ≠ 1.5", c)
+}
+
+func TestInDayInterval(t *testing.T) {
+	var a, x, y time.Time
+	var e error
+	a, e = time.Parse(time.RFC3339, "2006-01-02T07:00:00-04:00")
+	require.NoError(t, e)
+	x, e = time.Parse(time.RFC3339, "2006-01-02T08:00:00-04:00")
+	require.NoError(t, e)
+	y, e = time.Parse(time.RFC3339, "2006-01-02T14:00:00-04:00")
+	require.NoError(t, e)
+	var b bool
+	b = inDayInterval(a, x, y)
+	require.False(t, b)
+}
+
+func TestFinishedQuota(t *testing.T) {
+	var qa *QAdm
+	var e error
+	qa, _, e = initTestQAdm(coco, cocoIP)
+	require.NoError(t, e)
+	b := qa.FinishedQuota(cocoIP)
+	require.True(t, b)
 }
 
 const (
@@ -145,7 +180,8 @@ func (b *stringCloser) Close() (e error) {
 
 var accR = `[
  {"hostName":"google.com.cu","start":null,"end":null,"consCfc":0},
- {"hostName":"14ymedio.com","start":null,"end":null,"consCfc":-1}
+ {"hostName":"14ymedio.com","start":"1959-01-01T00:00:00-04:00","end":"2030-01-01T00:00:00-04:00","consCfc":1},
+{"hostName":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-04:00","end":"2006-01-02T14:00:00-04:00","consCfc":1.5}
 ]`
 
 var cons = `{

@@ -15,6 +15,7 @@ type NameVal struct {
 
 type AccExcp struct {
 	HostName string    `json:"hostName"`
+	Daily    bool      `json:"daily"`
 	Start    time.Time `json:"start"`
 	End      time.Time `json:"end"`
 	ConsCfc  float32   `json:"consCfc"`
@@ -110,7 +111,7 @@ func (q *QAdm) FinishedQuota(ip string) (b bool) {
 }
 
 // c < 0 means that the request cannot be made
-// c >= 0 means c * Response.ContentLength = UserConsumption
+// c ≥ 0 means c * Response.ContentLength = UserConsumption
 func (r *QAdm) CanReq(ip string, l *url.URL,
 	d time.Time) (c float32) {
 	var i int
@@ -123,14 +124,18 @@ func (r *QAdm) CanReq(ip string, l *url.URL,
 			i = i + 1
 		}
 	}
+	var res AccExcp
 	if f {
-		c = r.al[i].ConsCfc
+		res = r.al[i]
+		c = res.ConsCfc
 	}
-	if c != -1 && (r.FinishedQuota(ip) ||
-		(d.After(r.al[i].Start) &&
-			d.Before(r.al[i].End))) {
+	// { c ≥ 0 }
+	if r.FinishedQuota(ip) ||
+		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
+			(res.Daily && inDayInterval(d, res.Start, res.End))) {
 		c = c * -1
 	}
+	//{ r.FinishedQuota(ip) ∨ d inside forbidden interval ⇒ c < 0 }
 	return
 }
 
@@ -138,5 +143,20 @@ func ReadAccExcp(r io.Reader) (l []AccExcp, e error) {
 	var dc *json.Decoder
 	dc, l = json.NewDecoder(r), make([]AccExcp, 0)
 	e = dc.Decode(&l)
+	return
+}
+
+// a ∈ (x, y)
+func inDayInterval(a, x, y time.Time) (b bool) {
+	var beforeY, afterX bool
+	beforeY = beforeInDay(a, y)
+	afterX = beforeInDay(x, a)
+	b = beforeY && afterX
+	return
+}
+
+func beforeInDay(x, y time.Time) (b bool) {
+	b = x.Hour() < y.Hour() || x.Minute() < y.Minute() ||
+		x.Second() < y.Second() || x.Nanosecond() < y.Nanosecond()
 	return
 }
