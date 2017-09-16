@@ -22,6 +22,8 @@ const (
 	groupV  = "group"
 )
 
+// HTTP server for proxying requests and administrating
+// quotas other aspects
 type PMProxy struct {
 	mx *ServeMux
 	qa *QAdm
