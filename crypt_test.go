@@ -8,12 +8,8 @@ import (
 )
 
 func TestCrypt(t *testing.T) {
-	j := new(JWTCrypt)
-	var pKey *rsa.PrivateKey
-	var e error
-	pKey, e = parseKey()
+	j, e := newJWTCrypt()
 	require.NoError(t, e)
-	j.Init(pKey)
 	var u *User
 	u = &User{UserName: "coco", Name: "Coco"}
 	var s string
@@ -24,6 +20,23 @@ func TestCrypt(t *testing.T) {
 	require.NoError(t, e)
 	require.True(t, du.UserName == "coco",
 		"du.Name = \"%s\"", du.UserName)
+}
+
+func TestDecrypt(t *testing.T) {
+	j, e := newJWTCrypt()
+	require.NoError(t, e)
+	_, e = j.Decrypt("")
+	require.Error(t, e)
+}
+
+func newJWTCrypt() (j *JWTCrypt, e error) {
+	j = new(JWTCrypt)
+	var pKey *rsa.PrivateKey
+	pKey, e = parseKey()
+	if e == nil {
+		j.Init(pKey)
+	}
+	return
 }
 
 func parseKey() (pKey *rsa.PrivateKey, e error) {

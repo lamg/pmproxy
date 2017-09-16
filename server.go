@@ -26,14 +26,16 @@ type PMProxy struct {
 	mx *ServeMux
 	qa *QAdm
 	lg *RLog
-	gp *Proxy
+	gp *proxy
 }
 
-func (p *PMProxy) Init(qa *QAdm, lg *RLog) {
+func NewPMProxy(qa *QAdm, lg *RLog) (p *PMProxy) {
+	p = new(PMProxy)
 	p.qa, p.mx, p.lg = qa, NewServeMux(), lg
 	p.mx.HandleFunc(logX, p.logXHF)
 	p.mx.HandleFunc(groupQuota, p.groupQuotaHF)
 	p.mx.HandleFunc(userCons, p.userConsHF)
+	return
 }
 
 func (p *PMProxy) logXHF(w ResponseWriter, r *Request) {

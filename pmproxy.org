@@ -26,6 +26,7 @@ Ríos's needs, which are the following:
 - Improve test coverage (76%)
 - Integration
 - Improve document
+- TestUserInfo shouldn't fail when there is no network connection
 
 ** HTTP server
 Is implemented at server.go file. It handles the local

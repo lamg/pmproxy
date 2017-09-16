@@ -7,19 +7,19 @@ import (
 	"time"
 )
 
-type Proxy struct {
+type proxy struct {
 	qa *QAdm
 	px *g.ProxyHttpServer
 	rl *RLog
 }
 
-func (p *Proxy) Init(qa *QAdm, rl *RLog) {
+func (p *proxy) Init(qa *QAdm, rl *RLog) {
 	p.px, p.qa, p.rl = g.NewProxyHttpServer(), qa, rl
 	p.px.OnRequest().DoFunc(p.restrictAccess)
 	p.px.OnResponse().DoFunc(p.updateConsumption)
 }
 
-func (p *Proxy) restrictAccess(r *Request,
+func (p *proxy) restrictAccess(r *Request,
 	c *g.ProxyCtx) (x *Request, y *Response) {
 	ud := new(usrDt)
 	ud.cf, x = p.qa.CanReq(r.RemoteAddr, r.URL, time.Now()), r
@@ -39,7 +39,7 @@ type usrDt struct {
 	time time.Time
 }
 
-func (p *Proxy) updateConsumption(r *Response,
+func (p *proxy) updateConsumption(r *Response,
 	c *g.ProxyCtx) (x *Response) {
 	// { c.UserData ≠ nil ∧ c.UserData has type *usrDt }
 	var ud *usrDt
@@ -73,6 +73,6 @@ func (p *Proxy) updateConsumption(r *Response,
 	return
 }
 
-func (p *Proxy) ServeHTTP(w ResponseWriter, r *Request) {
+func (p *proxy) ServeHTTP(w ResponseWriter, r *Request) {
 	p.px.ServeHTTP(w, r)
 }

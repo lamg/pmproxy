@@ -57,8 +57,7 @@ func initPMProxy() (p *PMProxy, qa *QAdm, e error) {
 		lg := new(RLog)
 		lg.Init(NewDWF(), sm)
 		// pm initialization
-		p = new(PMProxy)
-		p.Init(qa, lg)
+		p = NewPMProxy(qa, lg)
 	}
 	return
 }
