@@ -86,7 +86,7 @@ func (p *MapPrs) PersistIfTime() (b bool, e error) {
 
 func (p *MapPrs) Reset() {
 	p.mp.Range(func(a, b interface{}) (x bool) {
-		p.mp.Store(a, 0)
+		p.mp.Store(a, uint64(0))
 		x = true
 		return
 	})

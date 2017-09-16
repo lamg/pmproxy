@@ -7,6 +7,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+// User is the type representing a logged user into the
+// system
 type User struct {
 	UserName   string `json:"userName"`
 	Name       string `json:"name"`
@@ -14,6 +16,8 @@ type User struct {
 	QuotaGroup string `json:"quotaGroup"`
 }
 
+// Equal says whether this user is equal to
+// another
 func (u *User) Equal(v interface{}) (ok bool) {
 	var lu *User
 	lu, ok = v.(*User)
@@ -28,6 +32,7 @@ type JWTCrypt struct {
 	pKey *rsa.PrivateKey
 }
 
+// JWTUser adds jwt.StandardClaims to an User
 type JWTUser struct {
 	User *User `json:"user"`
 	jwt.StandardClaims
