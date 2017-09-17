@@ -58,13 +58,19 @@ func TestProxy(t *testing.T) {
 	require.NoError(t, ec)
 	p.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == h.StatusForbidden)
-	_, e = p.qa.login(pepe, pepeIP)
+	var s string
+	s, e = p.qa.login(pepe, pepeIP)
 	require.True(t, !qa.finishedQuota(pepeIP))
 	require.True(t, e == nil)
 	rr = ht.NewRecorder()
 	rq.RemoteAddr = pepeIP
+	var n, nv uint64
+	n, e = p.qa.userCons(pepeIP, s, pepe.User)
+	require.True(t, e == nil)
 	p.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == h.StatusOK ||
+	nv, e = p.qa.userCons(pepeIP, s, pepe.User)
+	require.True(t, e == nil)
+	require.True(t, (rr.Code == h.StatusOK && nv > n) ||
 		rr.Code == h.StatusNotFound)
 	//TODO test with network connection
 }

@@ -23,10 +23,8 @@ Ríos's needs, which are the following:
 - Administration of quotas through an HTTP service.
 
 ** TODO General Tasks
-- Improve test coverage (76%)
 - Integration
 - Improve document
-- Error handling with github.com/lamg/errors
 
 ** HTTP server
 Is implemented at server.go file. It handles the local

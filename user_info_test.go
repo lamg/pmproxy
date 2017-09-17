@@ -35,6 +35,15 @@ func TestUserInfo(t *testing.T) {
 	} else {
 		udb := NewLDB(ld, adAdmG, []string{adAdmG, "Prof", "Est"})
 		u, e := udb.Login(uprUser, uprPass)
-		require.True(t, u != nil && e == nil)
+		require.True(t, e == nil && len(u.UserName) > 0 &&
+			len(u.Name) > 0 && len(u.QuotaGroup) > 0)
 	}
+}
+
+func TestElementOf(t *testing.T) {
+	a, b, c := []string{"a", "b", "c"}, []string{"c"}, []string{"C"}
+	aok, i := hasElementOf(a, b)
+	require.True(t, aok && i == 1)
+	cok, j := hasElementOf(a, c)
+	require.True(t, !cok && j == 1)
 }
