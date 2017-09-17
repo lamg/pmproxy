@@ -58,8 +58,7 @@ func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 	}
 	// { uc initialized ≡ e = nil }
 	if e == nil {
-		qa = new(QAdm)
-		qa.Init(sm, gq, uc, l, time.Now(), time.Second)
+		qa = NewQAdm(sm, gq, uc, l, time.Now(), time.Second)
 		s, e = qa.login(c, ip)
 	}
 	// { qa initialized ∧ c logged in ≡ e = nil }
@@ -148,6 +147,9 @@ func TestFinishedQuota(t *testing.T) {
 	require.True(t, e == nil)
 	b := qa.finishedQuota(cocoIP)
 	require.True(t, b)
+	_, e = qa.login(pepe, pepeIP)
+	require.True(t, e == nil)
+	require.True(t, !qa.finishedQuota(pepeIP))
 }
 
 const (

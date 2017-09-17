@@ -10,9 +10,9 @@ import (
 const (
 	// ErrorParseJWT is the error when parsing a JWT
 	ErrorParseJWT = iota
-	// ErrorNotMapClaims is the error when a MapClaims type
+	// ErrorNotJWTUser is the error when a JWTUser type
 	// assertion fails
-	ErrorNotMapClaims
+	ErrorNotJWTUser
 	// ErrorNotValidJWT is the error when the JWT isn't valid
 	ErrorNotValidJWT
 	// ErrorParseRSAPrivateFromPEM is the error when calling
@@ -60,10 +60,8 @@ func (j *JWTCrypt) Init(p *rsa.PrivateKey) {
 }
 
 func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {
-	var t *jwt.Token
-	var uc *JWTUser
-	uc = &JWTUser{User: u}
-	t = jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
+	uc := &JWTUser{User: u}
+	t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
 	var ec error
 	s, ec = t.SignedString(j.pKey)
 	if ec != nil {
@@ -99,8 +97,8 @@ func (j *JWTCrypt) decrypt(s string) (u *User, e *errors.Error) {
 		clm, ok = t.Claims.(*JWTUser)
 		if !ok {
 			e = &errors.Error{
-				Code: ErrorNotMapClaims,
-				Err:  fmt.Errorf("False jwt.MapClaims type assertion"),
+				Code: ErrorNotJWTUser,
+				Err:  fmt.Errorf("False JWTUser type assertion"),
 			}
 		}
 	}

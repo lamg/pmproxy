@@ -40,14 +40,13 @@ const (
 type PMProxy struct {
 	mx *h.ServeMux
 	qa *QAdm
-	lg *RLog
 	gp *proxy
 }
 
 // NewPMProxy creates a new PMProxy
 func NewPMProxy(qa *QAdm, lg *RLog) (p *PMProxy) {
 	p = new(PMProxy)
-	p.qa, p.mx, p.lg = qa, h.NewServeMux(), lg
+	p.qa, p.mx, p.gp = qa, h.NewServeMux(), newProxy(qa, lg)
 	p.mx.HandleFunc(logX, p.logXHF)
 	p.mx.HandleFunc(groupQuota, p.groupQuotaHF)
 	p.mx.HandleFunc(userCons, p.userConsHF)
@@ -150,9 +149,10 @@ func encode(w io.Writer, v interface{}) (e *errors.Error) {
 	var bs []byte
 	var ec error
 	bs, ec = json.Marshal(v)
-	if e == nil {
+	if ec == nil {
 		_, ec = w.Write(bs)
-	} else {
+	}
+	if ec != nil {
 		e = &errors.Error{
 			Code: ErrorEncode,
 			Err:  ec,
@@ -163,8 +163,11 @@ func encode(w io.Writer, v interface{}) (e *errors.Error) {
 
 func writeErr(w h.ResponseWriter, e *errors.Error) {
 	if e != nil {
-		w.Write([]byte(e.Error()))
+		// The order of the following commands matter since
+		// httptest.ResponseRecorder ignores parameter sent
+		// to WriteHeader if Write was called first
 		w.WriteHeader(h.StatusBadRequest)
+		w.Write([]byte(e.Error()))
 	}
 }
 

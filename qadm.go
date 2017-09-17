@@ -55,10 +55,18 @@ type QAdm struct {
 	cd time.Duration
 }
 
-// Init initializes the QAdm instance
-func (q *QAdm) Init(sm *SMng, gq, uc *MapPrs, al []AccExcp,
-	rd time.Time, cd time.Duration) {
-	q.sm, q.gq, q.uc, q.al, q.rd, q.cd = sm, gq, uc, al, rd, cd
+// NewQAdm creates a new QAdm instance
+func NewQAdm(sm *SMng, gq, uc *MapPrs, al []AccExcp,
+	rd time.Time, cd time.Duration) (q *QAdm) {
+	q = &QAdm{
+		sm: sm,
+		gq: gq,
+		uc: uc,
+		al: al,
+		rd: rd,
+		cd: cd,
+	}
+	return
 }
 
 func (q *QAdm) login(c *credentials,

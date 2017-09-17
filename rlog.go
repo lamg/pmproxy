@@ -19,10 +19,10 @@ type RLog struct {
 	iu IPUser
 }
 
-// Init initializes RLog
-func (rl *RLog) Init(wr w.WriterFct, iu IPUser) {
-	rl.wr, rl.iu = wr, iu
-	rl.w = rl.wr.Current()
+// NewRLog creates a new RLog
+func NewRLog(wr w.WriterFct, iu IPUser) (rl *RLog) {
+	rl = &RLog{wr: wr, iu: iu, w: wr.Current()}
+	return
 }
 
 func (rl *RLog) setZero() {

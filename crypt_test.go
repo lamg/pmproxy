@@ -11,8 +11,7 @@ import (
 func TestCrypt(t *testing.T) {
 	j, e := newJWTCrypt()
 	require.True(t, e == nil)
-	var u *User
-	u = &User{UserName: "coco", Name: "Coco"}
+	u := &User{UserName: "coco", Name: "Coco"}
 	var s string
 	s, e = j.encrypt(u)
 	require.True(t, e == nil)
@@ -23,6 +22,20 @@ func TestCrypt(t *testing.T) {
 		"du.Name = \"%s\"", du.UserName)
 }
 
+func TestErrDecrypt(t *testing.T) {
+	j, e := newJWTCrypt()
+	require.True(t, e == nil)
+	_, e = j.decrypt("coco")
+	require.True(t, e.Code == ErrorParseJWT)
+	uc := nJWT{User: "coc"}
+	tk := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
+	s, ec := tk.SignedString(j.pKey)
+	require.NoError(t, ec)
+	_, e = j.decrypt(s)
+	t.Log(e)
+	require.True(t, e.Code == ErrorParseJWT)
+}
+
 func newJWTCrypt() (j *JWTCrypt, e *errors.Error) {
 	j = new(JWTCrypt)
 	var pKey *rsa.PrivateKey
@@ -31,6 +44,11 @@ func newJWTCrypt() (j *JWTCrypt, e *errors.Error) {
 		j.Init(pKey)
 	}
 	return
+}
+
+type nJWT struct {
+	User string `json:"user"`
+	jwt.StandardClaims
 }
 
 func parseKey() (pKey *rsa.PrivateKey, e *errors.Error) {

@@ -2,17 +2,14 @@ package pmproxy
 
 import (
 	"bytes"
-	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"github.com/lamg/errors"
-	. "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
 	. "net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
-	"time"
 )
 
 const (
@@ -21,53 +18,18 @@ const (
 	ErrorServeHTTP = iota
 )
 
-func initPMProxy() (p *PMProxy, qa *QAdm, e *errors.Error) {
-	// qa initialization
-	qa = new(QAdm)
-
-	// init of l
-	var bf *bytes.Buffer
-	bf = bytes.NewBufferString(accR)
-	var l []AccExcp
-	l, e = ReadAccExcp(bf)
-	var pKey *rsa.PrivateKey
+func initPMProxy() (p *PMProxy, e *errors.Error) {
+	var qa *QAdm
+	var lg *RLog
+	qa, lg, e = initQARL()
 	if e == nil {
-		pKey, e = parseKey()
-	}
-
-	sm := new(SMng)
-	if e == nil {
-		da, cry := new(dAuth), new(JWTCrypt)
-		da.init()
-		cry.Init(pKey)
-		sm.Init(da, cry)
-	}
-
-	var gq *MapPrs
-	if e == nil {
-		gq, e = NewMapPrs(bytes.NewBufferString(quota),
-			NewDWF(), time.Now(), time.Second)
-	}
-
-	var uc *MapPrs
-	if e == nil {
-		uc, e = NewMapPrs(bytes.NewBufferString(cons),
-			NewDWF(), time.Now(), time.Second)
-	}
-
-	if e == nil {
-		qa.Init(sm, gq, uc, l, time.Now(), time.Second)
-		// lg initialization
-		lg := new(RLog)
-		lg.Init(NewDWF(), sm)
-		// pm initialization
 		p = NewPMProxy(qa, lg)
 	}
 	return
 }
 
 func TestServerLogInOut(t *testing.T) {
-	pm, qa, e := initPMProxy()
+	pm, e := initPMProxy()
 	require.True(t, e == nil)
 	bfrq := bytes.NewBufferString(`{"user":"a", "pass":"a"}`)
 	rr := httptest.NewRecorder()
@@ -79,10 +41,10 @@ func TestServerLogInOut(t *testing.T) {
 	scrt := rr.Header().Get(authHd)
 	require.True(t, scrt != "")
 	var usr *User
-	usr, e = qa.sm.check(cocoIP, scrt)
+	usr, e = pm.qa.sm.check(cocoIP, scrt)
 	require.True(t, e == nil)
 	require.True(t, usr.UserName == "a" &&
-		qa.sm.sessions[cocoIP].Equal(usr))
+		pm.qa.sm.sessions[cocoIP].Equal(usr))
 
 	rr = httptest.NewRecorder()
 	rq, ec = NewRequest(MethodDelete, logX, nil)
@@ -91,12 +53,14 @@ func TestServerLogInOut(t *testing.T) {
 	rq.Header.Set(authHd, scrt)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
-	require.True(t, qa.sm.sessions[cocoIP] == nil, "%v ≠ nil",
-		qa.sm.sessions[cocoIP])
+	require.True(t, pm.qa.sm.sessions[cocoIP] == nil, "%v ≠ nil",
+		pm.qa.sm.sessions[cocoIP])
+
+	testUnsMeth(t, pm, logX, MethodConnect)
 }
 
 func loginServ() (pm *PMProxy, s string, e *errors.Error) {
-	pm, _, e = initPMProxy()
+	pm, e = initPMProxy()
 	var ec error
 	var rq *Request
 	if e == nil {
@@ -138,6 +102,8 @@ func TestGetGroupQuotaHF(t *testing.T) {
 	pm.qa.getQuota(cocoIP, scrt, dv)
 	require.True(t, nv.Value == dv.Value, "%d ≠ %d", nv.Value,
 		dv.Value)
+
+	testUnsMeth(t, pm, groupQuota, MethodConnect)
 }
 
 func TestPutGroupQuotaHF(t *testing.T) {
@@ -173,10 +139,39 @@ func TestGetUserCons(t *testing.T) {
 	dv, ok := pm.qa.uc.load(coco.User)
 	require.True(t, ok)
 	require.True(t, nv.Value == dv)
+
+	testUnsMeth(t, pm, userCons, MethodConnect)
+}
+
+func TestCode(t *testing.T) {
+	bf := bytes.NewBufferString("")
+	e := encode(bf, make(chan int, 0))
+	require.True(t, e != nil && e.Code == ErrorEncode)
+	e = decode(bf, 0)
+	require.True(t, e != nil && e.Code == ErrorDecode)
+}
+
+func TestGoogleReq(t *testing.T) {
+	rr := httptest.NewRecorder()
+	rq, ec := NewRequest(MethodGet, "https://google.com", nil)
+	require.NoError(t, ec)
+	pm, e := initPMProxy()
+	require.True(t, e == nil)
+	pm.ServeHTTP(rr, rq)
+	// since user isn't logged
+	require.True(t, rr.Code == StatusForbidden)
 }
 
 func setQV(u *url.URL, k, v string) {
 	vs := u.Query()
 	vs.Set(k, v)
 	u.RawQuery = vs.Encode()
+}
+
+func testUnsMeth(t *testing.T, pm *PMProxy, path, meth string) {
+	rr := httptest.NewRecorder()
+	rq, ec := NewRequest(meth, path, nil)
+	require.NoError(t, ec)
+	pm.ServeHTTP(rr, rq)
+	require.True(t, rr.Code == StatusBadRequest)
 }
