@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"crypto/rsa"
+	"github.com/lamg/errors"
 	. "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
 	"net/url"
@@ -14,9 +15,9 @@ func TestLoadAccStr(t *testing.T) {
 	var sr *strings.Reader
 	sr = strings.NewReader(accR)
 	var l []AccExcp
-	var e error
+	var e *errors.Error
 	l, e = ReadAccExcp(sr)
-	require.NoError(t, e)
+	require.True(t, e == nil)
 	var zt time.Time
 	zt = time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -24,8 +25,8 @@ func TestLoadAccStr(t *testing.T) {
 		l[0].Start == zt && l[0].End == zt && l[0].ConsCfc == 0)
 }
 
-func initTestQAdm(c *Credentials, ip string) (qa *QAdm,
-	s string, e error) {
+func initTestQAdm(c *credentials, ip string) (qa *QAdm,
+	s string, e *errors.Error) {
 	var sr *strings.Reader
 	sr = strings.NewReader(accR)
 	var l []AccExcp
@@ -35,12 +36,10 @@ func initTestQAdm(c *Credentials, ip string) (qa *QAdm,
 	if e == nil {
 		pKey, e = parseKey()
 	}
-	var sm *SMng
+	sm := new(SMng)
 	if e == nil {
-		var da *dAuth
-		var jw *JWTCrypt
-		sm, da, jw = new(SMng), new(dAuth), new(JWTCrypt)
-		da.Init()
+		da, jw := new(dAuth), new(JWTCrypt)
+		da.init()
 		jw.Init(pKey)
 		sm.Init(da, jw)
 	}
@@ -61,81 +60,72 @@ func initTestQAdm(c *Credentials, ip string) (qa *QAdm,
 	if e == nil {
 		qa = new(QAdm)
 		qa.Init(sm, gq, uc, l, time.Now(), time.Second)
-		s, e = qa.Login(c, ip)
+		s, e = qa.login(c, ip)
 	}
 	// { qa initialized ∧ c logged in ≡ e = nil }
 	return
 }
 
 func TestSetQuota(t *testing.T) {
-	var qa *QAdm
-	var scrt string
-	var e error
-	qa, scrt, e = initTestQAdm(pepe, pepeIP)
-	require.NoError(t, e)
-	e = qa.SetQuota(pepeIP, scrt, &NameVal{gProf, qProf})
-	require.NoError(t, e)
-	e = qa.SetQuota(pepeIP, scrt, &NameVal{gEst, qEst})
-	require.NoError(t, e)
+	qa, scrt, e := initTestQAdm(pepe, pepeIP)
+	require.True(t, e == nil)
+	e = qa.setQuota(pepeIP, scrt, &nameVal{gProf, qProf})
+	require.True(t, e == nil)
+	e = qa.setQuota(pepeIP, scrt, &nameVal{gEst, qEst})
+	require.True(t, e == nil)
 }
 
 func TestGetQuota(t *testing.T) {
 	var qa *QAdm
 	var scrt string
-	var e error
+	var e *errors.Error
 	qa, scrt, e = initTestQAdm(coco, cocoIP)
-	require.NoError(t, e)
+	require.True(t, e == nil)
 	// { logged in qa }
 
-	v := &NameVal{Name: gProf}
-	qa.GetQuota(cocoIP, scrt, v)
+	v := &nameVal{Name: gProf}
+	qa.getQuota(cocoIP, scrt, v)
 	require.True(t, v.Value == qProf, "%d≠%d", v.Value, qProf)
 	v.Name = gEst
-	qa.GetQuota(cocoIP, scrt, v)
+	qa.getQuota(cocoIP, scrt, v)
 	require.True(t, v.Value == qEst, "%d≠%d", v.Value, qEst)
 }
 
 func TestAddCons(t *testing.T) {
-	var qa *QAdm
-	var scrt string
-	var e error
-	qa, scrt, e = initTestQAdm(coco, cocoIP)
-	require.NoError(t, e)
+	qa, scrt, e := initTestQAdm(coco, cocoIP)
+	require.True(t, e == nil)
 	var nc, dwn, n uint64
 	dwn = 1024
-	nc, e = qa.UserCons(cocoIP, scrt, coco.User)
-	qa.AddCons(cocoIP, dwn)
-	n, e = qa.UserCons(cocoIP, scrt, coco.User)
-	require.NoError(t, e)
+	nc, e = qa.userCons(cocoIP, scrt, coco.User)
+	qa.addCons(cocoIP, dwn)
+	n, e = qa.userCons(cocoIP, scrt, coco.User)
+	require.True(t, e == nil)
 	require.True(t, n == nc+dwn, "%d≠%d", n, nc+dwn)
 }
 
 func TestCanReq(t *testing.T) {
-	var qa *QAdm
-	var e error
-	qa, _, e = initTestQAdm(pepe, pepeIP)
-	require.NoError(t, e)
-	var u *url.URL
-	u, e = url.Parse("https://14ymedio.com/bla/bla")
-	require.NoError(t, e)
+	qa, _, e := initTestQAdm(pepe, pepeIP)
+	require.True(t, e == nil)
+	u, ec := url.Parse("https://14ymedio.com/bla/bla")
+	require.NoError(t, ec)
 	var c float32
-	c = qa.CanReq(pepeIP, u, time.Now())
+	c = qa.canReq(pepeIP, u, time.Now())
 	require.True(t, c == -1, "%.1f ≠ -1", c)
-	u, e = url.Parse("https://google.com.cu/coco/pepe")
-	require.NoError(t, e)
-	c = qa.CanReq(pepeIP, u, time.Now())
+	u, ec = url.Parse("https://google.com.cu/coco/pepe")
+	require.NoError(t, ec)
+	c = qa.canReq(pepeIP, u, time.Now())
 	require.True(t, c == 0, "%.1f ≠ 0", c)
 	var fpm time.Time
-	fpm, e = time.Parse(time.RFC3339, "2006-01-02T08:00:01-04:00")
-	require.NoError(t, e)
-	u, e = url.Parse("https://facebook.com/coco")
-	require.NoError(t, e)
-	c = qa.CanReq(pepeIP, u, fpm)
+	fpm, ec = time.Parse(time.RFC3339, "2006-01-02T08:00:01-04:00")
+	require.NoError(t, ec)
+	u, ec = url.Parse("https://facebook.com/coco")
+	require.NoError(t, ec)
+	c = qa.canReq(pepeIP, u, fpm)
 	require.True(t, c == -1.5, "%.1f ≠ -1.5", c)
-	fpm, e = time.Parse(time.RFC3339, "2006-01-02T08:00:00-04:00")
-	require.NoError(t, e)
-	require.False(t, qa.FinishedQuota(pepeIP))
-	c = qa.CanReq(pepeIP, u, fpm)
+	fpm, ec = time.Parse(time.RFC3339, "2006-01-02T08:00:00-04:00")
+	require.NoError(t, ec)
+	require.False(t, qa.finishedQuota(pepeIP))
+	c = qa.canReq(pepeIP, u, fpm)
 	require.True(t, c == 1.5, "%.1f ≠ 1.5", c)
 }
 
@@ -154,11 +144,9 @@ func TestInDayInterval(t *testing.T) {
 }
 
 func TestFinishedQuota(t *testing.T) {
-	var qa *QAdm
-	var e error
-	qa, _, e = initTestQAdm(coco, cocoIP)
-	require.NoError(t, e)
-	b := qa.FinishedQuota(cocoIP)
+	qa, _, e := initTestQAdm(coco, cocoIP)
+	require.True(t, e == nil)
+	b := qa.finishedQuota(cocoIP)
 	require.True(t, b)
 }
 

@@ -3,24 +3,47 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/lamg/errors"
 	"io"
 	"net/url"
 	"time"
 )
 
-type NameVal struct {
+const (
+	// ErrorReadAccExcp is the error returned by ReadAccExcp
+	ErrorReadAccExcp = iota
+	// ErrorUCLd is the error when loading a key at userCons call
+	ErrorUCLd
+	// ErrorSQNA is the error when setting a quota without being
+	// administrator, at setQuota call
+	ErrorSQNA
+)
+
+type nameVal struct {
 	Name  string `json:"name"`
 	Value uint64 `json:"value"`
 }
 
+// AccExcp represents an access exception
 type AccExcp struct {
-	HostName string    `json:"hostName"`
-	Daily    bool      `json:"daily"`
-	Start    time.Time `json:"start"`
-	End      time.Time `json:"end"`
-	ConsCfc  float32   `json:"consCfc"`
+	// Host name of the forbidden server
+	HostName string `json:"hostName"`
+	// The restriction is applied daily, this means that
+	// only the time of the day is looked for restricting
+	// access
+	Daily bool `json:"daily"`
+	// Time when the restriction starts
+	Start time.Time `json:"start"`
+	// Time when the restriction ends
+	End time.Time `json:"end"`
+	// Coeficient for multiplying the ContentLength and
+	// recording the result as downloaded amount
+	ConsCfc float32 `json:"consCfc"`
 }
 
+// QAdm is the administrator of quotas, also restricts
+// downloads according an []AccExcp and handles users's
+// sessions through an *SMng
 type QAdm struct {
 	sm *SMng
 	// Group Quota and User Consumption
@@ -32,59 +55,68 @@ type QAdm struct {
 	cd time.Duration
 }
 
+// Init initializes the QAdm instance
 func (q *QAdm) Init(sm *SMng, gq, uc *MapPrs, al []AccExcp,
 	rd time.Time, cd time.Duration) {
 	q.sm, q.gq, q.uc, q.al, q.rd, q.cd = sm, gq, uc, al, rd, cd
 }
 
-func (q *QAdm) Login(c *Credentials,
-	addr string) (s string, e error) {
-	s, e = q.sm.Login(c, addr)
+func (q *QAdm) login(c *credentials,
+	addr string) (s string, e *errors.Error) {
+	s, e = q.sm.login(c, addr)
 	return
 }
 
-func (q *QAdm) Logout(ip, s string) (e error) {
-	e = q.sm.Logout(ip, s)
+func (q *QAdm) logout(ip, s string) (e *errors.Error) {
+	e = q.sm.logout(ip, s)
 	return
 }
 
-func (q *QAdm) GetQuota(ip, s string, g *NameVal) {
-	_, e := q.sm.Check(ip, s)
+func (q *QAdm) getQuota(ip, s string, g *nameVal) {
+	_, e := q.sm.check(ip, s)
 	if e == nil {
-		g.Value, _ = q.gq.Load(g.Name)
+		g.Value, _ = q.gq.load(g.Name)
 	}
 }
 
-func (q *QAdm) SetQuota(ip, s string, g *NameVal) (e error) {
+func (q *QAdm) setQuota(ip, s string,
+	g *nameVal) (e *errors.Error) {
 	var u *User
-	u, e = q.sm.Check(ip, s)
+	u, e = q.sm.check(ip, s)
 	if e == nil && u.IsAdmin {
-		q.gq.Store(g.Name, g.Value)
-		_, e = q.gq.PersistIfTime()
+		q.gq.store(g.Name, g.Value)
+		_, e = q.gq.persistIfTime()
 	} else if e == nil && !u.IsAdmin {
-		e = fmt.Errorf("%s is not an administrator", u.UserName)
+		e = &errors.Error{
+			Code: ErrorSQNA,
+			Err:  fmt.Errorf("%s is not an administrator", u.UserName),
+		}
 	}
 	return
 }
 
-func (q *QAdm) UserCons(ip, s, usr string) (v uint64, e error) {
-	_, e = q.sm.Check(ip, s)
+func (q *QAdm) userCons(ip, s,
+	usr string) (v uint64, e *errors.Error) {
+	_, e = q.sm.check(ip, s)
 	var ok bool
 	if e == nil {
-		v, ok = q.uc.Load(usr)
+		v, ok = q.uc.load(usr)
 	}
 	if !ok {
-		e = fmt.Errorf("Not found consupmtion for user %s", usr)
+		e = &errors.Error{
+			Code: ErrorUCLd,
+			Err:  fmt.Errorf("Not found consupmtion for user %s", usr),
+		}
 	}
 	return
 }
 
-func (q *QAdm) AddCons(ip string, c uint64) {
+func (q *QAdm) addCons(ip string, c uint64) {
 	// reset consumption if cycle ended
 	var nt time.Time
 	nt = newTime(q.rd, q.cd)
 	if nt != q.rd {
-		q.uc.Reset()
+		q.uc.reset()
 		q.rd = nt
 	}
 
@@ -92,19 +124,19 @@ func (q *QAdm) AddCons(ip string, c uint64) {
 	var u *User
 	u = q.sm.User(ip)
 	if u != nil {
-		n, _ = q.uc.Load(u.UserName)
-		q.uc.Store(u.UserName, n+c)
-		q.uc.PersistIfTime()
+		n, _ = q.uc.load(u.UserName)
+		q.uc.store(u.UserName, n+c)
+		q.uc.persistIfTime()
 	}
 }
 
-func (q *QAdm) FinishedQuota(ip string) (b bool) {
+func (q *QAdm) finishedQuota(ip string) (b bool) {
 	var u *User
 	u = q.sm.User(ip)
 	var cons, quota uint64
 	if u != nil {
-		cons, _ = q.uc.Load(u.UserName)
-		quota, _ = q.gq.Load(u.QuotaGroup)
+		cons, _ = q.uc.load(u.UserName)
+		quota, _ = q.gq.load(u.QuotaGroup)
 	}
 	b = cons >= quota
 	return
@@ -112,37 +144,45 @@ func (q *QAdm) FinishedQuota(ip string) (b bool) {
 
 // c < 0 means that the request cannot be made
 // c ≥ 0 means c * Response.ContentLength = UserConsumption
-func (r *QAdm) CanReq(ip string, l *url.URL,
+func (q *QAdm) canReq(ip string, l *url.URL,
 	d time.Time) (c float32) {
 	var i int
 	//f means found l.Host in r.al[].hostname
 	var f bool
 	i, f, c = 0, false, 1
-	for !f && i != len(r.al) {
-		f = r.al[i].HostName == l.Host
+	for !f && i != len(q.al) {
+		f = q.al[i].HostName == l.Host
 		if !f {
 			i = i + 1
 		}
 	}
 	var res AccExcp
 	if f {
-		res = r.al[i]
+		res = q.al[i]
 		c = res.ConsCfc
 	}
 	// { c ≥ 0 }
-	if r.FinishedQuota(ip) ||
+	if q.finishedQuota(ip) ||
 		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
 			(res.Daily && inDayInterval(d, res.Start, res.End))) {
 		c = c * -1
 	}
-	//{ r.FinishedQuota(ip) ∨ d inside forbidden interval ⇒ c < 0 }
+	//{ q.finishedQuota(ip) ∨ d inside forbidden interval ⇒ c < 0 }
 	return
 }
 
-func ReadAccExcp(r io.Reader) (l []AccExcp, e error) {
+// ReadAccExcp reads a []AccExcp serialized as JSON in
+// the content of the r io.Reader
+func ReadAccExcp(r io.Reader) (l []AccExcp, e *errors.Error) {
 	var dc *json.Decoder
 	dc, l = json.NewDecoder(r), make([]AccExcp, 0)
-	e = dc.Decode(&l)
+	ec := dc.Decode(&l)
+	if ec != nil {
+		e = &errors.Error{
+			Code: ErrorReadAccExcp,
+			Err:  ec,
+		}
+	}
 	return
 }
 

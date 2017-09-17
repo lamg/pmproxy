@@ -28,16 +28,13 @@ func TestUserInfo(t *testing.T) {
 		}
 	}
 	require.True(t, ok, "va[%d] = \"\"", i)
-	var ld *Ldap
-	var e error
-	ld, e = NewLdap(adAddr, adSuff, adBDN)
-	if e == nil {
-		var udb *LDB
-		udb = NewLDB(ld, adAdmG, []string{adAdmG, "Prof", "Est"})
-		var u *User
-		u, e = udb.Login(uprUser, uprPass)
-		require.True(t, u != nil && e == nil)
+	ld, e := NewLdap(adAddr, adSuff, adBDN)
+	require.True(t, e == nil || e.Code == ErrorNetwork)
+	if e.Code == ErrorNetwork {
+		t.Log("No network connection")
 	} else {
-		t.Log(e.Error())
+		udb := NewLDB(ld, adAdmG, []string{adAdmG, "Prof", "Est"})
+		u, e := udb.Login(uprUser, uprPass)
+		require.True(t, u != nil && e == nil)
 	}
 }

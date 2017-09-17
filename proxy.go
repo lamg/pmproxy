@@ -2,7 +2,7 @@ package pmproxy
 
 import (
 	g "github.com/elazarl/goproxy"
-	. "net/http"
+	h "net/http"
 	"strings"
 	"time"
 )
@@ -19,12 +19,12 @@ func (p *proxy) Init(qa *QAdm, rl *RLog) {
 	p.px.OnResponse().DoFunc(p.updateConsumption)
 }
 
-func (p *proxy) restrictAccess(r *Request,
-	c *g.ProxyCtx) (x *Request, y *Response) {
+func (p *proxy) restrictAccess(r *h.Request,
+	c *g.ProxyCtx) (x *h.Request, y *h.Response) {
 	ud := new(usrDt)
-	ud.cf, x = p.qa.CanReq(r.RemoteAddr, r.URL, time.Now()), r
+	ud.cf, x = p.qa.canReq(r.RemoteAddr, r.URL, time.Now()), r
 	if ud.cf < 0 {
-		y = g.NewResponse(r, g.ContentTypeText, StatusForbidden,
+		y = g.NewResponse(r, g.ContentTypeText, h.StatusForbidden,
 			"No puede acceder al recurso")
 		// { c.UserData = nil }
 	} else {
@@ -39,13 +39,13 @@ type usrDt struct {
 	time time.Time
 }
 
-func (p *proxy) updateConsumption(r *Response,
-	c *g.ProxyCtx) (x *Response) {
+func (p *proxy) updateConsumption(r *h.Response,
+	c *g.ProxyCtx) (x *h.Response) {
 	// { c.UserData ≠ nil ∧ c.UserData has type *usrDt }
 	var ud *usrDt
 	var cl float32
 	x, ud, cl = r, c.UserData.(*usrDt), float32(r.ContentLength)
-	p.qa.AddCons(r.Request.RemoteAddr, uint64(ud.cf*cl))
+	p.qa.addCons(r.Request.RemoteAddr, uint64(ud.cf*cl))
 	// RLog
 	var log *Log
 	log = &Log{
@@ -69,10 +69,10 @@ func (p *proxy) updateConsumption(r *Response,
 		ct = strings.Split(ct, ";")[0]
 		// MIME type parameters droped
 	}
-	p.rl.Record(log)
+	p.rl.record(log)
 	return
 }
 
-func (p *proxy) ServeHTTP(w ResponseWriter, r *Request) {
+func (p *proxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	p.px.ServeHTTP(w, r)
 }

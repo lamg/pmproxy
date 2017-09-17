@@ -3,33 +3,27 @@ package pmproxy
 import (
 	"crypto/rsa"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestCrypt(t *testing.T) {
 	j, e := newJWTCrypt()
-	require.NoError(t, e)
+	require.True(t, e == nil)
 	var u *User
 	u = &User{UserName: "coco", Name: "Coco"}
 	var s string
-	s, e = j.Encrypt(u)
-	require.NoError(t, e)
+	s, e = j.encrypt(u)
+	require.True(t, e == nil)
 	var du *User
-	du, e = j.Decrypt(s)
-	require.NoError(t, e)
+	du, e = j.decrypt(s)
+	require.True(t, e == nil)
 	require.True(t, du.UserName == "coco",
 		"du.Name = \"%s\"", du.UserName)
 }
 
-func TestDecrypt(t *testing.T) {
-	j, e := newJWTCrypt()
-	require.NoError(t, e)
-	_, e = j.Decrypt("")
-	require.Error(t, e)
-}
-
-func newJWTCrypt() (j *JWTCrypt, e error) {
+func newJWTCrypt() (j *JWTCrypt, e *errors.Error) {
 	j = new(JWTCrypt)
 	var pKey *rsa.PrivateKey
 	pKey, e = parseKey()
@@ -39,8 +33,15 @@ func newJWTCrypt() (j *JWTCrypt, e error) {
 	return
 }
 
-func parseKey() (pKey *rsa.PrivateKey, e error) {
-	pKey, e = jwt.ParseRSAPrivateKeyFromPEM([]byte(pemKey))
+func parseKey() (pKey *rsa.PrivateKey, e *errors.Error) {
+	var ec error
+	pKey, ec = jwt.ParseRSAPrivateKeyFromPEM([]byte(pemKey))
+	if ec != nil {
+		e = &errors.Error{
+			Code: ErrorParseRSAPrivateFromPEM,
+			Err:  ec,
+		}
+	}
 	return
 }
 

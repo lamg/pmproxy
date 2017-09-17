@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Structure produced by requests made to the proxy server
+// Log is the struct produced by requests made to the proxy server
 type Log struct {
 	// Request's user
 	User string

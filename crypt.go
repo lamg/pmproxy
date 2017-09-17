@@ -2,9 +2,24 @@ package pmproxy
 
 import (
 	"crypto/rsa"
-	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/lamg/errors"
+)
+
+const (
+	// ErrorParseJWT is the error when parsing a JWT
+	ErrorParseJWT = iota
+	// ErrorNotMapClaims is the error when a MapClaims type
+	// assertion fails
+	ErrorNotMapClaims
+	// ErrorNotValidJWT is the error when the JWT isn't valid
+	ErrorNotValidJWT
+	// ErrorParseRSAPrivateFromPEM is the error when calling
+	// jwt.ParseRSAPrivateKeyFromPEM returns an error
+	ErrorParseRSAPrivateFromPEM
+	// ErrorEncrypt is the error when Encrypt fails
+	ErrorEncrypt
 )
 
 // User is the type representing a logged user into the
@@ -28,6 +43,7 @@ func (u *User) Equal(v interface{}) (ok bool) {
 	return
 }
 
+// JWTCrypt is the object for encrypting JWT
 type JWTCrypt struct {
 	pKey *rsa.PrivateKey
 }
@@ -38,35 +54,54 @@ type JWTUser struct {
 	jwt.StandardClaims
 }
 
+// Init initializes JWT
 func (j *JWTCrypt) Init(p *rsa.PrivateKey) {
 	j.pKey = p
 }
 
-func (j *JWTCrypt) Encrypt(u *User) (s string, e error) {
+func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {
 	var t *jwt.Token
 	var uc *JWTUser
 	uc = &JWTUser{User: u}
 	t = jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
-	s, e = t.SignedString(j.pKey)
+	var ec error
+	s, ec = t.SignedString(j.pKey)
+	if ec != nil {
+		e = &errors.Error{
+			Code: ErrorEncrypt,
+			Err:  ec,
+		}
+	}
 	return
 }
 
-func (j *JWTCrypt) Decrypt(s string) (u *User, e error) {
-	var t *jwt.Token
-	t, e = jwt.ParseWithClaims(s, &JWTUser{},
+// Decrypt decrypts a string representing an *User
+func (j *JWTCrypt) decrypt(s string) (u *User, e *errors.Error) {
+	t, ec := jwt.ParseWithClaims(s, &JWTUser{},
 		func(x *jwt.Token) (a interface{}, d error) {
 			a, d = &j.pKey.PublicKey, nil
 			return
 		})
-	if e == nil && !t.Valid {
-		e = fmt.Errorf("Invalid token in \"%s\"", s)
+	if ec == nil && !t.Valid {
+		e = &errors.Error{
+			Code: ErrorNotValidJWT,
+			Err:  fmt.Errorf("Invalid token in \"%s\"", s),
+		}
+	} else if ec != nil {
+		e = &errors.Error{
+			Code: ErrorParseJWT,
+			Err:  ec,
+		}
 	}
-	var ok bool
 	var clm *JWTUser
 	if e == nil {
+		var ok bool
 		clm, ok = t.Claims.(*JWTUser)
 		if !ok {
-			e = errors.New("False jwt.MapClaims type assertion")
+			e = &errors.Error{
+				Code: ErrorNotMapClaims,
+				Err:  fmt.Errorf("False jwt.MapClaims type assertion"),
+			}
 		}
 	}
 	if e == nil {

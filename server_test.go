@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
+	"github.com/lamg/errors"
 	. "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
 	. "net/http"
@@ -14,7 +15,13 @@ import (
 	"time"
 )
 
-func initPMProxy() (p *PMProxy, qa *QAdm, e error) {
+const (
+	// ErrorServeHTTP is the error when a response of the server
+	// has a code different from 200
+	ErrorServeHTTP = iota
+)
+
+func initPMProxy() (p *PMProxy, qa *QAdm, e *errors.Error) {
 	// qa initialization
 	qa = new(QAdm)
 
@@ -28,13 +35,10 @@ func initPMProxy() (p *PMProxy, qa *QAdm, e error) {
 		pKey, e = parseKey()
 	}
 
-	var sm *SMng
+	sm := new(SMng)
 	if e == nil {
-		var da *dAuth
-		var cry *JWTCrypt
-		// init of sm
-		sm, da, cry = new(SMng), new(dAuth), new(JWTCrypt)
-		da.Init()
+		da, cry := new(dAuth), new(JWTCrypt)
+		da.init()
 		cry.Init(pKey)
 		sm.Init(da, cry)
 	}
@@ -63,32 +67,26 @@ func initPMProxy() (p *PMProxy, qa *QAdm, e error) {
 }
 
 func TestServerLogInOut(t *testing.T) {
-	var pm *PMProxy
-	var qa *QAdm
-	var e error
-	pm, qa, e = initPMProxy()
-	var bfrq *bytes.Buffer
-	bfrq = bytes.NewBufferString(`{"user":"a", "pass":"a"}`)
-	var rr *httptest.ResponseRecorder
-	var rq *Request
-	rr = httptest.NewRecorder()
-	rq, e = NewRequest(MethodPost, logX, bfrq)
-	require.NoError(t, e)
+	pm, qa, e := initPMProxy()
+	require.True(t, e == nil)
+	bfrq := bytes.NewBufferString(`{"user":"a", "pass":"a"}`)
+	rr := httptest.NewRecorder()
+	rq, ec := NewRequest(MethodPost, logX, bfrq)
+	require.NoError(t, ec)
 	rq.RemoteAddr = cocoIP
 	pm.ServeHTTP(rr, rq)
 	require.Equal(t, rr.Code, StatusOK)
-	var scrt string
-	scrt = rr.Header().Get(authHd)
+	scrt := rr.Header().Get(authHd)
 	require.True(t, scrt != "")
 	var usr *User
-	usr, e = qa.sm.Check(cocoIP, scrt)
-	require.NoError(t, e)
+	usr, e = qa.sm.check(cocoIP, scrt)
+	require.True(t, e == nil)
 	require.True(t, usr.UserName == "a" &&
 		qa.sm.sessions[cocoIP].Equal(usr))
 
 	rr = httptest.NewRecorder()
-	rq, e = NewRequest(MethodDelete, logX, nil)
-	require.NoError(t, e)
+	rq, ec = NewRequest(MethodDelete, logX, nil)
+	require.NoError(t, ec)
 	rq.RemoteAddr = cocoIP
 	rq.Header.Set(authHd, scrt)
 	pm.ServeHTTP(rr, rq)
@@ -97,21 +95,24 @@ func TestServerLogInOut(t *testing.T) {
 		qa.sm.sessions[cocoIP])
 }
 
-func loginServ() (pm *PMProxy, s string, e error) {
+func loginServ() (pm *PMProxy, s string, e *errors.Error) {
 	pm, _, e = initPMProxy()
+	var ec error
 	var rq *Request
 	if e == nil {
 		var bfrq *bytes.Buffer
 		bfrq = bytes.NewBufferString(`{"user":"coco", "pass":"coco"}`)
-		rq, e = NewRequest(MethodPost, logX, bfrq)
+		rq, ec = NewRequest(MethodPost, logX, bfrq)
 	}
-	if e == nil {
+	if ec == nil {
 		rq.RemoteAddr = cocoIP
-		var rr *httptest.ResponseRecorder
-		rr = httptest.NewRecorder()
+		rr := httptest.NewRecorder()
 		pm.ServeHTTP(rr, rq)
 		if rr.Code != StatusOK {
-			e = fmt.Errorf("Code %d received", rr.Code)
+			e = &errors.Error{
+				Code: ErrorServeHTTP,
+				Err:  fmt.Errorf("Code %d received", rr.Code),
+			}
 		} else {
 			s = rr.Header().Get(authHd)
 		}
@@ -120,68 +121,56 @@ func loginServ() (pm *PMProxy, s string, e error) {
 }
 
 func TestGetGroupQuotaHF(t *testing.T) {
-	var pm *PMProxy
-	var scrt string
-	var e error
-	pm, scrt, e = loginServ()
-	require.NoError(t, e)
-	var rr *httptest.ResponseRecorder
-	rr = httptest.NewRecorder()
-	var rq *Request
-	rq, e = NewRequest(MethodGet, groupQuota, nil)
-	require.NoError(t, e)
+	pm, scrt, e := loginServ()
+	require.True(t, e == nil)
+	rr := httptest.NewRecorder()
+	rq, ec := NewRequest(MethodGet, groupQuota, nil)
+	require.NoError(t, ec)
 	setQV(rq.URL, groupV, "A")
 	rq.Header.Set(authHd, scrt)
 	rq.RemoteAddr = cocoIP
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
-	nv := &NameVal{Name: "A"}
-	e = json.Unmarshal(rr.Body.Bytes(), nv)
-	require.NoError(t, e)
-	dv := &NameVal{Name: "A"}
-	pm.qa.GetQuota(cocoIP, scrt, dv)
+	nv := &nameVal{Name: "A"}
+	ec = json.Unmarshal(rr.Body.Bytes(), nv)
+	require.NoError(t, ec)
+	dv := &nameVal{Name: "A"}
+	pm.qa.getQuota(cocoIP, scrt, dv)
 	require.True(t, nv.Value == dv.Value, "%d ≠ %d", nv.Value,
 		dv.Value)
 }
 
 func TestPutGroupQuotaHF(t *testing.T) {
-	var pm *PMProxy
-	var scrt string
-	var e error
-	pm, scrt, e = loginServ()
-	require.NoError(t, e)
-	var rr *httptest.ResponseRecorder
-	rr = httptest.NewRecorder()
-	var bf *bytes.Buffer
-	bf = bytes.NewBufferString(`{"name":"A","value":1024}`)
-	var rq *Request
-	rq, e = NewRequest(MethodPut, groupQuota, bf)
-	require.NoError(t, e)
+	pm, scrt, e := loginServ()
+	require.True(t, e == nil)
+	rr := httptest.NewRecorder()
+	bf := bytes.NewBufferString(`{"name":"A","value":1024}`)
+	rq, ec := NewRequest(MethodPut, groupQuota, bf)
+	require.NoError(t, ec)
 	rq.Header.Set(authHd, scrt)
 	rq.RemoteAddr = cocoIP
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
-	var n uint64
-	var ok bool
-	n, ok = pm.qa.gq.Load("A")
+
+	n, ok := pm.qa.gq.load("A")
 	require.True(t, ok)
 	require.True(t, n == 1024)
 }
 
 func TestGetUserCons(t *testing.T) {
 	pm, scrt, e := loginServ()
+	require.True(t, e == nil)
 	rr := httptest.NewRecorder()
-	var rq *Request
-	rq, e = NewRequest(MethodGet, userCons, nil)
-	require.NoError(t, e)
+	rq, ec := NewRequest(MethodGet, userCons, nil)
+	require.NoError(t, ec)
 	rq.Header.Set(authHd, scrt)
 	rq.RemoteAddr = cocoIP
 	setQV(rq.URL, userV, coco.User)
 	pm.ServeHTTP(rr, rq)
-	nv := new(NameVal)
-	e = json.Unmarshal(rr.Body.Bytes(), nv)
-	require.NoError(t, e)
-	dv, ok := pm.qa.uc.Load(coco.User)
+	nv := new(nameVal)
+	ec = json.Unmarshal(rr.Body.Bytes(), nv)
+	require.NoError(t, ec)
+	dv, ok := pm.qa.uc.load(coco.User)
 	require.True(t, ok)
 	require.True(t, nv.Value == dv)
 }

@@ -2,55 +2,59 @@ package pmproxy
 
 import (
 	"fmt"
-	. "github.com/lamg/ldaputil"
+	"github.com/lamg/errors"
+	l "github.com/lamg/ldaputil"
 )
 
+// UserDB is an interface for abstracting user databases
 type UserDB interface {
-	Login(string, string) (*User, error)
+	Login(string, string) (*User, *errors.Error)
 }
 
-// UserDB implementation using Ldap
+// LDB is an UserDB implementation using Ldap
 type LDB struct {
-	l           *Ldap
+	ld          *l.Ldap
 	adminGroup  string
 	quotaGroups []string
 }
 
-// l: Object with connection to the Active Directory (AD)
+// NewLDB creates a new LDB
+// ld: Object with connection to the Active Directory (AD)
 // where users are authenticated and that has their
 // information.
 // admG: The group in the AD which contains the administators
 // of this system.
 // qg: Quota groups, which users allowed to use the proxy
 // are member of in the AD.
-func NewLDB(l *Ldap, admG string, qg []string) (r *LDB) {
-	r = &LDB{l, admG, qg}
+func NewLDB(ld *l.Ldap, admG string, qg []string) (r *LDB) {
+	r = &LDB{ld, admG, qg}
 	return
 }
 
-func (l *LDB) Login(u, p string) (r *User, e error) {
-	r, e = new(User), l.l.Authenticate(u, p)
+// Login logs an user with user name u and password p
+func (db *LDB) Login(u, p string) (r *User, e error) {
+	r, e = new(User), db.ld.Authenticate(u, p)
 	var m []string
 	if e == nil {
 		r.UserName = u
-		r.Name, e = l.l.FullName(u)
+		r.Name, e = db.ld.FullName(u)
 	}
 	if e == nil {
-		m, e = l.l.Membership(u)
+		m, e = db.ld.Membership(u)
 	}
 	if e == nil {
-		r.IsAdmin, _ = ElementOf(m, l.adminGroup)
+		r.IsAdmin, _ = elementOf(m, db.adminGroup)
 		var ok bool
 		var i int
-		ok, i = HasElementOf(m, l.quotaGroups)
+		ok, i = hasElementOf(m, db.quotaGroups)
 		if ok {
-			r.QuotaGroup = l.quotaGroups[i]
+			r.QuotaGroup = db.quotaGroups[i]
 		}
 	}
 	return
 }
 
-func ElementOf(a []string, s string) (ok bool, i int) {
+func elementOf(a []string, s string) (ok bool, i int) {
 	ok, i = false, 0
 	for !ok && i != len(a) {
 		ok, i = a[i] == s, i+1
@@ -58,10 +62,10 @@ func ElementOf(a []string, s string) (ok bool, i int) {
 	return
 }
 
-func HasElementOf(a, b []string) (ok bool, i int) {
+func hasElementOf(a, b []string) (ok bool, i int) {
 	ok, i = false, 0
 	for !ok && i != len(b) {
-		ok, _ = ElementOf(a, b[i])
+		ok, _ = elementOf(a, b[i])
 		i = i + 1
 	}
 	return
@@ -71,11 +75,11 @@ type dAuth struct {
 	us []*User
 }
 
-func (d *dAuth) Init() {
+func (d *dAuth) init() {
 	d.us = make([]*User, 0)
 }
 
-func (d *dAuth) Login(u, p string) (r *User, e error) {
+func (d *dAuth) Login(u, p string) (r *User, e *errors.Error) {
 	if u == p {
 		r = &User{
 			Name:       u,
@@ -85,7 +89,10 @@ func (d *dAuth) Login(u, p string) (r *User, e error) {
 		}
 		d.us = append(d.us, r)
 	} else {
-		e = fmt.Errorf("Wrong password for %s", u)
+		e = &errors.Error{
+			Code: l.ErrorAuth,
+			Err:  fmt.Errorf("Wrong password for %s", u),
+		}
 	}
 	return
 }
