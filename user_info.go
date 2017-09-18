@@ -13,9 +13,8 @@ type UserDB interface {
 
 // LDB is an UserDB implementation using Ldap
 type LDB struct {
-	ld          *l.Ldap
-	adminGroup  string
-	quotaGroups []string
+	ld         *l.Ldap
+	adminGroup string
 }
 
 // NewLDB creates a new LDB
@@ -24,32 +23,25 @@ type LDB struct {
 // information.
 // admG: The group in the AD which contains the administators
 // of this system.
-// qg: Quota groups, which users allowed to use the proxy
-// are member of in the AD.
-func NewLDB(ld *l.Ldap, admG string, qg []string) (r *LDB) {
-	r = &LDB{ld, admG, qg}
+func NewLDB(ld *l.Ldap, admG string) (r *LDB) {
+	r = &LDB{ld, admG}
 	return
 }
 
 // Login logs an user with user name u and password p
-func (db *LDB) Login(u, p string) (r *User, e error) {
+func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
 	r, e = new(User), db.ld.Authenticate(u, p)
-	var m []string
+	var m string
 	if e == nil {
 		r.UserName = u
 		r.Name, e = db.ld.FullName(u)
 	}
 	if e == nil {
-		m, e = db.ld.Membership(u)
+		m, e = db.ld.GetGroup(u)
 	}
 	if e == nil {
-		r.IsAdmin, _ = elementOf(m, db.adminGroup)
-		var ok bool
-		var i int
-		ok, i = hasElementOf(m, db.quotaGroups)
-		if ok {
-			r.QuotaGroup = db.quotaGroups[i]
-		}
+		r.IsAdmin = m == db.adminGroup
+		r.QuotaGroup = m
 	}
 	return
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/lamg/errors"
 	"io"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -123,16 +124,14 @@ func (q *QAdm) addCons(ip string, c uint64) {
 	// reset consumption if cycle ended
 	var nt time.Time
 	nt = newTime(q.rd, q.cd)
-	if nt != q.rd {
+	if !nt.Equal(q.rd) {
 		q.uc.reset()
 		q.rd = nt
 	}
 
-	var n uint64
-	var u *User
-	u = q.sm.User(ip)
+	u := q.sm.User(ip)
 	if u != nil {
-		n, _ = q.uc.load(u.UserName)
+		n, _ := q.uc.load(u.UserName)
 		q.uc.store(u.UserName, n+c)
 		q.uc.persistIfTime()
 	}
@@ -159,7 +158,7 @@ func (q *QAdm) canReq(ip string, l *url.URL,
 	var f bool
 	i, f, c = 0, false, 1
 	for !f && i != len(q.al) {
-		f = q.al[i].HostName == l.Host
+		f = strings.Contains(l.Host, q.al[i].HostName)
 		if !f {
 			i = i + 1
 		}

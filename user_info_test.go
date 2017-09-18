@@ -30,13 +30,15 @@ func TestUserInfo(t *testing.T) {
 	require.True(t, ok, "va[%d] = \"\"", i)
 	ld, e := NewLdap(adAddr, adSuff, adBDN)
 	require.True(t, e == nil || e.Code == ErrorNetwork)
-	if e.Code == ErrorNetwork {
+	if e != nil && e.Code == ErrorNetwork {
 		t.Log("No network connection")
 	} else {
-		udb := NewLDB(ld, adAdmG, []string{adAdmG, "Prof", "Est"})
+		// TODO use actual groups in AD
+		udb := NewLDB(ld, adAdmG)
 		u, e := udb.Login(uprUser, uprPass)
 		require.True(t, e == nil && len(u.UserName) > 0 &&
-			len(u.Name) > 0 && len(u.QuotaGroup) > 0)
+			len(u.Name) > 0 && len(u.QuotaGroup) > 0,
+			"qg: %s", u.QuotaGroup)
 	}
 }
 

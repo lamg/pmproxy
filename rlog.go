@@ -31,7 +31,12 @@ func (rl *RLog) setZero() {
 }
 
 func (rl *RLog) record(l *Log) {
-	l.User = rl.iu.User(l.Addr).UserName
+	u := rl.iu.User(l.Addr)
+	if u == nil {
+		l.User = "-"
+	} else {
+		l.User = u.UserName
+	}
 	var ec error
 	_, ec = rl.w.Write([]byte(l.String() + "\n"))
 	if ec != nil {

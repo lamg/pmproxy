@@ -75,3 +75,11 @@ func TestReset(t *testing.T) {
 	}
 	// { persisted data is ok with mp.Reset behaviour }
 }
+
+func TestNewTime(t *testing.T) {
+	tm := time.Now()
+	dr := time.Hour
+	time.Sleep(8 * time.Millisecond)
+	n := newTime(tm, dr)
+	require.True(t, n.Equal(tm))
+}
