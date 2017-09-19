@@ -54,9 +54,10 @@ type JWTUser struct {
 	jwt.StandardClaims
 }
 
-// Init initializes JWT
-func (j *JWTCrypt) Init(p *rsa.PrivateKey) {
-	j.pKey = p
+// NewJWTCrypt creates a new JWTCrypt
+func NewJWTCrypt(p *rsa.PrivateKey) (j *JWTCrypt) {
+	j = &JWTCrypt{pKey: p}
+	return
 }
 
 func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {

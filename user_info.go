@@ -67,8 +67,9 @@ type dAuth struct {
 	us []*User
 }
 
-func (d *dAuth) init() {
-	d.us = make([]*User, 0)
+func newdAuth() (d *dAuth) {
+	d = &dAuth{make([]*User, 0)}
+	return
 }
 
 func (d *dAuth) Login(u, p string) (r *User, e *errors.Error) {

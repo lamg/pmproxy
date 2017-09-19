@@ -36,12 +36,10 @@ func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 	if e == nil {
 		pKey, e = parseKey()
 	}
-	sm := new(SMng)
+	var sm *SMng
 	if e == nil {
-		da, jw := new(dAuth), new(JWTCrypt)
-		da.init()
-		jw.Init(pKey)
-		sm.Init(da, jw)
+		da, jw := newdAuth(), NewJWTCrypt(pKey)
+		sm = NewSMng(da, jw)
 	}
 	// { sm initialized ≡ e = nil}
 

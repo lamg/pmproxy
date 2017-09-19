@@ -23,12 +23,10 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 		pKey, e = parseKey()
 	}
 
-	sm := new(SMng)
+	var sm *SMng
 	if e == nil {
-		da, cry := new(dAuth), new(JWTCrypt)
-		da.init()
-		cry.Init(pKey)
-		sm.Init(da, cry)
+		da, cry := newdAuth(), NewJWTCrypt(pKey)
+		sm = NewSMng(da, cry)
 	}
 
 	var gq *MapPrs

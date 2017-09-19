@@ -37,11 +37,10 @@ func TestErrDecrypt(t *testing.T) {
 }
 
 func newJWTCrypt() (j *JWTCrypt, e *errors.Error) {
-	j = new(JWTCrypt)
 	var pKey *rsa.PrivateKey
 	pKey, e = parseKey()
 	if e == nil {
-		j.Init(pKey)
+		j = NewJWTCrypt(pKey)
 	}
 	return
 }

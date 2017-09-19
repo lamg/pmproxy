@@ -14,12 +14,10 @@ var (
 )
 
 func TestSessionManager(t *testing.T) {
-	a, c := new(dAuth), new(JWTCrypt)
 	pKey, e := parseKey()
 	require.True(t, e == nil)
-	c.Init(pKey)
-	sm := new(SMng)
-	sm.Init(a, c)
+	a, c := newdAuth(), NewJWTCrypt(pKey)
+	sm := NewSMng(a, c)
 	var s0 string
 	s0, e = sm.login(coco, cocoIP)
 	require.True(t, e == nil)

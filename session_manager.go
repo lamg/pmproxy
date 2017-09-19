@@ -30,9 +30,13 @@ type SMng struct {
 	crt      *JWTCrypt
 }
 
-// Init initializes the SMng instance
-func (s *SMng) Init(a UserDB, c *JWTCrypt) {
-	s.sessions, s.udb, s.crt = make(map[string]*User), a, c
+// NewSMng initializes the SMng instance
+func NewSMng(a UserDB, c *JWTCrypt) (s *SMng) {
+	s = &SMng{
+		sessions: make(map[string]*User),
+		udb:      a,
+		crt:      c,
+	}
 	return
 }
 
