@@ -159,7 +159,8 @@ func TestGoogleReq(t *testing.T) {
 	require.True(t, e == nil)
 	pm.ServeHTTP(rr, rq)
 	// since user isn't logged
-	require.True(t, rr.Code == StatusForbidden)
+	require.True(t, rr.Code == StatusForbidden,
+		"Code: %d", rr.Code)
 }
 
 func setQV(u *url.URL, k, v string) {

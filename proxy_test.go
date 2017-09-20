@@ -72,6 +72,6 @@ func TestProxy(t *testing.T) {
 	nv, e = p.qa.userCons(pepeIP, s, pepe.User)
 	require.True(t, e == nil)
 	require.True(t, (rr.Code < h.StatusForbidden && nv >= n) ||
-		rr.Code == h.StatusNotFound, "Code:%d nv > n: %t",
-		rr.Code, nv > n)
+		rr.Code == h.StatusNotFound, "Code:%d nv >= n: %t",
+		rr.Code, nv >= n)
 }

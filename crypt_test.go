@@ -32,7 +32,6 @@ func TestErrDecrypt(t *testing.T) {
 	s, ec := tk.SignedString(j.pKey)
 	require.NoError(t, ec)
 	_, e = j.decrypt(s)
-	t.Log(e)
 	require.True(t, e.Code == ErrorParseJWT)
 }
 

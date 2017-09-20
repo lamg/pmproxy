@@ -38,8 +38,8 @@ type Log struct {
 // time elapsed remotehost code/status bytes method URL rfc931 peerstatus/peerhost type
 func (l *Log) String() (s string) {
 	s = fmt.Sprintf(
-		"%9d.%03d %6d %s %s/%03d %d %s %s %s %s/%s %s",
-		l.Time.Unix(), l.Time.UnixNano(), l.Elapsed, l.Addr,
+		"%9d.000 %6d %s %s/%03d %d %s %s %s %s/%s %s",
+		l.Time.Unix(), l.Elapsed, l.Addr,
 		l.Action, l.StatusCode, l.RespSize, l.Meth, l.URI, l.User,
 		l.Hierarchy, l.From, l.ContentType)
 	return

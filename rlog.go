@@ -22,6 +22,7 @@ type RLog struct {
 // NewRLog creates a new RLog
 func NewRLog(wr w.WriterFct, iu IPUser) (rl *RLog) {
 	rl = &RLog{wr: wr, iu: iu, w: wr.Current()}
+	rl.setZero()
 	return
 }
 

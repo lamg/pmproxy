@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"github.com/elazarl/goproxy"
 	g "github.com/elazarl/goproxy"
 	h "net/http"
 	"strings"
@@ -16,26 +17,10 @@ type proxy struct {
 func newProxy(qa *QAdm, rl *RLog) (p *proxy) {
 	p = new(proxy)
 	p.px, p.qa, p.rl = g.NewProxyHttpServer(), qa, rl
-	p.px.OnRequest().DoFunc(p.restrictAccess)
+	p.px.OnRequest(
+		goproxy.ReqConditionFunc(
+			p.cannotRequest)).HandleConnect(goproxy.AlwaysReject)
 	p.px.OnResponse().DoFunc(p.updateConsumption)
-	return
-}
-
-func (p *proxy) restrictAccess(r *h.Request,
-	c *g.ProxyCtx) (x *h.Request, y *h.Response) {
-	ud := &usrDt{
-		cf:  p.qa.canReq(r.RemoteAddr, r.URL, time.Now()),
-		req: r,
-	}
-	x = r
-	if ud.cf < 0 {
-		y = g.NewResponse(r, g.ContentTypeText, h.StatusForbidden,
-			"No puede acceder al recurso")
-		// { c.UserData = nil }
-	} else {
-		y, ud.time = nil, time.Now()
-		c.UserData = ud
-	}
 	return
 }
 
@@ -47,24 +32,28 @@ type usrDt struct {
 
 func (p *proxy) updateConsumption(r *h.Response,
 	c *g.ProxyCtx) (x *h.Response) {
-	var ud *usrDt
+	var k float32
 	var log *Log
-	if c.UserData != nil {
-		ud = c.UserData.(*usrDt)
+	if r != nil {
+		tm := time.Now()
+		k = p.qa.canReq(r.Request.RemoteAddr, r.Request.URL, tm)
 		log = &Log{
 			// User is set by p.rl.Log
-			Addr:    ud.req.RemoteAddr,
-			Meth:    ud.req.Method,
-			URI:     ud.req.URL.String(),
-			Proto:   ud.req.Proto,
-			Time:    time.Now(),
-			Elapsed: ud.time.Sub(time.Now()),
+			Addr:    r.Request.RemoteAddr,
+			Meth:    r.Request.Method,
+			URI:     r.Request.URL.String(),
+			Proto:   r.Request.Proto,
+			Time:    tm,
+			Elapsed: 5 * time.Millisecond, //FIXME not the meaning of E.
 			From:    "-",
 		}
+	} else {
+		k = -1
 	}
-	if ud != nil && r != nil {
+	// { (r ≠ nil ≡ log ≠ nil) ∧ (r = nil ≡ log = nil ∧ k = -1) }
+	if k >= 0 {
 		cl := float32(r.ContentLength)
-		p.qa.addCons(ud.req.RemoteAddr, uint64(ud.cf*cl))
+		p.qa.addCons(r.Request.RemoteAddr, uint64(k*cl))
 		log.RespSize = uint64(r.ContentLength)
 		log.Action = "TCP_MISS"
 		log.Hierarchy = "DIRECT"
@@ -76,17 +65,34 @@ func (p *proxy) updateConsumption(r *h.Response,
 			// MIME type parameters droped
 		}
 		log.ContentType = ct
-	} else if ud != nil && r == nil {
+		x = r
+	} else if log != nil {
 		log.Action = "TCP_DENIED"
 		log.Hierarchy = "NONE"
 		log.ContentType = "text/plain"
-		r = g.NewResponse(ud.req, "text/plain", h.StatusNotFound,
+		x = g.NewResponse(r.Request, "text/plain", h.StatusForbidden,
 			"No hay acceso a Internet")
-	}
-	if ud != nil {
 		p.rl.record(log)
 	}
-	x = r
+
+	return
+}
+
+func (p *proxy) cannotRequest(q *h.Request,
+	c *goproxy.ProxyCtx) (r bool) {
+	k := p.qa.canReq(q.RemoteAddr, q.URL, time.Now())
+	c.UserData = &usrDt{
+		cf:  k,
+		req: q,
+	}
+	r = k < 0
+	return
+}
+
+func (p *proxy) canResponse(r *h.Response,
+	c *goproxy.ProxyCtx) (x bool) {
+	k := p.qa.canReq(r.Request.RemoteAddr, r.Request.URL, time.Now())
+	x = k >= 0
 	return
 }
 

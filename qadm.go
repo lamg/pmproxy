@@ -18,6 +18,9 @@ const (
 	// ErrorSQNA is the error when setting a quota without being
 	// administrator, at setQuota call
 	ErrorSQNA
+	// ErrorMalformedRecord is the error returned when a record
+	// hasn't the required format
+	ErrorMalformedRecord
 )
 
 type nameVal struct {

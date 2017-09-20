@@ -8,17 +8,19 @@ import (
 )
 
 var (
-	adAddr  = os.Getenv("AD")
-	adSuff  = os.Getenv("AD_SUFF")
-	adBDN   = os.Getenv("AD_BDN")
-	adAdmG  = os.Getenv("AD_ADMG")
-	uprUser = os.Getenv("UPR_USER")
-	uprPass = os.Getenv("UPR_PASS")
+	adAddr   = os.Getenv("AD")
+	adSuff   = os.Getenv("AD_SUFF")
+	adBDN    = os.Getenv("AD_BDN")
+	adAdmG   = os.Getenv("AD_ADMG")
+	adQGPref = os.Getenv("AD_QGPREF")
+	uprUser  = os.Getenv("UPR_USER")
+	uprPass  = os.Getenv("UPR_PASS")
 )
 
 func TestUserInfo(t *testing.T) {
 	var ok bool
-	va := []string{adAddr, adSuff, adBDN, adAdmG, uprUser, uprPass}
+	va := []string{adAddr, adSuff, adBDN, adAdmG, adQGPref,
+		uprUser, uprPass}
 	var i int
 	ok, i = true, 0
 	for ok && i != len(va) {
@@ -34,11 +36,13 @@ func TestUserInfo(t *testing.T) {
 		t.Log("No network connection")
 	} else {
 		// TODO use actual groups in AD
-		udb := NewLDB(ld, adAdmG)
+		udb := NewLDB(ld, adAdmG, adQGPref)
 		u, e := udb.Login(uprUser, uprPass)
 		require.True(t, e == nil && len(u.UserName) > 0 &&
 			len(u.Name) > 0 && len(u.QuotaGroup) > 0,
 			"qg: %s", u.QuotaGroup)
+		t.Log(u.QuotaGroup)
+		t.Log(u.IsAdmin)
 	}
 }
 

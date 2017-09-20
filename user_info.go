@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lamg/errors"
 	l "github.com/lamg/ldaputil"
+	"strings"
 )
 
 // UserDB is an interface for abstracting user databases
@@ -15,6 +16,7 @@ type UserDB interface {
 type LDB struct {
 	ld         *l.Ldap
 	adminGroup string
+	qgPref     string
 }
 
 // NewLDB creates a new LDB
@@ -23,8 +25,10 @@ type LDB struct {
 // information.
 // admG: The group in the AD which contains the administators
 // of this system.
-func NewLDB(ld *l.Ldap, admG string) (r *LDB) {
-	r = &LDB{ld, admG}
+// qgPref: The group prefix of the group in membership that
+// defines the users quota group
+func NewLDB(ld *l.Ldap, admG, qgPref string) (r *LDB) {
+	r = &LDB{ld, admG, qgPref}
 	return
 }
 
@@ -37,11 +41,44 @@ func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
 		r.Name, e = db.ld.FullName(u)
 	}
 	if e == nil {
-		m, e = db.ld.GetGroup(u)
+		m, e = db.getQuotaGroup(u)
 	}
 	if e == nil {
-		r.IsAdmin = m == db.adminGroup
 		r.QuotaGroup = m
+	}
+	var fg string
+	if e == nil {
+		fg, e = db.ld.DNFirstGroup(u)
+	}
+	if e == nil {
+		r.IsAdmin = fg == db.adminGroup
+	}
+	return
+}
+
+// GetQuotaGroup gets the group specified at distinguishedName
+// field
+// usr: sAMAccountName
+func (db *LDB) getQuotaGroup(usr string) (g string,
+	e *errors.Error) {
+	var m []string
+	m, e = db.ld.MembershipCNs(usr)
+	if e == nil {
+		i, ok := 0, false
+		for !ok && i != len(m) {
+			ok = strings.HasPrefix(m[i], db.qgPref)
+			if !ok {
+				i = i + 1
+			}
+		}
+		if ok {
+			g = m[i]
+		} else {
+			e = &errors.Error{
+				Code: ErrorMalformedRecord,
+				Err:  fmt.Errorf("Couldn't find the quota group for %s", usr),
+			}
+		}
 	}
 	return
 }
