@@ -36,7 +36,8 @@ func (p *proxy) updateConsumption(r *h.Response,
 	var log *Log
 	if r != nil {
 		tm := time.Now()
-		k = p.qa.canReq(r.Request.RemoteAddr, r.Request.URL, tm)
+		k = p.qa.canReq(trimPort(r.Request.RemoteAddr),
+			r.Request.URL, tm)
 		log = &Log{
 			// User is set by p.rl.Log
 			Addr:    r.Request.RemoteAddr,

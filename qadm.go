@@ -85,8 +85,11 @@ func (q *QAdm) logout(ip, s string) (e *errors.Error) {
 }
 
 func (q *QAdm) getQuota(ip, s string, g *nameVal) {
-	_, e := q.sm.check(ip, s)
+	u, e := q.sm.check(ip, s)
 	if e == nil {
+		if g.Name == "" {
+			g.Name = u.QuotaGroup
+		}
 		g.Value, _ = q.gq.load(g.Name)
 	}
 }
@@ -107,17 +110,22 @@ func (q *QAdm) setQuota(ip, s string,
 	return
 }
 
-func (q *QAdm) userCons(ip, s,
-	usr string) (v uint64, e *errors.Error) {
-	_, e = q.sm.check(ip, s)
+func (q *QAdm) userCons(ip, s string,
+	nv *nameVal) (e *errors.Error) {
+	var u *User
+	u, e = q.sm.check(ip, s)
+	if nv.Name == "" {
+		nv.Name = u.UserName
+	}
 	var ok bool
 	if e == nil {
-		v, ok = q.uc.load(usr)
+		nv.Value, ok = q.uc.load(nv.Name)
 	}
 	if !ok {
 		e = &errors.Error{
 			Code: ErrorUCLd,
-			Err:  fmt.Errorf("Not found consupmtion for user %s", usr),
+			Err: fmt.Errorf("Not found consupmtion for user %s",
+				nv.Name),
 		}
 	}
 	return
@@ -140,7 +148,8 @@ func (q *QAdm) addCons(ip string, c uint64) {
 	}
 }
 
-func (q *QAdm) finishedQuota(ip string) (b bool) {
+// nlf ≡ not logged ∨ finished quota
+func (q *QAdm) nlf(ip string) (b bool) {
 	var u *User
 	u = q.sm.User(ip)
 	var cons, quota uint64
@@ -172,11 +181,17 @@ func (q *QAdm) canReq(ip string, l *url.URL,
 		c = res.ConsCfc
 	}
 	// { c ≥ 0 }
-	if q.finishedQuota(ip) ||
+	if q.nlf(ip) || (f &&
 		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
-			(res.Daily && inDayInterval(d, res.Start, res.End))) {
+			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
 		c = c * -1
 	}
+	println(q.nlf(ip))
+	fmt.Printf("%v\n", q.sm.sessions)
+	println(ip)
+	println(l.String())
+	println(d.String())
+	println(c)
 	//{ q.finishedQuota(ip) ∨ d inside forbidden interval ⇒ c < 0 }
 	return
 }

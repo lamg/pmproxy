@@ -92,10 +92,13 @@ func TestAddCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(coco, cocoIP)
 	require.True(t, e == nil)
 	var nc, dwn, n uint64
-	dwn = 1024
-	nc, e = qa.userCons(cocoIP, scrt, coco.User)
+	nv := new(nameVal)
+	e = qa.userCons(cocoIP, scrt, nv)
+	require.True(t, e == nil)
+	dwn, nc = 1024, nv.Value
 	qa.addCons(cocoIP, dwn)
-	n, e = qa.userCons(cocoIP, scrt, coco.User)
+	e = qa.userCons(cocoIP, scrt, nv)
+	n = nv.Value
 	require.True(t, e == nil)
 	require.True(t, n == nc+dwn, "%d≠%d", n, nc+dwn)
 }
@@ -103,27 +106,31 @@ func TestAddCons(t *testing.T) {
 func TestCanReq(t *testing.T) {
 	qa, _, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
-	u, ec := url.Parse("https://14ymedio.com/bla/bla")
-	require.NoError(t, ec)
-	var c float32
-	c = qa.canReq(pepeIP, u, time.Now())
-	require.True(t, c == -1, "%.1f ≠ -1", c)
-	u, ec = url.Parse("https://google.com.cu/coco/pepe")
-	require.NoError(t, ec)
-	c = qa.canReq(pepeIP, u, time.Now())
-	require.True(t, c == 0, "%.1f ≠ 0", c)
-	var fpm time.Time
-	fpm, ec = time.Parse(time.RFC3339, "2006-01-02T08:00:01-04:00")
-	require.NoError(t, ec)
-	u, ec = url.Parse("https://facebook.com/coco")
-	require.NoError(t, ec)
-	c = qa.canReq(pepeIP, u, fpm)
-	require.True(t, c == -1.5, "%.1f ≠ -1.5", c)
-	fpm, ec = time.Parse(time.RFC3339, "2006-01-02T08:00:00-04:00")
-	require.NoError(t, ec)
-	require.False(t, qa.finishedQuota(pepeIP))
-	c = qa.canReq(pepeIP, u, fpm)
-	require.True(t, c == 1.5, "%.1f ≠ 1.5", c)
+	cases := []struct {
+		url string
+		tm  string
+		ip  string
+		k   float32
+	}{
+		{"https://14ymedio.com/bla/bla",
+			"2006-01-02T08:00:01-04:00", cocoIP, -1},
+		{"https://google.com.cu/coco/pepe",
+			"2006-01-02T08:00:01-04:00", cocoIP, 0},
+		{"https://facebook.com/coco",
+			"2006-01-02T08:00:01-04:00", pepeIP, -1.5},
+		{"https://facebook.com/coco",
+			"2006-01-02T08:00:00-04:00", pepeIP, 1.5},
+		{"http://debian.org", "2006-01-02T08:00:00-04:00",
+			pepeIP, 1},
+	}
+	for i, j := range cases {
+		u, e := url.Parse(j.url)
+		require.True(t, e == nil, "URL at %d", i)
+		tm, e := time.Parse(time.RFC3339, j.tm)
+		require.True(t, e == nil, "Time at %d", i)
+		c := qa.canReq(j.ip, u, tm)
+		require.True(t, c == j.k, "%.1f ≠ %.1f at %d", c, j.k, i)
+	}
 }
 
 func TestInDayInterval(t *testing.T) {
@@ -140,14 +147,14 @@ func TestInDayInterval(t *testing.T) {
 	require.False(t, b)
 }
 
-func TestFinishedQuota(t *testing.T) {
+func TestNlf(t *testing.T) {
 	qa, _, e := initTestQAdm(coco, cocoIP)
 	require.True(t, e == nil)
-	b := qa.finishedQuota(cocoIP)
+	b := qa.nlf(cocoIP)
 	require.True(t, b)
 	_, e = qa.login(pepe, pepeIP)
 	require.True(t, e == nil)
-	require.True(t, !qa.finishedQuota(pepeIP))
+	require.True(t, !qa.nlf(pepeIP))
 }
 
 const (

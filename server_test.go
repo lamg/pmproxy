@@ -35,7 +35,7 @@ func TestServerLogInOut(t *testing.T) {
 	rr := httptest.NewRecorder()
 	rq, ec := NewRequest(MethodPost, logX, bfrq)
 	require.NoError(t, ec)
-	rq.RemoteAddr = cocoIP
+	rq.RemoteAddr = cocoIP + ":43"
 	pm.ServeHTTP(rr, rq)
 	require.Equal(t, rr.Code, StatusOK)
 	scrt := rr.Header().Get(authHd)
@@ -49,7 +49,7 @@ func TestServerLogInOut(t *testing.T) {
 	rr = httptest.NewRecorder()
 	rq, ec = NewRequest(MethodDelete, logX, nil)
 	require.NoError(t, ec)
-	rq.RemoteAddr = cocoIP
+	rq.RemoteAddr = cocoIP + ":43"
 	rq.Header.Set(authHd, scrt)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
@@ -69,7 +69,7 @@ func loginServ() (pm *PMProxy, s string, e *errors.Error) {
 		rq, ec = NewRequest(MethodPost, logX, bfrq)
 	}
 	if ec == nil {
-		rq.RemoteAddr = cocoIP
+		rq.RemoteAddr = cocoIP + ":43"
 		rr := httptest.NewRecorder()
 		pm.ServeHTTP(rr, rq)
 		if rr.Code != StatusOK {
@@ -92,7 +92,7 @@ func TestGetGroupQuotaHF(t *testing.T) {
 	require.NoError(t, ec)
 	setQV(rq.URL, groupV, "A")
 	rq.Header.Set(authHd, scrt)
-	rq.RemoteAddr = cocoIP
+	rq.RemoteAddr = cocoIP + ":43"
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 	nv := &nameVal{Name: "A"}
@@ -102,8 +102,9 @@ func TestGetGroupQuotaHF(t *testing.T) {
 	pm.qa.getQuota(cocoIP, scrt, dv)
 	require.True(t, nv.Value == dv.Value, "%d ≠ %d", nv.Value,
 		dv.Value)
-
-	testUnsMeth(t, pm, groupQuota, MethodConnect)
+	t.Run("Unsupported method", func(t *testing.T) {
+		testUnsMeth(t, pm, groupQuota, MethodConnect)
+	})
 }
 
 func TestPutGroupQuotaHF(t *testing.T) {
@@ -114,7 +115,7 @@ func TestPutGroupQuotaHF(t *testing.T) {
 	rq, ec := NewRequest(MethodPut, groupQuota, bf)
 	require.NoError(t, ec)
 	rq.Header.Set(authHd, scrt)
-	rq.RemoteAddr = cocoIP
+	rq.RemoteAddr = cocoIP + ":43"
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 
@@ -130,7 +131,7 @@ func TestGetUserCons(t *testing.T) {
 	rq, ec := NewRequest(MethodGet, userCons, nil)
 	require.NoError(t, ec)
 	rq.Header.Set(authHd, scrt)
-	rq.RemoteAddr = cocoIP
+	rq.RemoteAddr = cocoIP + ":43"
 	setQV(rq.URL, userV, coco.User)
 	pm.ServeHTTP(rr, rq)
 	nv := new(nameVal)
@@ -158,7 +159,7 @@ func TestGoogleReq(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
 	pm.ServeHTTP(rr, rq)
-	// since user isn't logged
+	// FIXME rr.Code = 500 when there's no network connection
 	require.True(t, rr.Code == StatusForbidden,
 		"Code: %d", rr.Code)
 }
@@ -175,4 +176,18 @@ func testUnsMeth(t *testing.T, pm *PMProxy, path, meth string) {
 	require.NoError(t, ec)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusBadRequest)
+}
+
+func TestTrimPort(t *testing.T) {
+	s := []struct {
+		pa string
+		r  string
+	}{
+		{"10.1.2.3:443", "10.1.2.3"},
+		{"[::1]:60630", "[::1]"},
+	}
+	for i, j := range s {
+		x := trimPort(j.pa)
+		require.True(t, x == j.r, "At %d %s≠%s", i, x, j.r)
+	}
 }

@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	h "net/http"
+	"strings"
+	"unicode"
 )
 
 const (
@@ -54,13 +56,14 @@ func NewPMProxy(qa *QAdm, lg *RLog) (p *PMProxy) {
 }
 
 func (p *PMProxy) logXHF(w h.ResponseWriter, r *h.Request) {
+	addr := trimPort(r.RemoteAddr)
 	var e *errors.Error
 	var scrt string
 	if r.Method == h.MethodPost {
 		cr := new(credentials)
 		e = decode(r.Body, cr)
 		if e == nil {
-			scrt, e = p.qa.login(cr, r.RemoteAddr)
+			scrt, e = p.qa.login(cr, addr)
 		}
 		if e == nil {
 			w.Header().Set(authHd, scrt)
@@ -68,7 +71,7 @@ func (p *PMProxy) logXHF(w h.ResponseWriter, r *h.Request) {
 	} else if r.Method == h.MethodDelete {
 		scrt, e = getScrt(r.Header)
 		if e == nil {
-			e = p.qa.logout(r.RemoteAddr, scrt)
+			e = p.qa.logout(addr, scrt)
 		}
 	} else {
 		e = notSuppMeth(r.Method)
@@ -78,15 +81,15 @@ func (p *PMProxy) logXHF(w h.ResponseWriter, r *h.Request) {
 
 func (p *PMProxy) groupQuotaHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
-	gr := new(nameVal)
+	gr, addr := new(nameVal), trimPort(r.RemoteAddr)
 	if e == nil && r.Method == h.MethodGet {
 		gr.Name = r.URL.Query().Get(groupV)
-		p.qa.getQuota(r.RemoteAddr, s, gr)
+		p.qa.getQuota(addr, s, gr)
 		e = encode(w, gr)
 	} else if e == nil && r.Method == h.MethodPut {
 		e = decode(r.Body, gr)
 		if e == nil {
-			p.qa.setQuota(r.RemoteAddr, s, gr)
+			p.qa.setQuota(addr, s, gr)
 		}
 	} else if e == nil {
 		e = notSuppMeth(r.Method)
@@ -102,9 +105,12 @@ func (p *PMProxy) userConsHF(w h.ResponseWriter, r *h.Request) {
 	} else {
 		e = notSuppMeth(r.Method)
 	}
+	nv := &nameVal{Name: usr}
 	if e == nil {
-		nv := new(nameVal)
-		nv.Value, e = p.qa.userCons(r.RemoteAddr, s, usr)
+		addr := trimPort(r.RemoteAddr)
+		e = p.qa.userCons(addr, s, nv)
+	}
+	if e == nil {
 		e = encode(w, nv)
 	}
 	writeErr(w, e)
@@ -176,5 +182,15 @@ func notSuppMeth(m string) (e *errors.Error) {
 		Code: ErrorNSMth,
 		Err:  fmt.Errorf("Not supported method %s", m),
 	}
+	return
+}
+
+func trimPort(s string) (r string) {
+	q := strings.TrimRightFunc(s,
+		func(c rune) (b bool) {
+			b = unicode.IsDigit(c)
+			return
+		})
+	r = strings.TrimRight(q, ":")
 	return
 }

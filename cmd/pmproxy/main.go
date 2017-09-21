@@ -64,7 +64,7 @@ func main() {
 	var uc *pmproxy.MapPrs
 	if e == nil {
 		tr := wfact.NewTruncater(cnFile)
-		uc, e = pmproxy.NewMapPrs(f, tr, time.Now(), 5*time.Minute)
+		uc, e = pmproxy.NewMapPrs(f, tr, time.Now(), 1*time.Minute)
 		e = nerror(ec)
 	}
 	var bs []byte

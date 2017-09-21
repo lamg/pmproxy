@@ -56,22 +56,32 @@ func TestProxy(t *testing.T) {
 	rq.RemoteAddr = cocoIP
 	require.NoError(t, ec)
 	p.ServeHTTP(rr, rq)
+	// FIXME rr.Code = 500 when there's no network connection
 	require.True(t, rr.Code == h.StatusForbidden, "Code: %d",
 		rr.Code)
+	// since coco has finished his quota
+	// and the requested url consumes quota
+
 	var s string
 	s, e = p.qa.login(pepe, pepeIP)
-	rq.RemoteAddr = pepeIP
-	require.True(t, !qa.finishedQuota(pepeIP))
 	require.True(t, e == nil)
+	rq.RemoteAddr = pepeIP
+	require.True(t, !qa.nlf(pepeIP))
+
 	rr = ht.NewRecorder()
-	var n, nv uint64
-	n, e = p.qa.userCons(pepeIP, s, pepe.User)
+	var n0, n1 uint64
+	// n0 is consumption before making request
+	// n1 is consumption after making request
+	nv := new(nameVal)
+	e = p.qa.userCons(pepeIP, s, nv)
 	require.True(t, e == nil)
 	rq.RemoteAddr = pepeIP
+	n0 = nv.Value
 	p.ServeHTTP(rr, rq)
-	nv, e = p.qa.userCons(pepeIP, s, pepe.User)
+	e = p.qa.userCons(pepeIP, s, nv)
 	require.True(t, e == nil)
-	require.True(t, (rr.Code < h.StatusForbidden && nv >= n) ||
-		rr.Code == h.StatusNotFound, "Code:%d nv >= n: %t",
-		rr.Code, nv >= n)
+	n1 = nv.Value
+	require.True(t, (rr.Code < h.StatusForbidden && n1 >= n0) ||
+		rr.Code == h.StatusNotFound, "Code:%d n1 >= n0: %t",
+		rr.Code, n1 >= n0)
 }
