@@ -31,11 +31,8 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 func TestServerLogInOut(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
-	bfrq := bytes.NewBufferString(`{"user":"a", "pass":"a"}`)
-	rr := httptest.NewRecorder()
-	rq, ec := NewRequest(MethodPost, logX, bfrq)
-	require.NoError(t, ec)
-	rq.RemoteAddr = cocoIP + ":43"
+	rr, rq := reqres(t, MethodPost, logX,
+		`{"user":"a", "pass":"a"}`, "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.Equal(t, rr.Code, StatusOK)
 	scrt := rr.Header().Get(authHd)
@@ -46,11 +43,7 @@ func TestServerLogInOut(t *testing.T) {
 	require.True(t, usr.UserName == "a" &&
 		pm.qa.sm.sessions[cocoIP].Equal(usr))
 
-	rr = httptest.NewRecorder()
-	rq, ec = NewRequest(MethodDelete, logX, nil)
-	require.NoError(t, ec)
-	rq.RemoteAddr = cocoIP + ":43"
-	rq.Header.Set(authHd, scrt)
+	rr, rq = reqres(t, MethodDelete, logX, "", scrt, cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 	require.True(t, pm.qa.sm.sessions[cocoIP] == nil, "%v ≠ nil",
@@ -59,46 +52,28 @@ func TestServerLogInOut(t *testing.T) {
 	testUnsMeth(t, pm, logX, MethodConnect)
 }
 
-func loginServ() (pm *PMProxy, s string, e *errors.Error) {
-	pm, e = initPMProxy()
-	var ec error
-	var rq *Request
-	if e == nil {
-		var bfrq *bytes.Buffer
-		bfrq = bytes.NewBufferString(`{"user":"coco", "pass":"coco"}`)
-		rq, ec = NewRequest(MethodPost, logX, bfrq)
-	}
-	if ec == nil {
-		rq.RemoteAddr = cocoIP + ":43"
-		rr := httptest.NewRecorder()
-		pm.ServeHTTP(rr, rq)
-		if rr.Code != StatusOK {
-			e = &errors.Error{
-				Code: ErrorServeHTTP,
-				Err:  fmt.Errorf("Code %d received", rr.Code),
-			}
-		} else {
-			s = rr.Header().Get(authHd)
-		}
-	}
+func loginServ(t *testing.T) (pm *PMProxy, s string) {
+	pm, e := initPMProxy()
+	require.True(t, e == nil)
+	rr, rq := reqres(t, MethodPost, logX,
+		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
+	pm.ServeHTTP(rr, rq)
+	require.True(t, rr.Code == StatusOK)
+	s = rr.Header().Get(authHd)
 	return
 }
 
 func TestGetGroupQuotaHF(t *testing.T) {
-	pm, scrt, e := loginServ()
-	require.True(t, e == nil)
-	rr := httptest.NewRecorder()
-	rq, ec := NewRequest(MethodGet, groupQuota, nil)
-	require.NoError(t, ec)
-	setQV(rq.URL, groupV, "A")
-	rq.Header.Set(authHd, scrt)
-	rq.RemoteAddr = cocoIP + ":43"
+	pm, scrt := loginServ(t)
+	rr, rq := reqres(t, MethodGet, groupQuota, "", scrt,
+		cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
-	nv := &nameVal{Name: "A"}
-	ec = json.Unmarshal(rr.Body.Bytes(), nv)
+	nv := &nameVal{}
+	ec := json.Unmarshal(rr.Body.Bytes(), nv)
 	require.NoError(t, ec)
-	dv := &nameVal{Name: "A"}
+	qg := pm.qa.sm.sessions[cocoIP].QuotaGroup
+	dv := &nameVal{Name: qg}
 	pm.qa.getQuota(cocoIP, scrt, dv)
 	require.True(t, nv.Value == dv.Value, "%d ≠ %d", nv.Value,
 		dv.Value)
@@ -108,14 +83,9 @@ func TestGetGroupQuotaHF(t *testing.T) {
 }
 
 func TestPutGroupQuotaHF(t *testing.T) {
-	pm, scrt, e := loginServ()
-	require.True(t, e == nil)
-	rr := httptest.NewRecorder()
-	bf := bytes.NewBufferString(`{"name":"A","value":1024}`)
-	rq, ec := NewRequest(MethodPut, groupQuota, bf)
-	require.NoError(t, ec)
-	rq.Header.Set(authHd, scrt)
-	rq.RemoteAddr = cocoIP + ":43"
+	pm, scrt := loginServ(t)
+	rr, rq := reqres(t, MethodPut, groupQuota,
+		`{"name":"A","value":1024}`, scrt, cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 
@@ -125,17 +95,11 @@ func TestPutGroupQuotaHF(t *testing.T) {
 }
 
 func TestGetUserCons(t *testing.T) {
-	pm, scrt, e := loginServ()
-	require.True(t, e == nil)
-	rr := httptest.NewRecorder()
-	rq, ec := NewRequest(MethodGet, userCons, nil)
-	require.NoError(t, ec)
-	rq.Header.Set(authHd, scrt)
-	rq.RemoteAddr = cocoIP + ":43"
-	setQV(rq.URL, userV, coco.User)
+	pm, scrt := loginServ(t)
+	rr, rq := reqres(t, MethodGet, userCons, "", scrt, cocoIP)
 	pm.ServeHTTP(rr, rq)
 	nv := new(nameVal)
-	ec = json.Unmarshal(rr.Body.Bytes(), nv)
+	ec := json.Unmarshal(rr.Body.Bytes(), nv)
 	require.NoError(t, ec)
 	dv, ok := pm.qa.uc.load(coco.User)
 	require.True(t, ok)
@@ -153,13 +117,13 @@ func TestCode(t *testing.T) {
 }
 
 func TestGoogleReq(t *testing.T) {
-	rr := httptest.NewRecorder()
-	rq, ec := NewRequest(MethodGet, "https://google.com", nil)
-	require.NoError(t, ec)
+	rr, rq := reqres(t, MethodGet, "https://google.com", "",
+		"", cocoIP)
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
 	pm.ServeHTTP(rr, rq)
 	// FIXME rr.Code = 500 when there's no network connection
+	// FIXME use recres
 	require.True(t, rr.Code == StatusForbidden,
 		"Code: %d", rr.Code)
 }
@@ -176,6 +140,24 @@ func testUnsMeth(t *testing.T, pm *PMProxy, path, meth string) {
 	require.NoError(t, ec)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusBadRequest)
+}
+
+func reqres(t *testing.T, meth, path, body, hd,
+	addr string) (r *httptest.ResponseRecorder, q *Request) {
+	var e error
+	if body != "" {
+		by := bytes.NewBufferString(body)
+		q, e = NewRequest(meth, path, by)
+	} else {
+		q, e = NewRequest(meth, path, nil)
+	}
+	require.NoError(t, e)
+	if hd != "" {
+		q.Header.Set(authHd, hd)
+	}
+	q.RemoteAddr = fmt.Sprintf("%s:443", addr)
+	r = httptest.NewRecorder()
+	return
 }
 
 func TestTrimPort(t *testing.T) {

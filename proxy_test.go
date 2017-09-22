@@ -52,9 +52,8 @@ func TestProxy(t *testing.T) {
 	p := newProxy(qa, rl)
 	rr := ht.NewRecorder()
 	_, e = p.qa.login(coco, cocoIP)
-	rq, ec := h.NewRequest(h.MethodGet, "https://google.com", nil)
-	rq.RemoteAddr = cocoIP
-	require.NoError(t, ec)
+	rr, rq := reqres(t, h.MethodGet, "https://google.com",
+		"", "", cocoIP)
 	p.ServeHTTP(rr, rq)
 	// FIXME rr.Code = 500 when there's no network connection
 	require.True(t, rr.Code == h.StatusForbidden, "Code: %d",
@@ -64,19 +63,17 @@ func TestProxy(t *testing.T) {
 
 	var s string
 	s, e = p.qa.login(pepe, pepeIP)
-	require.True(t, e == nil)
-	rq.RemoteAddr = pepeIP
 	require.True(t, !qa.nlf(pepeIP))
 
-	rr = ht.NewRecorder()
 	var n0, n1 uint64
 	// n0 is consumption before making request
 	// n1 is consumption after making request
 	nv := new(nameVal)
 	e = p.qa.userCons(pepeIP, s, nv)
 	require.True(t, e == nil)
-	rq.RemoteAddr = pepeIP
 	n0 = nv.Value
+	rr, rq = reqres(t, h.MethodGet, "https://google.com",
+		"", "", pepeIP)
 	p.ServeHTTP(rr, rq)
 	e = p.qa.userCons(pepeIP, s, nv)
 	require.True(t, e == nil)

@@ -25,6 +25,9 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
+- Error in sending response.RemoteAddr to QAdm since the
+  latter contains a port and not just the IP.
+- Refactor tests according what @francesc teached
 
 ** HTTP server
 Is implemented at server.go file. It handles the local

@@ -186,13 +186,7 @@ func (q *QAdm) canReq(ip string, l *url.URL,
 			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
 		c = c * -1
 	}
-	println(q.nlf(ip))
-	fmt.Printf("%v\n", q.sm.sessions)
-	println(ip)
-	println(l.String())
-	println(d.String())
-	println(c)
-	//{ q.finishedQuota(ip) ∨ d inside forbidden interval ⇒ c < 0 }
+	//{ q.nlf(ip) ∨ d inside forbidden interval ⇒ c < 0 }
 	return
 }
 

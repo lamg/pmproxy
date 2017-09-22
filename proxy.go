@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"github.com/elazarl/goproxy"
 	g "github.com/elazarl/goproxy"
+	_ "net"
 	h "net/http"
 	"strings"
 	"time"
@@ -17,11 +18,21 @@ type proxy struct {
 func newProxy(qa *QAdm, rl *RLog) (p *proxy) {
 	p = new(proxy)
 	p.px, p.qa, p.rl = g.NewProxyHttpServer(), qa, rl
+	// p.px.ConnectDial = newConCount
 	p.px.OnRequest(
 		goproxy.ReqConditionFunc(
 			p.cannotRequest)).HandleConnect(goproxy.AlwaysReject)
 	p.px.OnResponse().DoFunc(p.updateConsumption)
+	// Reject all connections not made throug port 443 or 80
 	return
+}
+
+// func newConCount(ntw, addr string) (r net.Conn, e error) {
+
+// 	return
+// }
+
+type conCount struct {
 }
 
 type usrDt struct {
@@ -54,7 +65,7 @@ func (p *proxy) updateConsumption(r *h.Response,
 	// { (r ≠ nil ≡ log ≠ nil) ∧ (r = nil ≡ log = nil ∧ k = -1) }
 	if k >= 0 {
 		cl := float32(r.ContentLength)
-		p.qa.addCons(r.Request.RemoteAddr, uint64(k*cl))
+		p.qa.addCons(trimPort(r.Request.RemoteAddr), uint64(k*cl))
 		log.RespSize = uint64(r.ContentLength)
 		log.Action = "TCP_MISS"
 		log.Hierarchy = "DIRECT"
@@ -81,7 +92,7 @@ func (p *proxy) updateConsumption(r *h.Response,
 
 func (p *proxy) cannotRequest(q *h.Request,
 	c *goproxy.ProxyCtx) (r bool) {
-	k := p.qa.canReq(q.RemoteAddr, q.URL, time.Now())
+	k := p.qa.canReq(trimPort(q.RemoteAddr), q.URL, time.Now())
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
@@ -92,7 +103,7 @@ func (p *proxy) cannotRequest(q *h.Request,
 
 func (p *proxy) canResponse(r *h.Response,
 	c *goproxy.ProxyCtx) (x bool) {
-	k := p.qa.canReq(r.Request.RemoteAddr, r.Request.URL, time.Now())
+	k := p.qa.canReq(trimPort(r.Request.RemoteAddr), r.Request.URL, time.Now())
 	x = k >= 0
 	return
 }
