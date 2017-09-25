@@ -89,7 +89,6 @@ func (q *QAdm) getQuota(ip, s string, g *nameVal) {
 		if g.Name == "" {
 			g.Name = u.QuotaGroup
 		}
-		println(g.Name)
 		g.Value, _ = q.gq.load(g.Name)
 	}
 }
@@ -141,6 +140,7 @@ func (q *QAdm) addCons(ip string, c uint64) {
 	}
 
 	u := q.sm.User(ip)
+	fmt.Printf("IP: %s User: %v Cons: %d\n", ip, u, c)
 	if u != nil {
 		n, _ := q.uc.load(u.UserName)
 		q.uc.store(u.UserName, n+c)
@@ -163,11 +163,12 @@ func (q *QAdm) nlf(ip string) (b bool) {
 
 // c < 0 means that the request cannot be made
 // c ≥ 0 means c * Response.ContentLength = UserConsumption
+// { l is a string with the form host:port }
 func (q *QAdm) canReq(ip string, l string,
 	d time.Time) (c float32) {
-	// { l is a host:port }
+
 	var i int
-	//f means found l.Host in r.al[].hostname
+	//f ≡ found l.Host in r.al[].hostname
 	var f bool
 	i, f, c = 0, false, 1
 	for !f && i != len(q.al) {

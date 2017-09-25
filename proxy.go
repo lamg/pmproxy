@@ -25,20 +25,20 @@ func newProxy(qa *QAdm, rl *RLog) (p *proxy) {
 		HandleConnect(goproxy.AlwaysReject)
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
+	// TODO p.px.NonproxyHandler = hl
 	// Reject all connections not made throug port 443 or 80
 	return
 }
 
-func (p *proxy) newConCount(ntw, addr string) (r net.Conn,
+func (p *proxy) newConCount(ntw, addr string, c *g.ProxyCtx) (r net.Conn,
 	e error) {
-	println("addr: " + addr)
 	// TODO
 	// if address is a host name then it can be stored
 	// in new cn to used by canReq
 	var cn net.Conn
 	cn, e = net.Dial(ntw, addr)
 	if e == nil {
-		r = &conCount{cn, p.qa, addr}
+		r = &conCount{cn, p.qa, addr, c.Req}
 	}
 	return
 }
@@ -47,17 +47,14 @@ type conCount struct {
 	net.Conn
 	qa   *QAdm
 	addr string
+	req  *h.Request
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	// TODO
-	// count consumption
-	// change QAdm.canReq to be used like this
-	// { c.Conn.LocalAddr().String() has the form
-	//   ip:port }
-	ip := trimPort(c.Conn.LocalAddr().String())
-	k := c.qa.canReq(ip, c.addr, time.Now())
-
+	// TODO test
+	ip, addr := trimPort(c.req.RemoteAddr),
+		c.req.URL.Host
+	k := c.qa.canReq(ip, addr, time.Now())
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
