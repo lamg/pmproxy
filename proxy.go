@@ -3,7 +3,7 @@ package pmproxy
 import (
 	"github.com/elazarl/goproxy"
 	g "github.com/elazarl/goproxy"
-	_ "net"
+	"net"
 	h "net/http"
 	"strings"
 	"time"
@@ -18,21 +18,53 @@ type proxy struct {
 func newProxy(qa *QAdm, rl *RLog) (p *proxy) {
 	p = new(proxy)
 	p.px, p.qa, p.rl = g.NewProxyHttpServer(), qa, rl
-	// p.px.ConnectDial = newConCount
-	p.px.OnRequest(
-		goproxy.ReqConditionFunc(
-			p.cannotRequest)).HandleConnect(goproxy.AlwaysReject)
-	p.px.OnResponse().DoFunc(p.updateConsumption)
+	// TODO instead of handling with goproxy.AlwaysReject
+	// use a handler that returns an html page with useful
+	// information for the user
+	p.px.OnRequest(goproxy.ReqConditionFunc(p.cannotRequest)).
+		HandleConnect(goproxy.AlwaysReject)
+	p.px.OnResponse().DoFunc(p.logResp)
+	p.px.ConnectDial = p.newConCount
 	// Reject all connections not made throug port 443 or 80
 	return
 }
 
-// func newConCount(ntw, addr string) (r net.Conn, e error) {
-
-// 	return
-// }
+func (p *proxy) newConCount(ntw, addr string) (r net.Conn,
+	e error) {
+	println("addr: " + addr)
+	// TODO
+	// if address is a host name then it can be stored
+	// in new cn to used by canReq
+	var cn net.Conn
+	cn, e = net.Dial(ntw, addr)
+	if e == nil {
+		r = &conCount{cn, p.qa, addr}
+	}
+	return
+}
 
 type conCount struct {
+	net.Conn
+	qa   *QAdm
+	addr string
+}
+
+func (c *conCount) Read(p []byte) (n int, e error) {
+	// TODO
+	// count consumption
+	// change QAdm.canReq to be used like this
+	// { c.Conn.LocalAddr().String() has the form
+	//   ip:port }
+	ip := trimPort(c.Conn.LocalAddr().String())
+	k := c.qa.canReq(ip, c.addr, time.Now())
+
+	if k >= 0 {
+		n, e = c.Conn.Read(p)
+		// { n ≥ 0 }
+		cs := k * float32(n)
+		c.qa.addCons(ip, uint64(cs))
+	}
+	return
 }
 
 type usrDt struct {
@@ -41,34 +73,23 @@ type usrDt struct {
 	time time.Time
 }
 
-func (p *proxy) updateConsumption(r *h.Response,
+func (p *proxy) logResp(r *h.Response,
 	c *g.ProxyCtx) (x *h.Response) {
-	var k float32
 	var log *Log
 	if r != nil {
 		tm := time.Now()
-		k = p.qa.canReq(trimPort(r.Request.RemoteAddr),
-			r.Request.URL, tm)
 		log = &Log{
 			// User is set by p.rl.Log
-			Addr:    r.Request.RemoteAddr,
-			Meth:    r.Request.Method,
-			URI:     r.Request.URL.String(),
-			Proto:   r.Request.Proto,
-			Time:    tm,
-			Elapsed: 5 * time.Millisecond, //FIXME not the meaning of E.
-			From:    "-",
+			Addr:      r.Request.RemoteAddr,
+			Meth:      r.Request.Method,
+			URI:       r.Request.URL.String(),
+			Proto:     r.Request.Proto,
+			Time:      tm,
+			Elapsed:   5 * time.Millisecond, //FIXME not the meaning of E.
+			From:      "-",
+			Action:    "TCP_MISS",
+			Hierarchy: "DIRECT",
 		}
-	} else {
-		k = -1
-	}
-	// { (r ≠ nil ≡ log ≠ nil) ∧ (r = nil ≡ log = nil ∧ k = -1) }
-	if k >= 0 {
-		cl := float32(r.ContentLength)
-		p.qa.addCons(trimPort(r.Request.RemoteAddr), uint64(k*cl))
-		log.RespSize = uint64(r.ContentLength)
-		log.Action = "TCP_MISS"
-		log.Hierarchy = "DIRECT"
 		ct := r.Header.Get("Content-Type")
 		if ct == "" {
 			ct = "-"
@@ -77,34 +98,20 @@ func (p *proxy) updateConsumption(r *h.Response,
 			// MIME type parameters droped
 		}
 		log.ContentType = ct
-		x = r
-	} else if log != nil {
-		log.Action = "TCP_DENIED"
-		log.Hierarchy = "NONE"
-		log.ContentType = "text/plain"
-		x = g.NewResponse(r.Request, "text/plain", h.StatusForbidden,
-			"No hay acceso a Internet")
 		p.rl.record(log)
 	}
-
+	x = r
 	return
 }
 
 func (p *proxy) cannotRequest(q *h.Request,
 	c *goproxy.ProxyCtx) (r bool) {
-	k := p.qa.canReq(trimPort(q.RemoteAddr), q.URL, time.Now())
+	k := p.qa.canReq(trimPort(q.RemoteAddr), q.URL.Host, time.Now())
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
 	}
 	r = k < 0
-	return
-}
-
-func (p *proxy) canResponse(r *h.Response,
-	c *goproxy.ProxyCtx) (x bool) {
-	k := p.qa.canReq(trimPort(r.Request.RemoteAddr), r.Request.URL, time.Now())
-	x = k >= 0
 	return
 }
 

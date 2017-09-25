@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/lamg/errors"
 	"io"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -163,14 +162,15 @@ func (q *QAdm) nlf(ip string) (b bool) {
 
 // c < 0 means that the request cannot be made
 // c ≥ 0 means c * Response.ContentLength = UserConsumption
-func (q *QAdm) canReq(ip string, l *url.URL,
+func (q *QAdm) canReq(ip string, l string,
 	d time.Time) (c float32) {
+	// { l is a host:port }
 	var i int
 	//f means found l.Host in r.al[].hostname
 	var f bool
 	i, f, c = 0, false, 1
 	for !f && i != len(q.al) {
-		f = strings.Contains(l.Host, q.al[i].HostName)
+		f = strings.Contains(l, q.al[i].HostName)
 		if !f {
 			i = i + 1
 		}
@@ -184,6 +184,7 @@ func (q *QAdm) canReq(ip string, l *url.URL,
 	if q.nlf(ip) || (f &&
 		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
 			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
+
 		c = c * -1
 	}
 	//{ q.nlf(ip) ∨ d inside forbidden interval ⇒ c < 0 }

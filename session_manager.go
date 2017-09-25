@@ -3,11 +3,21 @@ package pmproxy
 import (
 	"fmt"
 	"github.com/lamg/errors"
+	"sync"
 )
 
 const (
 	errorCheck = iota
+	// ErrorDictDef is the error code meaning that
+	// SMng.sessions has a key with type different from *User
+	ErrorDictDef
+	// ErrorOverwritten is the error code meaning that
+	// the current jwt is no longer corresponding to the
+	// user associated with the ip
+	ErrorOverwritten
 )
+
+var ()
 
 // IPUser is an interface for getting *User associated to
 // user's names.
@@ -25,7 +35,7 @@ type credentials struct {
 // SMng handles users's sessions
 type SMng struct {
 	// ip - *User
-	sessions map[string]*User
+	sessions *sync.Map
 	udb      UserDB
 	crt      *JWTCrypt
 }
@@ -33,7 +43,7 @@ type SMng struct {
 // NewSMng initializes the SMng instance
 func NewSMng(a UserDB, c *JWTCrypt) (s *SMng) {
 	s = &SMng{
-		sessions: make(map[string]*User),
+		sessions: new(sync.Map),
 		udb:      a,
 		crt:      c,
 	}
@@ -48,7 +58,7 @@ func (s *SMng) login(c *credentials,
 		t, e = s.crt.encrypt(usr)
 	}
 	if e == nil {
-		s.sessions[a] = usr
+		s.sessions.Store(a, usr)
 	}
 	return
 }
@@ -56,22 +66,41 @@ func (s *SMng) login(c *credentials,
 func (s *SMng) logout(ip, scrt string) (e *errors.Error) {
 	_, e = s.check(ip, scrt)
 	if e == nil {
-		delete(s.sessions, ip)
+		s.sessions.Delete(ip)
 	}
 	return
 }
 
 func (s *SMng) check(ip, t string) (u *User, e *errors.Error) {
 	u, e = s.crt.decrypt(t)
+	var iv interface{}
 	if e == nil {
 		var ok bool
-		var lu *User
-		lu, ok = s.sessions[ip]
-		if !(ok && u.Equal(lu)) {
+		iv, ok = s.sessions.Load(ip)
+		if !ok {
 			e = &errors.Error{
 				Code: errorCheck,
 				Err:  fmt.Errorf("User %s not logged", u.Name),
 			}
+		}
+	}
+	var lu *User
+	if e == nil {
+		var ok bool
+		lu, ok = iv.(*User)
+		if !ok {
+			e = &errors.Error{
+				Code: ErrorDictDef,
+				Err: fmt.Errorf(
+					"The dictionary values must be of type *User"),
+			}
+		}
+	}
+	if e == nil && !u.Equal(lu) {
+		e = &errors.Error{
+			Code: ErrorOverwritten,
+			Err: fmt.Errorf("%s is not logged in %s",
+				u.UserName, ip),
 		}
 	}
 	return
@@ -79,6 +108,9 @@ func (s *SMng) check(ip, t string) (u *User, e *errors.Error) {
 
 // User returns the User struct associated to ip
 func (s *SMng) User(ip string) (u *User) {
-	u, _ = s.sessions[ip]
+	iv, ok := s.sessions.Load(ip)
+	if ok {
+		u, _ = iv.(*User)
+	}
 	return
 }

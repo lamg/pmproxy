@@ -122,13 +122,15 @@ func TestCanReq(t *testing.T) {
 			"2006-01-02T08:00:00-04:00", pepeIP, 1.5},
 		{"http://debian.org", "2006-01-02T08:00:00-04:00",
 			pepeIP, 1},
+		{"news.ycombinator.com:443", "2006-01-02T08:00:00-04:00",
+			pepeIP, 1},
 	}
 	for i, j := range cases {
 		u, e := url.Parse(j.url)
 		require.True(t, e == nil, "URL at %d", i)
 		tm, e := time.Parse(time.RFC3339, j.tm)
 		require.True(t, e == nil, "Time at %d", i)
-		c := qa.canReq(j.ip, u, tm)
+		c := qa.canReq(j.ip, u.Host, tm)
 		require.True(t, c == j.k, "%.1f ≠ %.1f at %d", c, j.k, i)
 	}
 }

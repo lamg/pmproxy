@@ -25,10 +25,13 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
-- Error in sending response.RemoteAddr to QAdm since the
-  latter contains a port and not just the IP.
-- Refactor tests according what @francesc teached
-
+- Consider case when proxy response status code is 500
+	as a warning of no network connection
+- SMng.sessions is not storing sessions, since (I think)
+	is not a concurrent map.
+- Change QAdm.canReq to use an ip instead of an URL as
+	parameter
+	
 ** HTTP server
 Is implemented at server.go file. It handles the local
 requests. The former provide login and logout
