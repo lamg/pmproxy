@@ -59,6 +59,7 @@ func (p *PMProxy) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr := trimPort(r.RemoteAddr)
 	var e *errors.Error
 	var scrt string
+
 	if r.Method == h.MethodPost {
 		cr := new(credentials)
 		e = decode(r.Body, cr)

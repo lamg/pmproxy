@@ -89,6 +89,7 @@ func (q *QAdm) getQuota(ip, s string, g *nameVal) {
 		if g.Name == "" {
 			g.Name = u.QuotaGroup
 		}
+		println(g.Name)
 		g.Value, _ = q.gq.load(g.Name)
 	}
 }
@@ -184,7 +185,6 @@ func (q *QAdm) canReq(ip string, l string,
 	if q.nlf(ip) || (f &&
 		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
 			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
-
 		c = c * -1
 	}
 	//{ q.nlf(ip) ∨ d inside forbidden interval ⇒ c < 0 }
