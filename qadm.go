@@ -164,15 +164,14 @@ func (q *QAdm) nlf(ip string) (b bool) {
 // c < 0 means that the request cannot be made
 // c ≥ 0 means c * Response.ContentLength = UserConsumption
 // { l is a string with the form host:port }
-func (q *QAdm) canReq(ip string, l string,
+func (q *QAdm) canReq(ip, host, port string,
 	d time.Time) (c float32) {
-
 	var i int
 	//f ≡ found l.Host in r.al[].hostname
 	var f bool
 	i, f, c = 0, false, 1
 	for !f && i != len(q.al) {
-		f = strings.Contains(l, q.al[i].HostName)
+		f = strings.Contains(host, q.al[i].HostName)
 		if !f {
 			i = i + 1
 		}
@@ -183,7 +182,7 @@ func (q *QAdm) canReq(ip string, l string,
 		c = res.ConsCfc
 	}
 	// { c ≥ 0 }
-	if q.nlf(ip) || (f &&
+	if !(port == "443" || port == "80") || q.nlf(ip) || (f &&
 		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
 			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
 		c = c * -1

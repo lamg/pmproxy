@@ -6,6 +6,7 @@ import (
 	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
+	"net"
 	h "net/http"
 	ht "net/http/httptest"
 	"testing"
@@ -49,8 +50,7 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 func TestProxy(t *testing.T) {
 	qa, rl, e := initQARL()
 	require.True(t, e == nil)
-	lh := newLocalHn(qa)
-	p := NewPMProxy(qa, rl, lh)
+	p := NewPMProxy(qa, rl, new(NetDialer))
 	rr := ht.NewRecorder()
 	_, e = p.qa.login(coco, cocoIP)
 	rr, rq := reqres(t, h.MethodGet, "https://google.com",
@@ -96,9 +96,7 @@ func TestLocalRequest(t *testing.T) {
 }
 
 func TestNewConCount(t *testing.T) {
-	// create a proxy type that instead of using
-	// net.Dial directly, uses an interface for
-	// dialing
+	// TODO use dummyDialer
 }
 
 func TestGoogleReq(t *testing.T) {
@@ -107,9 +105,18 @@ func TestGoogleReq(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
 	pm.ServeHTTP(rr, rq)
-	// FIXME rr.Code = 500 when there's no network connection
-	// FIXME use recres
 	require.True(t, rr.Code == h.StatusForbidden ||
 		rr.Code == h.StatusInternalServerError,
 		"Code: %d", rr.Code)
+}
+
+// TODO define this type properly and use it to test the
+// proxy
+type dummyDialer struct {
+}
+
+func (d *dummyDialer) Dial(ntw,
+	addr string) (c net.Conn, e error) {
+
+	return
 }

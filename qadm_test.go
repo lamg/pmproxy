@@ -5,7 +5,6 @@ import (
 	"github.com/lamg/errors"
 	. "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -107,45 +106,48 @@ func TestCanReq(t *testing.T) {
 	qa, _, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
 	cases := []struct {
-		url string
-		tm  string
-		ip  string
-		k   float32
+		host string
+		port string
+		tm   string
+		ip   string
+		k    float32
 	}{
-		{"https://14ymedio.com/bla/bla",
+		{"14ymedio.com", "443",
 			"2006-01-02T08:00:01-04:00", cocoIP, -1},
-		{"https://google.com.cu/coco/pepe",
+		{"google.com.cu", "443",
 			"2006-01-02T08:00:01-04:00", cocoIP, 0},
-		{"https://facebook.com/coco",
+		{"facebook.com", "443",
 			"2006-01-02T08:00:01-04:00", pepeIP, -1.5},
-		{"https://facebook.com/coco",
+		{"facebook.com", "443",
 			"2006-01-02T08:00:00-04:00", pepeIP, 1.5},
-		{"http://debian.org", "2006-01-02T08:00:00-04:00",
+		{"debian.org", "80", "2006-01-02T08:00:00-04:00",
 			pepeIP, 1},
-		{"news.ycombinator.com:443", "2006-01-02T08:00:00-04:00",
-			pepeIP, 1},
+		{"news.ycombinator.com", "443",
+			"2006-01-02T08:00:00-04:00", pepeIP, 1},
+		{"news.ycombinator.com", "441",
+			"2006-01-02T08:00:00-04:00", pepeIP, -1},
 	}
 	for i, j := range cases {
-		u, e := url.Parse(j.url)
-		require.True(t, e == nil, "URL at %d", i)
 		tm, e := time.Parse(time.RFC3339, j.tm)
 		require.True(t, e == nil, "Time at %d", i)
-		c := qa.canReq(j.ip, u.Host, tm)
+		c := qa.canReq(j.ip, j.host, j.port, tm)
 		require.True(t, c == j.k, "%.1f ≠ %.1f at %d", c, j.k, i)
 	}
 }
 
 func TestInDayInterval(t *testing.T) {
-	var a, x, y time.Time
+	i, ts, s := 0, make([]time.Time, 3), []string{
+		"2006-01-02T07:00:00-04:00",
+		"2006-01-02T08:00:00-04:00",
+		"2006-01-02T14:00:00-04:00",
+	}
 	var e error
-	a, e = time.Parse(time.RFC3339, "2006-01-02T07:00:00-04:00")
+	for i != len(s) && e == nil {
+		ts[i], e = time.Parse(time.RFC3339, s[i])
+		i = i + 1
+	}
 	require.NoError(t, e)
-	x, e = time.Parse(time.RFC3339, "2006-01-02T08:00:00-04:00")
-	require.NoError(t, e)
-	y, e = time.Parse(time.RFC3339, "2006-01-02T14:00:00-04:00")
-	require.NoError(t, e)
-	var b bool
-	b = inDayInterval(a, x, y)
+	b := inDayInterval(ts[0], ts[1], ts[2])
 	require.False(t, b)
 }
 

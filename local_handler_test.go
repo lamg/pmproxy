@@ -21,8 +21,7 @@ const (
 func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
-		lh := newLocalHn(qa)
-		p = NewPMProxy(qa, rl, lh)
+		p = NewPMProxy(qa, rl, new(NetDialer))
 	}
 	return
 }

@@ -99,7 +99,8 @@ func main() {
 		dt := wfact.NewDateArchiver(logFile)
 		rl, qa := pmproxy.NewRLog(dt, sm),
 			pmproxy.NewQAdm(sm, gq, uc, accExc, tm, 7*24*time.Hour)
-		pm := pmproxy.NewPMProxy(qa, rl)
+
+		pm := pmproxy.NewPMProxy(qa, rl, new(pmproxy.NetDialer))
 		// TODO serve HTTPS with valid certificate
 		ec = http.ListenAndServe(addr, pm)
 		e = nerror(ec)
