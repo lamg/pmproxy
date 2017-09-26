@@ -19,17 +19,18 @@ const (
 )
 
 func initPMProxy() (p *PMProxy, e *errors.Error) {
-	var qa *QAdm
-	var lg *RLog
-	qa, lg, e = initQARL()
+	qa, rl, e := initQARL()
 	if e == nil {
-		p = NewPMProxy(qa, lg)
+		lh := newLocalHn(qa)
+		p = NewPMProxy(qa, rl, lh)
 	}
 	return
 }
 
 func TestServerLogInOut(t *testing.T) {
-	pm, e := initPMProxy()
+	qa, _, e := initQARL()
+	require.True(t, e == nil)
+	pm := newLocalHn(qa)
 	require.True(t, e == nil)
 	rr, rq := reqres(t, MethodPost, logX,
 		`{"user":"a", "pass":"a"}`, "", cocoIP)
@@ -52,12 +53,13 @@ func TestServerLogInOut(t *testing.T) {
 	testUnsMeth(t, pm, logX, MethodConnect)
 }
 
-func loginServ(t *testing.T) (pm *PMProxy, s string) {
-	pm, e := initPMProxy()
+func loginServ(t *testing.T) (lh *localHn, s string) {
+	qa, _, e := initQARL()
 	require.True(t, e == nil)
+	lh = newLocalHn(qa)
 	rr, rq := reqres(t, MethodPost, logX,
 		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
-	pm.ServeHTTP(rr, rq)
+	lh.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 	s = rr.Header().Get(authHd)
 	return
@@ -65,6 +67,7 @@ func loginServ(t *testing.T) (pm *PMProxy, s string) {
 
 func TestGetGroupQuotaHF(t *testing.T) {
 	pm, scrt := loginServ(t)
+	require.True(t, pm != nil)
 	rr, rq := reqres(t, MethodGet, groupQuota, "", scrt,
 		cocoIP)
 	pm.ServeHTTP(rr, rq)
@@ -116,26 +119,13 @@ func TestCode(t *testing.T) {
 	require.True(t, e != nil && e.Code == ErrorDecode)
 }
 
-func TestGoogleReq(t *testing.T) {
-	rr, rq := reqres(t, MethodGet, "https://google.com", "",
-		"", cocoIP)
-	pm, e := initPMProxy()
-	require.True(t, e == nil)
-	pm.ServeHTTP(rr, rq)
-	// FIXME rr.Code = 500 when there's no network connection
-	// FIXME use recres
-	require.True(t, rr.Code == StatusForbidden ||
-		rr.Code == StatusInternalServerError,
-		"Code: %d", rr.Code)
-}
-
 func setQV(u *url.URL, k, v string) {
 	vs := u.Query()
 	vs.Set(k, v)
 	u.RawQuery = vs.Encode()
 }
 
-func testUnsMeth(t *testing.T, pm *PMProxy, path, meth string) {
+func testUnsMeth(t *testing.T, pm *localHn, path, meth string) {
 	rr := httptest.NewRecorder()
 	rq, ec := NewRequest(meth, path, nil)
 	require.NoError(t, ec)

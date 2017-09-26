@@ -9,14 +9,16 @@ import (
 	"time"
 )
 
-type proxy struct {
+// PMProxy is the proxy server
+type PMProxy struct {
 	qa *QAdm
 	px *g.ProxyHttpServer
 	rl *RLog
 }
 
-func newProxy(qa *QAdm, rl *RLog) (p *proxy) {
-	p = new(proxy)
+// NewPMProxy creates a new PMProxy
+func NewPMProxy(qa *QAdm, rl *RLog, lh h.Handler) (p *PMProxy) {
+	p = new(PMProxy)
 	p.px, p.qa, p.rl = g.NewProxyHttpServer(), qa, rl
 	// TODO instead of handling with goproxy.AlwaysReject
 	// use a handler that returns an html page with useful
@@ -25,12 +27,12 @@ func newProxy(qa *QAdm, rl *RLog) (p *proxy) {
 		HandleConnect(goproxy.AlwaysReject)
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
-	// TODO p.px.NonproxyHandler = hl
+	p.px.NonproxyHandler = lh
 	// Reject all connections not made throug port 443 or 80
 	return
 }
 
-func (p *proxy) newConCount(ntw, addr string, c *g.ProxyCtx) (r net.Conn,
+func (p *PMProxy) newConCount(ntw, addr string, c *g.ProxyCtx) (r net.Conn,
 	e error) {
 	// TODO
 	// if address is a host name then it can be stored
@@ -70,7 +72,7 @@ type usrDt struct {
 	time time.Time
 }
 
-func (p *proxy) logResp(r *h.Response,
+func (p *PMProxy) logResp(r *h.Response,
 	c *g.ProxyCtx) (x *h.Response) {
 	var log *Log
 	if r != nil {
@@ -101,7 +103,7 @@ func (p *proxy) logResp(r *h.Response,
 	return
 }
 
-func (p *proxy) cannotRequest(q *h.Request,
+func (p *PMProxy) cannotRequest(q *h.Request,
 	c *goproxy.ProxyCtx) (r bool) {
 	k := p.qa.canReq(trimPort(q.RemoteAddr), q.URL.Host, time.Now())
 	c.UserData = &usrDt{
@@ -112,6 +114,6 @@ func (p *proxy) cannotRequest(q *h.Request,
 	return
 }
 
-func (p *proxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
+func (p *PMProxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	p.px.ServeHTTP(w, r)
 }

@@ -39,23 +39,22 @@ const (
 
 // PMProxy is an HTTP server for proxying requests and
 // administrating quotas other aspects
-type PMProxy struct {
+type localHn struct {
 	mx *h.ServeMux
 	qa *QAdm
-	gp *proxy
 }
 
-// NewPMProxy creates a new PMProxy
-func NewPMProxy(qa *QAdm, lg *RLog) (p *PMProxy) {
-	p = new(PMProxy)
-	p.qa, p.mx, p.gp = qa, h.NewServeMux(), newProxy(qa, lg)
+// newLocalHn creates a new localHn
+func newLocalHn(qa *QAdm) (p *localHn) {
+	p = new(localHn)
+	p.qa, p.mx = qa, h.NewServeMux()
 	p.mx.HandleFunc(logX, p.logXHF)
 	p.mx.HandleFunc(groupQuota, p.groupQuotaHF)
 	p.mx.HandleFunc(userCons, p.userConsHF)
 	return
 }
 
-func (p *PMProxy) logXHF(w h.ResponseWriter, r *h.Request) {
+func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr := trimPort(r.RemoteAddr)
 	var e *errors.Error
 	var scrt string
@@ -80,7 +79,7 @@ func (p *PMProxy) logXHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-func (p *PMProxy) groupQuotaHF(w h.ResponseWriter, r *h.Request) {
+func (p *localHn) groupQuotaHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
 	gr, addr := new(nameVal), trimPort(r.RemoteAddr)
 	if e == nil && r.Method == h.MethodGet {
@@ -98,7 +97,7 @@ func (p *PMProxy) groupQuotaHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-func (p *PMProxy) userConsHF(w h.ResponseWriter, r *h.Request) {
+func (p *localHn) userConsHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
 	var usr string
 	if e == nil && r.Method == h.MethodGet {
@@ -117,12 +116,8 @@ func (p *PMProxy) userConsHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-func (p *PMProxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
-	if r.URL.Host == "" {
-		p.mx.ServeHTTP(w, r)
-	} else {
-		p.gp.ServeHTTP(w, r)
-	}
+func (p *localHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
+	p.mx.ServeHTTP(w, r)
 }
 
 func getScrt(h h.Header) (s string, e *errors.Error) {

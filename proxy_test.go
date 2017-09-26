@@ -49,7 +49,8 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 func TestProxy(t *testing.T) {
 	qa, rl, e := initQARL()
 	require.True(t, e == nil)
-	p := newProxy(qa, rl)
+	lh := newLocalHn(qa)
+	p := NewPMProxy(qa, rl, lh)
 	rr := ht.NewRecorder()
 	_, e = p.qa.login(coco, cocoIP)
 	rr, rq := reqres(t, h.MethodGet, "https://google.com",
@@ -85,8 +86,30 @@ func TestProxy(t *testing.T) {
 		"Code:%d n1 >= n0: %t", rr.Code, m >= n)
 }
 
+func TestLocalRequest(t *testing.T) {
+	rr, rq := reqres(t, h.MethodGet, "/", "", "", cocoIP)
+	pm, e := initPMProxy()
+	require.True(t, e == nil)
+	pm.ServeHTTP(rr, rq)
+	rs := rr.Result()
+	require.True(t, rs.StatusCode == h.StatusNotFound)
+}
+
 func TestNewConCount(t *testing.T) {
 	// create a proxy type that instead of using
 	// net.Dial directly, uses an interface for
 	// dialing
+}
+
+func TestGoogleReq(t *testing.T) {
+	rr, rq := reqres(t, h.MethodGet, "https://google.com", "",
+		"", cocoIP)
+	pm, e := initPMProxy()
+	require.True(t, e == nil)
+	pm.ServeHTTP(rr, rq)
+	// FIXME rr.Code = 500 when there's no network connection
+	// FIXME use recres
+	require.True(t, rr.Code == h.StatusForbidden ||
+		rr.Code == h.StatusInternalServerError,
+		"Code: %d", rr.Code)
 }
