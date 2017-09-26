@@ -7,7 +7,6 @@ import (
 	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
-	"net"
 	h "net/http"
 	ht "net/http/httptest"
 	"testing"
@@ -54,11 +53,11 @@ func TestProxy(t *testing.T) {
 	p := NewPMProxy(qa, rl, new(NetDialer))
 	rr := ht.NewRecorder()
 	_, e = p.qa.login(coco, cocoIP)
-	rr, rq := reqres(t, h.MethodGet, "https://google.com",
+	rr, rq := reqres(t, h.MethodGet, "https://twitter.com",
 		"", "", cocoIP)
 	p.ServeHTTP(rr, rq)
 	// FIXME rr.Code = 500 when there's no network connection
-	require.True(t, rr.Code < h.StatusForbidden ||
+	require.True(t, rr.Code == h.StatusForbidden ||
 		rr.Code == h.StatusInternalServerError,
 		"Code: %d", rr.Code)
 	// since coco has finished his quota
@@ -75,14 +74,16 @@ func TestProxy(t *testing.T) {
 	e = p.qa.userCons(pepeIP, s, nv)
 	require.True(t, e == nil)
 	n = nv.Value
-	rr, rq = reqres(t, h.MethodGet, "https://google.com",
+	require.True(t, p.qa.canReq(pepeIP, "twitter.com", "443",
+		time.Now()) == 1)
+	rr, rq = reqres(t, h.MethodGet, "https://twitter.com",
 		"", "", pepeIP)
+
 	p.ServeHTTP(rr, rq)
 	e = p.qa.userCons(pepeIP, s, nv)
 	require.True(t, e == nil)
 	m = nv.Value
-	require.True(t, (rr.Code < h.StatusForbidden && m >= n) ||
-		rr.Code == h.StatusNotFound ||
+	require.True(t, (rr.Code == h.StatusOK && m >= n) ||
 		rr.Code == h.StatusInternalServerError,
 		"Code:%d n1 >= n0: %t", rr.Code, m >= n)
 }
@@ -110,9 +111,8 @@ func TestForbiddenReq(t *testing.T) {
 	rr, rq := reqres(t, h.MethodGet, "https://twitter.com", "",
 		"", cocoIP)
 	pm.ServeHTTP(rr, rq)
-	rs := rr.Result()
-	require.True(t, rs.StatusCode == h.StatusForbidden ||
-		rs.StatusCode == h.StatusInternalServerError,
+	require.True(t, rr.Code == h.StatusForbidden &&
+		rr.Body.String() == "No tiene acceso",
 		"Code: %d", rr.Code)
 }
 
@@ -131,15 +131,4 @@ func TestConCountRead(t *testing.T) {
 	if n == 0 {
 		t.Log("No network connection")
 	}
-}
-
-// TODO define this type properly and use it to test the
-// proxy
-type dummyDialer struct {
-}
-
-func (d *dummyDialer) Dial(ntw,
-	addr string) (c net.Conn, e error) {
-
-	return
 }

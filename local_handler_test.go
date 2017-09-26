@@ -145,6 +145,7 @@ func reqres(t *testing.T, meth, path, body, hd,
 	if hd != "" {
 		q.Header.Set(authHd, hd)
 	}
+	q.Host = q.Host + ":443"
 	q.RemoteAddr = fmt.Sprintf("%s:443", addr)
 	r = httptest.NewRecorder()
 	return

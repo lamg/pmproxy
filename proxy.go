@@ -20,15 +20,19 @@ type PMProxy struct {
 // NewPMProxy creates a new PMProxy
 func NewPMProxy(qa *QAdm, rl *RLog, nd Dialer) (p *PMProxy) {
 	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, nd}
-	// TODO instead of handling with goproxy.AlwaysReject
-	// use a handler that returns an html page with useful
-	// information for the user
 	p.px.OnRequest(goproxy.ReqConditionFunc(p.cannotRequest)).
-		HandleConnect(goproxy.AlwaysReject)
+		DoFunc(forbiddenAcc)
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
 	p.px.NonproxyHandler = newLocalHn(qa)
 	// Reject all connections not made throug port 443 or 80
+	return
+}
+
+func forbiddenAcc(r *h.Request,
+	c *g.ProxyCtx) (q *h.Request, p *h.Response) {
+	q, p = r, g.NewResponse(r, "text/plain",
+		h.StatusForbidden, "No tiene acceso")
 	return
 }
 
@@ -104,12 +108,19 @@ func (p *PMProxy) logResp(r *h.Response,
 
 func (p *PMProxy) cannotRequest(q *h.Request,
 	c *goproxy.ProxyCtx) (r bool) {
-	k := p.qa.canReq(trimPort(q.RemoteAddr), q.URL.Hostname(), q.URL.Port(), time.Now())
+	hs, pr := splitHostPort(q.Host)
+	k := p.qa.canReq(trimPort(q.RemoteAddr), hs, pr, time.Now())
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
 	}
 	r = k < 0
+	return
+}
+
+func splitHostPort(s string) (hs, pr string) {
+	a := strings.Split(s, ":")
+	hs, pr = a[0], a[1]
 	return
 }
 
