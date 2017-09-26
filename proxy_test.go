@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"bytes"
 	"crypto/rsa"
+	g "github.com/elazarl/goproxy"
 	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
@@ -93,21 +94,43 @@ func TestLocalRequest(t *testing.T) {
 	pm.ServeHTTP(rr, rq)
 	rs := rr.Result()
 	require.True(t, rs.StatusCode == h.StatusNotFound)
+
+	rr, rq = reqres(t, h.MethodGet, groupQuota, "", "", cocoIP)
+	pm.ServeHTTP(rr, rq)
+	require.True(t, rr.Code == h.StatusBadRequest)
 }
 
 func TestNewConCount(t *testing.T) {
 	// TODO use dummyDialer
 }
 
-func TestGoogleReq(t *testing.T) {
-	rr, rq := reqres(t, h.MethodGet, "https://google.com", "",
-		"", cocoIP)
+func TestForbiddenReq(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
+	rr, rq := reqres(t, h.MethodGet, "https://twitter.com", "",
+		"", cocoIP)
 	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == h.StatusForbidden ||
-		rr.Code == h.StatusInternalServerError,
+	rs := rr.Result()
+	require.True(t, rs.StatusCode == h.StatusForbidden ||
+		rs.StatusCode == h.StatusInternalServerError,
 		"Code: %d", rr.Code)
+}
+
+func TestConCountRead(t *testing.T) {
+	pm, e := initPMProxy()
+	require.True(t, e == nil)
+	_, rq := reqres(t, h.MethodGet, "https://twitter.com", "",
+		"", cocoIP)
+	c, ec := pm.newConCount("tcp", "twitter.com:443",
+		&g.ProxyCtx{Req: rq})
+	require.NoError(t, ec)
+	bs := make([]byte, 1024)
+	n, ec := c.Read(bs)
+	require.NoError(t, ec)
+	require.True(t, n >= 0)
+	if n == 0 {
+		t.Log("No network connection")
+	}
 }
 
 // TODO define this type properly and use it to test the

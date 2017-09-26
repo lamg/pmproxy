@@ -140,7 +140,6 @@ func (q *QAdm) addCons(ip string, c uint64) {
 	}
 
 	u := q.sm.User(ip)
-	fmt.Printf("IP: %s User: %v Cons: %d\n", ip, u, c)
 	if u != nil {
 		n, _ := q.uc.load(u.UserName)
 		q.uc.store(u.UserName, n+c)

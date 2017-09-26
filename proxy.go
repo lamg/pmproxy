@@ -53,7 +53,6 @@ type conCount struct {
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	// TODO test
 	ip := trimPort(c.req.RemoteAddr)
 	k := c.qa.canReq(ip, c.req.URL.Hostname(),
 		c.req.URL.Port(), time.Now())
