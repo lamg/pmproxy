@@ -3,7 +3,6 @@ package pmproxy
 import (
 	"bytes"
 	"crypto/rsa"
-	g "github.com/elazarl/goproxy"
 	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
@@ -101,10 +100,6 @@ func TestLocalRequest(t *testing.T) {
 	require.True(t, rr.Code == h.StatusBadRequest)
 }
 
-func TestNewConCount(t *testing.T) {
-	// TODO use dummyDialer
-}
-
 func TestForbiddenReq(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
@@ -114,21 +109,4 @@ func TestForbiddenReq(t *testing.T) {
 	require.True(t, rr.Code == h.StatusForbidden &&
 		rr.Body.String() == "No tiene acceso",
 		"Code: %d", rr.Code)
-}
-
-func TestConCountRead(t *testing.T) {
-	pm, e := initPMProxy()
-	require.True(t, e == nil)
-	_, rq := reqres(t, h.MethodGet, "https://twitter.com", "",
-		"", cocoIP)
-	c, ec := pm.newConCount("tcp", "twitter.com:443",
-		&g.ProxyCtx{Req: rq})
-	require.NoError(t, ec)
-	bs := make([]byte, 1024)
-	n, ec := c.Read(bs)
-	require.NoError(t, ec)
-	require.True(t, n >= 0)
-	if n == 0 {
-		t.Log("No network connection")
-	}
 }

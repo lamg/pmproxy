@@ -58,8 +58,8 @@ type conCount struct {
 
 func (c *conCount) Read(p []byte) (n int, e error) {
 	ip := trimPort(c.req.RemoteAddr)
-	k := c.qa.canReq(ip, c.req.URL.Hostname(),
-		c.req.URL.Port(), time.Now())
+	hs, pr := splitHostPort(c.req.Host)
+	k := c.qa.canReq(ip, hs, pr, time.Now())
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
