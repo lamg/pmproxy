@@ -25,12 +25,11 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
-- Consider case when proxy response status code is 500
-	as a warning of no network connection
-- SMng.sessions is not storing sessions, since (I think)
-	is not a concurrent map.
-- Change QAdm.canReq to use an ip instead of an URL as
-	parameter
+- The following line at conCount.Read doesn't look very good
+else {
+		p = []byte(fmt.Sprintf("Cannot request %s:%s from %s at this time", hs, pr, ip))
+		n = len(p)
+}
 	
 ** HTTP server
 Is implemented at server.go file. It handles the local
@@ -42,7 +41,7 @@ route "/groupQuota", information of users consumption,
 through the GET method at the route "/userCons".
 
 Remote requests are handled by the package
-github.com/elazarl/goproxy, when the user is logged in,
+github.com/lamg/goproxy, when the user is logged in,
 and the response size is added to its consumption. Users
 whose consumption is equal or greater to their quotas are
 not served, unless the request is done to determined

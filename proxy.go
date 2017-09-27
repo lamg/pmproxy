@@ -1,8 +1,8 @@
 package pmproxy
 
 import (
-	"github.com/elazarl/goproxy"
-	g "github.com/elazarl/goproxy"
+	"fmt"
+	g "github.com/lamg/goproxy"
 	"net"
 	h "net/http"
 	"strings"
@@ -20,7 +20,7 @@ type PMProxy struct {
 // NewPMProxy creates a new PMProxy
 func NewPMProxy(qa *QAdm, rl *RLog, nd Dialer) (p *PMProxy) {
 	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, nd}
-	p.px.OnRequest(goproxy.ReqConditionFunc(p.cannotRequest)).
+	p.px.OnRequest(g.ReqConditionFunc(p.cannotRequest)).
 		DoFunc(forbiddenAcc)
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
@@ -44,7 +44,7 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	var cn net.Conn
 	cn, e = p.nd.Dial(ntw, addr)
 	if e == nil {
-		r = &conCount{cn, p.qa, addr, c.Req}
+		r = &conCount{cn, p.qa, addr, c}
 	}
 	return
 }
@@ -53,18 +53,21 @@ type conCount struct {
 	net.Conn
 	qa   *QAdm
 	addr string
-	req  *h.Request
+	ctx  *g.ProxyCtx
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	ip := trimPort(c.req.RemoteAddr)
-	hs, pr := splitHostPort(c.req.Host)
+	ip := trimPort(c.ctx.Req.RemoteAddr)
+	hs, pr := splitHostPort(c.ctx.Req.Host)
 	k := c.qa.canReq(ip, hs, pr, time.Now())
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
 		cs := k * float32(n)
 		c.qa.addCons(ip, uint64(cs))
+	} else {
+		p = []byte(fmt.Sprintf("Cannot request %s:%s from %s at this time", hs, pr, ip))
+		n = len(p)
 	}
 	return
 }
@@ -107,7 +110,7 @@ func (p *PMProxy) logResp(r *h.Response,
 }
 
 func (p *PMProxy) cannotRequest(q *h.Request,
-	c *goproxy.ProxyCtx) (r bool) {
+	c *g.ProxyCtx) (r bool) {
 	hs, pr := splitHostPort(q.Host)
 	k := p.qa.canReq(trimPort(q.RemoteAddr), hs, pr, time.Now())
 	c.UserData = &usrDt{
@@ -120,7 +123,12 @@ func (p *PMProxy) cannotRequest(q *h.Request,
 
 func splitHostPort(s string) (hs, pr string) {
 	a := strings.Split(s, ":")
-	hs, pr = a[0], a[1]
+	if len(a) == 1 {
+		pr = "80"
+	} else {
+		pr = a[1]
+	}
+	hs = a[0]
 	return
 }
 
