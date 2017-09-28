@@ -14,10 +14,8 @@ import (
 const (
 	// POST, DELETE
 	logX = "/logX"
-	// GET, PUT
-	groupQuota = "/groupQuota"
 	// GET
-	userCons = "/userCons"
+	userStatus = "/userStatus"
 	// GET, POST
 	accExcp = "/accessExceptions"
 	authHd  = "authHd"
@@ -49,8 +47,7 @@ func newLocalHn(qa *QAdm) (p *localHn) {
 	p = new(localHn)
 	p.qa, p.mx = qa, h.NewServeMux()
 	p.mx.HandleFunc(logX, p.logXHF)
-	p.mx.HandleFunc(groupQuota, p.groupQuotaHF)
-	p.mx.HandleFunc(userCons, p.userConsHF)
+	p.mx.HandleFunc(userStatus, p.userStatusHF)
 	return
 }
 
@@ -66,7 +63,7 @@ func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
 			scrt, e = p.qa.login(cr, addr)
 		}
 		if e == nil {
-			w.Header().Set(authHd, scrt)
+			w.Write([]byte(scrt))
 		}
 	} else if r.Method == h.MethodDelete {
 		scrt, e = getScrt(r.Header)
@@ -79,39 +76,26 @@ func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-func (p *localHn) groupQuotaHF(w h.ResponseWriter, r *h.Request) {
+type usrSt struct {
+	Quota       uint64 `json:"quota"`
+	Consumption uint64 `json:"consumption"`
+}
+
+func (p *localHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
-	gr, addr := new(nameVal), trimPort(r.RemoteAddr)
+	addr := trimPort(r.RemoteAddr)
 	if e == nil && r.Method == h.MethodGet {
-		gr.Name = r.URL.Query().Get(groupV)
-		p.qa.getQuota(addr, s, gr)
-		e = encode(w, gr)
-	} else if e == nil && r.Method == h.MethodPut {
-		e = decode(r.Body, gr)
+		var q uint64
+		q, e = p.qa.getQuota(addr, s)
+		var c uint64
 		if e == nil {
-			p.qa.setQuota(addr, s, gr)
+			c, e = p.qa.userCons(addr, s)
+		}
+		if e == nil {
+			e = encode(w, &usrSt{Quota: q, Consumption: c})
 		}
 	} else if e == nil {
 		e = notSuppMeth(r.Method)
-	}
-	writeErr(w, e)
-}
-
-func (p *localHn) userConsHF(w h.ResponseWriter, r *h.Request) {
-	s, e := getScrt(r.Header)
-	var usr string
-	if e == nil && r.Method == h.MethodGet {
-		usr = r.URL.Query().Get(userV)
-	} else {
-		e = notSuppMeth(r.Method)
-	}
-	nv := &nameVal{Name: usr}
-	if e == nil {
-		addr := trimPort(r.RemoteAddr)
-		e = p.qa.userCons(addr, s, nv)
-	}
-	if e == nil {
-		e = encode(w, nv)
 	}
 	writeErr(w, e)
 }

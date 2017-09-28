@@ -75,29 +75,24 @@ func TestGetQuota(t *testing.T) {
 	var qa *QAdm
 	var scrt string
 	var e *errors.Error
-	qa, scrt, e = initTestQAdm(coco, cocoIP)
+	qa, scrt, e = initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
 	// { logged in qa }
 
-	v := &nameVal{Name: gProf}
-	qa.getQuota(cocoIP, scrt, v)
-	require.True(t, v.Value == qProf, "%d≠%d", v.Value, qProf)
-	v.Name = gEst
-	qa.getQuota(cocoIP, scrt, v)
-	require.True(t, v.Value == qEst, "%d≠%d", v.Value, qEst)
+	var v uint64
+	v, e = qa.getQuota(pepeIP, scrt)
+	require.True(t, v == qProf, "%d≠%d", v, qProf)
 }
 
 func TestAddCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(coco, cocoIP)
 	require.True(t, e == nil)
 	var nc, dwn, n uint64
-	nv := new(nameVal)
-	e = qa.userCons(cocoIP, scrt, nv)
+	nc, e = qa.userCons(cocoIP, scrt)
 	require.True(t, e == nil)
-	dwn, nc = 1024, nv.Value
+	dwn = 1024
 	qa.addCons(cocoIP, dwn)
-	e = qa.userCons(cocoIP, scrt, nv)
-	n = nv.Value
+	n, e = qa.userCons(cocoIP, scrt)
 	require.True(t, e == nil)
 	require.True(t, n == nc+dwn, "%d≠%d", n, nc+dwn)
 }

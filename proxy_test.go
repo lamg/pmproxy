@@ -69,19 +69,16 @@ func TestProxy(t *testing.T) {
 	var n, m uint64
 	// n0 is consumption before making request
 	// n1 is consumption after making request
-	nv := new(nameVal)
-	e = p.qa.userCons(pepeIP, s, nv)
+	n, e = p.qa.userCons(pepeIP, s)
 	require.True(t, e == nil)
-	n = nv.Value
 	require.True(t, p.qa.canReq(pepeIP, "twitter.com", "443",
 		time.Now()) == 1)
 	rr, rq = reqres(t, h.MethodGet, "https://twitter.com",
 		"", "", pepeIP)
 
 	p.ServeHTTP(rr, rq)
-	e = p.qa.userCons(pepeIP, s, nv)
+	m, e = p.qa.userCons(pepeIP, s)
 	require.True(t, e == nil)
-	m = nv.Value
 	require.True(t, (rr.Code == h.StatusOK && m >= n) ||
 		rr.Code == h.StatusInternalServerError,
 		"Code:%d n1 >= n0: %t", rr.Code, m >= n)
@@ -95,7 +92,7 @@ func TestLocalRequest(t *testing.T) {
 	rs := rr.Result()
 	require.True(t, rs.StatusCode == h.StatusNotFound)
 
-	rr, rq = reqres(t, h.MethodGet, groupQuota, "", "", cocoIP)
+	rr, rq = reqres(t, h.MethodGet, userStatus, "", "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == h.StatusBadRequest)
 }

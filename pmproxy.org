@@ -31,24 +31,17 @@ else {
 		n = len(p)
 }
 	
-** HTTP server
-Is implemented at server.go file. It handles the local
-requests. The former provide login and logout
-functionality, through the POST and DELETE methods
-respectively at the route "/logX", information and change
-of group quotas, through the GET and PUT methods at the
-route "/groupQuota", information of users consumption,
-through the GET method at the route "/userCons".
+** User HTTP interface
+- Cred: {"user":string, "pass":string}
+- JWT: JSON web token (a string with encrypted user information)
+- Hd: {"authHd":JWT}
+- UsrSt: {"quota":uint64, "consumption":uint64}
 
-Remote requests are handled by the package
-github.com/lamg/goproxy, when the user is logged in,
-and the response size is added to its consumption. Users
-whose consumption is equal or greater to their quotas are
-not served, unless the request is done to determined
-servers.
-
-
-
+| Path        | Method | Body | Header | R. code    | R. body |
+|-------------+--------+------+--------+------------+---------|
+| /logX       | POST   | Cred |        | 200 or 400 | JWT     |
+| /logX       | DELETE |      | Hd     | 200 or 400 |         |
+| /userStatus | GET    |      | Hd     | 200 or 400 | UsrSt   |
 
 ** Quota administration
 - Improve description

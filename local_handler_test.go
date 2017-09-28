@@ -35,7 +35,7 @@ func TestServerLogInOut(t *testing.T) {
 		`{"user":"a", "pass":"a"}`, "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.Equal(t, rr.Code, StatusOK)
-	scrt := rr.Header().Get(authHd)
+	scrt := rr.Body.String()
 	require.True(t, scrt != "")
 	var usr *User
 	usr, e = pm.qa.sm.check(cocoIP, scrt)
@@ -60,54 +60,26 @@ func loginServ(t *testing.T) (lh *localHn, s string) {
 		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
 	lh.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
-	s = rr.Header().Get(authHd)
+	s = rr.Body.String()
 	return
 }
 
-func TestGetGroupQuotaHF(t *testing.T) {
+func TestGetUserStatus(t *testing.T) {
 	pm, scrt := loginServ(t)
-	require.True(t, pm != nil)
-	rr, rq := reqres(t, MethodGet, groupQuota, "", scrt,
-		cocoIP)
+	rr, rq := reqres(t, MethodGet, userStatus, "", scrt, cocoIP)
 	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == StatusOK)
-	nv := &nameVal{}
-	ec := json.Unmarshal(rr.Body.Bytes(), nv)
+	us := new(usrSt)
+	ec := json.Unmarshal(rr.Body.Bytes(), us)
 	require.NoError(t, ec)
-	qg := pm.qa.sm.User(cocoIP).QuotaGroup
-	dv := &nameVal{Name: qg}
-	pm.qa.getQuota(cocoIP, scrt, dv)
-	require.True(t, nv.Value == dv.Value, "%d ≠ %d", nv.Value,
-		dv.Value)
-	t.Run("Unsupported method", func(t *testing.T) {
-		testUnsMeth(t, pm, groupQuota, MethodConnect)
-	})
-}
-
-func TestPutGroupQuotaHF(t *testing.T) {
-	pm, scrt := loginServ(t)
-	rr, rq := reqres(t, MethodPut, groupQuota,
-		`{"name":"A","value":1024}`, scrt, cocoIP)
-	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == StatusOK)
-
-	n, ok := pm.qa.gq.load("A")
+	cv, ok := pm.qa.uc.load(coco.User)
 	require.True(t, ok)
-	require.True(t, n == 1024)
-}
-
-func TestGetUserCons(t *testing.T) {
-	pm, scrt := loginServ(t)
-	rr, rq := reqres(t, MethodGet, userCons, "", scrt, cocoIP)
-	pm.ServeHTTP(rr, rq)
-	nv := new(nameVal)
-	ec := json.Unmarshal(rr.Body.Bytes(), nv)
-	require.NoError(t, ec)
-	dv, ok := pm.qa.uc.load(coco.User)
+	require.True(t, us.Consumption == cv)
+	u, e := pm.qa.sm.check(cocoIP, scrt)
+	require.True(t, e == nil)
+	qv, ok := pm.qa.gq.load(u.QuotaGroup)
 	require.True(t, ok)
-	require.True(t, nv.Value == dv)
-
-	testUnsMeth(t, pm, userCons, MethodConnect)
+	require.True(t, us.Quota == qv)
+	testUnsMeth(t, pm, userStatus, MethodConnect)
 }
 
 func TestCode(t *testing.T) {

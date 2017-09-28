@@ -20,6 +20,8 @@ const (
 	// ErrorMalformedRecord is the error returned when a record
 	// hasn't the required format
 	ErrorMalformedRecord
+	// ErrorLQ is the error when a quota doesn't appear
+	ErrorLQ
 )
 
 type nameVal struct {
@@ -83,14 +85,20 @@ func (q *QAdm) logout(ip, s string) (e *errors.Error) {
 	return
 }
 
-func (q *QAdm) getQuota(ip, s string, g *nameVal) {
+func (q *QAdm) getQuota(ip, s string) (r uint64,
+	e *errors.Error) {
 	u, e := q.sm.check(ip, s)
 	if e == nil {
-		if g.Name == "" {
-			g.Name = u.QuotaGroup
+		var ok bool
+		r, ok = q.gq.load(u.QuotaGroup)
+		if !ok {
+			e = &errors.Error{
+				Code: ErrorLQ,
+				Err:  fmt.Errorf("Not found quota for %s", u.UserName),
+			}
 		}
-		g.Value, _ = q.gq.load(g.Name)
 	}
+	return
 }
 
 func (q *QAdm) setQuota(ip, s string,
@@ -109,22 +117,19 @@ func (q *QAdm) setQuota(ip, s string,
 	return
 }
 
-func (q *QAdm) userCons(ip, s string,
-	nv *nameVal) (e *errors.Error) {
+func (q *QAdm) userCons(ip, s string) (c uint64,
+	e *errors.Error) {
 	var u *User
 	u, e = q.sm.check(ip, s)
-	if nv.Name == "" {
-		nv.Name = u.UserName
-	}
 	var ok bool
 	if e == nil {
-		nv.Value, ok = q.uc.load(nv.Name)
-	}
-	if !ok {
-		e = &errors.Error{
-			Code: ErrorUCLd,
-			Err: fmt.Errorf("Not found consupmtion for user %s",
-				nv.Name),
+		c, ok = q.uc.load(u.UserName)
+		if !ok {
+			e = &errors.Error{
+				Code: ErrorUCLd,
+				Err: fmt.Errorf("Not found consupmtion for user %s",
+					u.UserName),
+			}
 		}
 	}
 	return
