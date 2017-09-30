@@ -16,7 +16,8 @@ import (
 
 func main() {
 	var addr, adAddr, qtFile, cnFile, accExcFile, certFile,
-		keyFile, logFile, suff, bDN, adAdminG, adQGPref string
+		keyFile, logFile, suff, bDN, adAdminG, adQGPref,
+		admAddr string
 	var dAuth bool
 	flag.StringVar(&accExcFile, "a", "accExcp.json",
 		"JSON list of AccExcp objects")
@@ -39,6 +40,8 @@ func main() {
 		`JSON dictionary of group names to quotas. These group names
 				must match those in users's distinguishedName field in AD`)
 	flag.StringVar(&addr, "s", ":8080", "Proxy listen address")
+	flag.StringVar(&admAddr, "adm", ":8081",
+		"Address to serve administration HTTPS interface")
 	flag.StringVar(&suff, "sf", "", "Suffix for accounts in AD")
 	flag.BoolVar(&dAuth, "d", true, "Use dummy authentication instad of LDAP")
 	flag.Parse()
@@ -103,6 +106,9 @@ func main() {
 
 		pm := pmproxy.NewPMProxy(qa, rl, new(pmproxy.NetDialer))
 		// TODO serve HTTPS with valid certificate
+		lh := pmproxy.NewLocalHn(qa)
+		go http.ListenAndServeTLS(admAddr, certFile, keyFile,
+			lh)
 		ec = http.ListenAndServe(addr, pm)
 		e = nerror(ec)
 	}

@@ -90,11 +90,13 @@ func TestLocalRequest(t *testing.T) {
 	require.True(t, e == nil)
 	pm.ServeHTTP(rr, rq)
 	rs := rr.Result()
-	require.True(t, rs.StatusCode == h.StatusNotFound)
+	require.True(t, rs.StatusCode == h.StatusNotFound,
+		"Status = %d", rs.StatusCode)
 
 	rr, rq = reqres(t, h.MethodGet, UserStatus, "", "", cocoIP)
 	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == h.StatusBadRequest)
+	require.True(t, rr.Code == h.StatusNotFound,
+		"Status = %d", rr.Code)
 }
 
 func TestForbiddenReq(t *testing.T) {

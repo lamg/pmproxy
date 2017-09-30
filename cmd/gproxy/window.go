@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/lamg/pmproxy"
@@ -28,6 +29,9 @@ func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
 		hd, e = header(st)
 	}
 	if e == nil {
+		h.DefaultClient.Transport = &h.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 		w.SetIconName("system-users")
 		w.SetTitlebar(hd)
 		w.Add(st)

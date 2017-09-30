@@ -24,9 +24,12 @@ func NewPMProxy(qa *QAdm, rl *RLog, nd Dialer) (p *PMProxy) {
 		DoFunc(forbiddenAcc)
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
-	p.px.NonproxyHandler = newLocalHn(qa)
-	// Reject all connections not made throug port 443 or 80
+	p.px.NonproxyHandler = h.HandlerFunc(localHandler)
 	return
+}
+
+func localHandler(w h.ResponseWriter, r *h.Request) {
+	w.WriteHeader(h.StatusNotFound)
 }
 
 func forbiddenAcc(r *h.Request,

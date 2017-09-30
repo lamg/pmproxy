@@ -35,23 +35,23 @@ const (
 	ErrorGScrt
 )
 
-// PMProxy is an HTTP server for proxying requests and
+// LocalHn is an HTTP server for proxying requests and
 // administrating quotas other aspects
-type localHn struct {
+type LocalHn struct {
 	mx *h.ServeMux
 	qa *QAdm
 }
 
-// newLocalHn creates a new localHn
-func newLocalHn(qa *QAdm) (p *localHn) {
-	p = new(localHn)
+// NewLocalHn creates a new localHn
+func NewLocalHn(qa *QAdm) (p *LocalHn) {
+	p = new(LocalHn)
 	p.qa, p.mx = qa, h.NewServeMux()
 	p.mx.HandleFunc(LogX, p.logXHF)
 	p.mx.HandleFunc(UserStatus, p.userStatusHF)
 	return
 }
 
-func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
+func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e *errors.Error
 	var scrt string
@@ -85,7 +85,7 @@ type UsrSt struct {
 	Consumption uint64 `json:"consumption"`
 }
 
-func (p *localHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
+func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var q, c uint64
@@ -111,7 +111,7 @@ func (p *localHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-func (p *localHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
+func (p *LocalHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	p.mx.ServeHTTP(w, r)
 }
 

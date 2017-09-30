@@ -29,7 +29,7 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 func TestServerLogInOut(t *testing.T) {
 	qa, _, e := initQARL()
 	require.True(t, e == nil)
-	pm := newLocalHn(qa)
+	pm := NewLocalHn(qa)
 	require.True(t, e == nil)
 	rr, rq := reqres(t, MethodPost, LogX,
 		`{"user":"a", "pass":"a"}`, "", cocoIP)
@@ -52,10 +52,10 @@ func TestServerLogInOut(t *testing.T) {
 	testUnsMeth(t, pm, LogX, MethodConnect)
 }
 
-func loginServ(t *testing.T) (lh *localHn, s string) {
+func loginServ(t *testing.T) (lh *LocalHn, s string) {
 	qa, _, e := initQARL()
 	require.True(t, e == nil)
-	lh = newLocalHn(qa)
+	lh = NewLocalHn(qa)
 	rr, rq := reqres(t, MethodPost, LogX,
 		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
 	lh.ServeHTTP(rr, rq)
@@ -96,7 +96,7 @@ func setQV(u *url.URL, k, v string) {
 	u.RawQuery = vs.Encode()
 }
 
-func testUnsMeth(t *testing.T, pm *localHn, path, meth string) {
+func testUnsMeth(t *testing.T, pm *LocalHn, path, meth string) {
 	rr := httptest.NewRecorder()
 	rq, ec := NewRequest(meth, path, nil)
 	require.NoError(t, ec)
