@@ -37,7 +37,7 @@ func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 	}
 	var sm *SMng
 	if e == nil {
-		da, jw := newdAuth(), NewJWTCrypt(pKey)
+		da, jw := NewDAuth(), NewJWTCrypt(pKey)
 		sm = NewSMng(da, jw)
 	}
 	// { sm initialized ≡ e = nil}

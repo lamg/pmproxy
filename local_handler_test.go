@@ -31,7 +31,7 @@ func TestServerLogInOut(t *testing.T) {
 	require.True(t, e == nil)
 	pm := newLocalHn(qa)
 	require.True(t, e == nil)
-	rr, rq := reqres(t, MethodPost, logX,
+	rr, rq := reqres(t, MethodPost, LogX,
 		`{"user":"a", "pass":"a"}`, "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.Equal(t, rr.Code, StatusOK)
@@ -43,20 +43,20 @@ func TestServerLogInOut(t *testing.T) {
 	require.True(t, usr.UserName == "a" &&
 		pm.qa.sm.User(cocoIP).Equal(usr))
 
-	rr, rq = reqres(t, MethodDelete, logX, "", scrt, cocoIP)
+	rr, rq = reqres(t, MethodDelete, LogX, "", scrt, cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 	require.True(t, pm.qa.sm.User(cocoIP) == nil, "%v ≠ nil",
 		pm.qa.sm.User(cocoIP))
 
-	testUnsMeth(t, pm, logX, MethodConnect)
+	testUnsMeth(t, pm, LogX, MethodConnect)
 }
 
 func loginServ(t *testing.T) (lh *localHn, s string) {
 	qa, _, e := initQARL()
 	require.True(t, e == nil)
 	lh = newLocalHn(qa)
-	rr, rq := reqres(t, MethodPost, logX,
+	rr, rq := reqres(t, MethodPost, LogX,
 		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
 	lh.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
@@ -66,9 +66,9 @@ func loginServ(t *testing.T) (lh *localHn, s string) {
 
 func TestGetUserStatus(t *testing.T) {
 	pm, scrt := loginServ(t)
-	rr, rq := reqres(t, MethodGet, userStatus, "", scrt, cocoIP)
+	rr, rq := reqres(t, MethodGet, UserStatus, "", scrt, cocoIP)
 	pm.ServeHTTP(rr, rq)
-	us := new(usrSt)
+	us := new(UsrSt)
 	ec := json.Unmarshal(rr.Body.Bytes(), us)
 	require.NoError(t, ec)
 	cv, ok := pm.qa.uc.load(coco.User)
@@ -79,14 +79,14 @@ func TestGetUserStatus(t *testing.T) {
 	qv, ok := pm.qa.gq.load(u.QuotaGroup)
 	require.True(t, ok)
 	require.True(t, us.Quota == qv)
-	testUnsMeth(t, pm, userStatus, MethodConnect)
+	testUnsMeth(t, pm, UserStatus, MethodConnect)
 }
 
 func TestCode(t *testing.T) {
 	bf := bytes.NewBufferString("")
 	e := encode(bf, make(chan int, 0))
 	require.True(t, e != nil && e.Code == ErrorEncode)
-	e = decode(bf, 0)
+	e = Decode(bf, 0)
 	require.True(t, e != nil && e.Code == ErrorDecode)
 }
 
@@ -115,7 +115,7 @@ func reqres(t *testing.T, meth, path, body, hd,
 	}
 	require.NoError(t, e)
 	if hd != "" {
-		q.Header.Set(authHd, hd)
+		q.Header.Set(AuthHd, hd)
 	}
 	q.Host = q.Host + ":443"
 	q.RemoteAddr = fmt.Sprintf("%s:443", addr)

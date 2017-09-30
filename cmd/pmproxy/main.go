@@ -5,7 +5,6 @@ import (
 	"flag"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/lamg/errors"
-	"github.com/lamg/ldaputil"
 	"github.com/lamg/pmproxy"
 	"github.com/lamg/wfact"
 	"io/ioutil"
@@ -18,6 +17,7 @@ import (
 func main() {
 	var addr, adAddr, qtFile, cnFile, accExcFile, certFile,
 		keyFile, logFile, suff, bDN, adAdminG, adQGPref string
+	var dAuth bool
 	flag.StringVar(&accExcFile, "a", "accExcp.json",
 		"JSON list of AccExcp objects")
 	flag.StringVar(&adAddr, "ad", "ad.upr.edu.cu:636",
@@ -40,6 +40,7 @@ func main() {
 				must match those in users's distinguishedName field in AD`)
 	flag.StringVar(&addr, "s", ":8080", "Proxy listen address")
 	flag.StringVar(&suff, "sf", "", "Suffix for accounts in AD")
+	flag.BoolVar(&dAuth, "d", true, "Use dummy authentication instad of LDAP")
 	flag.Parse()
 
 	var tm time.Time
@@ -77,10 +78,6 @@ func main() {
 		pkey, ec = jwt.ParseRSAPrivateKeyFromPEM(bs)
 		e = nerror(ec)
 	}
-	var ld *ldaputil.Ldap
-	if e == nil {
-		ld, e = ldaputil.NewLdap(adAddr, suff, bDN)
-	}
 	if e == nil {
 		f, ec = os.Open(accExcFile)
 		e = nerror(ec)
@@ -90,12 +87,16 @@ func main() {
 		accExc, e = pmproxy.ReadAccExcp(f)
 		f.Close()
 	}
+	var udb pmproxy.UserDB
+	if dAuth {
+		udb = pmproxy.NewDAuth()
+	} else {
+		udb = pmproxy.NewLDB(adAddr, suff, bDN, adAdminG, adQGPref)
+	}
 	var sm *pmproxy.SMng
 	if e == nil {
-		cry, udb := pmproxy.NewJWTCrypt(pkey),
-			pmproxy.NewLDB(ld, adAdminG, adQGPref)
+		cry := pmproxy.NewJWTCrypt(pkey)
 		sm = pmproxy.NewSMng(udb, cry)
-
 		dt := wfact.NewDateArchiver(logFile)
 		rl, qa := pmproxy.NewRLog(dt, sm),
 			pmproxy.NewQAdm(sm, gq, uc, accExc, tm, 7*24*time.Hour)

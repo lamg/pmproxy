@@ -25,7 +25,7 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 
 	var sm *SMng
 	if e == nil {
-		da, cry := newdAuth(), NewJWTCrypt(pKey)
+		da, cry := NewDAuth(), NewJWTCrypt(pKey)
 		sm = NewSMng(da, cry)
 	}
 
@@ -92,7 +92,7 @@ func TestLocalRequest(t *testing.T) {
 	rs := rr.Result()
 	require.True(t, rs.StatusCode == h.StatusNotFound)
 
-	rr, rq = reqres(t, h.MethodGet, userStatus, "", "", cocoIP)
+	rr, rq = reqres(t, h.MethodGet, UserStatus, "", "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == h.StatusBadRequest)
 }

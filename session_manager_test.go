@@ -16,7 +16,7 @@ var (
 func TestSessionManager(t *testing.T) {
 	pKey, e := parseKey()
 	require.True(t, e == nil)
-	a, c := newdAuth(), NewJWTCrypt(pKey)
+	a, c := NewDAuth(), NewJWTCrypt(pKey)
 	sm := NewSMng(a, c)
 	var s0 string
 	s0, e = sm.login(coco, cocoIP)

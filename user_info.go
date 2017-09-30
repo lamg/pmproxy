@@ -14,7 +14,9 @@ type UserDB interface {
 
 // LDB is an UserDB implementation using Ldap
 type LDB struct {
-	ld         *l.Ldap
+	adAddr     string
+	suff       string
+	bDN        string
 	adminGroup string
 	qgPref     string
 }
@@ -27,28 +29,29 @@ type LDB struct {
 // of this system.
 // qgPref: The group prefix of the group in membership that
 // defines the users quota group
-func NewLDB(ld *l.Ldap, admG, qgPref string) (r *LDB) {
-	r = &LDB{ld, admG, qgPref}
+func NewLDB(adAddr, suff, bDN, admG, qgPref string) (r *LDB) {
+	r = &LDB{adAddr, suff, bDN, admG, qgPref}
 	return
 }
 
 // Login logs an user with user name u and password p
 func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
-	r, e = new(User), db.ld.Authenticate(u, p)
+	ld := l.NewLdap(db.adAddr, db.suff, db.bDN, u, p)
+	r, e = new(User), ld.Authenticate(u, p)
 	var m string
 	if e == nil {
 		r.UserName = u
-		r.Name, e = db.ld.FullName(u)
+		r.Name, e = ld.FullName(u)
 	}
 	if e == nil {
-		m, e = db.getQuotaGroup(u)
+		m, e = db.getQuotaGroup(ld, u)
 	}
 	if e == nil {
 		r.QuotaGroup = m
 	}
 	var fg string
 	if e == nil {
-		fg, e = db.ld.DNFirstGroup(u)
+		fg, e = ld.DNFirstGroup(u)
 	}
 	if e == nil {
 		r.IsAdmin = fg == db.adminGroup
@@ -59,10 +62,10 @@ func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
 // GetQuotaGroup gets the group specified at distinguishedName
 // field
 // usr: sAMAccountName
-func (db *LDB) getQuotaGroup(usr string) (g string,
+func (db *LDB) getQuotaGroup(ld *l.Ldap, usr string) (g string,
 	e *errors.Error) {
 	var m []string
-	m, e = db.ld.MembershipCNs(usr)
+	m, e = ld.MembershipCNs(usr)
 	if e == nil {
 		i, ok := 0, false
 		for !ok && i != len(m) {
@@ -100,16 +103,19 @@ func hasElementOf(a, b []string) (ok bool, i int) {
 	return
 }
 
-type dAuth struct {
+// DAuth is an UserDB
+type DAuth struct {
 	us []*User
 }
 
-func newdAuth() (d *dAuth) {
-	d = &dAuth{make([]*User, 0)}
+// NewDAuth …
+func NewDAuth() (d *DAuth) {
+	d = &DAuth{make([]*User, 0)}
 	return
 }
 
-func (d *dAuth) Login(u, p string) (r *User, e *errors.Error) {
+// Login …
+func (d *DAuth) Login(u, p string) (r *User, e *errors.Error) {
 	if u == p {
 		r = &User{
 			Name:       u,

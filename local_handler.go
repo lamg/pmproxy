@@ -12,15 +12,16 @@ import (
 )
 
 const (
-	// POST, DELETE
-	logX = "/logX"
-	// GET
-	userStatus = "/userStatus"
+	// LogX path to login, logout (POST, DELETE)
+	LogX = "/logX"
+	// UserStatus path to get status (GET)
+	UserStatus = "/userStatus"
 	// GET, POST
 	accExcp = "/accessExceptions"
-	authHd  = "authHd"
-	userV   = "user"
-	groupV  = "group"
+	// AuthHd header key of JWT value
+	AuthHd = "authHd"
+	userV  = "user"
+	groupV = "group"
 )
 
 const (
@@ -46,8 +47,8 @@ type localHn struct {
 func newLocalHn(qa *QAdm) (p *localHn) {
 	p = new(localHn)
 	p.qa, p.mx = qa, h.NewServeMux()
-	p.mx.HandleFunc(logX, p.logXHF)
-	p.mx.HandleFunc(userStatus, p.userStatusHF)
+	p.mx.HandleFunc(LogX, p.logXHF)
+	p.mx.HandleFunc(UserStatus, p.userStatusHF)
 	return
 }
 
@@ -58,7 +59,7 @@ func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
 
 	if r.Method == h.MethodPost {
 		cr := new(credentials)
-		e = decode(r.Body, cr)
+		e = Decode(r.Body, cr)
 		if e == nil {
 			scrt, e = p.qa.login(cr, addr)
 		}
@@ -76,7 +77,8 @@ func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-type usrSt struct {
+// UsrSt is used for storing user information
+type UsrSt struct {
 	Quota       uint64 `json:"quota"`
 	Consumption uint64 `json:"consumption"`
 }
@@ -85,15 +87,9 @@ func (p *localHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
 	addr := trimPort(r.RemoteAddr)
 	if e == nil && r.Method == h.MethodGet {
-		var q uint64
-		q, e = p.qa.getQuota(addr, s)
-		var c uint64
-		if e == nil {
-			c, e = p.qa.userCons(addr, s)
-		}
-		if e == nil {
-			e = encode(w, &usrSt{Quota: q, Consumption: c})
-		}
+		q, _ := p.qa.getQuota(addr, s)
+		c, _ := p.qa.userCons(addr, s)
+		e = encode(w, &UsrSt{Quota: q, Consumption: c})
 	} else if e == nil {
 		e = notSuppMeth(r.Method)
 	}
@@ -105,7 +101,7 @@ func (p *localHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 }
 
 func getScrt(h h.Header) (s string, e *errors.Error) {
-	s = h.Get(authHd)
+	s = h.Get(AuthHd)
 	if s == "" {
 		e = &errors.Error{
 			Code: ErrorGScrt,
@@ -115,7 +111,8 @@ func getScrt(h h.Header) (s string, e *errors.Error) {
 	return
 }
 
-func decode(r io.Reader, v interface{}) (e *errors.Error) {
+// Decode decodes an io.Reader with a JSON formatted object
+func Decode(r io.Reader, v interface{}) (e *errors.Error) {
 	var bs []byte
 	var ec error
 	bs, ec = ioutil.ReadAll(r)
