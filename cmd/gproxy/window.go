@@ -114,8 +114,8 @@ func newInfoBox(le *loginSt) (bx *gtk.Box, e error) {
 	if e == nil {
 		bx.PackStart(st.ucs, true, true, 0)
 		bx.PackStart(st.uqt, true, true, 0)
-		bx.PackStart(st.inf, true, true, 0)
 		bx.PackStart(st.rfr, true, true, 0)
+		bx.PackStart(st.inf, true, true, 0)
 	}
 	return
 }
@@ -147,7 +147,7 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 		bytes.NewBufferString(fmt.Sprintf(
 			`{"user":"%s","pass":"%s"}`, ust, pst)))
 	if e == nil {
-		m.inf.SetText(fmt.Sprintf("Respuesta: %s",r.Status))
+		m.inf.SetText(fmt.Sprintf("Respuesta: %s", r.Status))
 		m.scr, e = ioutil.ReadAll(r.Body)
 	}
 	if e != nil {

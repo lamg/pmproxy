@@ -57,8 +57,8 @@ type conCount struct {
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	ip := trimPort(c.ctx.Req.RemoteAddr)
-	hs, pr := splitHostPort(c.ctx.Req.Host)
+	ip, _, _ := net.SplitHostPort(c.ctx.Req.RemoteAddr)
+	hs, pr, _ := net.SplitHostPort(c.ctx.Req.Host)
 	k := c.qa.canReq(ip, hs, pr, time.Now())
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
@@ -111,24 +111,14 @@ func (p *PMProxy) logResp(r *h.Response,
 
 func (p *PMProxy) cannotRequest(q *h.Request,
 	c *g.ProxyCtx) (r bool) {
-	hs, pr := splitHostPort(q.Host)
-	k := p.qa.canReq(trimPort(q.RemoteAddr), hs, pr, time.Now())
+	hs, pr, _ := net.SplitHostPort(q.Host)
+	ra, _, _ := net.SplitHostPort(q.RemoteAddr)
+	k := p.qa.canReq(ra, hs, pr, time.Now())
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
 	}
 	r = k < 0
-	return
-}
-
-func splitHostPort(s string) (hs, pr string) {
-	a := strings.Split(s, ":")
-	if len(a) == 1 {
-		pr = "80"
-	} else {
-		pr = a[1]
-	}
-	hs = a[0]
 	return
 }
 

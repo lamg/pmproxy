@@ -3,9 +3,9 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
+	"net"
 	. "net/http"
 	"net/http/httptest"
 	"net/url"
@@ -117,22 +117,8 @@ func reqres(t *testing.T, meth, path, body, hd,
 	if hd != "" {
 		q.Header.Set(AuthHd, hd)
 	}
-	q.Host = q.Host + ":443"
-	q.RemoteAddr = fmt.Sprintf("%s:443", addr)
+	q.Host = net.JoinHostPort(q.Host, "443")
+	q.RemoteAddr = net.JoinHostPort(addr, "443")
 	r = httptest.NewRecorder()
 	return
-}
-
-func TestTrimPort(t *testing.T) {
-	s := []struct {
-		pa string
-		r  string
-	}{
-		{"10.1.2.3:443", "10.1.2.3"},
-		{"[::1]:60630", "[::1]"},
-	}
-	for i, j := range s {
-		x := trimPort(j.pa)
-		require.True(t, x == j.r, "At %d %s≠%s", i, x, j.r)
-	}
 }

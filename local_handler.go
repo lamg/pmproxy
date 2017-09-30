@@ -6,9 +6,8 @@ import (
 	"github.com/lamg/errors"
 	"io"
 	"io/ioutil"
+	"net"
 	h "net/http"
-	"strings"
-	"unicode"
 )
 
 const (
@@ -53,7 +52,7 @@ func newLocalHn(qa *QAdm) (p *localHn) {
 }
 
 func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
-	addr := trimPort(r.RemoteAddr)
+	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e *errors.Error
 	var scrt string
 
@@ -85,7 +84,7 @@ type UsrSt struct {
 
 func (p *localHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
-	addr := trimPort(r.RemoteAddr)
+	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	if e == nil && r.Method == h.MethodGet {
 		q, _ := p.qa.getQuota(addr, s)
 		c, _ := p.qa.userCons(addr, s)
@@ -159,15 +158,5 @@ func notSuppMeth(m string) (e *errors.Error) {
 		Code: ErrorNSMth,
 		Err:  fmt.Errorf("Not supported method %s", m),
 	}
-	return
-}
-
-func trimPort(s string) (r string) {
-	q := strings.TrimRightFunc(s,
-		func(c rune) (b bool) {
-			b = unicode.IsDigit(c)
-			return
-		})
-	r = strings.TrimRight(q, ":")
 	return
 }
