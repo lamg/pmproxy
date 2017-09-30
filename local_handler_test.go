@@ -84,7 +84,7 @@ func TestGetUserStatus(t *testing.T) {
 
 func TestCode(t *testing.T) {
 	bf := bytes.NewBufferString("")
-	e := encode(bf, make(chan int, 0))
+	e := Encode(bf, make(chan int, 0))
 	require.True(t, e != nil && e.Code == ErrorEncode)
 	e = Decode(bf, 0)
 	require.True(t, e != nil && e.Code == ErrorDecode)

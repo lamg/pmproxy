@@ -5,16 +5,23 @@ import (
 	"fmt"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/lamg/pmproxy"
+	"io"
 	"io/ioutil"
 	h "net/http"
+	"os"
 )
 
-func initW(a *gtk.Application) (e error) {
+func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
 	var w *gtk.ApplicationWindow
 	w, e = gtk.ApplicationWindowNew(a)
 	var st *gtk.Stack
 	if e == nil {
-		st, e = stack()
+		lg := new(loginInf)
+		if rd != nil {
+			pmproxy.Decode(rd, lg)
+			rd.Close()
+		}
+		st, e = stack(lg)
 	}
 	var hd *gtk.HeaderBar
 	if e == nil {
@@ -31,10 +38,16 @@ func initW(a *gtk.Application) (e error) {
 	return
 }
 
-func stack() (st *gtk.Stack, e error) {
+type loginInf struct {
+	Addr string `json:"addr"`
+	User string `json:"user"`
+	Pass string `json:"pass"`
+}
+
+func stack(lg *loginInf) (st *gtk.Stack, e error) {
 	var infoBx *gtk.Box
 	var le *loginSt
-	le, e = newLoginBox()
+	le, e = newLoginBox(lg)
 	if e == nil {
 		infoBx, e = newInfoBox(le)
 	}
@@ -62,7 +75,7 @@ func header(st *gtk.Stack) (hd *gtk.HeaderBar, e error) {
 	return
 }
 
-func newLoginBox() (st *loginSt, e error) {
+func newLoginBox(lg *loginInf) (st *loginSt, e error) {
 	st = new(loginSt)
 	st.bx, e = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if e == nil {
@@ -76,6 +89,9 @@ func newLoginBox() (st *loginSt, e error) {
 	}
 	if e == nil {
 		st.pst.SetVisibility(false)
+		st.adr.SetText(lg.Addr)
+		st.ust.SetText(lg.User)
+		st.pst.SetText(lg.Pass)
 		st.ent, e = gtk.ButtonNewWithLabel("Entrar")
 	}
 	if e == nil {
@@ -143,11 +159,19 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 	adr, _ := m.adr.GetText()
 	ust, _ := m.ust.GetText()
 	pst, _ := m.pst.GetText()
+	jusr := fmt.Sprintf(`{"user":"%s","pass":"%s"}`, ust, pst)
 	r, e := h.Post(adr+pmproxy.LogX, "text/json",
-		bytes.NewBufferString(fmt.Sprintf(
-			`{"user":"%s","pass":"%s"}`, ust, pst)))
+		bytes.NewBufferString(jusr))
 	if e == nil {
 		m.inf.SetText(fmt.Sprintf("Respuesta: %s", r.Status))
+		if r.StatusCode == h.StatusOK {
+			f, _ := os.Create(config)
+			if f != nil {
+				lg := &loginInf{Addr: adr, User: ust, Pass: pst}
+				pmproxy.Encode(f, lg)
+				f.Close()
+			}
+		}
 		m.scr, e = ioutil.ReadAll(r.Body)
 	}
 	if e != nil {
@@ -196,6 +220,7 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 	if e == nil {
 		st.uqt.SetText(fmt.Sprintf("Cuota %d", ust.Quota))
 		st.ucs.SetText(fmt.Sprintf("Consumo %d", ust.Consumption))
+		st.inf.SetText(fmt.Sprintf("Usuario %s", ust.UserName))
 	} else {
 		st.inf.SetText(e.Error())
 	}

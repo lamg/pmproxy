@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+var config = ".gproxy"
+
 func main() {
 	ap, e := gtk.ApplicationNew("com.github.lamg.gproxy",
 		glib.APPLICATION_FLAGS_NONE)
@@ -23,7 +25,8 @@ func main() {
 
 func activate(a *gtk.Application) {
 	var e error
-	e = initW(a)
+	f, _ := os.Open(config)
+	e = initW(a, f)
 	if e != nil {
 		log.Print(e.Error())
 	}

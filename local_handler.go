@@ -78,6 +78,9 @@ func (p *localHn) logXHF(w h.ResponseWriter, r *h.Request) {
 
 // UsrSt is used for storing user information
 type UsrSt struct {
+	UserName    string `json:"userName"`
+	Name        string `json:"name"`
+	IsAdmin     bool   `json:"isAdmin"`
 	Quota       uint64 `json:"quota"`
 	Consumption uint64 `json:"consumption"`
 }
@@ -85,12 +88,25 @@ type UsrSt struct {
 func (p *localHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	s, e := getScrt(r.Header)
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
+	var q, c uint64
+	var u *User
 	if e == nil && r.Method == h.MethodGet {
-		q, _ := p.qa.getQuota(addr, s)
-		c, _ := p.qa.userCons(addr, s)
-		e = encode(w, &UsrSt{Quota: q, Consumption: c})
+		q, _ = p.qa.getQuota(addr, s)
+		c, _ = p.qa.userCons(addr, s)
+		u, e = p.qa.sm.check(addr, s)
 	} else if e == nil {
 		e = notSuppMeth(r.Method)
+	}
+	if e == nil {
+		// TODO probably not the best having a type
+		// *User being encrypted with excessive information
+		e = Encode(w, &UsrSt{
+			UserName:    u.UserName,
+			Name:        u.Name,
+			IsAdmin:     u.IsAdmin,
+			Quota:       q,
+			Consumption: c,
+		})
 	}
 	writeErr(w, e)
 }
@@ -127,7 +143,8 @@ func Decode(r io.Reader, v interface{}) (e *errors.Error) {
 	return
 }
 
-func encode(w io.Writer, v interface{}) (e *errors.Error) {
+// Encode encodes an object in JSON notation into w
+func Encode(w io.Writer, v interface{}) (e *errors.Error) {
 	var bs []byte
 	var ec error
 	bs, ec = json.Marshal(v)
