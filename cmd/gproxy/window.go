@@ -169,15 +169,17 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 	r, e := h.Post(adr+pmproxy.LogX, "text/json",
 		bytes.NewBufferString(jusr))
 	if e == nil {
-		m.scr, _ = ioutil.ReadAll(r.Body)
+		var bs []byte
+		bs, _ = ioutil.ReadAll(r.Body)
 		r.Body.Close()
-		sb := string(m.scr)
+		sb := string(bs)
 		if len(sb) > 70 {
 			sb = sb[:70] + "…"
 		}
 		m.inf.SetText(fmt.Sprintf("Respuesta: %s Cuerpo:%s",
 			r.Status, sb))
 		if r.StatusCode == h.StatusOK {
+			m.scr = bs
 			f, _ := os.Create(config)
 			if f != nil {
 				lg := &loginInf{Addr: adr, User: ust, Pass: pst}
@@ -228,7 +230,11 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 		ust = new(pmproxy.UsrSt)
 		e = json.Unmarshal(bs, ust)
 		if e != nil {
-			e = fmt.Errorf("%s Body: %s", e.Error(), string(bs))
+			sb := string(bs)
+			if len(sb) > 70 {
+				sb = sb[:70] + "…"
+			}
+			e = fmt.Errorf("Error: %s Body: %s", e.Error(), sb)
 		}
 	}
 	if e == nil {
