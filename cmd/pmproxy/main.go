@@ -43,7 +43,7 @@ func main() {
 	flag.StringVar(&admAddr, "adm", ":8081",
 		"Address to serve administration HTTPS interface")
 	flag.StringVar(&suff, "sf", "", "Suffix for accounts in AD")
-	flag.BoolVar(&dAuth, "d", true, "Use dummy authentication instad of LDAP")
+	flag.BoolVar(&dAuth, "d", false, "Use dummy authentication instad of LDAP")
 	flag.Parse()
 
 	var tm time.Time

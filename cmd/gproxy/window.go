@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/lamg/pmproxy"
@@ -35,7 +36,7 @@ func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
 		w.SetIconName("system-users")
 		w.SetTitlebar(hd)
 		w.Add(st)
-		w.SetDefaultSize(800, 600)
+		w.SetDefaultSize(400, 200)
 		w.Connect("destroy", a.Quit)
 		w.ShowAll()
 	}
@@ -102,12 +103,13 @@ func newLoginBox(lg *loginInf) (st *loginSt, e error) {
 		st.inf, e = gtk.LabelNew("Info")
 	}
 	if e == nil {
+		st.inf.SetLineWrap(true)
 		st.ent.Connect("clicked", st.entClicked)
-		st.bx.PackStart(st.adr, true, true, 0)
-		st.bx.PackStart(st.ust, true, true, 0)
-		st.bx.PackStart(st.pst, true, true, 0)
-		st.bx.PackStart(st.ent, true, true, 0)
-		st.bx.PackStart(st.inf, true, true, 0)
+		st.bx.PackStart(st.adr, false, true, 0)
+		st.bx.PackStart(st.ust, false, true, 0)
+		st.bx.PackStart(st.pst, false, true, 0)
+		st.bx.PackStart(st.ent, false, true, 0)
+		st.bx.PackStart(st.inf, false, true, 0)
 	}
 	return
 }
@@ -132,10 +134,10 @@ func newInfoBox(le *loginSt) (bx *gtk.Box, e error) {
 		st.rfr.Connect("clicked", st.rfrClicked)
 	}
 	if e == nil {
-		bx.PackStart(st.ucs, true, true, 0)
-		bx.PackStart(st.uqt, true, true, 0)
-		bx.PackStart(st.rfr, true, true, 0)
-		bx.PackStart(st.inf, true, true, 0)
+		bx.PackStart(st.ucs, false, true, 0)
+		bx.PackStart(st.uqt, false, true, 0)
+		bx.PackStart(st.rfr, false, true, 0)
+		bx.PackStart(st.inf, false, true, 0)
 	}
 	return
 }
@@ -167,7 +169,14 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 	r, e := h.Post(adr+pmproxy.LogX, "text/json",
 		bytes.NewBufferString(jusr))
 	if e == nil {
-		m.inf.SetText(fmt.Sprintf("Respuesta: %s", r.Status))
+		m.scr, _ = ioutil.ReadAll(r.Body)
+		r.Body.Close()
+		sb := string(m.scr)
+		if len(sb) > 70 {
+			sb = sb[:70] + "…"
+		}
+		m.inf.SetText(fmt.Sprintf("Respuesta: %s Cuerpo:%s",
+			r.Status, sb))
 		if r.StatusCode == h.StatusOK {
 			f, _ := os.Create(config)
 			if f != nil {
@@ -176,12 +185,9 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 				f.Close()
 			}
 		}
-		m.scr, e = ioutil.ReadAll(r.Body)
 	}
 	if e != nil {
 		m.inf.SetText(fmt.Sprintf("Error: %s", e.Error()))
-	} else {
-		r.Body.Close()
 	}
 }
 
@@ -212,14 +218,18 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 			e = fmt.Errorf("No ha iniciado sesión")
 		}
 	}
+	var bs []byte
+	if e == nil {
+		bs, e = ioutil.ReadAll(r.Body)
+		r.Body.Close()
+	}
 	var ust *pmproxy.UsrSt
 	if e == nil {
 		ust = new(pmproxy.UsrSt)
-		ec := pmproxy.Decode(r.Body, ust)
-		if ec != nil {
-			e = ec.Err
+		e = json.Unmarshal(bs, ust)
+		if e != nil {
+			e = fmt.Errorf("%s Body: %s", e.Error(), string(bs))
 		}
-		r.Body.Close()
 	}
 	if e == nil {
 		st.uqt.SetText(fmt.Sprintf("Cuota %d", ust.Quota))

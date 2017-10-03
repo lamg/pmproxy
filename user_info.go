@@ -37,12 +37,9 @@ func NewLDB(adAddr, suff, bDN, admG, qgPref string) (r *LDB) {
 // Login logs an user with user name u and password p
 func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
 	ld := l.NewLdap(db.adAddr, db.suff, db.bDN, u, p)
-	r, e = new(User), ld.Authenticate(u, p)
+	r = &User{UserName: u}
+	r.Name, e = ld.FullName(u)
 	var m string
-	if e == nil {
-		r.UserName = u
-		r.Name, e = ld.FullName(u)
-	}
 	if e == nil {
 		m, e = db.getQuotaGroup(ld, u)
 	}
