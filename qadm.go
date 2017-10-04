@@ -186,7 +186,7 @@ func (q *QAdm) canReq(ip, host, port string,
 		c = res.ConsCfc
 	}
 	// { c ≥ 0 }
-	if !(port == "443" || port == "80") || q.nlf(ip) || (f &&
+	if !(port == "443" || port == "80" || port == "") || q.nlf(ip) || (f &&
 		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
 			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
 		c = c * -1
