@@ -31,17 +31,18 @@ else {
 		n = len(p)
 }
 	
-** User HTTP interface
+** HTTP user interface
 - Cred: {"user":string, "pass":string}
 - JWT: JSON web token (a string with encrypted user information)
 - Hd: {"authHd":JWT}
 - UsrSt: {"quota":uint64, "consumption":uint64}
 
-| Path        | Method | Body | Header | R. code    | R. body |
-|-------------+--------+------+--------+------------+---------|
-| /logX       | POST   | Cred |        | 200 or 400 | JWT     |
-| /logX       | DELETE |      | Hd     | 200 or 400 |         |
-| /userStatus | GET    |      | Hd     | 200 or 400 | UsrSt   |
+| Path            | Method | Body | Header | R. code    | R. body      |
+|-----------------+--------+------+--------+------------+--------------|
+| /api/logX       | POST   | Cred |        | 200 or 400 | JWT          |
+| /api/logX       | DELETE |      | Hd     | 200 or 400 |              |
+| /api/userStatus | GET    |      | Hd     | 200 or 400 | UsrSt        |
+| /               | GET    |      |        | 200        | static files |
 
 ** Quota administration
 - Improve description

@@ -29,7 +29,7 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 func TestServerLogInOut(t *testing.T) {
 	qa, _, e := initQARL()
 	require.True(t, e == nil)
-	pm := NewLocalHn(qa)
+	pm := NewLocalHn(qa, "")
 	require.True(t, e == nil)
 	rr, rq := reqres(t, MethodPost, LogX,
 		`{"user":"a", "pass":"a"}`, "", cocoIP)
@@ -55,7 +55,7 @@ func TestServerLogInOut(t *testing.T) {
 func loginServ(t *testing.T) (lh *LocalHn, s string) {
 	qa, _, e := initQARL()
 	require.True(t, e == nil)
-	lh = NewLocalHn(qa)
+	lh = NewLocalHn(qa, "")
 	rr, rq := reqres(t, MethodPost, LogX,
 		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
 	lh.ServeHTTP(rr, rq)

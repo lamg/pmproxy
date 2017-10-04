@@ -17,7 +17,7 @@ import (
 func main() {
 	var addr, adAddr, qtFile, cnFile, accExcFile, certFile,
 		keyFile, logFile, suff, bDN, adAdminG, adQGPref,
-		admAddr string
+		admAddr, spath string
 	var dAuth bool
 	flag.StringVar(&accExcFile, "a", "accExcp.json",
 		"JSON list of AccExcp objects")
@@ -44,6 +44,7 @@ func main() {
 		"Address to serve administration HTTPS interface")
 	flag.StringVar(&suff, "sf", "", "Suffix for accounts in AD")
 	flag.BoolVar(&dAuth, "d", false, "Use dummy authentication instad of LDAP")
+	flag.StringVar(&spath, "st", ".", "Directory to serve static files")
 	flag.Parse()
 
 	var tm time.Time
@@ -106,7 +107,7 @@ func main() {
 
 		pm := pmproxy.NewPMProxy(qa, rl, new(pmproxy.NetDialer))
 		// TODO serve HTTPS with valid certificate
-		lh := pmproxy.NewLocalHn(qa)
+		lh := pmproxy.NewLocalHn(qa, spath)
 		go http.ListenAndServeTLS(admAddr, certFile, keyFile,
 			lh)
 		ec = http.ListenAndServe(addr, pm)

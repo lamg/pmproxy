@@ -11,12 +11,14 @@ import (
 )
 
 const (
+	// RootP is the root path
+	RootP = "/"
 	// LogX path to login, logout (POST, DELETE)
-	LogX = "/logX"
+	LogX = "/api/logX"
 	// UserStatus path to get status (GET)
-	UserStatus = "/userStatus"
+	UserStatus = "/api/userStatus"
 	// GET, POST
-	accExcp = "/accessExceptions"
+	accExcp = "/api/accessExceptions"
 	// AuthHd header key of JWT value
 	AuthHd = "authHd"
 	userV  = "user"
@@ -43,11 +45,12 @@ type LocalHn struct {
 }
 
 // NewLocalHn creates a new localHn
-func NewLocalHn(qa *QAdm) (p *LocalHn) {
+func NewLocalHn(qa *QAdm, spath string) (p *LocalHn) {
 	p = new(LocalHn)
 	p.qa, p.mx = qa, h.NewServeMux()
 	p.mx.HandleFunc(LogX, p.logXHF)
 	p.mx.HandleFunc(UserStatus, p.userStatusHF)
+	p.mx.Handle(RootP, h.FileServer(h.Dir(spath)))
 	return
 }
 
