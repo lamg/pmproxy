@@ -63,6 +63,7 @@ func (c *conCount) Read(p []byte) (n int, e error) {
 	ip, _, _ := net.SplitHostPort(c.ctx.Req.RemoteAddr)
 	hs, pr, _ := net.SplitHostPort(c.ctx.Req.Host)
 	k := c.qa.canReq(ip, hs, pr, time.Now())
+	fmt.Printf("ct p: %s k: %.1f\n", pr, k)
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
