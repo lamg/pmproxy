@@ -117,6 +117,7 @@ func (p *PMProxy) cannotRequest(q *h.Request,
 	hs, pr, _ := net.SplitHostPort(q.Host)
 	ra, _, _ := net.SplitHostPort(q.RemoteAddr)
 	k := p.qa.canReq(ra, hs, pr, time.Now())
+	fmt.Printf("p: %s k: %.1f\n", pr, k)
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
