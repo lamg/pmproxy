@@ -5,7 +5,6 @@ import (
 	g "github.com/lamg/goproxy"
 	"net"
 	h "net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -64,7 +63,6 @@ func (c *conCount) Read(p []byte) (n int, e error) {
 	ip, _, _ := net.SplitHostPort(c.ctx.Req.RemoteAddr)
 	hs, pr, _ := net.SplitHostPort(c.ctx.Req.Host)
 	k := c.qa.canReq(ip, hs, pr, time.Now())
-	fmt.Fprintf(os.Stderr, "ct p: %s k: %.1f\n", pr, k)
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
@@ -119,7 +117,6 @@ func (p *PMProxy) cannotRequest(q *h.Request,
 	hs, pr, _ := net.SplitHostPort(q.Host)
 	ra, _, _ := net.SplitHostPort(q.RemoteAddr)
 	k := p.qa.canReq(ra, hs, pr, time.Now())
-	fmt.Fprintf(os.Stderr, "p: %s k: %.1f\n", pr, k)
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
