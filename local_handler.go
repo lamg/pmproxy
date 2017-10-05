@@ -16,8 +16,10 @@ const (
 	RootP = "/"
 	// StatusP is the status page path
 	StatusP = "/status"
+	// PublicP public directory path
+	PublicP = "/public"
 	// LogX path to login, logout (POST, DELETE)
-	LogX = "/api/logX"
+	LogX = "/api/auth"
 	// UserStatus path to get status (GET)
 	UserStatus = "/api/userStatus"
 	// GET, POST
@@ -62,6 +64,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	p.mx.HandleFunc(UserStatus, p.userStatusHF)
 	p.mx.HandleFunc(RootP, p.serveLogin)
 	p.mx.HandleFunc(StatusP, p.serveStatus)
+	p.mx.Handle(PublicP, h.FileServer(h.Dir(sp)))
 	return
 }
 
