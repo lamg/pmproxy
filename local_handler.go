@@ -17,7 +17,7 @@ const (
 	// StatusP is the status page path
 	StatusP = "/status"
 	// PublicP public directory path
-	PublicP = "/public"
+	PublicP = "/public/"
 	// LogX path to login, logout (POST, DELETE)
 	LogX = "/api/auth"
 	// UserStatus path to get status (GET)
