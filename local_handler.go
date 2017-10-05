@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net"
 	h "net/http"
-	"path"
 )
 
 const (
@@ -62,20 +61,8 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	}
 	p.mx.HandleFunc(LogX, p.logXHF)
 	p.mx.HandleFunc(UserStatus, p.userStatusHF)
-	p.mx.HandleFunc(RootP, p.serveLogin)
-	p.mx.HandleFunc(StatusP, p.serveStatus)
-	p.mx.Handle(PublicP, h.FileServer(h.Dir(sp)))
+	p.mx.Handle(RootP, h.FileServer(h.Dir(sp)))
 	return
-}
-
-func (p *LocalHn) serveLogin(w h.ResponseWriter,
-	r *h.Request) {
-	h.ServeFile(w, r, path.Join(p.stPath, loginPg))
-}
-
-func (p *LocalHn) serveStatus(w h.ResponseWriter,
-	r *h.Request) {
-	h.ServeFile(w, r, path.Join(p.stPath, statusPg))
 }
 
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
