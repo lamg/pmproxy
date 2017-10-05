@@ -8,11 +8,14 @@ import (
 	"io/ioutil"
 	"net"
 	h "net/http"
+	"path"
 )
 
 const (
 	// RootP is the root path
 	RootP = "/"
+	// StatusP is the status page path
+	StatusP = "/status"
 	// LogX path to login, logout (POST, DELETE)
 	LogX = "/api/logX"
 	// UserStatus path to get status (GET)
@@ -20,9 +23,11 @@ const (
 	// GET, POST
 	accExcp = "/api/accessExceptions"
 	// AuthHd header key of JWT value
-	AuthHd = "authHd"
-	userV  = "user"
-	groupV = "group"
+	AuthHd   = "authHd"
+	userV    = "user"
+	groupV   = "group"
+	loginPg  = "login.html"
+	statusPg = "status.html"
 )
 
 const (
@@ -40,18 +45,34 @@ const (
 // LocalHn is an HTTP server for proxying requests and
 // administrating quotas other aspects
 type LocalHn struct {
-	mx *h.ServeMux
-	qa *QAdm
+	mx     *h.ServeMux
+	qa     *QAdm
+	stPath string
 }
 
 // NewLocalHn creates a new localHn
-func NewLocalHn(qa *QAdm, spath string) (p *LocalHn) {
-	p = new(LocalHn)
-	p.qa, p.mx = qa, h.NewServeMux()
+// sp: static files directory path
+func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
+	p = &LocalHn{
+		qa:     qa,
+		mx:     h.NewServeMux(),
+		stPath: sp,
+	}
 	p.mx.HandleFunc(LogX, p.logXHF)
 	p.mx.HandleFunc(UserStatus, p.userStatusHF)
-	p.mx.Handle(RootP, h.FileServer(h.Dir(spath)))
+	p.mx.HandleFunc(RootP, p.serveLogin)
+	p.mx.HandleFunc(StatusP, p.serveStatus)
 	return
+}
+
+func (p *LocalHn) serveLogin(w h.ResponseWriter,
+	r *h.Request) {
+	h.ServeFile(w, r, path.Join(p.stPath, loginPg))
+}
+
+func (p *LocalHn) serveStatus(w h.ResponseWriter,
+	r *h.Request) {
+	h.ServeFile(w, r, path.Join(p.stPath, statusPg))
 }
 
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
