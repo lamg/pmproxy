@@ -59,6 +59,8 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	if e == nil {
 		// DOUBT 0 seems to be the IPv4 address and
 		// 1 the IPv6 address
+		println(len(laddr))
+		println(laddr[0].String())
 		d = &net.Dialer{LocalAddr: laddr[0]}
 	}
 	var cn net.Conn
