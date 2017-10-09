@@ -48,33 +48,24 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	// in new cn to used by canReq
 	n, er := p.getUsrNtIf(c.Req)
 	e = errors.UnwrapErr(er)
-	println(e == nil)
 	var ief *net.Interface
 	if e == nil {
-		ifs, _ := net.Interfaces()
-		for i, j := range ifs {
-			print(i)
-			print(" - ")
-			println(j.Name)
-		}
-		println("n: " + n)
 		ief, e = net.InterfaceByName(n)
 	}
 	var laddr []net.Addr
 	if e == nil {
 		laddr, e = ief.Addrs()
 	}
-	println("ok")
-	var d *net.Dialer
+	var cn net.Conn
 	if e == nil {
 		// DOUBT 0 seems to be the IPv4 address and
 		// 1 the IPv6 address
-		println(len(laddr))
-		println(laddr[0].String())
-		d = &net.Dialer{LocalAddr: laddr[0]}
-	}
-	var cn net.Conn
-	if e == nil {
+		for i, j := range laddr {
+			print(i)
+			print(": ")
+			println(j.String())
+		}
+		d := &net.Dialer{LocalAddr: laddr[0]}
 		cn, e = d.Dial(ntw, addr)
 	}
 	if e == nil {
@@ -123,8 +114,6 @@ func (p *PMProxy) getUsrNtIf(
 			}
 		}
 	}
-	print("e = nil ≡ ")
-	println(e == nil)
 	return
 }
 
