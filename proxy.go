@@ -71,6 +71,9 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	if e == nil {
 		r = &conCount{cn, p.qa, addr, c}
 	}
+	if e != nil {
+		println(e.Error())
+	}
 	return
 }
 
