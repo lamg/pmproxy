@@ -48,6 +48,7 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	// in new cn to used by canReq
 	var n string
 	n, e = p.getUsrNtIf(c.Req)
+	println(e == nil)
 	var ief *net.Interface
 	if e == nil {
 		ifs, _ := net.Interfaces()
