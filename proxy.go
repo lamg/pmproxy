@@ -49,17 +49,17 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	n, e = p.getUsrNtIf(c.Req)
 	var ief *net.Interface
 	if e == nil {
-		i0, e0 := net.InterfaceByIndex(0)
-		if e0 == nil {
-			println("i0: " + i0.Name)
-		} else {
-			println("i0 error: " + e0.Error())
-		}
 		i1, e1 := net.InterfaceByIndex(1)
 		if e1 == nil {
 			println("i1: " + i1.Name)
 		} else {
 			println("i1 error: " + e1.Error())
+		}
+		i2, e2 := net.InterfaceByIndex(2)
+		if e2 == nil {
+			println("i2: " + i2.Name)
+		} else {
+			println("i2 error: " + e2.Error())
 		}
 		ief, e = net.InterfaceByName(n)
 	}
