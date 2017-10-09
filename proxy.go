@@ -55,6 +55,7 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	if e == nil {
 		laddr, e = ief.Addrs()
 	}
+	println("ok")
 	var d *net.Dialer
 	if e == nil {
 		// DOUBT 0 seems to be the IPv4 address and
