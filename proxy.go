@@ -43,9 +43,6 @@ func forbiddenAcc(r *h.Request,
 
 func (p *PMProxy) newConCount(ntw, addr string,
 	c *g.ProxyCtx) (r net.Conn, e error) {
-	// TODO
-	// if address is a host name then it can be stored
-	// in new cn to used by canReq
 	n, er := p.getUsrNtIf(c.Req)
 	e = errors.UnwrapErr(er)
 	var ief *net.Interface
@@ -56,26 +53,28 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	if e == nil {
 		laddr, e = ief.Addrs()
 	}
+	var la *net.IPNet
+	if e == nil {
+		ok, i := false, 0
+		for !ok && i != len(laddr) {
+			la = laddr[i].(*net.IPNet)
+			ok = la.IP.To4() != nil
+			if !ok {
+				i = i + 1
+			}
+		}
+		if i == len(addr) {
+			e = fmt.Errorf("Not found IPv4 address")
+		}
+	}
 	var cn net.Conn
 	if e == nil {
-		// DOUBT 0 seems to be the IPv4 address and
-		// 1 the IPv6 address
-		for i, j := range laddr {
-			print(i)
-			print(": ")
-			print(j.Network() + " ")
-			println(j.String())
-		}
-		// FIXME the order of IPv4 and IPv6 is not guaranteed
-		tca := &net.TCPAddr{IP: laddr[0].(*net.IPNet).IP}
+		tca := &net.TCPAddr{IP: la.IP}
 		d := &net.Dialer{LocalAddr: tca}
 		cn, e = d.Dial(ntw, addr)
 	}
 	if e == nil {
 		r = &conCount{cn, p.qa, addr, c}
-	}
-	if e != nil {
-		fmt.Println(e)
 	}
 	return
 }
