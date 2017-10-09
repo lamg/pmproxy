@@ -55,6 +55,7 @@ func (p *PMProxy) newConCount(ntw, addr string,
 			print(" - ")
 			println(j.Name)
 		}
+		println("n: " + n)
 		ief, e = net.InterfaceByName(n)
 	}
 	var laddr []net.Addr
