@@ -63,9 +63,12 @@ func (p *PMProxy) newConCount(ntw, addr string,
 		for i, j := range laddr {
 			print(i)
 			print(": ")
+			print(j.Network() + " ")
 			println(j.String())
 		}
-		d := &net.Dialer{LocalAddr: laddr[0]}
+		// FIXME the order of IPv4 and IPv6 is not guaranteed
+		tca := &net.TCPAddr{IP: laddr[0].(*net.IPNet).IP}
+		d := &net.Dialer{LocalAddr: tca}
 		cn, e = d.Dial(ntw, addr)
 	}
 	if e == nil {
