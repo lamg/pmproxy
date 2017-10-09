@@ -49,6 +49,14 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	n, e = p.getUsrNtIf(c.Req)
 	var ief *net.Interface
 	if e == nil {
+		i0, e0 := net.InterfaceByIndex(0)
+		if e0 == nil {
+			println(i0.Name)
+		}
+		i1, e1 := net.InterfaceByIndex(1)
+		if e1 == nil {
+			println(i1.Name)
+		}
 		ief, e = net.InterfaceByName(n)
 	}
 	var laddr []net.Addr
