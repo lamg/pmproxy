@@ -123,7 +123,7 @@ func (p *PMProxy) getUsrNtIf(
 		if !ok {
 			e = &errors.Error{
 				Code: errors.ErrorKey,
-				Err: fmt.Errorf("Not found key %s", u.QuotaGroup),
+				Err:  fmt.Errorf("Not found key %s", u.QuotaGroup),
 			}
 		}
 	}
