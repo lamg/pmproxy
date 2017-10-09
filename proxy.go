@@ -46,8 +46,8 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	// TODO
 	// if address is a host name then it can be stored
 	// in new cn to used by canReq
-	var n string
-	n, e = p.getUsrNtIf(c.Req)
+	n, er := p.getUsrNtIf(c.Req)
+	e = errors.UnwrapErr(er)
 	println(e == nil)
 	var ief *net.Interface
 	if e == nil {
