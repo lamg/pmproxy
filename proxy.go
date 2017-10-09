@@ -88,12 +88,7 @@ func (p *PMProxy) newConCount(ntw, addr string,
 func (p *PMProxy) getUsrNtIf(
 	r *h.Request) (n string, e *errors.Error) {
 	h, _, ec := net.SplitHostPort(r.RemoteAddr)
-	if ec != nil {
-		e = &errors.Error{
-			Code: errors.ForwardErr,
-			Err:  ec,
-		}
-	}
+	e = errors.NewForwardErr(ec)
 	var v interface{}
 	if e == nil {
 		var ok bool
@@ -127,6 +122,8 @@ func (p *PMProxy) getUsrNtIf(
 			}
 		}
 	}
+	print("e = nil ≡ ")
+	println(e == nil)
 	return
 }
 
