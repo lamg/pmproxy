@@ -63,10 +63,22 @@ func TestLocalRequest(t *testing.T) {
 func TestForbiddenReq(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
-	rr, rq := reqres(t, h.MethodGet, "https://twitter.com", "",
-		"", cocoIP)
+	rr, rq := reqres(t, h.MethodGet, "https://twitter.com",
+		"", "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == h.StatusForbidden &&
 		rr.Body.String() == "No tiene acceso",
 		"Code: %d", rr.Code)
+}
+
+func TestGetUsrNtIf(t *testing.T) {
+	pm, e := initPMProxy()
+	require.True(t, e == nil)
+	_, e = pm.qa.login(pepe, pepeIP)
+	require.True(t, e == nil)
+	_, rq := reqres(t, h.MethodGet, "https://twitter.com",
+		"", "", pepeIP)
+	n, ec := pm.getUsrNtIf(rq)
+	require.True(t, ec == nil)
+	require.True(t, n == "eth1")
 }

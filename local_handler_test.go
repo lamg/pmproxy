@@ -22,7 +22,7 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
 		p = NewPMProxy(qa, rl,
-			map[string]string{"eth0": "UPR-Internet-Full"})
+			map[string]string{"B": "eth0", "A": "eth1"})
 	}
 	return
 }

@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"fmt"
+	"github.com/lamg/errors"
 	g "github.com/lamg/goproxy"
 	"net"
 	h "net/http"
@@ -84,14 +85,46 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	return
 }
 
-func (p *PMProxy) getUsrNtIf(r *h.Request) (n string, e error) {
-	h, _, e := net.SplitHostPort(r.RemoteAddr)
+func (p *PMProxy) getUsrNtIf(
+	r *h.Request) (n string, e *errors.Error) {
+	h, _, ec := net.SplitHostPort(r.RemoteAddr)
+	if ec != nil {
+		e = &errors.Error{
+			Code: errors.ForwardErr,
+			Err:  ec,
+		}
+	}
+	var v interface{}
 	if e == nil {
-		v, ok := p.qa.sm.sessions.Load(h)
-		var u *User
-		if ok {
-			u = v.(*User)
-			n = p.uf[u.QuotaGroup]
+		var ok bool
+		v, ok = p.qa.sm.sessions.Load(h)
+		if !ok {
+			e = &errors.Error{
+				Code: errors.ErrorKey,
+				Err: fmt.Errorf("Not found key %s in p.qa.sm.sessions",
+					h),
+			}
+		}
+	}
+	var u *User
+	if e == nil {
+		var ok bool
+		u, ok = v.(*User)
+		if !ok {
+			e = &errors.Error{
+				Code: errors.ErrorTypeAssertion,
+				Err:  fmt.Errorf("v is not an *User"),
+			}
+		}
+	}
+	if e == nil {
+		var ok bool
+		n, ok = p.uf[u.QuotaGroup]
+		if !ok {
+			e = &errors.Error{
+				Code: errors.ErrorKey,
+				Err: fmt.Errorf("Not found key %s", u.QuotaGroup),
+			}
 		}
 	}
 	return
