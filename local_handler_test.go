@@ -21,7 +21,8 @@ const (
 func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
-		p = NewPMProxy(qa, rl, new(NetDialer))
+		p = NewPMProxy(qa, rl,
+			map[string]string{"eth0": "UPR-Internet-Full"})
 	}
 	return
 }

@@ -17,7 +17,7 @@ type Conf struct {
 	// ProxySrvAddr host:port to serve the proxy
 	ProxySrvAddr string `json:"proxySrvAddr"`
 	// GrpIface group-network interface dictionary file path
-	GrpIface string `json:"grpIface"`
+	GrpIface map[string]string `json:"grpIface"`
 	// GrpQtPref quota group prefix in memberOf field in AD
 	GrpQtPref string `json:"grpQtPref"`
 	// LogBName is the logs base path and name
@@ -123,7 +123,7 @@ func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
 		rl, qa := NewRLog(dt, sm),
 			NewQAdm(sm, gq, uc, accExc, tm, 7*24*time.Hour)
 
-		p = NewPMProxy(qa, rl, new(NetDialer))
+		p = NewPMProxy(qa, rl, c.GrpIface)
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)
 	}

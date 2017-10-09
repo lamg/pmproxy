@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/c2h5oh/datasize"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/lamg/pmproxy"
 	"io"
@@ -137,7 +138,7 @@ func newInfoBox(le *loginSt) (bx *gtk.Box, e error) {
 		bx.PackStart(st.ucs, false, true, 0)
 		bx.PackStart(st.uqt, false, true, 0)
 		bx.PackStart(st.rfr, false, true, 0)
-		bx.PackStart(st.inf, false, true, 0)
+		bx.PackStart(st.inf, false, false, 0)
 	}
 	return
 }
@@ -238,8 +239,10 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 		}
 	}
 	if e == nil {
-		st.uqt.SetText(fmt.Sprintf("Cuota %d", ust.Quota))
-		st.ucs.SetText(fmt.Sprintf("Consumo %d", ust.Consumption))
+		st.uqt.SetText(fmt.Sprintf("Cuota %s",
+			datasize.ByteSize(ust.Quota).HumanReadable()))
+		st.ucs.SetText(fmt.Sprintf("Consumo %s",
+			datasize.ByteSize(ust.Consumption).HumanReadable()))
 		st.inf.SetText(fmt.Sprintf("Usuario %s", ust.UserName))
 	} else {
 		st.inf.SetText(e.Error())

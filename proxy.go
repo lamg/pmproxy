@@ -14,12 +14,13 @@ type PMProxy struct {
 	qa *QAdm
 	px *g.ProxyHttpServer
 	rl *RLog
-	nd Dialer
+	uf map[string]string
 }
 
 // NewPMProxy creates a new PMProxy
-func NewPMProxy(qa *QAdm, rl *RLog, nd Dialer) (p *PMProxy) {
-	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, nd}
+func NewPMProxy(qa *QAdm, rl *RLog,
+	uf map[string]string) (p *PMProxy) {
+	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, uf}
 	p.px.OnRequest(g.ReqConditionFunc(p.cannotRequest)).
 		DoFunc(forbiddenAcc)
 	p.px.OnResponse().DoFunc(p.logResp)
@@ -44,10 +45,41 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	// TODO
 	// if address is a host name then it can be stored
 	// in new cn to used by canReq
+	var n string
+	n, e = p.getUsrNtIf(c.Req)
+	var ief *net.Interface
+	if e == nil {
+		ief, e = net.InterfaceByName(n)
+	}
+	var laddr []net.Addr
+	if e == nil {
+		laddr, e = ief.Addrs()
+	}
+	var d *net.Dialer
+	if e == nil {
+		// DOUBT 0 seems to be the IPv4 address and
+		// 1 the IPv6 address
+		d = &net.Dialer{LocalAddr: laddr[0]}
+	}
 	var cn net.Conn
-	cn, e = p.nd.Dial(ntw, addr)
+	if e == nil {
+		cn, e = d.Dial(ntw, addr)
+	}
 	if e == nil {
 		r = &conCount{cn, p.qa, addr, c}
+	}
+	return
+}
+
+func (p *PMProxy) getUsrNtIf(r *h.Request) (n string, e error) {
+	h, _, e := net.SplitHostPort(r.RemoteAddr)
+	if e == nil {
+		v, ok := p.qa.sm.sessions.Load(h)
+		var u *User
+		if ok {
+			u = v.(*User)
+			n = p.uf[u.QuotaGroup]
+		}
 	}
 	return
 }

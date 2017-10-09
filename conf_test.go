@@ -11,7 +11,7 @@ func TestConf(t *testing.T) {
 	e := Decode(strings.NewReader(conf), c)
 	require.True(t, e == nil)
 	require.True(t, c.ProxySrvAddr == ":9080")
-	require.True(t, c.GrpIface == "ifaces.json")
+	require.True(t, c.GrpIface["UPR-Internet-Full"] == "eth0")
 	require.True(t, c.GrpQtPref == "UPR-Internet-")
 	require.True(t, c.LogBName == "logs/access.log")
 	require.True(t, c.AccExcp == "accExcp.json")
@@ -30,7 +30,7 @@ func TestConf(t *testing.T) {
 var conf = `
 {
 	"proxySrvAddr": ":9080",
-	"grpIface": "ifaces.json",
+	"grpIface": {"UPR-Internet-Full":"eth0"},
 	"grpQtPref":"UPR-Internet-",
 	"logBName":"logs/access.log",
 	"accExcp":"accExcp.json",
