@@ -25,11 +25,8 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
-- The following line at conCount.Read doesn't look very good
-else {
-		p = []byte(fmt.Sprintf("Cannot request %s:%s from %s at this time", hs, pr, ip))
-		n = len(p)
-}
+- The reset date must not be part of the configuration, rather
+	from the consumption.json file
 	
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
