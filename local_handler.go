@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/lamg/errors"
+	"github.com/rs/cors"
 	"io"
 	"io/ioutil"
 	"net"
@@ -46,7 +47,7 @@ const (
 // LocalHn is an HTTP server for proxying requests and
 // administrating quotas other aspects
 type LocalHn struct {
-	mx     *h.ServeMux
+	hn     h.Handler
 	qa     *QAdm
 	stPath string
 }
@@ -56,12 +57,14 @@ type LocalHn struct {
 func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	p = &LocalHn{
 		qa:     qa,
-		mx:     h.NewServeMux(),
 		stPath: sp,
 	}
-	p.mx.HandleFunc(LogX, p.logXHF)
-	p.mx.HandleFunc(UserStatus, p.userStatusHF)
-	p.mx.Handle(RootP, h.FileServer(h.Dir(sp)))
+	mx := h.NewServeMux()
+	mx.HandleFunc(LogX, p.logXHF)
+	mx.HandleFunc(UserStatus, p.userStatusHF)
+	mx.Handle(RootP, h.FileServer(h.Dir(sp)))
+	p.hn = cors.AllowAll().Handler(mx) //FIXME take care
+	// of allowing all origins
 	return
 }
 
@@ -126,7 +129,7 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 }
 
 func (p *LocalHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
-	p.mx.ServeHTTP(w, r)
+	p.hn.ServeHTTP(w, r)
 }
 
 func getScrt(h h.Header) (s string, e *errors.Error) {
