@@ -116,8 +116,7 @@ func (p *MapPrs) rangeF(f func(k string, v uint64) bool) {
 }
 
 func (p *MapPrs) persistIfTime() (b bool, e *errors.Error) {
-	var n time.Time
-	n = newTime(p.dt, p.iv)
+	n := newTime(p.dt, p.iv)
 	b = n != p.dt
 	if b {
 		p.dt, e = n, p.persist()
@@ -131,19 +130,4 @@ func (p *MapPrs) reset() {
 		x = true
 		return
 	})
-}
-
-// time.Now() - d > i ≡ n ≠ d
-// n ≠ d ⇒ n - d < i
-func newTime(d time.Time, i time.Duration) (n time.Time) {
-	var nw time.Time
-	var ta time.Duration
-	nw = time.Now()
-	// { nw - d < 290 years (by time.Duration's doc.)}
-	var ci time.Duration
-	ci = nw.Sub(d)
-	// { cintv: interval between now and the last}
-	ta = ci / i
-	n = d.Add(i * ta)
-	return
 }
