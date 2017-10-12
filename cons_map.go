@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/lamg/errors"
 	"io"
 	"sync"
 	"time"
@@ -17,15 +18,18 @@ type ConsMap struct {
 	mp     *sync.Map
 	closed bool
 	bf     *bytes.Buffer
+	pr     *Persister
 }
 
 // NewConsMap creates a new ConsMap
 func NewConsMap(lr time.Time, rt time.Duration,
-	uc map[string]uint64) (c *ConsMap) {
+	uc map[string]uint64, pr *Persister) (c *ConsMap) {
 	c = &ConsMap{lr: lr,
 		rt:     rt,
 		closed: true,
 		bf:     bytes.NewBufferString(""),
+		mp:     new(sync.Map),
+		pr:     pr,
 	}
 	for k, v := range uc {
 		c.mp.Store(k, v)
@@ -43,12 +47,14 @@ type OMap struct {
 
 // NewCMFromR creates a new ConsMap reading a OMap serialized
 // as JSON in r
-func NewCMFromR(r io.Reader) (c *ConsMap, e error) {
+func NewCMFromR(r io.Reader,
+	pr *Persister) (c *ConsMap, e *errors.Error) {
 	d, om := json.NewDecoder(r), new(OMap)
-	e = d.Decode(om)
-	if e == nil {
-		c = NewConsMap(om.LastReset, om.ResetT, om.UserCons)
+	ec := d.Decode(om)
+	if ec == nil {
+		c = NewConsMap(om.LastReset, om.ResetT, om.UserCons, pr)
 	}
+	e = errors.NewForwardErr(ec)
 	return
 }
 
@@ -60,7 +66,7 @@ func (p *ConsMap) Load(key string) (v uint64, ok bool) {
 		v, ok = iv.(uint64)
 	}
 	if !ok {
-		println("Failed type assertion at QuotaMap.Load")
+		println("Failed type assertion at ConsMap.Load")
 	}
 	return
 }
@@ -73,6 +79,32 @@ func (p *ConsMap) Store(key string, val uint64) {
 		p.lr = n
 	}
 	p.mp.Store(key, val)
+	p.bf.Reset()
+	enc := json.NewEncoder(p.bf)
+	om := &OMap{
+		LastReset: p.lr,
+		ResetT:    p.rt,
+		UserCons:  make(map[string]uint64),
+	}
+	p.mp.Range(func(k, v interface{}) (b bool) {
+		sk, oks := k.(string)
+		uv, oku := v.(uint64)
+		if !oks {
+			fmt.Printf("Assertion of %v as string failed\n", k)
+		}
+		if !oku {
+			fmt.Printf("Assertion of %v as uint64 failed\n", v)
+		}
+		b = oks && oku
+		if b {
+			om.UserCons[sk] = uv
+		}
+		return
+	})
+	e := enc.Encode(om)
+	if e == nil {
+		p.pr.Persist(p.bf)
+	}
 }
 
 // Reset sets all values to 0
@@ -82,44 +114,4 @@ func (p *ConsMap) Reset() {
 		x = true
 		return
 	})
-}
-
-func (p *ConsMap) Read(a []byte) (n int, e error) {
-	if p.closed {
-		enc := json.NewEncoder(p.bf)
-		om := &OMap{
-			LastReset: p.lr,
-			ResetT:    p.rt,
-			UserCons:  make(map[string]uint64),
-		}
-		p.mp.Range(func(k, v interface{}) (b bool) {
-			var sk string
-			var uv uint64
-			sk, oks := k.(string)
-			uv, oku := v.(uint64)
-			if !oks {
-				fmt.Printf("Assertion of %v as string failed\n", k)
-			}
-			if !oku {
-				fmt.Printf("Assertion of %v as uint64 failed\n", v)
-			}
-			b = oks && oku
-			if b {
-				om.UserCons[sk] = uv
-			}
-			return
-		})
-		e = enc.Encode(om)
-	}
-	if e == nil {
-		n, e = p.bf.Read(a)
-	}
-	return
-}
-
-// Close is the implementation of the io.Closer interface
-func (p *ConsMap) Close() (e error) {
-	p.closed = true
-	p.bf.Reset()
-	return
 }

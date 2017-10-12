@@ -12,41 +12,35 @@ import (
 // in a supplied date, to a file abstracted by a
 // WriterFct
 type Persister struct {
-	r  io.ReadCloser
 	wf w.WriterFct
 	dt time.Time
 	iv time.Duration
 }
 
 // NewPersister creates a Persister struct
-func NewPersister(r io.ReadCloser, wf w.WriterFct, dt time.Time,
+func NewPersister(wf w.WriterFct, dt time.Time,
 	iv time.Duration) (p *Persister) {
-	p = &Persister{r, wf, dt, iv}
+	p = &Persister{wf, dt, iv}
 	return
 }
 
-func (p *Persister) persistNow() (e *errors.Error) {
+func (p *Persister) persistNow(r io.Reader) (e *errors.Error) {
 	p.wf.NextWriter()
 	e = p.wf.Err()
 	if e == nil {
-		_, ec := io.Copy(p.wf.Current(), p.r)
-		e = errors.NewForwardErr(ec)
-	}
-	if e == nil {
-		ec := p.r.Close()
+		_, ec := io.Copy(p.wf.Current(), r)
 		e = errors.NewForwardErr(ec)
 	}
 	return
 }
 
 // Persist persists the content of r as described previously
-func (p *Persister) Persist() (b bool,
+func (p *Persister) Persist(r io.Reader) (b bool,
 	e *errors.Error) {
-	var n time.Time
-	n = newTime(p.dt, p.iv)
-	b = n != p.dt
+	t := newTime(p.dt, p.iv)
+	b = t != p.dt
 	if b {
-		p.dt, e = n, p.persistNow()
+		p.dt, e = t, p.persistNow(r)
 	}
 	return
 }
