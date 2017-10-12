@@ -46,9 +46,9 @@ func (q *QuotaMap) Load(key string) (v uint64, ok bool) {
 	iv, ok = q.mp.Load(key)
 	if ok {
 		v, ok = iv.(uint64)
-	}
-	if !ok {
-		println("Failed type assertion at QuotaMap.Load")
+		if !ok {
+			println("Failed type assertion at QuotaMap.Load")
+		}
 	}
 	return
 }

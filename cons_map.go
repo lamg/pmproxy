@@ -64,9 +64,9 @@ func (p *ConsMap) Load(key string) (v uint64, ok bool) {
 	iv, ok = p.mp.Load(key)
 	if ok {
 		v, ok = iv.(uint64)
-	}
-	if !ok {
-		println("Failed type assertion at ConsMap.Load")
+		if !ok {
+			println("Failed type assertion at ConsMap.Load")
+		}
 	}
 	return
 }
