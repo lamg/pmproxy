@@ -150,7 +150,7 @@ var accR = `[
 
 var cons = `{
 	"lastReset":"2017-10-02T14:00:00-04:00",
-	"resetTime":1000,
+	"resetTime":1000000000,
 	"userCons":{
  		"coco": 8192,
  		"pepe": 1024

@@ -79,6 +79,11 @@ func (p *ConsMap) Store(key string, val uint64) {
 		p.lr = n
 	}
 	p.mp.Store(key, val)
+	p.fillBuffer()
+	p.pr.Persist(p.bf)
+}
+
+func (p *ConsMap) fillBuffer() {
 	p.bf.Reset()
 	enc := json.NewEncoder(p.bf)
 	om := &OMap{
@@ -101,10 +106,7 @@ func (p *ConsMap) Store(key string, val uint64) {
 		}
 		return
 	})
-	e := enc.Encode(om)
-	if e == nil {
-		p.pr.Persist(p.bf)
-	}
+	enc.Encode(om)
 }
 
 // Reset sets all values to 0
