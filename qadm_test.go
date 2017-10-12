@@ -1,9 +1,7 @@
 package pmproxy
 
 import (
-	"crypto/rsa"
 	"github.com/lamg/errors"
-	. "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
@@ -26,36 +24,8 @@ func TestLoadAccStr(t *testing.T) {
 
 func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 	s string, e *errors.Error) {
-	var sr *strings.Reader
-	sr = strings.NewReader(accR)
-	var l []AccExcp
-	l, e = ReadAccExcp(sr)
-	// { l initialized ≡ e = nil }
-	var pKey *rsa.PrivateKey
+	qa, _, e = initQARL()
 	if e == nil {
-		pKey, e = parseKey()
-	}
-	var sm *SMng
-	if e == nil {
-		da, jw := NewDAuth(), NewJWTCrypt(pKey)
-		sm = NewSMng(da, jw)
-	}
-	// { sm initialized ≡ e = nil}
-
-	var gq *MapPrs
-	if e == nil {
-		sgq := &stringCloser{strings.NewReader(quota)}
-		gq, e = NewMapPrs(sgq, NewDWF(), time.Now(), time.Second)
-	}
-	// { gq initialized ≡ e = nil }
-	var uc *MapPrs
-	if e == nil {
-		suc := &stringCloser{strings.NewReader(cons)}
-		uc, e = NewMapPrs(suc, NewDWF(), time.Now(), time.Second)
-	}
-	// { uc initialized ≡ e = nil }
-	if e == nil {
-		qa = NewQAdm(sm, gq, uc, l, time.Now(), time.Second)
 		s, e = qa.login(c, ip)
 	}
 	// { qa initialized ∧ c logged in ≡ e = nil }
@@ -179,8 +149,12 @@ var accR = `[
 ]`
 
 var cons = `{
- "coco": 8192,
- "pepe": 1024
+	"lastReset":"2017-10-02T14:00:00-04:00",
+	"resetTime":1000,
+	"userCons":{
+ 		"coco": 8192,
+ 		"pepe": 1024
+	}
 }`
 
 var quota = `{

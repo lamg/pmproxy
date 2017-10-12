@@ -51,25 +51,22 @@ type AccExcp struct {
 // sessions through an *SMng
 type QAdm struct {
 	sm *SMng
-	// Group Quota and User Consumption
-	gq, uc *MapPrs
-	al     []AccExcp
-	// Consumption reset date
-	rd time.Time
-	// Consumption cycle duration
-	cd time.Duration
+	// Group Quota
+	gq *QuotaMap
+	// User Consumption
+	uc *ConsMap
+	// List of access exceptions
+	al []AccExcp
 }
 
 // NewQAdm creates a new QAdm instance
-func NewQAdm(sm *SMng, gq, uc *MapPrs, al []AccExcp,
-	rd time.Time, cd time.Duration) (q *QAdm) {
+func NewQAdm(sm *SMng, gq *QuotaMap, uc *ConsMap,
+	al []AccExcp) (q *QAdm) {
 	q = &QAdm{
 		sm: sm,
 		gq: gq,
 		uc: uc,
 		al: al,
-		rd: rd,
-		cd: cd,
 	}
 	return
 }
@@ -90,7 +87,7 @@ func (q *QAdm) getQuota(ip, s string) (r uint64,
 	u, e := q.sm.check(ip, s)
 	if e == nil {
 		var ok bool
-		r, ok = q.gq.load(u.QuotaGroup)
+		r, ok = q.gq.Load(u.QuotaGroup)
 		if !ok {
 			e = &errors.Error{
 				Code: ErrorLQ,
@@ -106,8 +103,7 @@ func (q *QAdm) setQuota(ip, s string,
 	var u *User
 	u, e = q.sm.check(ip, s)
 	if e == nil && u.IsAdmin {
-		q.gq.store(g.Name, g.Value)
-		_, e = q.gq.persistIfTime()
+		q.gq.Store(g.Name, g.Value)
 	} else if e == nil && !u.IsAdmin {
 		e = &errors.Error{
 			Code: ErrorSQNA,
@@ -123,7 +119,7 @@ func (q *QAdm) userCons(ip, s string) (c uint64,
 	u, e = q.sm.check(ip, s)
 	var ok bool
 	if e == nil {
-		c, ok = q.uc.load(u.UserName)
+		c, ok = q.uc.Load(u.UserName)
 		if !ok {
 			e = &errors.Error{
 				Code: ErrorUCLd,
@@ -136,19 +132,10 @@ func (q *QAdm) userCons(ip, s string) (c uint64,
 }
 
 func (q *QAdm) addCons(ip string, c uint64) {
-	// reset consumption if cycle ended
-	var nt time.Time
-	nt = newTime(q.rd, q.cd)
-	if !nt.Equal(q.rd) {
-		q.uc.reset()
-		q.rd = nt
-	}
-
 	u := q.sm.User(ip)
 	if u != nil {
-		n, _ := q.uc.load(u.UserName)
-		q.uc.store(u.UserName, n+c)
-		q.uc.persistIfTime()
+		n, _ := q.uc.Load(u.UserName)
+		q.uc.Store(u.UserName, n+c)
 	}
 }
 
@@ -158,8 +145,8 @@ func (q *QAdm) nlf(ip string) (b bool) {
 	u = q.sm.User(ip)
 	var cons, quota uint64
 	if u != nil {
-		cons, _ = q.uc.load(u.UserName)
-		quota, _ = q.gq.load(u.QuotaGroup)
+		cons, _ = q.uc.Load(u.UserName)
+		quota, _ = q.gq.Load(u.QuotaGroup)
 	}
 	b = cons >= quota
 	return

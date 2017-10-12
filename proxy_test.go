@@ -28,18 +28,18 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 		sm = NewSMng(da, cry)
 	}
 
-	var gq *MapPrs
+	var gq *QuotaMap
 	if e == nil {
-		gq, e = NewMapPrs(bytes.NewBufferString(quota),
-			w.NewDWF(), time.Now(), time.Second)
+		gqp := NewPersister(w.NewDWF(), time.Now(), time.Second)
+		gq, e = NewQMFromR(bytes.NewBufferString(quota), gqp)
 	}
 
-	var uc *MapPrs
+	var uc *ConsMap
 	if e == nil {
-		uc, e = NewMapPrs(bytes.NewBufferString(cons),
-			w.NewDWF(), time.Now(), time.Second)
+		ucp := NewPersister(w.NewDWF(), time.Now(), time.Second)
+		uc, e = NewCMFromR(bytes.NewBufferString(cons), ucp)
 	}
-	qa = NewQAdm(sm, gq, uc, l, time.Now(), time.Hour)
+	qa = NewQAdm(sm, gq, uc, l)
 	// rl initialization
 	rl = NewRLog(w.NewDWF(), sm)
 	return

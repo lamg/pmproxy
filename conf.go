@@ -67,29 +67,29 @@ func ParseConf(r io.Reader) (c *Conf, e error) {
 // an instance of PMProxy
 func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
 	lh *LocalHn, e *errors.Error) {
-	tm, ec := time.Parse(time.RFC3339, c.RsDt)
-	e = nerror(ec)
-	var f *os.File
+	f, ec := os.Open(c.Quota)
+	e = errors.NewForwardErr(ec)
+	// { c.Quota opened as f ≡ e = nil }
+	var gq *QuotaMap
 	if e == nil {
-		f, ec = os.Open(c.Quota)
-		e = nerror(ec)
-	}
-	var gq *MapPrs
-	if e == nil {
-		tr := wfact.NewTruncater(c.Quota)
-		gq, e = NewMapPrs(f, tr, time.Now(), 5*time.Minute)
-	}
-	if e == nil {
+		gqp := NewPersister(wfact.NewTruncater(c.Quota),
+			time.Now(), 5*time.Minute)
+		gq, e = NewQMFromR(f, gqp)
 		f.Close()
-		f, ec = os.Open(c.Cons)
-		e = nerror(ec)
 	}
-	var uc *MapPrs
 	if e == nil {
-		tr := wfact.NewTruncater(c.Cons)
-		uc, e = NewMapPrs(f, tr, time.Now(), 5*time.Minute)
-		e = nerror(ec)
+		f, ec = os.Open(c.Cons)
+		e = errors.NewForwardErr(ec)
 	}
+	// { c.Cons opened as f ≡ e = nil }
+	var uc *ConsMap
+	if e == nil {
+		ucp := NewPersister(wfact.NewTruncater(c.Cons),
+			time.Now(), 5*time.Minute)
+		uc, e = NewCMFromR(f, ucp)
+		f.Close()
+	}
+
 	var bs []byte
 	if e == nil {
 		bs, ec = ioutil.ReadFile(c.KeyFl)
@@ -120,9 +120,7 @@ func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
 		cry := NewJWTCrypt(pkey)
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName)
-		rl, qa := NewRLog(dt, sm),
-			NewQAdm(sm, gq, uc, accExc, tm, 7*24*time.Hour)
-
+		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc)
 		p = NewPMProxy(qa, rl, c.GrpIface)
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)
