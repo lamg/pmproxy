@@ -12,24 +12,12 @@ import (
 )
 
 const (
-	// RootP is the root path
-	RootP = "/"
-	// StatusP is the status page path
-	StatusP = "/status"
-	// PublicP public directory path
-	PublicP = "/public/"
 	// LogX path to login, logout (POST, DELETE)
 	LogX = "/api/auth"
 	// UserStatus path to get status (GET)
 	UserStatus = "/api/userStatus"
-	// GET, POST
-	accExcp = "/api/accessExceptions"
 	// AuthHd header key of JWT value
-	AuthHd   = "authHd"
-	userV    = "user"
-	groupV   = "group"
-	loginPg  = "login.html"
-	statusPg = "status.html"
+	AuthHd = "authHd"
 )
 
 const (
@@ -62,7 +50,6 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	mx := h.NewServeMux()
 	mx.HandleFunc(LogX, p.logXHF)
 	mx.HandleFunc(UserStatus, p.userStatusHF)
-	mx.Handle(RootP, h.FileServer(h.Dir(sp)))
 	p.hn = cors.AllowAll().Handler(mx) //FIXME take care
 	// of allowing all origins
 	return
