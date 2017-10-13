@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"context"
 	"fmt"
 	"github.com/lamg/errors"
 	g "github.com/lamg/goproxy"
@@ -22,11 +23,19 @@ type PMProxy struct {
 func NewPMProxy(qa *QAdm, rl *RLog,
 	uf map[string]string) (p *PMProxy) {
 	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, uf}
+	p.px.Tr.DialContext = p.dialContext
 	p.px.OnRequest(g.ReqConditionFunc(p.cannotRequest)).
 		DoFunc(forbiddenAcc)
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
 	p.px.NonproxyHandler = h.HandlerFunc(localHandler)
+	return
+}
+
+func (p *PMProxy) dialContext(ct context.Context,
+	nt, ad string) (c net.Conn, e error) {
+	c, e = net.Dial(nt, ad)
+	fmt.Printf("%v\n", ct)
 	return
 }
 
@@ -135,6 +144,8 @@ func (c *conCount) Read(p []byte) (n int, e error) {
 		// { n ≥ 0 }
 		cs := k * float32(n)
 		c.qa.addCons(ip, uint64(cs))
+	} else {
+		e = fmt.Errorf("No tiene acceso")
 	}
 	return
 }
