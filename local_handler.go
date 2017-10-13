@@ -65,6 +65,9 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 		e = Decode(r.Body, cr)
 		if e == nil {
 			scrt, e = p.qa.login(cr, addr)
+			if e != nil {
+				e.Err = fmt.Errorf("Login error: %s", e.Error())
+			}
 		}
 		if e == nil {
 			w.Write([]byte(scrt))

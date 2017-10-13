@@ -25,6 +25,7 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
+- Use custom dialer in proxy.Tr for HTTP requests
 	
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
