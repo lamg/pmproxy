@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/lamg/errors"
 	g "github.com/lamg/goproxy"
+	"golang.org/x/blog/content/context/userip"
 	"net"
 	h "net/http"
 	"strings"
@@ -35,7 +36,8 @@ func NewPMProxy(qa *QAdm, rl *RLog,
 func (p *PMProxy) dialContext(ct context.Context,
 	nt, ad string) (c net.Conn, e error) {
 	c, e = net.Dial(nt, ad)
-	fmt.Printf("%v\n", ct)
+	ip, _ := userip.FromContext(ct)
+	fmt.Printf("%v\n", ip.String())
 	return
 }
 
