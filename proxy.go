@@ -135,12 +135,6 @@ func (c *conCount) Read(p []byte) (n int, e error) {
 		// { n ≥ 0 }
 		cs := k * float32(n)
 		c.qa.addCons(ip, uint64(cs))
-	} else {
-		msg := []byte(
-			fmt.Sprintf("Cannot request %s:%s from %s at this time",
-				hs, pr, ip))
-		p = append(p, msg...)
-		n = len(p)
 	}
 	return
 }
