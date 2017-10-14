@@ -24,20 +24,12 @@ type PMProxy struct {
 func NewPMProxy(qa *QAdm, rl *RLog,
 	uf map[string]string) (p *PMProxy) {
 	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, uf}
-	p.px.Tr.DialContext = p.dialContext
 	p.px.OnRequest(g.ReqConditionFunc(p.cannotRequest)).
 		DoFunc(forbiddenAcc)
+
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCount
 	p.px.NonproxyHandler = h.HandlerFunc(localHandler)
-	return
-}
-
-func (p *PMProxy) dialContext(ct context.Context,
-	nt, ad string) (c net.Conn, e error) {
-	c, e = net.Dial(nt, ad)
-	ip, _ := userip.FromContext(ct)
-	fmt.Printf("%v\n", ip.String())
 	return
 }
 
