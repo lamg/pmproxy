@@ -1,11 +1,9 @@
 package pmproxy
 
 import (
-	"context"
 	"fmt"
 	"github.com/lamg/errors"
 	g "github.com/lamg/goproxy"
-	"golang.org/x/blog/content/context/userip"
 	"net"
 	h "net/http"
 	"strings"
