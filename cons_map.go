@@ -52,9 +52,17 @@ func NewCMFromR(r io.Reader,
 	d, om := json.NewDecoder(r), new(OMap)
 	ec := d.Decode(om)
 	if ec == nil {
-		c = NewConsMap(om.LastReset, om.ResetT, om.UserCons, pr)
+		if om.ResetT == 0 {
+			e = &errors.Error{
+				Code: errors.FormatErr,
+				Err:  fmt.Errorf("resetTime field must not be 0"),
+			}
+		} else {
+			c = NewConsMap(om.LastReset, om.ResetT, om.UserCons, pr)
+		}
+	} else {
+		e = errors.NewForwardErr(ec)
 	}
-	e = errors.NewForwardErr(ec)
 	return
 }
 
