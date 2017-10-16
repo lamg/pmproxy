@@ -119,7 +119,7 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		e = Decode(r.Body, ust)
 		if e == nil {
 			nv := &nameVal{
-				Name:  ust.Name,
+				Name:  ust.UserName,
 				Value: ust.Consumption,
 			}
 			fmt.Printf("%v\n", nv)
