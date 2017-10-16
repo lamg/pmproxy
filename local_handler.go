@@ -122,7 +122,6 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 				Name:  ust.UserName,
 				Value: ust.Consumption,
 			}
-			fmt.Printf("%v\n", nv)
 			e = p.qa.setCons(addr, s, nv)
 		}
 	} else if e == nil {
