@@ -305,6 +305,7 @@ func (cs *ctrlSt) setCons(b *gtk.Button) {
 	}
 	var p *h.Response
 	if e == nil {
+		r.Header.Set(pmproxy.AuthHd, string(cs.ls.scr))
 		p, e = h.DefaultClient.Do(r)
 	}
 	if e == nil {
