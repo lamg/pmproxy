@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	h "net/http"
 	"os"
+	"strings"
 )
 
 func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
@@ -57,12 +58,17 @@ func stack(lg *loginInf) (st *gtk.Stack, e error) {
 	if e == nil {
 		infoBx, e = newInfoBox(le)
 	}
+	var ctrlBx *gtk.Box
+	if e == nil {
+		ctrlBx, e = newCtrlSt(le)
+	}
 	if e == nil {
 		st, e = gtk.StackNew()
 	}
 	if e == nil {
 		st.AddTitled(le.bx, "login", "Autenticación")
 		st.AddTitled(infoBx, "info", "Información")
+		st.AddTitled(ctrlBx, "ctrl", "Administración")
 	}
 	return
 }
@@ -106,11 +112,11 @@ func newLoginBox(lg *loginInf) (st *loginSt, e error) {
 	if e == nil {
 		st.inf.SetLineWrap(true)
 		st.ent.Connect("clicked", st.entClicked)
-		st.bx.PackStart(st.adr, false, true, 0)
-		st.bx.PackStart(st.ust, false, true, 0)
-		st.bx.PackStart(st.pst, false, true, 0)
-		st.bx.PackStart(st.ent, false, true, 0)
-		st.bx.PackStart(st.inf, false, true, 0)
+		st.bx.PackStart(st.adr, true, true, 1)
+		st.bx.PackStart(st.ust, true, true, 1)
+		st.bx.PackStart(st.pst, true, true, 1)
+		st.bx.PackStart(st.ent, true, true, 1)
+		st.bx.PackStart(st.inf, true, true, 1)
 	}
 	return
 }
@@ -135,10 +141,10 @@ func newInfoBox(le *loginSt) (bx *gtk.Box, e error) {
 		st.rfr.Connect("clicked", st.rfrClicked)
 	}
 	if e == nil {
-		bx.PackStart(st.ucs, false, true, 0)
-		bx.PackStart(st.uqt, false, true, 0)
-		bx.PackStart(st.rfr, false, true, 0)
-		bx.PackStart(st.inf, false, false, 0)
+		bx.PackStart(st.ucs, true, true, 1)
+		bx.PackStart(st.uqt, true, true, 1)
+		bx.PackStart(st.rfr, true, true, 1)
+		bx.PackStart(st.inf, true, true, 1)
 	}
 	return
 }
@@ -246,5 +252,64 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 		st.inf.SetText(fmt.Sprintf("Usuario %s", ust.UserName))
 	} else {
 		st.inf.SetText(e.Error())
+	}
+}
+
+type ctrlSt struct {
+	usrEnt *gtk.Entry
+	consSp *gtk.SpinButton
+	setBt  *gtk.Button
+	infoLb *gtk.Label
+	ls     *loginSt
+}
+
+func newCtrlSt(ls *loginSt) (bx *gtk.Box, e error) {
+	cs := &ctrlSt{ls: ls}
+	cs.usrEnt, e = gtk.EntryNew()
+	if e == nil {
+		cs.consSp, e = gtk.SpinButtonNew(nil, 1, 0)
+	}
+	if e == nil {
+		cs.setBt, e = gtk.ButtonNewWithLabel("Asignar consumo")
+	}
+	if e == nil {
+		cs.infoLb, e = gtk.LabelNew("Info")
+	}
+	if e == nil {
+		bx, e = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 1)
+	}
+	if e == nil {
+		cs.setBt.Connect("clicked", cs.setCons)
+		bx.PackStart(cs.usrEnt, true, true, 1)
+		bx.PackStart(cs.consSp, true, true, 1)
+		bx.PackStart(cs.setBt, true, true, 1)
+		bx.PackStart(cs.infoLb, true, true, 1)
+	}
+	return
+}
+
+func (cs *ctrlSt) setCons(b *gtk.Button) {
+	usr, e := cs.usrEnt.GetText()
+	var addr string
+	if e == nil {
+		addr, e = cs.ls.adr.GetText()
+	}
+	var r *h.Request
+	if e == nil {
+		cons := uint64(cs.consSp.GetValue())
+		r, e = h.NewRequest(h.MethodPut,
+			addr+pmproxy.UserStatus,
+			strings.NewReader(
+				fmt.Sprintf(`{"userName":"%s","consumption":%d}`,
+					usr, cons)))
+	}
+	var p *h.Response
+	if e == nil {
+		p, e = h.DefaultClient.Do(r)
+	}
+	if e == nil {
+		cs.infoLb.SetText(p.Status)
+	} else {
+		cs.infoLb.SetText("Error: " + e.Error())
 	}
 }

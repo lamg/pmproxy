@@ -32,12 +32,12 @@ func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 	return
 }
 
-func TestSetQuota(t *testing.T) {
+func TestSetCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
-	e = qa.setQuota(pepeIP, scrt, &nameVal{gProf, qProf})
+	e = qa.setCons(pepeIP, scrt, &nameVal{gProf, qProf})
 	require.True(t, e == nil)
-	e = qa.setQuota(pepeIP, scrt, &nameVal{gEst, qEst})
+	e = qa.setCons(pepeIP, scrt, &nameVal{gEst, qEst})
 	require.True(t, e == nil)
 }
 

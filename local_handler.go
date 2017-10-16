@@ -14,7 +14,9 @@ import (
 const (
 	// LogX path to login, logout (POST, DELETE)
 	LogX = "/api/auth"
-	// UserStatus path to get status (GET)
+	// UserStatus path to get status (GET, PUT)
+	// The method PUT currently is used for setting
+	// the consumption of a secific user
 	UserStatus = "/api/userStatus"
 	// AuthHd header key of JWT value
 	AuthHd = "authHd"
@@ -101,20 +103,30 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		q, _ = p.qa.getQuota(addr, s)
 		c, _ = p.qa.userCons(addr, s)
 		u, e = p.qa.sm.check(addr, s)
+		if e == nil {
+			// TODO probably not the best having a type
+			// *User being encrypted with excessive information
+			e = Encode(w, &UsrSt{
+				UserName:    u.UserName,
+				Name:        u.Name,
+				IsAdmin:     u.IsAdmin,
+				Quota:       q,
+				Consumption: c,
+			})
+		}
+	} else if e == nil && r.Method == h.MethodPut {
+		ust := new(UsrSt)
+		e = Decode(r.Body, ust)
+		if e == nil {
+			e = p.qa.setCons(addr, s, &nameVal{
+				Name:  ust.Name,
+				Value: ust.Consumption,
+			})
+		}
 	} else if e == nil {
 		e = notSuppMeth(r.Method)
 	}
-	if e == nil {
-		// TODO probably not the best having a type
-		// *User being encrypted with excessive information
-		e = Encode(w, &UsrSt{
-			UserName:    u.UserName,
-			Name:        u.Name,
-			IsAdmin:     u.IsAdmin,
-			Quota:       q,
-			Consumption: c,
-		})
-	}
+
 	writeErr(w, e)
 }
 

@@ -98,12 +98,12 @@ func (q *QAdm) getQuota(ip, s string) (r uint64,
 	return
 }
 
-func (q *QAdm) setQuota(ip, s string,
+func (q *QAdm) setCons(ip, s string,
 	g *nameVal) (e *errors.Error) {
 	var u *User
 	u, e = q.sm.check(ip, s)
 	if e == nil && u.IsAdmin {
-		q.gq.Store(g.Name, g.Value)
+		q.uc.Store(g.Name, g.Value)
 	} else if e == nil && !u.IsAdmin {
 		e = &errors.Error{
 			Code: ErrorSQNA,

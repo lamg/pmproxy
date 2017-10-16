@@ -67,7 +67,8 @@ func loginServ(t *testing.T) (lh *LocalHn, s string) {
 
 func TestGetUserStatus(t *testing.T) {
 	pm, scrt := loginServ(t)
-	rr, rq := reqres(t, MethodGet, UserStatus, "", scrt, cocoIP)
+	rr, rq := reqres(t, MethodGet, UserStatus, "", scrt,
+		cocoIP)
 	pm.ServeHTTP(rr, rq)
 	us := new(UsrSt)
 	ec := json.Unmarshal(rr.Body.Bytes(), us)
@@ -81,6 +82,21 @@ func TestGetUserStatus(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, us.Quota == qv)
 	testUnsMeth(t, pm, UserStatus, MethodConnect)
+}
+
+func TestPutUserStatus(t *testing.T) {
+	pm, s := loginServ(t)
+	v, ok := pm.qa.uc.Load(coco.User)
+	require.True(t, ok)
+	require.True(t, v > 0)
+	r, q := reqres(t, MethodPut, UserStatus,
+		`{"userName":"coco","consumption":0}`, s, cocoIP)
+	pm.ServeHTTP(r, q)
+	require.True(t, r.Code == StatusOK, "Code: %d Body:%s",
+		r.Code, r.Body.String())
+	v, ok = pm.qa.uc.Load(coco.User)
+	require.True(t, ok)
+	require.True(t, v == 0, "v = %d ≠ 0", v)
 }
 
 func TestCode(t *testing.T) {
