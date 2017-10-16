@@ -18,23 +18,31 @@ func TestSessionManager(t *testing.T) {
 	require.True(t, e == nil)
 	a, c := NewDAuth(), NewJWTCrypt(pKey)
 	sm := NewSMng(a, c)
-	var s0 string
-	s0, e = sm.login(coco, cocoIP)
+	tss := []struct {
+		cr   *credentials
+		ip   string
+		ok   bool
+		code int
+	}{
+		{coco, cocoIP, true, 0},
+		{&credentials{"a", "b"}, pepeIP, false,
+			ldaputil.ErrorAuth},
+	}
+	for _, j := range tss {
+		s, e := sm.login(j.cr, j.ip)
+		require.True(t, (e == nil) == j.ok)
+		if j.ok {
+			nm, e := sm.check(j.ip, s)
+			require.True(t, e == nil)
+			require.True(t, nm.UserName == j.cr.User)
+		} else {
+			require.True(t, e.Code == j.code)
+		}
+	}
+	s, _ := sm.login(coco, cocoIP)
+	s1, _ := sm.login(coco, pepeIP)
+	_, e = sm.check(cocoIP, s)
+	require.True(t, e.Code == errorCheck)
+	_, e = sm.check(pepeIP, s1)
 	require.True(t, e == nil)
-	var nm *User
-	nm, e = sm.check(cocoIP, s0)
-	require.True(t, e == nil)
-	require.True(t, nm.Name == coco.User)
-	var s1 string
-	s1, e = sm.login(&credentials{"a", "b"}, pepeIP)
-	require.True(t, e != nil && e.Code == ldaputil.ErrorAuth)
-	s1, e = sm.login(pepe, pepeIP)
-	require.True(t, e == nil)
-	e = sm.logout(cocoIP, s0)
-	require.True(t, e == nil)
-	_, e = sm.check(pepeIP, s0)
-	require.Error(t, e)
-	nm, e = sm.check(pepeIP, s1)
-	require.True(t, e == nil)
-	require.True(t, nm.Name == pepe.User)
 }

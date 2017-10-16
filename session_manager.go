@@ -51,14 +51,26 @@ func NewSMng(a UserDB, c *JWTCrypt) (s *SMng) {
 }
 
 func (s *SMng) login(c *credentials,
-	a string) (t string, e *errors.Error) {
+	addr string) (t string, e *errors.Error) {
 	var usr *User
 	usr, e = s.udb.Login(c.User, c.Pass)
 	if e == nil {
 		t, e = s.crt.encrypt(usr)
 	}
 	if e == nil {
-		s.sessions.Store(a, usr)
+		var prvAddr string
+		s.sessions.Range(func(key, value interface{}) (x bool) {
+			v, ok := value.(*User)
+			x = true
+			if ok && v.UserName == usr.UserName {
+				prvAddr, _ = key.(string)
+				x = false
+			}
+			return
+		})
+		s.sessions.Delete(prvAddr)
+		// user session at prvAddr closed
+		s.sessions.Store(addr, usr)
 	}
 	return
 }
