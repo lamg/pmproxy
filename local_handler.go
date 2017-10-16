@@ -117,6 +117,10 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	} else if e == nil && r.Method == h.MethodPut {
 		ust := new(UsrSt)
 		e = Decode(r.Body, ust)
+		println("ok")
+		if e != nil {
+			println(e.Error())
+		}
 		if e == nil {
 			e = p.qa.setCons(addr, s, &nameVal{
 				Name:  ust.Name,
