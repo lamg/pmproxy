@@ -45,15 +45,9 @@ func forbiddenAcc(r *h.Request,
 func (p *PMProxy) newConCount(ntw, addr string,
 	c *g.ProxyCtx) (r net.Conn, e error) {
 	n, er := p.getUsrNtIf(c.Req)
-	println("n:"+n)
-	if er != nil {
-		println("Error:" + er.Error())
-	}
 	e = errors.UnwrapErr(er)
 	var ief *net.Interface
 	if e == nil {
-		print("interface:")
-		println(n)
 		ief, e = net.InterfaceByName(n)
 	}
 	var laddr []net.Addr
@@ -190,7 +184,6 @@ func (p *PMProxy) cannotRequest(q *h.Request,
 	hs, pr, _ := net.SplitHostPort(q.Host)
 	ra, _, _ := net.SplitHostPort(q.RemoteAddr)
 	k := p.qa.canReq(ra, hs, pr, time.Now())
-	println(k)
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
