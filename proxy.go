@@ -128,9 +128,7 @@ type conCount struct {
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	ip, _, _ := net.SplitHostPort(c.ctx.Req.RemoteAddr)
-	hs, pr, _ := net.SplitHostPort(c.ctx.Req.Host)
-	k := c.qa.canReq(ip, hs, pr, time.Now())
+	k, ip := getK(c.qa, c.ctx.Req)
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
@@ -173,17 +171,27 @@ func (p *PMProxy) logResp(r *h.Response,
 			// MIME type parameters droped
 		}
 		log.ContentType = ct
+		k, ip := getK(p.qa, r.Request)
+		if k > 0 {
+			cs := float32(r.Request.ContentLength) * k
+			p.qa.addCons(ip, uint64(cs))
+		}
 		p.rl.record(log)
 	}
 	x = r
 	return
 }
 
+func getK(qa *QAdm, q *h.Request) (k float32, ip string) {
+	hs, pr, _ := net.SplitHostPort(q.Host)
+	ip, _, _ = net.SplitHostPort(q.RemoteAddr)
+	k = qa.canReq(ip, hs, pr, time.Now())
+	return
+}
+
 func (p *PMProxy) cannotRequest(q *h.Request,
 	c *g.ProxyCtx) (r bool) {
-	hs, pr, _ := net.SplitHostPort(q.Host)
-	ra, _, _ := net.SplitHostPort(q.RemoteAddr)
-	k := p.qa.canReq(ra, hs, pr, time.Now())
+	k, _ := getK(p.qa, q)
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
