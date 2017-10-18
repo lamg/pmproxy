@@ -48,6 +48,8 @@ func (p *PMProxy) newConCount(ntw, addr string,
 	e = errors.UnwrapErr(er)
 	var ief *net.Interface
 	if e == nil {
+		print("interface:")
+		println(n)
 		ief, e = net.InterfaceByName(n)
 	}
 	var laddr []net.Addr

@@ -29,7 +29,7 @@ func TestUserInfo(t *testing.T) {
 			i = i + 1
 		}
 	}
-	require.True(t, ok, "va[%d] = \"\"", i)
+	require.True(t, ok, "Env var va[%d] = \"\"", i)
 	udb := NewLDB(adAddr, adSuff, adBDN, adAdmG, adQGPref)
 	u, e := udb.Login(uprUser, uprPass)
 	if e != nil && e.Code == ErrorNetwork {

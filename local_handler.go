@@ -63,6 +63,7 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	var scrt string
 
 	if r.Method == h.MethodPost {
+		// TODO return a JSON object with the token inside
 		cr := new(credentials)
 		e = Decode(r.Body, cr)
 		if e == nil {
