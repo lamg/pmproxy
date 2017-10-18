@@ -15,11 +15,45 @@ func TestLoadAccStr(t *testing.T) {
 	var e *errors.Error
 	l, e = ReadAccExcp(sr)
 	require.True(t, e == nil)
-	var zt time.Time
-	zt = time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)
+	tss := []AccExcp{
+		{
+			"google.com.cu",
+			false,
+			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+			0,
+		},
+		{
+			"14ymedio.com",
+			false,
+			time.Date(1959, 1, 1, 0, 0, 0, 0, time.UTC),
+			time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
+			1,
+		},
+		{
+			"facebook.com",
+			true,
+			time.Date(2006, 1, 2, 8, 0, 0, 0, time.UTC),
+			time.Date(2006, 1, 2, 14, 0, 0, 0, time.UTC),
+			1.5,
+		},
+	}
 
-	require.True(t, l[0].HostName == "google.com.cu" &&
-		l[0].Start == zt && l[0].End == zt && l[0].ConsCfc == 0)
+	for i, j := range tss {
+		b0 := j.HostName == l[i].HostName
+		require.True(t, b0, "Test %s ≠ %s",
+			j.HostName, l[i].HostName)
+		b1 := j.Daily == l[i].Daily
+		require.True(t, b1, "%t ≠ %t", j.Daily, l[i].Daily)
+		b2 := j.Start.Equal(l[i].Start)
+		require.True(t, b2, "%s ≠ %s",
+			j.Start.String(), l[i].Start.String())
+		b3 := j.End.Equal(l[i].End)
+		require.True(t, b3, "%s ≠ %s", j.End, l[i].End)
+		b4 := j.ConsCfc == l[i].ConsCfc
+		require.True(t, b4, "%.1f ≠ %.1d",
+			j.ConsCfc, l[i].ConsCfc)
+	}
 }
 
 func initTestQAdm(c *credentials, ip string) (qa *QAdm,
@@ -35,36 +69,46 @@ func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 func TestSetCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
-	e = qa.setCons(pepeIP, scrt, &nameVal{gProf, qProf})
-	require.True(t, e == nil)
-	e = qa.setCons(pepeIP, scrt, &nameVal{gEst, qEst})
-	require.True(t, e == nil)
+	tss := []nameVal{
+		nameVal{gProf, qProf},
+		nameVal{gEst, qEst},
+	}
+	for _, j := range tss {
+		e = qa.setCons(pepeIP, scrt, &j)
+		require.True(t, e == nil)
+		v, ok := qa.uc.Load(j.Name)
+		require.True(t, ok)
+		require.True(t, v == j.Value)
+	}
 }
 
 func TestGetQuota(t *testing.T) {
-	var qa *QAdm
-	var scrt string
-	var e *errors.Error
-	qa, scrt, e = initTestQAdm(pepe, pepeIP)
+	qa, scrt, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
 	// { logged in qa }
-
-	var v uint64
-	v, e = qa.getQuota(pepeIP, scrt)
+	v, e := qa.getQuota(pepeIP, scrt)
+	require.True(t, e == nil)
 	require.True(t, v == qProf, "%d≠%d", v, qProf)
 }
 
 func TestAddCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(coco, cocoIP)
 	require.True(t, e == nil)
-	var nc, dwn, n uint64
-	nc, e = qa.userCons(cocoIP, scrt)
-	require.True(t, e == nil)
-	dwn = 1024
-	qa.addCons(cocoIP, dwn)
-	n, e = qa.userCons(cocoIP, scrt)
-	require.True(t, e == nil)
-	require.True(t, n == nc+dwn, "%d≠%d", n, nc+dwn)
+	tss := []struct {
+		ip   string
+		dwn  uint64
+		scrt string
+	}{
+		{cocoIP, 1024, scrt},
+	}
+	for _, j := range tss {
+		nc, e := qa.userCons(j.ip, j.scrt)
+		require.True(t, e == nil)
+		qa.addCons(j.ip, j.dwn)
+		n, e := qa.userCons(j.ip, j.scrt)
+		require.True(t, e == nil)
+		require.True(t, n == nc+j.dwn, "%d≠%d", n, nc+j.dwn)
+	}
 }
 
 func TestCanReq(t *testing.T) {
@@ -117,13 +161,20 @@ func TestInDayInterval(t *testing.T) {
 }
 
 func TestNlf(t *testing.T) {
-	qa, _, e := initTestQAdm(coco, cocoIP)
+	qa, _, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
-	b := qa.nlf(cocoIP)
-	require.True(t, b)
-	_, e = qa.login(pepe, pepeIP)
-	require.True(t, e == nil)
-	require.True(t, !qa.nlf(pepeIP))
+	tss := []struct {
+		ip     string
+		logged bool
+	}{
+		{cocoIP, true},
+		{pepeIP, false},
+	}
+	for i, j := range tss {
+		b := qa.nlf(j.ip)
+		require.True(t, j.logged == b, "At %d %t ≠ %t",
+			i, j.logged, b)
+	}
 }
 
 const (
@@ -134,18 +185,10 @@ const (
 	adr0  = "0.0.0.0"
 )
 
-type stringCloser struct {
-	*strings.Reader
-}
-
-func (b *stringCloser) Close() (e error) {
-	return
-}
-
 var accR = `[
  {"hostName":"google.com.cu","start":null,"end":null,"consCfc":0},
- {"hostName":"14ymedio.com","start":"1959-01-01T00:00:00-04:00","end":"2030-01-01T00:00:00-04:00","consCfc":1},
-{"hostName":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-04:00","end":"2006-01-02T14:00:00-04:00","consCfc":1.5}
+ {"hostName":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
+{"hostName":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5}
 ]`
 
 var cons = `{

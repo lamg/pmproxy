@@ -91,7 +91,8 @@ func (q *QAdm) getQuota(ip, s string) (r uint64,
 		if !ok {
 			e = &errors.Error{
 				Code: ErrorLQ,
-				Err:  fmt.Errorf("Not found quota for %s", u.UserName),
+				Err: fmt.Errorf("Not found quota for %s",
+					u.UserName),
 			}
 		}
 	}
@@ -107,7 +108,8 @@ func (q *QAdm) setCons(ip, s string,
 	} else if e == nil && !u.IsAdmin {
 		e = &errors.Error{
 			Code: ErrorSQNA,
-			Err:  fmt.Errorf("%s is not an administrator", u.UserName),
+			Err: fmt.Errorf("%s is not an administrator",
+				u.UserName),
 		}
 	}
 	return
@@ -173,9 +175,17 @@ func (q *QAdm) canReq(ip, host, port string,
 		c = res.ConsCfc
 	}
 	// { c ≥ 0 }
-	if !(port == "443" || port == "80" || port == "") || q.nlf(ip) || (f &&
-		((!res.Daily && d.After(res.Start) && d.Before(res.End)) ||
-			(res.Daily && inDayInterval(d, res.Start, res.End)))) {
+	var dailyRestr, intervalRestr bool
+	if f {
+		dailyRestr, intervalRestr =
+			!res.Daily && d.After(res.Start) && d.Before(res.End),
+			res.Daily && inDayInterval(d, res.Start, res.End)
+	}
+	okPort, restrTime :=
+		(port == "443" || port == "80" || port == ""),
+		dailyRestr || intervalRestr
+
+	if !okPort || q.nlf(ip) || restrTime {
 		c = c * -1
 	}
 	//{ q.nlf(ip) ∨ d inside forbidden interval ⇒ c < 0 }
