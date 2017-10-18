@@ -45,7 +45,10 @@ func forbiddenAcc(r *h.Request,
 func (p *PMProxy) newConCount(ntw, addr string,
 	c *g.ProxyCtx) (r net.Conn, e error) {
 	n, er := p.getUsrNtIf(c.Req)
-	println(n)
+	println("n:"+n)
+	if er != nil {
+		println("Error:" + er.Error())
+	}
 	e = errors.UnwrapErr(er)
 	var ief *net.Interface
 	if e == nil {
