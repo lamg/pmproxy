@@ -60,25 +60,25 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e *errors.Error
-	var scrt string
+	var u *User
 
 	if r.Method == h.MethodPost {
 		// TODO return a JSON object with the token inside
 		cr := new(credentials)
 		e = Decode(r.Body, cr)
 		if e == nil {
-			scrt, e = p.qa.login(cr, addr)
+			u, e = p.qa.login(cr, addr)
 			if e != nil {
 				e.Err = fmt.Errorf("Login error: %s", e.Error())
 			}
 		}
 		if e == nil {
-			w.Write([]byte(scrt))
+			e = Encode(w, u)
 		}
 	} else if r.Method == h.MethodDelete {
-		scrt, e = getScrt(r.Header)
+		u, e = getUser(r.Body)
 		if e == nil {
-			e = p.qa.logout(addr, scrt)
+			e = p.qa.logout(addr, u)
 		}
 	} else {
 		e = notSuppMeth(r.Method)
@@ -86,36 +86,36 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
-// UsrSt is used for storing user information
-type UsrSt struct {
-	UserName    string `json:"userName"`
-	Name        string `json:"name"`
-	IsAdmin     bool   `json:"isAdmin"`
+// QtCs is used for storing quota and consumption
+type QtCs struct {
 	Quota       uint64 `json:"quota"`
 	Consumption uint64 `json:"consumption"`
 }
 
+// UsrSt represents the consumption that is to be set
+// to determined user name, with the credentials for
+// doing it.
+type UsrSt struct {
+	User        *User  `json:"user"`
+	UserName    string `json:"userName"`
+	Consumption uint64 `json:"consumption"`
+}
+
 func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
-	s, e := getScrt(r.Header)
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var q, c uint64
-	var u *User
-	if e == nil && r.Method == h.MethodGet {
-		q, _ = p.qa.getQuota(addr, s)
-		c, _ = p.qa.userCons(addr, s)
-		u, e = p.qa.sm.check(addr, s)
+	var e *errors.Error
+	if r.Method == h.MethodPost {
+		u, e := getUser(r.Body)
+		q, _ = p.qa.getQuota(addr, u)
+		c, _ = p.qa.userCons(addr, u)
 		if e == nil {
-			// TODO probably not the best having a type
-			// *User being encrypted with excessive information
-			e = Encode(w, &UsrSt{
-				UserName:    u.UserName,
-				Name:        u.Name,
-				IsAdmin:     u.IsAdmin,
+			e = Encode(w, &QtCs{
 				Quota:       q,
 				Consumption: c,
 			})
 		}
-	} else if e == nil && r.Method == h.MethodPut {
+	} else if r.Method == h.MethodPut {
 		ust := new(UsrSt)
 		e = Decode(r.Body, ust)
 		if e == nil {
@@ -123,9 +123,9 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 				Name:  ust.UserName,
 				Value: ust.Consumption,
 			}
-			e = p.qa.setCons(addr, s, nv)
+			e = p.qa.setCons(addr, ust.User, nv)
 		}
-	} else if e == nil {
+	} else {
 		e = notSuppMeth(r.Method)
 	}
 
@@ -136,13 +136,11 @@ func (p *LocalHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	p.hn.ServeHTTP(w, r)
 }
 
-func getScrt(h h.Header) (s string, e *errors.Error) {
-	s = h.Get(AuthHd)
-	if s == "" {
-		e = &errors.Error{
-			Code: ErrorGScrt,
-			Err:  fmt.Errorf("Malformed header"),
-		}
+func getUser(r io.ReadCloser) (u *User, e *errors.Error) {
+	u = new(User)
+	e = Decode(r, u)
+	if e == nil {
+		r.Close()
 	}
 	return
 }

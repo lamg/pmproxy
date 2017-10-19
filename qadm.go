@@ -72,19 +72,19 @@ func NewQAdm(sm *SMng, gq *QuotaMap, uc *ConsMap,
 }
 
 func (q *QAdm) login(c *credentials,
-	addr string) (s string, e *errors.Error) {
-	s, e = q.sm.login(c, addr)
+	addr string) (u *User, e *errors.Error) {
+	u, e = q.sm.login(c, addr)
 	return
 }
 
-func (q *QAdm) logout(ip, s string) (e *errors.Error) {
-	e = q.sm.logout(ip, s)
+func (q *QAdm) logout(ip string, u *User) (e *errors.Error) {
+	e = q.sm.logout(ip, u)
 	return
 }
 
-func (q *QAdm) getQuota(ip, s string) (r uint64,
+func (q *QAdm) getQuota(ip string, u *User) (r uint64,
 	e *errors.Error) {
-	u, e := q.sm.check(ip, s)
+	e = q.sm.check(ip, u)
 	if e == nil {
 		var ok bool
 		r, ok = q.gq.Load(u.QuotaGroup)
@@ -99,10 +99,9 @@ func (q *QAdm) getQuota(ip, s string) (r uint64,
 	return
 }
 
-func (q *QAdm) setCons(ip, s string,
+func (q *QAdm) setCons(ip string, u *User,
 	g *nameVal) (e *errors.Error) {
-	var u *User
-	u, e = q.sm.check(ip, s)
+	e = q.sm.check(ip, u)
 	if e == nil && u.IsAdmin {
 		q.uc.Store(g.Name, g.Value)
 	} else if e == nil && !u.IsAdmin {
@@ -115,10 +114,9 @@ func (q *QAdm) setCons(ip, s string,
 	return
 }
 
-func (q *QAdm) userCons(ip, s string) (c uint64,
+func (q *QAdm) userCons(ip string, u *User) (c uint64,
 	e *errors.Error) {
-	var u *User
-	u, e = q.sm.check(ip, s)
+	e = q.sm.check(ip, u)
 	var ok bool
 	if e == nil {
 		c, ok = q.uc.Load(u.UserName)

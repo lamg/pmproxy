@@ -46,7 +46,7 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 }
 
 func TestLocalRequest(t *testing.T) {
-	rr, rq := reqres(t, h.MethodGet, "/", "", "", cocoIP)
+	rr, rq := reqres(t, h.MethodGet, "/", "", cocoIP)
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
 	pm.ServeHTTP(rr, rq)
@@ -54,7 +54,7 @@ func TestLocalRequest(t *testing.T) {
 	require.True(t, rs.StatusCode == h.StatusNotFound,
 		"Status = %d", rs.StatusCode)
 
-	rr, rq = reqres(t, h.MethodGet, UserStatus, "", "", cocoIP)
+	rr, rq = reqres(t, h.MethodPost, UserStatus, "", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == h.StatusNotFound,
 		"Status = %d", rr.Code)
@@ -64,7 +64,7 @@ func TestForbiddenReq(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
 	rr, rq := reqres(t, h.MethodGet, "https://twitter.com",
-		"", "", cocoIP)
+		"", cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == h.StatusForbidden &&
 		rr.Body.String() == "No tiene acceso",
@@ -74,10 +74,14 @@ func TestForbiddenReq(t *testing.T) {
 func TestGetUsrNtIf(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
-	_, e = pm.qa.login(pepe, pepeIP)
+	var u *User
+	u, e = pm.qa.login(pepe, pepeIP)
+	require.True(t, e == nil)
+	var s string
+	s, e = u.ToJSON()
 	require.True(t, e == nil)
 	_, rq := reqres(t, h.MethodGet, "https://twitter.com",
-		"", "", pepeIP)
+		s, pepeIP)
 	n, ec := pm.getUsrNtIf(rq)
 	require.True(t, ec == nil)
 	require.True(t, n == "eth1")

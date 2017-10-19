@@ -57,10 +57,10 @@ func TestLoadAccStr(t *testing.T) {
 }
 
 func initTestQAdm(c *credentials, ip string) (qa *QAdm,
-	s string, e *errors.Error) {
+	u *User, e *errors.Error) {
 	qa, _, e = initQARL()
 	if e == nil {
-		s, e = qa.login(c, ip)
+		u, e = qa.login(c, ip)
 	}
 	// { qa initialized ∧ c logged in ≡ e = nil }
 	return
@@ -92,20 +92,20 @@ func TestGetQuota(t *testing.T) {
 }
 
 func TestAddCons(t *testing.T) {
-	qa, scrt, e := initTestQAdm(coco, cocoIP)
+	qa, u, e := initTestQAdm(coco, cocoIP)
 	require.True(t, e == nil)
 	tss := []struct {
-		ip   string
-		dwn  uint64
-		scrt string
+		ip  string
+		dwn uint64
+		usr *User
 	}{
-		{cocoIP, 1024, scrt},
+		{cocoIP, 1024, u},
 	}
 	for _, j := range tss {
-		nc, e := qa.userCons(j.ip, j.scrt)
+		nc, e := qa.userCons(j.ip, j.usr)
 		require.True(t, e == nil)
 		qa.addCons(j.ip, j.dwn)
-		n, e := qa.userCons(j.ip, j.scrt)
+		n, e := qa.userCons(j.ip, j.usr)
 		require.True(t, e == nil)
 		require.True(t, n == nc+j.dwn, "%d≠%d", n, nc+j.dwn)
 	}

@@ -12,26 +12,16 @@ func TestCrypt(t *testing.T) {
 	j, e := newJWTCrypt()
 	require.True(t, e == nil)
 	u := &User{UserName: "coco", Name: "Coco"}
-	var s string
-	s, e = j.encrypt(u)
+	e = j.encrypt(u)
 	require.True(t, e == nil)
-	var du *User
-	du, e = j.decrypt(s)
+	e = j.checkUser(u)
 	require.True(t, e == nil)
-	require.True(t, du.UserName == "coco",
-		"du.Name = \"%s\"", du.UserName)
 }
 
-func TestErrDecrypt(t *testing.T) {
+func TestErrCheckUser(t *testing.T) {
 	j, e := newJWTCrypt()
 	require.True(t, e == nil)
-	_, e = j.decrypt("coco")
-	require.True(t, e.Code == ErrorParseJWT)
-	uc := nJWT{User: "coc"}
-	tk := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
-	s, ec := tk.SignedString(j.pKey)
-	require.NoError(t, ec)
-	_, e = j.decrypt(s)
+	e = j.checkUser(&User{JWT: "coco"})
 	require.True(t, e.Code == ErrorParseJWT)
 }
 

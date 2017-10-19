@@ -32,14 +32,27 @@ Ríos's needs, which are the following:
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
 - JWT: JSON web token (a string with encrypted user information)
-- Hd: {"authHd":JWT}
-- UsrSt: {"quota":uint64, "consumption":uint64}
+- User: {
+	"userName":string, 
+  "name":string, 
+  "isAdmin":bool, 
+  "quotaGroup":uint64,
+	"jwt":string,
+}
+- UsrSt: {
+	"user":User,
+	"userName":string,
+	"quota":uint64, 
+  "consumption":uint64,
+}
 
-| Path            | Method | Body | Header | R. code    | R. body      |
-|-----------------+--------+------+--------+------------+--------------|
-| /api/auth       | POST   | Cred |        | 200 or 400 | JWT          |
-| /api/auth       | DELETE |      | Hd     | 200 or 400 |              |
-| /api/userStatus | GET    |      | Hd     | 200 or 400 | UsrSt        |
+| Path            | Method | Body  | R. code    | R. body |
+|-----------------+--------+-------+------------+---------|
+| /api/auth       | POST   | Cred  | 200 or 400 | User    |
+| /api/auth       | DELETE | User  | 200 or 400 |         |
+| /api/userStatus | POST   | User  | 200 or 400 | QtCs    |
+| /api/userStatus | PUT    | UsrSt | 200 or 400 |         |
+
 
 ** Quota administration
 - Improve description

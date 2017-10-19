@@ -32,17 +32,17 @@ func TestSessionManager(t *testing.T) {
 		s, e := sm.login(j.cr, j.ip)
 		require.True(t, (e == nil) == j.ok)
 		if j.ok {
-			nm, e := sm.check(j.ip, s)
+			e = sm.check(j.ip, s)
 			require.True(t, e == nil)
-			require.True(t, nm.UserName == j.cr.User)
+			require.True(t, s.UserName == j.cr.User)
 		} else {
 			require.True(t, e.Code == j.code)
 		}
 	}
 	s, _ := sm.login(coco, cocoIP)
 	s1, _ := sm.login(coco, pepeIP)
-	_, e = sm.check(cocoIP, s)
+	e = sm.check(cocoIP, s)
 	require.True(t, e.Code == errorCheck)
-	_, e = sm.check(pepeIP, s1)
+	e = sm.check(pepeIP, s1)
 	require.True(t, e == nil)
 }

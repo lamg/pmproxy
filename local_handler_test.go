@@ -3,12 +3,14 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 	"net"
 	. "net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -33,20 +35,20 @@ func TestServerLogInOut(t *testing.T) {
 	pm := NewLocalHn(qa, "")
 	require.True(t, e == nil)
 	rr, rq := reqres(t, MethodPost, LogX,
-		`{"user":"a", "pass":"a"}`, "", cocoIP)
+		`{"user":"a", "pass":"a"}`, cocoIP)
 	pm.ServeHTTP(rr, rq)
 	require.Equal(t, rr.Code, StatusOK)
-	scrt := rr.Body.String()
-	require.True(t, scrt != "")
-	var usr *User
-	usr, e = pm.qa.sm.check(cocoIP, scrt)
+	u, e := NewUserFR(rr.Body)
 	require.True(t, e == nil)
-	require.True(t, usr.UserName == "a" &&
-		pm.qa.sm.User(cocoIP).Equal(usr))
+	e = pm.qa.sm.check(cocoIP, u)
+	require.True(t, e == nil)
+	require.True(t, u.UserName == "a" &&
+		pm.qa.sm.User(cocoIP).Equal(u))
 
-	rr, rq = reqres(t, MethodDelete, LogX, "", scrt, cocoIP)
+	usr, _ := u.ToJSON()
+	rr, rq = reqres(t, MethodDelete, LogX, usr, cocoIP)
 	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == StatusOK)
+	require.True(t, rr.Code == StatusOK, "Code: %d", rr.Code)
 	require.True(t, pm.qa.sm.User(cocoIP) == nil, "%v ≠ nil",
 		pm.qa.sm.User(cocoIP))
 
@@ -58,7 +60,7 @@ func loginServ(t *testing.T) (lh *LocalHn, s string) {
 	require.True(t, e == nil)
 	lh = NewLocalHn(qa, "")
 	rr, rq := reqres(t, MethodPost, LogX,
-		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
+		`{"user":"coco", "pass":"coco"}`, cocoIP)
 	lh.ServeHTTP(rr, rq)
 	require.True(t, rr.Code == StatusOK)
 	s = rr.Body.String()
@@ -66,19 +68,20 @@ func loginServ(t *testing.T) (lh *LocalHn, s string) {
 }
 
 func TestGetUserStatus(t *testing.T) {
-	pm, scrt := loginServ(t)
-	rr, rq := reqres(t, MethodGet, UserStatus, "", scrt,
-		cocoIP)
+	pm, u := loginServ(t)
+	rr, rq := reqres(t, MethodPost, UserStatus, u, cocoIP)
 	pm.ServeHTTP(rr, rq)
-	us := new(UsrSt)
+	us := new(QtCs)
 	ec := json.Unmarshal(rr.Body.Bytes(), us)
 	require.NoError(t, ec)
 	cv, ok := pm.qa.uc.Load(coco.User)
 	require.True(t, ok)
 	require.True(t, us.Consumption == cv)
-	u, e := pm.qa.sm.check(cocoIP, scrt)
+	usr, e := NewUserFR(strings.NewReader(u))
 	require.True(t, e == nil)
-	qv, ok := pm.qa.gq.Load(u.QuotaGroup)
+	e = pm.qa.sm.check(cocoIP, usr)
+	require.True(t, e == nil)
+	qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
 	require.True(t, ok)
 	require.True(t, us.Quota == qv)
 	testUnsMeth(t, pm, UserStatus, MethodConnect)
@@ -90,7 +93,9 @@ func TestPutUserStatus(t *testing.T) {
 	require.True(t, ok)
 	require.True(t, v > 0)
 	r, q := reqres(t, MethodPut, UserStatus,
-		`{"userName":"coco","consumption":0}`, s, cocoIP)
+		fmt.Sprintf(
+			`{"user":%s,"userName":"coco","consumption":0}`, s),
+		cocoIP)
 	pm.ServeHTTP(r, q)
 	require.True(t, r.Code == StatusOK, "Code: %d Body:%s",
 		r.Code, r.Body.String())
@@ -121,7 +126,7 @@ func testUnsMeth(t *testing.T, pm *LocalHn, path, meth string) {
 	require.True(t, rr.Code == StatusBadRequest)
 }
 
-func reqres(t *testing.T, meth, path, body, hd,
+func reqres(t *testing.T, meth, path, body,
 	addr string) (r *httptest.ResponseRecorder, q *Request) {
 	var e error
 	if body != "" {
@@ -131,9 +136,6 @@ func reqres(t *testing.T, meth, path, body, hd,
 		q, e = NewRequest(meth, path, nil)
 	}
 	require.NoError(t, e)
-	if hd != "" {
-		q.Header.Set(AuthHd, hd)
-	}
 	q.Host = net.JoinHostPort(q.Host, "443")
 	q.RemoteAddr = net.JoinHostPort(addr, "443")
 	r = httptest.NewRecorder()

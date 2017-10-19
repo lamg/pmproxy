@@ -1,10 +1,12 @@
 package pmproxy
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/lamg/errors"
+	"io"
 )
 
 const (
@@ -29,6 +31,7 @@ type User struct {
 	Name       string `json:"name"`
 	IsAdmin    bool   `json:"isAdmin"`
 	QuotaGroup string `json:"quotaGroup"`
+	JWT        string `json:"jwt"`
 }
 
 // Equal says whether this user is equal to
@@ -43,6 +46,30 @@ func (u *User) Equal(v interface{}) (ok bool) {
 	return
 }
 
+func (u *User) String() (s string) {
+	s = fmt.Sprintf(
+		`{"userName":"%s","name":%s,"isAdmin":%t,"quotaGroup":%s}`,
+		u.UserName, u.Name, u.IsAdmin, u.QuotaGroup)
+	return
+}
+
+// ToJSON encodes the instance to a JSON string
+func (u *User) ToJSON() (s string, e *errors.Error) {
+	sw := bytes.NewBufferString("")
+	e = Encode(sw, u)
+	if e == nil {
+		s = sw.String()
+	}
+	return
+}
+
+// NewUserFR parses a JSON User representation
+func NewUserFR(r io.Reader) (u *User, e *errors.Error) {
+	u = new(User)
+	e = Decode(r, u)
+	return
+}
+
 // JWTCrypt is the object for encrypting JWT
 type JWTCrypt struct {
 	pKey *rsa.PrivateKey
@@ -50,7 +77,7 @@ type JWTCrypt struct {
 
 // JWTUser adds jwt.StandardClaims to an User
 type JWTUser struct {
-	User *User `json:"user"`
+	Data string `json:"data"`
 	jwt.StandardClaims
 }
 
@@ -60,11 +87,11 @@ func NewJWTCrypt(p *rsa.PrivateKey) (j *JWTCrypt) {
 	return
 }
 
-func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {
-	uc := &JWTUser{User: u}
+func (j *JWTCrypt) encrypt(u *User) (e *errors.Error) {
+	uc := &JWTUser{Data: u.String()}
 	t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
 	var ec error
-	s, ec = t.SignedString(j.pKey)
+	u.JWT, ec = t.SignedString(j.pKey)
 	if ec != nil {
 		e = &errors.Error{
 			Code: ErrorEncrypt,
@@ -74,9 +101,9 @@ func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {
 	return
 }
 
-// Decrypt decrypts a string representing an *User
-func (j *JWTCrypt) decrypt(s string) (u *User, e *errors.Error) {
-	t, ec := jwt.ParseWithClaims(s, &JWTUser{},
+// checkUser checks if the signature is ok
+func (j *JWTCrypt) checkUser(u *User) (e *errors.Error) {
+	t, ec := jwt.ParseWithClaims(u.JWT, &JWTUser{},
 		func(x *jwt.Token) (a interface{}, d error) {
 			a, d = &j.pKey.PublicKey, nil
 			return
@@ -84,7 +111,7 @@ func (j *JWTCrypt) decrypt(s string) (u *User, e *errors.Error) {
 	if ec == nil && !t.Valid {
 		e = &errors.Error{
 			Code: ErrorNotValidJWT,
-			Err:  fmt.Errorf("Invalid token in \"%s\"", s),
+			Err:  fmt.Errorf("Invalid token in \"%s\"", u.JWT),
 		}
 	} else if ec != nil {
 		e = &errors.Error{
@@ -101,10 +128,12 @@ func (j *JWTCrypt) decrypt(s string) (u *User, e *errors.Error) {
 				Code: ErrorNotJWTUser,
 				Err:  fmt.Errorf("False JWTUser type assertion"),
 			}
+		} else if clm.Data != u.String() {
+			e = &errors.Error{
+				Code: ErrorNotValidJWT,
+				Err:  fmt.Errorf("Not valid JWT"),
+			}
 		}
-	}
-	if e == nil {
-		u = clm.User
 	}
 	return
 }
