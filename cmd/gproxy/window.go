@@ -239,7 +239,10 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 	var qc *pmproxy.QtCs
 	if e == nil {
 		qc = new(pmproxy.QtCs)
-		e = pmproxy.Decode(r.Body, qc)
+		ec := pmproxy.Decode(r.Body, qc)
+		if ec != nil {
+			e = ec.Err
+		}
 	}
 	if e == nil {
 		st.uqt.SetText(fmt.Sprintf("Cuota %s",
