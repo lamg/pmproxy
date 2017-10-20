@@ -3,13 +3,12 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"github.com/c2h5oh/datasize"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy"
 	"io"
-	"io/ioutil"
 	h "net/http"
 	"os"
 	"strings"
@@ -165,7 +164,7 @@ type loginSt struct {
 	inf *gtk.Label
 	ent *gtk.Button
 	bx  *gtk.Box
-	scr []byte
+	usr *pmproxy.User
 }
 
 func (m *loginSt) entClicked(b *gtk.Button) {
@@ -176,17 +175,16 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 	r, e := h.Post(adr+pmproxy.LogX, "text/json",
 		bytes.NewBufferString(jusr))
 	if e == nil {
-		var bs []byte
-		bs, _ = ioutil.ReadAll(r.Body)
-		r.Body.Close()
-		sb := string(bs)
-		if len(sb) > 70 {
-			sb = sb[:70] + "…"
+		m.usr = new(pmproxy.User)
+		er := pmproxy.Decode(r.Body, m.usr)
+		if er != nil {
+			e = er.Err
 		}
-		m.inf.SetText(fmt.Sprintf("Respuesta: %s Cuerpo:%s",
-			r.Status, sb))
+	}
+	if e == nil {
+		m.inf.SetText(fmt.Sprintf("Respuesta: %s Usuario:%s",
+			r.Status, m.usr.Name))
 		if r.StatusCode == h.StatusOK {
-			m.scr = bs
 			f, _ := os.Create(config)
 			if f != nil {
 				lg := &loginInf{Addr: adr, User: ust, Pass: pst}
@@ -213,43 +211,43 @@ type infoSt struct {
 
 func (st *infoSt) rfrClicked(b *gtk.Button) {
 	adr, e := st.le.adr.GetText()
-	var q *h.Request
+	var str string
 	if e == nil {
-		q, e = h.NewRequest(h.MethodGet,
-			adr+pmproxy.UserStatus, nil)
-	}
-	var r *h.Response
-	if e == nil {
-		if st.le.scr != nil {
-			q.Header.Set(pmproxy.AuthHd, string(st.le.scr))
-			r, e = h.DefaultClient.Do(q)
+		if st.le.usr != nil {
+			var ec *errors.Error
+			str, ec = st.le.usr.ToJSON()
+			if ec != nil {
+				e = ec.Err
+			}
 		} else {
 			e = fmt.Errorf("No ha iniciado sesión")
 		}
 	}
-	var bs []byte
+	var rd *strings.Reader
 	if e == nil {
-		bs, e = ioutil.ReadAll(r.Body)
-		r.Body.Close()
+		rd = strings.NewReader(str)
 	}
-	var ust *pmproxy.UsrSt
+	var q *h.Request
 	if e == nil {
-		ust = new(pmproxy.UsrSt)
-		e = json.Unmarshal(bs, ust)
-		if e != nil {
-			sb := string(bs)
-			if len(sb) > 70 {
-				sb = sb[:70] + "…"
-			}
-			e = fmt.Errorf("Error: %s Body: %s", e.Error(), sb)
-		}
+		q, e = h.NewRequest(h.MethodPost,
+			adr+pmproxy.UserStatus, rd)
+	}
+	var r *h.Response
+	if e == nil {
+		r, e = h.DefaultClient.Do(q)
+	}
+	var qc *pmproxy.QtCs
+	if e == nil {
+		qc = new(pmproxy.QtCs)
+		e = pmproxy.Decode(r.Body, qc)
 	}
 	if e == nil {
 		st.uqt.SetText(fmt.Sprintf("Cuota %s",
-			datasize.ByteSize(ust.Quota).HumanReadable()))
+			datasize.ByteSize(qc.Quota).HumanReadable()))
 		st.ucs.SetText(fmt.Sprintf("Consumo %s",
-			datasize.ByteSize(ust.Consumption).HumanReadable()))
-		st.inf.SetText(fmt.Sprintf("Usuario %s", ust.UserName))
+			datasize.ByteSize(qc.Consumption).HumanReadable()))
+		st.inf.SetText(fmt.Sprintf("Usuario %s",
+			st.le.usr.UserName))
 	} else {
 		st.inf.SetText(e.Error())
 	}
@@ -294,18 +292,23 @@ func (cs *ctrlSt) setCons(b *gtk.Button) {
 	if e == nil {
 		addr, e = cs.ls.adr.GetText()
 	}
-	var r *h.Request
+	var bf *bytes.Buffer
 	if e == nil {
 		cons := uint64(cs.consSp.GetValue())
+		ust := &pmproxy.UsrSt{
+			User:        cs.ls.usr,
+			UserName:    usr,
+			Consumption: cons,
+		}
+		pmproxy.Encode(bf, ust)
+	}
+	var r *h.Request
+	if e == nil {
 		r, e = h.NewRequest(h.MethodPut,
-			addr+pmproxy.UserStatus,
-			strings.NewReader(
-				fmt.Sprintf(`{"userName":"%s","consumption":%d}`,
-					usr, cons)))
+			addr+pmproxy.UserStatus, bf)
 	}
 	var p *h.Response
 	if e == nil {
-		r.Header.Set(pmproxy.AuthHd, string(cs.ls.scr))
 		p, e = h.DefaultClient.Do(r)
 	}
 	if e == nil {

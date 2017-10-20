@@ -5,10 +5,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"flag"
+	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func main() {
@@ -31,13 +33,15 @@ func main() {
 		r, e = http.Post(proxyAddr+pmproxy.LogX, "text/json",
 			bytes.NewReader(bs))
 	}
+	var usr *pmproxy.User
 	if e == nil {
-		bs, e = ioutil.ReadAll(r.Body)
+		usr = new(pmproxy.User)
+		e = pmproxy.Decode(r.Body, usr)
+		r.Body.Close()
 	}
 	var cons string
 	if e == nil {
-		r.Body.Close()
-		cons, e = get(proxyAddr, pmproxy.UserStatus, string(bs))
+		cons, e = get(proxyAddr, pmproxy.UserStatus, usr)
 	}
 	if e == nil {
 		log.Print(cons)
@@ -47,17 +51,31 @@ func main() {
 	}
 }
 
-func get(addr, path, s string) (r string, e error) {
+func get(addr, path string,
+	u *pmproxy.User) (r string, e *errors.Error) {
+	var s string
+	s, e = u.ToJSON()
+	var rd *strings.Reader
+	if e == nil {
+		rd = strings.NewReader(s)
+	}
 	var q *http.Request
-	q, e = http.NewRequest(http.MethodGet, addr+path, nil)
+	if e == nil {
+		var ec error
+		q, ec = http.NewRequest(http.MethodPost, addr+path, rd)
+		e = errors.NewForwardErr(ec)
+	}
 	var p *http.Response
 	if e == nil {
-		q.Header.Set(pmproxy.AuthHd, s)
-		p, e = http.DefaultClient.Do(q)
+		var ec error
+		p, ec = http.DefaultClient.Do(q)
+		e = errors.NewForwardErr(ec)
 	}
 	var bs []byte
 	if e == nil {
-		bs, e = ioutil.ReadAll(p.Body)
+		var ec error
+		bs, ec = ioutil.ReadAll(p.Body)
+		e = errors.NewForwardErr(ec)
 	}
 	if e == nil {
 		r = string(bs)
