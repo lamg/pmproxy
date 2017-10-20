@@ -303,7 +303,11 @@ func (cs *ctrlSt) setCons(b *gtk.Button) {
 			UserName:    usr,
 			Consumption: cons,
 		}
-		pmproxy.Encode(bf, ust)
+		bf = bytes.NewBufferString("")
+		ec := pmproxy.Encode(bf, ust)
+		if ec != nil {
+			e = ec.Err
+		}
 	}
 	var r *h.Request
 	if e == nil {
