@@ -85,6 +85,10 @@ func (q *QAdm) logout(ip string, u *User) (e *errors.Error) {
 func (q *QAdm) getQuota(ip string, u *User) (r uint64,
 	e *errors.Error) {
 	e = q.sm.check(ip, u)
+	println("gq: " + ip)
+	if e != nil {
+		println(e.Error())
+	}
 	if e == nil {
 		var ok bool
 		r, ok = q.gq.Load(u.QuotaGroup)
