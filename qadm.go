@@ -24,7 +24,8 @@ const (
 	ErrorLQ
 )
 
-type nameVal struct {
+// NameVal name value pair
+type NameVal struct {
 	Name  string `json:"name"`
 	Value uint64 `json:"value"`
 }
@@ -72,23 +73,20 @@ func NewQAdm(sm *SMng, gq *QuotaMap, uc *ConsMap,
 }
 
 func (q *QAdm) login(c *credentials,
-	addr string) (u *User, e *errors.Error) {
-	u, e = q.sm.login(c, addr)
+	addr string) (u *User, s string, e *errors.Error) {
+	u, s, e = q.sm.login(c, addr)
 	return
 }
 
-func (q *QAdm) logout(ip string, u *User) (e *errors.Error) {
-	e = q.sm.logout(ip, u)
+func (q *QAdm) logout(ip, s string) (e *errors.Error) {
+	e = q.sm.logout(ip, s)
 	return
 }
 
-func (q *QAdm) getQuota(ip string, u *User) (r uint64,
+func (q *QAdm) getQuota(ip string, s string) (r uint64,
 	e *errors.Error) {
-	e = q.sm.check(ip, u)
-	println("gq: " + ip)
-	if e != nil {
-		println(e.Error())
-	}
+	var u *User
+	u, e = q.sm.check(ip, s)
 	if e == nil {
 		var ok bool
 		r, ok = q.gq.Load(u.QuotaGroup)
@@ -103,9 +101,10 @@ func (q *QAdm) getQuota(ip string, u *User) (r uint64,
 	return
 }
 
-func (q *QAdm) setCons(ip string, u *User,
-	g *nameVal) (e *errors.Error) {
-	e = q.sm.check(ip, u)
+func (q *QAdm) setCons(ip, s string,
+	g *NameVal) (e *errors.Error) {
+	var u *User
+	u, e = q.sm.check(ip, s)
 	if e == nil && u.IsAdmin {
 		q.uc.Store(g.Name, g.Value)
 	} else if e == nil && !u.IsAdmin {
@@ -118,9 +117,10 @@ func (q *QAdm) setCons(ip string, u *User,
 	return
 }
 
-func (q *QAdm) userCons(ip string, u *User) (c uint64,
+func (q *QAdm) userCons(ip, s string) (c uint64,
 	e *errors.Error) {
-	e = q.sm.check(ip, u)
+	var u *User
+	u, e = q.sm.check(ip, s)
 	var ok bool
 	if e == nil {
 		c, ok = q.uc.Load(u.UserName)

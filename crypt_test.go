@@ -12,16 +12,19 @@ func TestCrypt(t *testing.T) {
 	j, e := newJWTCrypt()
 	require.True(t, e == nil)
 	u := &User{UserName: "coco", Name: "Coco"}
-	e = j.encrypt(u)
+	var s string
+	s, e = j.encrypt(u)
 	require.True(t, e == nil)
-	e = j.checkUser(u)
+	var lu *User
+	lu, e = j.checkUser(s)
 	require.True(t, e == nil)
+	require.True(t, lu.Equal(u))
 }
 
 func TestErrCheckUser(t *testing.T) {
 	j, e := newJWTCrypt()
 	require.True(t, e == nil)
-	e = j.checkUser(&User{JWT: "coco"})
+	_, e = j.checkUser("coco")
 	require.True(t, e.Code == ErrorParseJWT)
 }
 

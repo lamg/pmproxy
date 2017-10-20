@@ -51,10 +51,10 @@ func NewSMng(a UserDB, c *JWTCrypt) (s *SMng) {
 }
 
 func (s *SMng) login(c *credentials,
-	addr string) (usr *User, e *errors.Error) {
+	addr string) (usr *User, t string, e *errors.Error) {
 	usr, e = s.udb.Login(c.User, c.Pass)
 	if e == nil {
-		e = s.crt.encrypt(usr)
+		t, e = s.crt.encrypt(usr)
 	}
 	if e == nil {
 		var prvAddr string
@@ -74,16 +74,16 @@ func (s *SMng) login(c *credentials,
 	return
 }
 
-func (s *SMng) logout(ip string, u *User) (e *errors.Error) {
-	e = s.check(ip, u)
+func (s *SMng) logout(ip, t string) (e *errors.Error) {
+	_, e = s.check(ip, t)
 	if e == nil {
 		s.sessions.Delete(ip)
 	}
 	return
 }
 
-func (s *SMng) check(ip string, u *User) (e *errors.Error) {
-	e = s.crt.checkUser(u)
+func (s *SMng) check(ip, t string) (u *User, e *errors.Error) {
+	u, e = s.crt.checkUser(t)
 	var iv interface{}
 	if e == nil {
 		var ok bool

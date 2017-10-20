@@ -57,10 +57,10 @@ func TestLoadAccStr(t *testing.T) {
 }
 
 func initTestQAdm(c *credentials, ip string) (qa *QAdm,
-	u *User, e *errors.Error) {
+	s string, e *errors.Error) {
 	qa, _, e = initQARL()
 	if e == nil {
-		u, e = qa.login(c, ip)
+		_, s, e = qa.login(c, ip)
 	}
 	// { qa initialized ∧ c logged in ≡ e = nil }
 	return
@@ -69,9 +69,9 @@ func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 func TestSetCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
-	tss := []nameVal{
-		nameVal{gProf, qProf},
-		nameVal{gEst, qEst},
+	tss := []NameVal{
+		NameVal{gProf, qProf},
+		NameVal{gEst, qEst},
 	}
 	for _, j := range tss {
 		e = qa.setCons(pepeIP, scrt, &j)
@@ -92,20 +92,20 @@ func TestGetQuota(t *testing.T) {
 }
 
 func TestAddCons(t *testing.T) {
-	qa, u, e := initTestQAdm(coco, cocoIP)
+	qa, s, e := initTestQAdm(coco, cocoIP)
 	require.True(t, e == nil)
 	tss := []struct {
 		ip  string
 		dwn uint64
-		usr *User
+		hd  string
 	}{
-		{cocoIP, 1024, u},
+		{cocoIP, 1024, s},
 	}
 	for _, j := range tss {
-		nc, e := qa.userCons(j.ip, j.usr)
+		nc, e := qa.userCons(j.ip, j.hd)
 		require.True(t, e == nil)
 		qa.addCons(j.ip, j.dwn)
-		n, e := qa.userCons(j.ip, j.usr)
+		n, e := qa.userCons(j.ip, j.hd)
 		require.True(t, e == nil)
 		require.True(t, n == nc+j.dwn, "%d≠%d", n, nc+j.dwn)
 	}

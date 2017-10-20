@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"github.com/c2h5oh/datasize"
 	"github.com/gotk3/gotk3/gtk"
-	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy"
 	"io"
 	h "net/http"
 	"os"
-	"strings"
 )
 
 func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
@@ -164,7 +162,7 @@ type loginSt struct {
 	inf *gtk.Label
 	ent *gtk.Button
 	bx  *gtk.Box
-	usr *pmproxy.User
+	lr  *pmproxy.LogRs
 }
 
 func (m *loginSt) entClicked(b *gtk.Button) {
@@ -175,15 +173,15 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 	r, e := h.Post(adr+pmproxy.LogX, "text/json",
 		bytes.NewBufferString(jusr))
 	if e == nil {
-		m.usr = new(pmproxy.User)
-		er := pmproxy.Decode(r.Body, m.usr)
+		m.lr = new(pmproxy.LogRs)
+		er := pmproxy.Decode(r.Body, m.lr)
 		if er != nil {
 			e = er.Err
 		}
 	}
 	if e == nil {
 		m.inf.SetText(fmt.Sprintf("Respuesta: %s Usuario:%s",
-			r.Status, m.usr.Name))
+			r.Status, m.lr.User.Name))
 		if r.StatusCode == h.StatusOK {
 			f, _ := os.Create(config)
 			if f != nil {
@@ -211,29 +209,14 @@ type infoSt struct {
 
 func (st *infoSt) rfrClicked(b *gtk.Button) {
 	adr, e := st.le.adr.GetText()
-	var str string
-	if e == nil {
-		if st.le.usr != nil {
-			var ec *errors.Error
-			str, ec = st.le.usr.ToJSON()
-			if ec != nil {
-				e = ec.Err
-			}
-		} else {
-			e = fmt.Errorf("No ha iniciado sesión")
-		}
-	}
-	var rd *strings.Reader
-	if e == nil {
-		rd = strings.NewReader(str)
-	}
 	var q *h.Request
 	if e == nil {
-		q, e = h.NewRequest(h.MethodPost,
-			adr+pmproxy.UserStatus, rd)
+		q, e = h.NewRequest(h.MethodGet,
+			adr+pmproxy.UserStatus, nil)
 	}
 	var r *h.Response
 	if e == nil {
+		q.Header.Set(pmproxy.AuthHd, st.le.lr.Scrt)
 		r, e = h.DefaultClient.Do(q)
 	}
 	var qc *pmproxy.QtCs
@@ -250,7 +233,7 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 		st.ucs.SetText(fmt.Sprintf("Consumo %s",
 			datasize.ByteSize(qc.Consumption).HumanReadable()))
 		st.inf.SetText(fmt.Sprintf("Usuario %s",
-			st.le.usr.UserName))
+			st.le.lr.User.UserName))
 	} else {
 		st.inf.SetText(e.Error())
 	}
@@ -298,10 +281,9 @@ func (cs *ctrlSt) setCons(b *gtk.Button) {
 	var bf *bytes.Buffer
 	if e == nil {
 		cons := uint64(cs.consSp.GetValue())
-		ust := &pmproxy.UsrSt{
-			User:        cs.ls.usr,
-			UserName:    usr,
-			Consumption: cons,
+		ust := &pmproxy.NameVal{
+			Name:  usr,
+			Value: cons,
 		}
 		bf = bytes.NewBufferString("")
 		ec := pmproxy.Encode(bf, ust)
@@ -316,6 +298,7 @@ func (cs *ctrlSt) setCons(b *gtk.Button) {
 	}
 	var p *h.Response
 	if e == nil {
+		r.Header.Set(pmproxy.AuthHd, cs.ls.lr.Scrt)
 		p, e = h.DefaultClient.Do(r)
 	}
 	if e == nil {

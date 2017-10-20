@@ -57,28 +57,35 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	return
 }
 
+// LogRs is the login result sent as JSON
+type LogRs struct {
+	User *User  `json:"user"`
+	Scrt string `json:"scrt"`
+}
+
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e *errors.Error
-	var u *User
 
 	if r.Method == h.MethodPost {
 		// TODO return a JSON object with the token inside
 		cr := new(credentials)
 		e = Decode(r.Body, cr)
+		var lr *LogRs
 		if e == nil {
-			u, e = p.qa.login(cr, addr)
+			lr = new(LogRs)
+			lr.User, lr.Scrt, e = p.qa.login(cr, addr)
 			if e != nil {
 				e.Err = fmt.Errorf("Login error: %s", e.Error())
 			}
 		}
 		if e == nil {
-			e = Encode(w, u)
+			e = Encode(w, lr)
 		}
 	} else if r.Method == h.MethodDelete {
-		u, e = getUser(r.Body)
+		s, e := getScrt(r.Header)
 		if e == nil {
-			e = p.qa.logout(addr, u)
+			e = p.qa.logout(addr, s)
 		}
 	} else {
 		e = notSuppMeth(r.Method)
@@ -104,26 +111,21 @@ type UsrSt struct {
 func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var q, c uint64
-	var e *errors.Error
-	if r.Method == h.MethodPost {
-		u, e := getUser(r.Body)
-		q, _ = p.qa.getQuota(addr, u)
-		c, _ = p.qa.userCons(addr, u)
+	s, e := getScrt(r.Header)
+	if e == nil && r.Method == h.MethodGet {
+		q, _ = p.qa.getQuota(addr, s)
+		c, _ = p.qa.userCons(addr, s)
 		if e == nil {
 			e = Encode(w, &QtCs{
 				Quota:       q,
 				Consumption: c,
 			})
 		}
-	} else if r.Method == h.MethodPut {
-		ust := new(UsrSt)
-		e = Decode(r.Body, ust)
+	} else if e == nil && r.Method == h.MethodPut {
+		nv := new(NameVal)
+		e = Decode(r.Body, nv)
 		if e == nil {
-			nv := &nameVal{
-				Name:  ust.UserName,
-				Value: ust.Consumption,
-			}
-			e = p.qa.setCons(addr, ust.User, nv)
+			e = p.qa.setCons(addr, s, nv)
 		}
 	} else {
 		e = notSuppMeth(r.Method)
@@ -136,11 +138,13 @@ func (p *LocalHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	p.hn.ServeHTTP(w, r)
 }
 
-func getUser(r io.ReadCloser) (u *User, e *errors.Error) {
-	u = new(User)
-	e = Decode(r, u)
-	if e == nil {
-		r.Close()
+func getScrt(h h.Header) (s string, e *errors.Error) {
+	s = h.Get(AuthHd)
+	if s == "" {
+		e = &errors.Error{
+			Code: ErrorGScrt,
+			Err:  fmt.Errorf("Malformed header"),
+		}
 	}
 	return
 }
