@@ -29,21 +29,21 @@ func TestSessionManager(t *testing.T) {
 			ldaputil.ErrorAuth},
 	}
 	for _, j := range tss {
-		_, s, e := sm.login(j.cr, j.ip)
+		lr, e := sm.login(j.cr, j.ip)
 		require.True(t, (e == nil) == j.ok)
 		if j.ok {
 			var lu *User
-			lu, e = sm.check(j.ip, s)
+			lu, e = sm.check(j.ip, lr.Scrt)
 			require.True(t, e == nil)
 			require.True(t, lu.UserName == j.cr.User)
 		} else {
 			require.True(t, e.Code == j.code)
 		}
 	}
-	_, s, _ := sm.login(coco, cocoIP)
-	_, s1, _ := sm.login(coco, pepeIP)
-	_, e = sm.check(cocoIP, s)
+	lr0, _ := sm.login(coco, cocoIP)
+	lr1, _ := sm.login(coco, pepeIP)
+	_, e = sm.check(cocoIP, lr0.Scrt)
 	require.True(t, e.Code == errorCheck)
-	_, e = sm.check(pepeIP, s1)
+	_, e = sm.check(pepeIP, lr1.Scrt)
 	require.True(t, e == nil)
 }

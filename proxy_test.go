@@ -74,11 +74,11 @@ func TestForbiddenReq(t *testing.T) {
 func TestGetUsrNtIf(t *testing.T) {
 	pm, e := initPMProxy()
 	require.True(t, e == nil)
-	var hd string
-	_, hd, e = pm.qa.login(pepe, pepeIP)
+	var lr *LogRs
+	lr, e = pm.qa.login(pepe, pepeIP)
 	require.True(t, e == nil)
 	_, rq := reqres(t, h.MethodGet, "https://twitter.com",
-		"", hd, pepeIP)
+		"", lr.Scrt, pepeIP)
 	n, ec := pm.getUsrNtIf(rq)
 	require.True(t, ec == nil)
 	require.True(t, n == "eth1")

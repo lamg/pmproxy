@@ -57,12 +57,6 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	return
 }
 
-// LogRs is the login result sent as JSON
-type LogRs struct {
-	User *User  `json:"user"`
-	Scrt string `json:"scrt"`
-}
-
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e *errors.Error
@@ -73,8 +67,7 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 		e = Decode(r.Body, cr)
 		var lr *LogRs
 		if e == nil {
-			lr = new(LogRs)
-			lr.User, lr.Scrt, e = p.qa.login(cr, addr)
+			lr, e = p.qa.login(cr, addr)
 			if e != nil {
 				e.Err = fmt.Errorf("Login error: %s", e.Error())
 			}

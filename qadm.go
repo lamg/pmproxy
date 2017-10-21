@@ -73,8 +73,8 @@ func NewQAdm(sm *SMng, gq *QuotaMap, uc *ConsMap,
 }
 
 func (q *QAdm) login(c *credentials,
-	addr string) (u *User, s string, e *errors.Error) {
-	u, s, e = q.sm.login(c, addr)
+	addr string) (lr *LogRs, e *errors.Error) {
+	lr, e = q.sm.login(c, addr)
 	return
 }
 

@@ -50,18 +50,25 @@ func NewSMng(a UserDB, c *JWTCrypt) (s *SMng) {
 	return
 }
 
+// LogRs is the login result sent as JSON
+type LogRs struct {
+	User *User  `json:"user"`
+	Scrt string `json:"scrt"`
+}
+
 func (s *SMng) login(c *credentials,
-	addr string) (usr *User, t string, e *errors.Error) {
-	usr, e = s.udb.Login(c.User, c.Pass)
+	addr string) (lr *LogRs, e *errors.Error) {
+	lr = new(LogRs)
+	lr.User, e = s.udb.Login(c.User, c.Pass)
 	if e == nil {
-		t, e = s.crt.encrypt(usr)
+		lr.Scrt, e = s.crt.encrypt(lr.User)
 	}
 	if e == nil {
 		var prvAddr string
 		s.sessions.Range(func(key, value interface{}) (x bool) {
 			v, ok := value.(*User)
 			x = true
-			if ok && v.UserName == usr.UserName {
+			if ok && v.UserName == lr.User.UserName {
 				prvAddr, _ = key.(string)
 				x = false
 			}
@@ -69,7 +76,7 @@ func (s *SMng) login(c *credentials,
 		})
 		s.sessions.Delete(prvAddr)
 		// user session at prvAddr closed
-		s.sessions.Store(addr, usr)
+		s.sessions.Store(addr, lr.User)
 	}
 	return
 }
