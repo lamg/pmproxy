@@ -1,15 +1,38 @@
 package pmproxy
 
 import (
+	fs "github.com/lamg/filesystem"
 	"github.com/stretchr/testify/require"
-	"strings"
 	"testing"
 )
 
-func TestLoadConf(t *testing.T) {
-	c, e := ParseConf(strings.NewReader(conf))
-	require.True(t, e == nil)
-	require.True(t, c.Equal(pconf))
+func TestConfPMProxy(t *testing.T) {
+	bfs := fs.NewBufferFS()
+	initialFiles := []struct {
+		name    string
+		content string
+	}{
+		{"conf.json", conf},
+		{"cuotas.json", quota},
+		{"consumos.json", cons},
+		{"key.pem", pemKey},
+		{"accExcp.json", accR},
+	}
+	for _, j := range initialFiles {
+		f, e := bfs.Create(j.name)
+		require.NoError(t, e)
+		_, e = f.Write([]byte(j.content))
+		require.NoError(t, e)
+		f.Close()
+	}
+
+	f, e := bfs.Open("conf.json")
+	require.NoError(t, e)
+	c, ec := ParseConf(f)
+	require.True(t, ec == nil)
+	require.True(t, pconf.Equal(c), "%v", c)
+	_, _, ec = ConfPMProxy(c, true, bfs)
+	require.True(t, ec == nil)
 }
 
 var pconf = &Conf{

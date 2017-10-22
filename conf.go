@@ -4,10 +4,9 @@ import (
 	"crypto/rsa"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/lamg/errors"
+	fs "github.com/lamg/filesystem"
 	"github.com/lamg/wfact"
 	"io"
-	"io/ioutil"
-	"os"
 	"time"
 )
 
@@ -90,26 +89,26 @@ func ParseConf(r io.Reader) (c *Conf, e *errors.Error) {
 
 // ConfPMProxy uses supplied configuration to initialize
 // an instance of PMProxy
-func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
-	lh *LocalHn, e *errors.Error) {
-	f, ec := os.Open(c.Quota)
+func ConfPMProxy(c *Conf, dAuth bool,
+	fsm fs.FileSystem) (p *PMProxy, lh *LocalHn,
+	e *errors.Error) {
+	f, ec := fsm.Open(c.Quota)
 	e = errors.NewForwardErr(ec)
 	// { c.Quota opened as f ≡ e = nil }
 	var gq *QuotaMap
 	if e == nil {
-		gqp := NewPersister(wfact.NewTruncater(c.Quota),
+		gqp := NewPersister(wfact.NewTruncater(c.Quota, fsm),
 			time.Now(), 5*time.Minute)
 		gq, e = NewQMFromR(f, gqp)
 		f.Close()
 	}
 	if e == nil {
-		f, ec = os.Open(c.Cons)
-		e = errors.NewForwardErr(ec)
+		f, ec = fsm.Open(c.Cons)
 	}
 	// { c.Cons opened as f ≡ e = nil }
 	var uc *ConsMap
 	if e == nil {
-		ucp := NewPersister(wfact.NewTruncater(c.Cons),
+		ucp := NewPersister(wfact.NewTruncater(c.Cons, fsm),
 			time.Now(), 5*time.Minute)
 		uc, e = NewCMFromR(f, ucp)
 		f.Close()
@@ -117,7 +116,7 @@ func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
 
 	var bs []byte
 	if e == nil {
-		bs, ec = ioutil.ReadFile(c.KeyFl)
+		bs, ec = fsm.ReadFile(c.KeyFl)
 		e = nerror(ec)
 	}
 	var pkey *rsa.PrivateKey
@@ -126,7 +125,7 @@ func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
 		e = nerror(ec)
 	}
 	if e == nil {
-		f, ec = os.Open(c.AccExcp)
+		f, ec = fsm.Open(c.AccExcp)
 		e = nerror(ec)
 	}
 	var accExc []AccExcp
@@ -144,7 +143,7 @@ func ConfPMProxy(c *Conf, dAuth bool) (p *PMProxy,
 	if e == nil {
 		cry := NewJWTCrypt(pkey)
 		sm := NewSMng(udb, cry)
-		dt := wfact.NewDateArchiver(c.LogBName)
+		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc)
 		p = NewPMProxy(qa, rl, c.GrpIface)
 		// TODO serve HTTPS with valid certificate
