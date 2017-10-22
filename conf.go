@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"crypto/rsa"
-	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/lamg/errors"
 	"github.com/lamg/wfact"
@@ -55,11 +54,37 @@ type Conf struct {
 	BDN string `json:"bdn"`
 }
 
+// Equal is the equality comparison
+func (c *Conf) Equal(v interface{}) (ok bool) {
+	var nc *Conf
+	nc, ok = v.(*Conf)
+	if ok {
+		ok = c.AccExcp == nc.AccExcp && c.ADAccSf == nc.ADAccSf &&
+			c.ADAddr == nc.ADAddr && c.AdmGrp == nc.AdmGrp &&
+			c.BDN == nc.BDN && c.CertFl == nc.CertFl &&
+			c.Cons == nc.Cons &&
+			c.GrpQtPref == nc.GrpQtPref && c.KeyFl == nc.KeyFl &&
+			c.LogBName == nc.LogBName &&
+			c.ProxySrvAddr == nc.ProxySrvAddr && c.Quota == nc.Quota &&
+			c.RsDt == nc.RsDt && c.StPath == nc.StPath &&
+			c.UISrvAddr == nc.UISrvAddr
+	}
+	if ok {
+		for k, v := range c.GrpIface {
+			ok = nc.GrpIface[k] == v
+			if !ok {
+				// linear search in maps forces to use break
+				break
+			}
+		}
+	}
+	return
+}
+
 // ParseConf parses a JSON formatted Conf object
-func ParseConf(r io.Reader) (c *Conf, e error) {
-	d := json.NewDecoder(r)
+func ParseConf(r io.Reader) (c *Conf, e *errors.Error) {
 	c = new(Conf)
-	e = d.Decode(c)
+	e = Decode(r, c)
 	return
 }
 
