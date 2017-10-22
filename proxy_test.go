@@ -46,40 +46,64 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 }
 
 func TestLocalRequest(t *testing.T) {
-	rr, rq := reqres(t, h.MethodGet, "/", "", "", cocoIP)
-	pm, e := initPMProxy()
-	require.True(t, e == nil)
-	pm.ServeHTTP(rr, rq)
-	rs := rr.Result()
-	require.True(t, rs.StatusCode == h.StatusNotFound,
-		"Status = %d", rs.StatusCode)
-
-	rr, rq = reqres(t, h.MethodPost, UserStatus, "", "", cocoIP)
-	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == h.StatusNotFound,
-		"Status = %d", rr.Code)
+	tss := []struct {
+		meth string
+		path string
+		ip   string
+	}{
+		{h.MethodGet, "/", cocoIP},
+		{h.MethodGet, UserStatus, pepeIP},
+	}
+	for _, j := range tss {
+		pm, e := initPMProxy()
+		require.True(t, e == nil)
+		rr, rq := reqres(t, j.meth, j.path, "", "", j.ip)
+		pm.ServeHTTP(rr, rq)
+		require.True(t, rr.Code == h.StatusNotFound,
+			"Status = %d", rr.Code)
+	}
 }
 
-func TestForbiddenReq(t *testing.T) {
-	pm, e := initPMProxy()
-	require.True(t, e == nil)
-	rr, rq := reqres(t, h.MethodGet, "https://twitter.com",
-		"", "", cocoIP)
-	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == h.StatusForbidden &&
-		rr.Body.String() == "No tiene acceso",
-		"Code: %d", rr.Code)
+func TestReq(t *testing.T) {
+	tss := []struct {
+		meth string
+		url  string
+		ip   string
+		code int
+		body string
+	}{
+		{h.MethodGet, "https://twitter.com", cocoIP,
+			h.StatusForbidden, "No tiene acceso"},
+	}
+	for _, j := range tss {
+		pm, e := initPMProxy()
+		require.True(t, e == nil)
+		rr, rq := reqres(t, h.MethodGet, j.url, "", "", j.ip)
+		pm.ServeHTTP(rr, rq)
+		require.True(t, rr.Code == j.code &&
+			rr.Body.String() == j.body, "Code: %d", rr.Code)
+	}
 }
 
 func TestGetUsrNtIf(t *testing.T) {
-	pm, e := initPMProxy()
-	require.True(t, e == nil)
-	var lr *LogRs
-	lr, e = pm.qa.login(pepe, pepeIP)
-	require.True(t, e == nil)
-	_, rq := reqres(t, h.MethodGet, "https://twitter.com",
-		"", lr.Scrt, pepeIP)
-	n, ec := pm.getUsrNtIf(rq)
-	require.True(t, ec == nil)
-	require.True(t, n == "eth1")
+	tss := []struct {
+		c     *credentials
+		ip    string
+		url   string
+		iface string
+	}{
+		{pepe, pepeIP, "https://twitter.com", "eth1"},
+		{coco, cocoIP, "https://google.com.cu", "eth1"},
+	}
+	for _, j := range tss {
+		pm, e := initPMProxy()
+		require.True(t, e == nil)
+		var lr *LogRs
+		lr, e = pm.qa.login(j.c, j.ip)
+		require.True(t, e == nil)
+		_, rq := reqres(t, h.MethodGet, j.url, "", lr.Scrt, j.ip)
+		n, ec := pm.getUsrNtIf(rq)
+		require.True(t, ec == nil)
+		require.True(t, n == j.iface)
+	}
 }

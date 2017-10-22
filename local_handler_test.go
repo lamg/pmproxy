@@ -163,7 +163,7 @@ func loginServ(t *testing.T, c *credentials, ip string) (lh *LocalHn, s string) 
 	e = Decode(rr.Body, lr)
 	require.True(t, e == nil)
 	s = lr.Scrt
-	// { user coco is logged from cocoIP }
+	// { user c is logged from ip }
 	return
 }
 
