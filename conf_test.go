@@ -7,12 +7,12 @@ import (
 )
 
 func TestConfPMProxy(t *testing.T) {
-	bfs := fs.NewBufferFS()
+	bfs, cfile := fs.NewBufferFS(), "conf.json"
 	initialFiles := []struct {
 		name    string
 		content string
 	}{
-		{"conf.json", conf},
+		{cfile, conf},
 		{"cuotas.json", quota},
 		{"consumos.json", cons},
 		{"key.pem", pemKey},
@@ -26,7 +26,7 @@ func TestConfPMProxy(t *testing.T) {
 		f.Close()
 	}
 
-	f, e := bfs.Open("conf.json")
+	f, e := bfs.Open(cfile)
 	require.NoError(t, e)
 	c, ec := ParseConf(f)
 	require.True(t, ec == nil)

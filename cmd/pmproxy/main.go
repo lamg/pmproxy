@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"github.com/lamg/errors"
+	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
 	"log"
 	"net/http"
-	"os"
 )
 
 func main() {
@@ -16,6 +16,7 @@ func main() {
 		"Use dummy authentication instad of LDAP")
 	flag.StringVar(&conf, "c", "", "Configuration file")
 	flag.Parse()
+	os := &fs.OSFS{}
 	f, e := os.Open(conf)
 	var c *pmproxy.Conf
 	if e == nil {
@@ -26,7 +27,7 @@ func main() {
 	var pm *pmproxy.PMProxy
 	if e == nil {
 		var ec *errors.Error
-		pm, lh, ec = pmproxy.ConfPMProxy(c, dAuth)
+		pm, lh, ec = pmproxy.ConfPMProxy(c, dAuth, os)
 		if ec != nil {
 			e = ec.Err
 		}
