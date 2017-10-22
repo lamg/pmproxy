@@ -188,23 +188,3 @@ const (
 	qEst  = 4096
 	adr0  = "0.0.0.0"
 )
-
-var accR = `[
- {"hostName":"google.com.cu","start":null,"end":null,"consCfc":0},
- {"hostName":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
-{"hostName":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5}
-]`
-
-var cons = `{
-	"lastReset":"2017-10-02T14:00:00-04:00",
-	"resetTime":1000000000,
-	"userCons":{
- 		"coco": 8192,
- 		"pepe": 1024
-	}
-}`
-
-var quota = `{
- "A": 8192,
- "B": 4096
-}`
