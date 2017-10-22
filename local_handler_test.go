@@ -74,12 +74,13 @@ func TestGetUserStatus(t *testing.T) {
 		ip string
 	}{
 		{coco, cocoIP},
+		{pepe, pepeIP},
 	}
 	for _, j := range tss {
 		pm, hd := loginServ(t, j.c, j.ip)
 		cv, ok := pm.qa.uc.Load(j.c.User)
 		require.True(t, ok)
-		usr, e := pm.qa.sm.check(cocoIP, hd)
+		usr, e := pm.qa.sm.check(j.ip, hd)
 		require.True(t, e == nil)
 		qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
 		require.True(t, ok)
