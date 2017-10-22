@@ -6,7 +6,7 @@ import (
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 	"net"
-	. "net/http"
+	h "net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -42,15 +42,15 @@ func TestServerLogInOut(t *testing.T) {
 		ip     string
 		usr    string
 	}{
-		{MethodPost, LogX, `{"user":"a", "pass":"a"}`, cocoIP,
+		{h.MethodPost, LogX, `{"user":"a", "pass":"a"}`, cocoIP,
 			jtu},
-		{MethodDelete, LogX, jtu, cocoIP, ""},
+		{h.MethodDelete, LogX, jtu, cocoIP, ""},
 	}
 	var hd string
 	for i, j := range tss {
 		rr, rq := reqres(t, j.method, j.route, j.body, hd, j.ip)
 		pm.ServeHTTP(rr, rq)
-		require.Equal(t, rr.Code, StatusOK, "%d: Code = %d", i,
+		require.Equal(t, rr.Code, h.StatusOK, "%d: Code = %d", i,
 			rr.Code)
 		require.True(t, (rr.Body.Len() != 0) ==
 			(len(j.usr) != 0))
@@ -84,7 +84,7 @@ func TestGetUserStatus(t *testing.T) {
 		qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
 		require.True(t, ok)
 		// { cv and qv are the consumption and quota of j.c }
-		rr, rq := reqres(t, MethodGet, UserStatus, "", hd, j.ip)
+		rr, rq := reqres(t, h.MethodGet, UserStatus, "", hd, j.ip)
 		pm.ServeHTTP(rr, rq)
 		us := new(QtCs)
 		ec := json.Unmarshal(rr.Body.Bytes(), us)
@@ -108,10 +108,10 @@ func TestPutUserStatus(t *testing.T) {
 		nv := &NameVal{j.c.User, j.cs}
 		bs, ec := json.Marshal(nv)
 		require.NoError(t, ec)
-		r, q := reqres(t, MethodPut, UserStatus, string(bs),
+		r, q := reqres(t, h.MethodPut, UserStatus, string(bs),
 			s, j.ip)
 		pm.ServeHTTP(r, q)
-		require.True(t, r.Code == StatusOK, "Code: %d Body:%s",
+		require.True(t, r.Code == h.StatusOK, "Code: %d Body:%s",
 			r.Code, r.Body.String())
 		// { the request to set the consumption of j.c is sent}
 		v, ok := pm.qa.uc.Load(j.c.User)
@@ -138,13 +138,13 @@ func TestUnsMethod(t *testing.T) {
 		meth string
 		scrt string
 	}{
-		{LogX, MethodConnect, ""},
-		{UserStatus, MethodConnect, hd},
+		{LogX, h.MethodConnect, ""},
+		{UserStatus, h.MethodConnect, hd},
 	}
 	for _, j := range tss {
 		r, q := reqres(t, j.meth, j.path, "", j.scrt, cocoIP)
 		pm.ServeHTTP(r, q)
-		require.True(t, r.Code == StatusBadRequest)
+		require.True(t, r.Code == h.StatusBadRequest)
 	}
 }
 
@@ -155,9 +155,9 @@ func loginServ(t *testing.T, c *credentials, ip string) (lh *LocalHn, s string) 
 	lh = NewLocalHn(qa, "")
 	bs, ec := json.Marshal(c)
 	require.NoError(t, ec)
-	rr, rq := reqres(t, MethodPost, LogX, string(bs), "", ip)
+	rr, rq := reqres(t, h.MethodPost, LogX, string(bs), "", ip)
 	lh.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == StatusOK)
+	require.True(t, rr.Code == h.StatusOK)
 	lr := new(LogRs)
 	e = Decode(rr.Body, lr)
 	require.True(t, e == nil)
@@ -173,13 +173,13 @@ func setQV(u *url.URL, k, v string) {
 }
 
 func reqres(t *testing.T, meth, path, body, hd,
-	addr string) (r *httptest.ResponseRecorder, q *Request) {
+	addr string) (r *httptest.ResponseRecorder, q *h.Request) {
 	var e error
 	if body != "" {
 		by := bytes.NewBufferString(body)
-		q, e = NewRequest(meth, path, by)
+		q, e = h.NewRequest(meth, path, by)
 	} else {
-		q, e = NewRequest(meth, path, nil)
+		q, e = h.NewRequest(meth, path, nil)
 	}
 	require.NoError(t, e)
 	q.Host = net.JoinHostPort(q.Host, "443")
