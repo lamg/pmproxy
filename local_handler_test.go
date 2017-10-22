@@ -55,6 +55,7 @@ func TestServerLogInOut(t *testing.T) {
 		require.True(t, (rr.Body.Len() != 0) ==
 			(len(j.usr) != 0))
 		if len(j.usr) != 0 {
+			// { this is a login and not a logout }
 			lg := new(LogRs)
 			e = Decode(rr.Body, lg)
 			require.True(t, e == nil)
@@ -65,57 +66,61 @@ func TestServerLogInOut(t *testing.T) {
 			require.True(t, s == j.usr)
 		}
 	}
-
-	testUnsMeth(t, pm, LogX, MethodConnect)
-}
-
-func loginServ(t *testing.T) (lh *LocalHn, s string) {
-	qa, _, e := initQARL()
-	require.True(t, e == nil)
-	lh = NewLocalHn(qa, "")
-	rr, rq := reqres(t, MethodPost, LogX,
-		`{"user":"coco", "pass":"coco"}`, "", cocoIP)
-	lh.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == StatusOK)
-	lr := new(LogRs)
-	e = Decode(rr.Body, lr)
-	require.True(t, e == nil)
-	s = lr.Scrt
-	return
 }
 
 func TestGetUserStatus(t *testing.T) {
-	pm, hd := loginServ(t)
-	rr, rq := reqres(t, MethodGet, UserStatus, "", hd, cocoIP)
-	pm.ServeHTTP(rr, rq)
-	us := new(QtCs)
-	ec := json.Unmarshal(rr.Body.Bytes(), us)
-	require.NoError(t, ec)
-	cv, ok := pm.qa.uc.Load(coco.User)
-	require.True(t, ok)
-	require.True(t, us.Consumption == cv)
-	usr, e := pm.qa.sm.check(cocoIP, hd)
-	require.True(t, e == nil)
-	qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
-	require.True(t, ok)
-	require.True(t, us.Quota == qv)
-	testUnsMeth(t, pm, UserStatus, MethodConnect)
+	tss := []struct {
+		c  *credentials
+		ip string
+	}{
+		{coco, cocoIP},
+	}
+	for _, j := range tss {
+		pm, hd := loginServ(t, j.c, j.ip)
+		cv, ok := pm.qa.uc.Load(j.c.User)
+		require.True(t, ok)
+		usr, e := pm.qa.sm.check(cocoIP, hd)
+		require.True(t, e == nil)
+		qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
+		require.True(t, ok)
+		// { cv and qv are the consumption and quota of j.c }
+		rr, rq := reqres(t, MethodGet, UserStatus, "", hd, j.ip)
+		pm.ServeHTTP(rr, rq)
+		us := new(QtCs)
+		ec := json.Unmarshal(rr.Body.Bytes(), us)
+		require.NoError(t, ec)
+		// { us is the QtCs object returned by the server }
+		require.True(t, us.Consumption == cv)
+		require.True(t, us.Quota == qv)
+	}
 }
 
 func TestPutUserStatus(t *testing.T) {
-	pm, s := loginServ(t)
-	v, ok := pm.qa.uc.Load(coco.User)
-	require.True(t, ok)
-	require.True(t, v > 0)
-	r, q := reqres(t, MethodPut, UserStatus,
-		`{"userName":"coco","consumption":0}`,
-		s, cocoIP)
-	pm.ServeHTTP(r, q)
-	require.True(t, r.Code == StatusOK, "Code: %d Body:%s",
-		r.Code, r.Body.String())
-	v, ok = pm.qa.uc.Load(coco.User)
-	require.True(t, ok)
-	require.True(t, v == 0, "v = %d ≠ 0", v)
+	tss := []struct {
+		c  *credentials
+		ip string
+		cs uint64
+	}{
+		{coco, cocoIP, 0},
+	}
+	for _, j := range tss {
+		pm, s := loginServ(t, j.c, j.ip)
+		nv := &NameVal{j.c.User, j.cs}
+		bs, ec := json.Marshal(nv)
+		require.NoError(t, ec)
+		r, q := reqres(t, MethodPut, UserStatus, string(bs),
+			s, j.ip)
+		pm.ServeHTTP(r, q)
+		require.True(t, r.Code == StatusOK, "Code: %d Body:%s",
+			r.Code, r.Body.String())
+		// { the request to set the consumption of j.c is sent}
+		v, ok := pm.qa.uc.Load(j.c.User)
+		require.True(t, ok)
+		require.True(t, v == j.cs, "v = %d ≠ %d", v, j.cs)
+		// { the consumption obtained from the consumptions
+		//  dictionary directly, is equal to the sent as request
+		//  to set}
+	}
 }
 
 func TestCode(t *testing.T) {
@@ -126,18 +131,45 @@ func TestCode(t *testing.T) {
 	require.True(t, e != nil && e.Code == ErrorDecode)
 }
 
+func TestUnsMethod(t *testing.T) {
+	pm, hd := loginServ(t, coco, cocoIP)
+	tss := []struct {
+		path string
+		meth string
+		scrt string
+	}{
+		{LogX, MethodConnect, ""},
+		{UserStatus, MethodConnect, hd},
+	}
+	for _, j := range tss {
+		r, q := reqres(t, j.meth, j.path, "", j.scrt, cocoIP)
+		pm.ServeHTTP(r, q)
+		require.True(t, r.Code == StatusBadRequest)
+	}
+}
+
+func loginServ(t *testing.T, c *credentials, ip string) (lh *LocalHn, s string) {
+	qa, _, e := initQARL()
+	require.True(t, e == nil)
+
+	lh = NewLocalHn(qa, "")
+	bs, ec := json.Marshal(c)
+	require.NoError(t, ec)
+	rr, rq := reqres(t, MethodPost, LogX, string(bs), "", ip)
+	lh.ServeHTTP(rr, rq)
+	require.True(t, rr.Code == StatusOK)
+	lr := new(LogRs)
+	e = Decode(rr.Body, lr)
+	require.True(t, e == nil)
+	s = lr.Scrt
+	// { user coco is logged from cocoIP }
+	return
+}
+
 func setQV(u *url.URL, k, v string) {
 	vs := u.Query()
 	vs.Set(k, v)
 	u.RawQuery = vs.Encode()
-}
-
-func testUnsMeth(t *testing.T, pm *LocalHn, path, meth string) {
-	rr := httptest.NewRecorder()
-	rq, ec := NewRequest(meth, path, nil)
-	require.NoError(t, ec)
-	pm.ServeHTTP(rr, rq)
-	require.True(t, rr.Code == StatusBadRequest)
 }
 
 func reqres(t *testing.T, meth, path, body, hd,
