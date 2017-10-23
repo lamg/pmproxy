@@ -117,16 +117,16 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	var bs []byte
 	if e == nil {
 		bs, ec = fsm.ReadFile(c.KeyFl)
-		e = nerror(ec)
+		e = errors.NewForwardErr(ec)
 	}
 	var pkey *rsa.PrivateKey
 	if e == nil {
 		pkey, ec = jwt.ParseRSAPrivateKeyFromPEM(bs)
-		e = nerror(ec)
+		e = errors.NewForwardErr(ec)
 	}
 	if e == nil {
 		f, ec = fsm.Open(c.AccExcp)
-		e = nerror(ec)
+		e = errors.NewForwardErr(ec)
 	}
 	var accExc []AccExcp
 	if e == nil {
@@ -148,16 +148,6 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		p = NewPMProxy(qa, rl, c.GrpIface)
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)
-	}
-	return
-}
-
-func nerror(e error) (r *errors.Error) {
-	if e != nil {
-		r = &errors.Error{
-			Code: 0,
-			Err:  e,
-		}
 	}
 	return
 }
