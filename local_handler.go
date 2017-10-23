@@ -106,8 +106,10 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	var q, c uint64
 	s, e := getScrt(r.Header)
 	if e == nil && r.Method == h.MethodGet {
-		q, _ = p.qa.getQuota(addr, s)
-		c, _ = p.qa.userCons(addr, s)
+		q, e = p.qa.getQuota(addr, s)
+		if e == nil {
+			c, e = p.qa.userCons(addr, s)
+		}
 		if e == nil {
 			e = Encode(w, &QtCs{
 				Quota:       q,
