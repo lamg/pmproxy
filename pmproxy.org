@@ -31,27 +31,28 @@ Ríos's needs, which are the following:
 	
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
-- JWT: JSON web token (a string with encrypted user information)
-- User: {
+- User {
 	"userName":string, 
   "name":string, 
   "isAdmin":bool, 
   "quotaGroup":uint64,
-	"jwt":string,
 }
-- UsrSt: {
-	"user":User,
-	"userName":string,
-	"quota":uint64, 
-  "consumption":uint64,
+- NameVal {
+	"name":string
+	"value":uint64
 }
+- LogRs {
+	"user":User
+	"scrt":string // this is the string sent in the header
+}
+- AHd{"authHd":string}
 
-| Path            | Method | Body  | R. code    | R. body |
-|-----------------+--------+-------+------------+---------|
-| /api/auth       | POST   | Cred  | 200 or 400 | User    |
-| /api/auth       | DELETE | User  | 200 or 400 |         |
-| /api/userStatus | POST   | User  | 200 or 400 | QtCs    |
-| /api/userStatus | PUT    | UsrSt | 200 or 400 |         |
+| Path            | Method | Body    | Hd  | R. code    | R. body |
+|-----------------+--------+---------+-----+------------+---------|
+| /api/auth       | POST   | Cred    |     | 200 or 400 | LogRs   |
+| /api/auth       | DELETE |         | AHd | 200 or 400 |         |
+| /api/userStatus | GET    |         | AHd | 200 or 400 | QtCs    |
+| /api/userStatus | PUT    | NameVal | AHd | 200 or 400 |         |
 
 
 ** Quota administration
