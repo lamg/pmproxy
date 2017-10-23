@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/lamg/errors"
 	"io"
-	"strings"
+	rg "regexp"
 	"time"
 )
 
@@ -33,7 +33,7 @@ type NameVal struct {
 // AccExcp represents an access exception
 type AccExcp struct {
 	// Host name of the forbidden server
-	HostName string `json:"hostName"`
+	HostR *rg.Regexp `json:"hostR"`
 	// The restriction is applied daily, this means that
 	// only the time of the day is looked for restricting
 	// access
@@ -166,7 +166,7 @@ func (q *QAdm) canReq(ip, host, port string,
 	var f bool
 	i, f, c = 0, false, 1
 	for !f && i != len(q.al) {
-		f = strings.Contains(host, q.al[i].HostName)
+		f = q.al[i].HostR.MatchString(host)
 		if !f {
 			i = i + 1
 		}
@@ -194,17 +194,35 @@ func (q *QAdm) canReq(ip, host, port string,
 	return
 }
 
+// JAccExcp is the AccExcp representation that can be
+// [un]marshaled as JSON
+type JAccExcp struct {
+	HostRE  string    `json:"hostRE"`
+	Daily   bool      `json:"daily"`
+	Start   time.Time `json:"start"`
+	End     time.Time `json:"end"`
+	ConsCfc float32   `json:"consCfc"`
+}
+
 // ReadAccExcp reads a []AccExcp serialized as JSON in
 // the content of the r io.Reader
 func ReadAccExcp(r io.Reader) (l []AccExcp, e *errors.Error) {
-	var dc *json.Decoder
-	dc, l = json.NewDecoder(r), make([]AccExcp, 0)
-	ec := dc.Decode(&l)
-	if ec != nil {
-		e = &errors.Error{
-			Code: ErrorReadAccExcp,
-			Err:  ec,
+	dc, jl := json.NewDecoder(r), make([]JAccExcp, 0)
+	ec := dc.Decode(&jl)
+	e = errors.NewForwardErr(ec)
+	if e == nil {
+		l = make([]AccExcp, len(jl))
+		for i := 0; e == nil && i != len(l); i++ {
+			r, ec := rg.Compile(jl[i].HostRE)
+			e = errors.NewForwardErr(ec)
+			if e == nil {
+				l[i] = AccExcp{r, jl[i].Daily, jl[i].Start, jl[i].End,
+					jl[i].ConsCfc}
+			}
 		}
+	}
+	if e != nil {
+		e.Code = ErrorReadAccExcp
 	}
 	return
 }

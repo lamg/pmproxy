@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
+	rg "regexp"
 	"strings"
 	"testing"
 	"time"
@@ -17,21 +18,21 @@ func TestLoadAccStr(t *testing.T) {
 	require.True(t, e == nil)
 	tss := []AccExcp{
 		{
-			"google.com.cu",
+			rg.MustCompile("google.com.cu"),
 			false,
 			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 			0,
 		},
 		{
-			"14ymedio.com",
+			rg.MustCompile("14ymedio.com"),
 			false,
 			time.Date(1959, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 			1,
 		},
 		{
-			"facebook.com",
+			rg.MustCompile("facebook.com"),
 			true,
 			time.Date(2006, 1, 2, 8, 0, 0, 0, time.UTC),
 			time.Date(2006, 1, 2, 14, 0, 0, 0, time.UTC),
@@ -40,9 +41,9 @@ func TestLoadAccStr(t *testing.T) {
 	}
 
 	for i, j := range tss {
-		b0 := j.HostName == l[i].HostName
+		b0 := j.HostR.String() == l[i].HostR.String()
 		require.True(t, b0, "Test %s ≠ %s",
-			j.HostName, l[i].HostName)
+			j.HostR.String(), l[i].HostR.String())
 		b1 := j.Daily == l[i].Daily
 		require.True(t, b1, "%t ≠ %t", j.Daily, l[i].Daily)
 		b2 := j.Start.Equal(l[i].Start)

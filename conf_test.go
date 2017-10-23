@@ -75,9 +75,9 @@ var conf = `
 }
 `
 var accR = `[
-	{"hostName":"google.com.cu","start":null,"end":null,"consCfc":0},
-	{"hostName":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
- {"hostName":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5}
+	{"hostRE":"google.com.cu","start":null,"end":null,"consCfc":0},
+	{"hostRE":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
+ {"hostRE":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5}
  ]`
 
 var cons = `{
