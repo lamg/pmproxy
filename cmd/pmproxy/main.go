@@ -20,8 +20,11 @@ func main() {
 	f, e := os.Open(conf)
 	var c *pmproxy.Conf
 	if e == nil {
-		// FIXME *errors.Error and error interaction doubt
-		c, e = pmproxy.ParseConf(f)
+		var ec *errors.Error
+		c, ec = pmproxy.ParseConf(f)
+		if ec != nil {
+			e = ec.Err
+		}
 	}
 	var lh *pmproxy.LocalHn
 	var pm *pmproxy.PMProxy
