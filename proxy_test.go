@@ -102,7 +102,7 @@ func TestGetUsrNtIf(t *testing.T) {
 		lr, e = pm.qa.login(j.c, j.ip)
 		require.True(t, e == nil)
 		_, rq := reqres(t, h.MethodGet, j.url, "", lr.Scrt, j.ip)
-		n, ec := pm.getUsrNtIf(rq)
+		n, ec := pm.getUsrNtIf(rq.RemoteAddr)
 		require.True(t, ec == nil)
 		require.True(t, n == j.iface)
 	}

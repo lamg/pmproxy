@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"context"
 	"fmt"
 	"github.com/lamg/errors"
 	g "github.com/lamg/goproxy"
@@ -26,7 +27,8 @@ func NewPMProxy(qa *QAdm, rl *RLog,
 		DoFunc(forbiddenAcc)
 
 	p.px.OnResponse().DoFunc(p.logResp)
-	p.px.ConnectDial = p.newConCount
+	p.px.ConnectDial = p.newConCountHTTPS
+	p.px.Tr.DialContext = p.newConCountHTTP
 	p.px.NonproxyHandler = h.HandlerFunc(localHandler)
 	return
 }
@@ -42,9 +44,27 @@ func forbiddenAcc(r *h.Request,
 	return
 }
 
-func (p *PMProxy) newConCount(ntw, addr string,
-	c *g.ProxyCtx) (r net.Conn, e error) {
-	n, er := p.getUsrNtIf(c.Req)
+func (p *PMProxy) newConCountHTTP(c context.Context, nt,
+	ad string) (n net.Conn, e error) {
+	v := c.Value(RemoteAddr("RemoteAddress"))
+	if v != nil {
+		x, ok := v.(string)
+		if ok {
+			n, e = p.newConCount(nt, ad, x)
+		}
+	}
+	return
+}
+
+func (p *PMProxy) newConCountHTTPS(nt, ad string,
+	c *g.ProxyCtx) (n net.Conn, e error) {
+	n, e = p.newConCount(nt, ad, c.Req.RemoteAddr)
+	return
+}
+
+func (p *PMProxy) newConCount(ntw, addr,
+	rAddr string) (r net.Conn, e error) {
+	n, er := p.getUsrNtIf(rAddr)
 	e = errors.UnwrapErr(er)
 	var ief *net.Interface
 	if e == nil {
@@ -75,14 +95,14 @@ func (p *PMProxy) newConCount(ntw, addr string,
 		cn, e = d.Dial(ntw, addr)
 	}
 	if e == nil {
-		r = &conCount{cn, p.qa, addr, c}
+		r = &conCount{cn, p.qa, addr, rAddr}
 	}
 	return
 }
 
-func (p *PMProxy) getUsrNtIf(
-	r *h.Request) (n string, e *errors.Error) {
-	h, _, ec := net.SplitHostPort(r.RemoteAddr)
+func (p *PMProxy) getUsrNtIf(r string) (n string,
+	e *errors.Error) {
+	h, _, ec := net.SplitHostPort(r)
 	e = errors.NewForwardErr(ec)
 	var v interface{}
 	if e == nil {
@@ -122,13 +142,13 @@ func (p *PMProxy) getUsrNtIf(
 
 type conCount struct {
 	net.Conn
-	qa   *QAdm
-	addr string
-	ctx  *g.ProxyCtx
+	qa    *QAdm
+	addr  string
+	rAddr string
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	k, ip := getK(c.qa, c.ctx.Req)
+	k, ip := getK(c.qa, c.addr, c.rAddr)
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
@@ -171,7 +191,7 @@ func (p *PMProxy) logResp(r *h.Response,
 			// MIME type parameters droped
 		}
 		log.ContentType = ct
-		k, ip := getK(p.qa, r.Request)
+		k, ip := getK(p.qa, r.Request.Host, r.Request.RemoteAddr)
 		if k > 0 {
 			cs := float32(r.Request.ContentLength) * k
 			p.qa.addCons(ip, uint64(cs))
@@ -182,16 +202,16 @@ func (p *PMProxy) logResp(r *h.Response,
 	return
 }
 
-func getK(qa *QAdm, q *h.Request) (k float32, ip string) {
-	hs, pr, _ := net.SplitHostPort(q.Host)
-	ip, _, _ = net.SplitHostPort(q.RemoteAddr)
+func getK(qa *QAdm, host, raddr string) (k float32, ip string) {
+	hs, pr, _ := net.SplitHostPort(host)
+	ip, _, _ = net.SplitHostPort(raddr)
 	k = qa.canReq(ip, hs, pr, time.Now())
 	return
 }
 
 func (p *PMProxy) cannotRequest(q *h.Request,
 	c *g.ProxyCtx) (r bool) {
-	k, _ := getK(p.qa, q)
+	k, _ := getK(p.qa, q.Host, q.RemoteAddr)
 	c.UserData = &usrDt{
 		cf:  k,
 		req: q,
@@ -200,8 +220,17 @@ func (p *PMProxy) cannotRequest(q *h.Request,
 	return
 }
 
+// RemoteAddr is the type to be used as key
+// of RemoteAddr value in context
+type RemoteAddr string
+
+const rmAddr = "RemoteAddress"
+
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
-	p.px.ServeHTTP(w, r)
+	q := r.WithContext(context.WithValue(context.Background(),
+		RemoteAddr(rmAddr),
+		r.RemoteAddr))
+	p.px.ServeHTTP(w, q)
 }
 
 // Dialer is an interface to custom dialers that
