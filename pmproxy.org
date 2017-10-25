@@ -25,10 +25,9 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
-- Use custom dialer in proxy.Tr for HTTP requests
-  - Investigate if making a better version of goproxy will do  
-- Refactor tests
-	
+- QAdm.setCons must check if the user exists before setting
+- Redirection doesn't work
+
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
 - User {

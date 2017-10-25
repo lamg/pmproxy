@@ -106,7 +106,12 @@ func (q *QAdm) setCons(ip, s string,
 	var u *User
 	u, e = q.sm.check(ip, s)
 	if e == nil && u.IsAdmin {
-		q.uc.Store(g.Name, g.Value)
+		// TODO check the user exists
+		var y bool
+		y, e = q.sm.exists(s, g.Name)
+		if e == nil && y {
+			q.uc.Store(g.Name, g.Value)
+		}
 	} else if e == nil && !u.IsAdmin {
 		e = &errors.Error{
 			Code: ErrorSQNA,

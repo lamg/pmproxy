@@ -80,11 +80,12 @@ func NewJWTCrypt(p *rsa.PrivateKey) (j *JWTCrypt) {
 	return
 }
 
-func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {
-	dt, e := u.ToJSON()
+func (j *JWTCrypt) encrypt(c *credentials) (s string, e *errors.Error) {
+	bf := bytes.NewBufferString("")
+	e = Encode(bf, c)
 	var uc *JWTUser
 	if e == nil {
-		uc = &JWTUser{Data: dt}
+		uc = &JWTUser{Data: bf.String()}
 	}
 	t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
 	var ec error
@@ -99,7 +100,7 @@ func (j *JWTCrypt) encrypt(u *User) (s string, e *errors.Error) {
 }
 
 // checkUser checks if the signature is ok
-func (j *JWTCrypt) checkUser(s string) (u *User, e *errors.Error) {
+func (j *JWTCrypt) checkUser(s string) (c *credentials, e *errors.Error) {
 	t, ec := jwt.ParseWithClaims(s, &JWTUser{},
 		func(x *jwt.Token) (a interface{}, d error) {
 			a, d = &j.pKey.PublicKey, nil
@@ -127,8 +128,8 @@ func (j *JWTCrypt) checkUser(s string) (u *User, e *errors.Error) {
 			}
 		} else {
 			rd := strings.NewReader(clm.Data)
-			u = new(User)
-			e = Decode(rd, u)
+			c = new(credentials)
+			e = Decode(rd, c)
 		}
 	}
 	return

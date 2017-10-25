@@ -61,7 +61,7 @@ func (s *SMng) login(c *credentials,
 	lr = new(LogRs)
 	lr.User, e = s.udb.Login(c.User, c.Pass)
 	if e == nil {
-		lr.Scrt, e = s.crt.encrypt(lr.User)
+		lr.Scrt, e = s.crt.encrypt(c)
 	}
 	if e == nil {
 		var prvAddr string
@@ -90,7 +90,11 @@ func (s *SMng) logout(ip, t string) (e *errors.Error) {
 }
 
 func (s *SMng) check(ip, t string) (u *User, e *errors.Error) {
-	u, e = s.crt.checkUser(t)
+	var c *credentials
+	c, e = s.crt.checkUser(t)
+	if e == nil {
+		u, e = s.udb.Login(c.User, c.Pass)
+	}
 	var iv interface{}
 	if e == nil {
 		var ok bool
@@ -120,6 +124,16 @@ func (s *SMng) check(ip, t string) (u *User, e *errors.Error) {
 			Err: fmt.Errorf("%s is not logged in %s",
 				u.UserName, ip),
 		}
+	}
+	return
+}
+
+func (s *SMng) exists(t, usr string) (y bool,
+	e *errors.Error) {
+	var c *credentials
+	c, e = s.crt.checkUser(t)
+	if e == nil {
+		y, e = s.udb.Exists(c.User, c.Pass, usr)
 	}
 	return
 }

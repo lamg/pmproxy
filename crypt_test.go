@@ -11,14 +11,14 @@ import (
 func TestCrypt(t *testing.T) {
 	j, e := newJWTCrypt()
 	require.True(t, e == nil)
-	u := &User{UserName: "coco", Name: "Coco"}
+	c := &credentials{User: "coco", Pass: "Coco"}
 	var s string
-	s, e = j.encrypt(u)
+	s, e = j.encrypt(c)
 	require.True(t, e == nil)
-	var lu *User
-	lu, e = j.checkUser(s)
+	var lc *credentials
+	lc, e = j.checkUser(s)
 	require.True(t, e == nil)
-	require.True(t, lu.Equal(u))
+	require.True(t, lc.User == c.User && lc.Pass == c.Pass)
 }
 
 func TestErrCheckUser(t *testing.T) {

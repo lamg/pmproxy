@@ -10,13 +10,12 @@ import (
 // UserDB is an interface for abstracting user databases
 type UserDB interface {
 	Login(string, string) (*User, *errors.Error)
+	Exists(string, string, string) (bool, *errors.Error)
 }
 
 // LDB is an UserDB implementation using Ldap
 type LDB struct {
-	adAddr     string
-	suff       string
-	bDN        string
+	ldp        *l.Ldap
 	adminGroup string
 	qgPref     string
 }
@@ -30,25 +29,24 @@ type LDB struct {
 // qgPref: The group prefix of the group in membership that
 // defines the users quota group
 func NewLDB(adAddr, suff, bDN, admG, qgPref string) (r *LDB) {
-	r = &LDB{adAddr, suff, bDN, admG, qgPref}
+	r = &LDB{l.NewLdap(adAddr, suff, bDN), admG, qgPref}
 	return
 }
 
 // Login logs an user with user name u and password p
 func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
-	ld := l.NewLdap(db.adAddr, db.suff, db.bDN, u, p)
 	r = &User{UserName: u}
-	r.Name, e = ld.FullName(u)
+	r.Name, e = db.ldp.FullName(u, p, u)
 	var m string
 	if e == nil {
-		m, e = db.getQuotaGroup(ld, u)
+		m, e = db.getQuotaGroup(u, p, u)
 	}
 	if e == nil {
 		r.QuotaGroup = m
 	}
 	var fg string
 	if e == nil {
-		fg, e = ld.DNFirstGroup(u)
+		fg, e = db.ldp.DNFirstGroup(u, p, u)
 	}
 	if e == nil {
 		r.IsAdmin = fg == db.adminGroup
@@ -56,13 +54,22 @@ func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
 	return
 }
 
+// Exists tells if an user exists
+func (db *LDB) Exists(user, pass, usr string) (y bool,
+	e *errors.Error) {
+	var s string
+	s, e = db.getQuotaGroup(user, pass, usr)
+	y = s == ""
+	return
+}
+
 // GetQuotaGroup gets the group specified at distinguishedName
 // field
 // usr: sAMAccountName
-func (db *LDB) getQuotaGroup(ld *l.Ldap, usr string) (g string,
+func (db *LDB) getQuotaGroup(user, pass, usr string) (g string,
 	e *errors.Error) {
 	var m []string
-	m, e = ld.MembershipCNs(usr)
+	m, e = db.ldp.MembershipCNs(user, pass, usr)
 	if e == nil {
 		i, ok := 0, false
 		for !ok && i != len(m) {
@@ -127,5 +134,11 @@ func (d *DAuth) Login(u, p string) (r *User, e *errors.Error) {
 			Err:  fmt.Errorf("Wrong password for %s", u),
 		}
 	}
+	return
+}
+
+// Exists implementation of UserDB interface
+func (d *DAuth) Exists(u, p, usr string) (y bool, e *errors.Error) {
+	y = true
 	return
 }
