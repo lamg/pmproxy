@@ -163,12 +163,9 @@ func Decode(r io.Reader, v interface{}) (e *errors.Error) {
 
 // Encode encodes an object in JSON notation into w
 func Encode(w io.Writer, v interface{}) (e *errors.Error) {
-	var bs []byte
-	var ec error
-	bs, ec = json.Marshal(v)
-	if ec == nil {
-		_, ec = w.Write(bs)
-	}
+	cd := json.NewEncoder(w)
+	cd.SetIndent("	", "")
+	ec := cd.Encode(v)
 	if ec != nil {
 		e = &errors.Error{
 			Code: ErrorEncode,

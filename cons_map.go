@@ -93,7 +93,6 @@ func (p *ConsMap) Store(key string, val uint64) {
 
 func (p *ConsMap) fillBuffer() {
 	p.bf.Reset()
-	enc := json.NewEncoder(p.bf)
 	om := &OMap{
 		LastReset: p.lr,
 		ResetT:    p.rt,
@@ -114,7 +113,7 @@ func (p *ConsMap) fillBuffer() {
 		}
 		return
 	})
-	enc.Encode(om)
+	Encode(p.bf, om)
 }
 
 // Reset sets all values to 0
