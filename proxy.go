@@ -42,7 +42,7 @@ func (p *PMProxy) forbiddenAcc(r *h.Request,
 	c *g.ProxyCtx) (q *h.Request, t *h.Response) {
 	q, t = r, g.NewResponse(r, "text/plain",
 		h.StatusForbidden, "No tiene acceso")
-	t.StatusCode = h.StatusFound
+	t.StatusCode = h.StatusMovedPermanently
 	t.Header.Set("Location",
 		fmt.Sprintf("%s/?url=%s", p.loginAddr, r.URL.String()))
 	return
