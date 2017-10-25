@@ -73,7 +73,7 @@ func TestReq(t *testing.T) {
 		body string
 	}{
 		{h.MethodGet, "https://twitter.com", cocoIP,
-			h.StatusForbidden, "No tiene acceso"},
+			h.StatusFound, "No tiene acceso"},
 	}
 	for _, j := range tss {
 		pm, e := initPMProxy()

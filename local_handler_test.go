@@ -21,7 +21,7 @@ const (
 func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
-		p = NewPMProxy(qa, rl,
+		p = NewPMProxy(qa, rl, "",
 			map[string]string{"B": "eth0", "A": "eth1"})
 	}
 	return

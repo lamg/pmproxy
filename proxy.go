@@ -13,18 +13,19 @@ import (
 
 // PMProxy is the proxy server
 type PMProxy struct {
-	qa *QAdm
-	px *g.ProxyHttpServer
-	rl *RLog
-	uf map[string]string
+	qa        *QAdm
+	px        *g.ProxyHttpServer
+	rl        *RLog
+	loginAddr string
+	uf        map[string]string
 }
 
 // NewPMProxy creates a new PMProxy
-func NewPMProxy(qa *QAdm, rl *RLog,
+func NewPMProxy(qa *QAdm, rl *RLog, loginAddr string,
 	uf map[string]string) (p *PMProxy) {
-	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, uf}
+	p = &PMProxy{qa, g.NewProxyHttpServer(), rl, loginAddr, uf}
 	p.px.OnRequest(g.ReqConditionFunc(p.cannotRequest)).
-		DoFunc(forbiddenAcc)
+		DoFunc(p.forbiddenAcc)
 
 	p.px.OnResponse().DoFunc(p.logResp)
 	p.px.ConnectDial = p.newConCountHTTPS
@@ -37,10 +38,13 @@ func localHandler(w h.ResponseWriter, r *h.Request) {
 	w.WriteHeader(h.StatusNotFound)
 }
 
-func forbiddenAcc(r *h.Request,
-	c *g.ProxyCtx) (q *h.Request, p *h.Response) {
-	q, p = r, g.NewResponse(r, "text/plain",
+func (p *PMProxy) forbiddenAcc(r *h.Request,
+	c *g.ProxyCtx) (q *h.Request, t *h.Response) {
+	q, t = r, g.NewResponse(r, "text/plain",
 		h.StatusForbidden, "No tiene acceso")
+	t.StatusCode = h.StatusFound
+	t.Header.Set("Location",
+		fmt.Sprintf("%s/?url=%s", p.loginAddr, r.URL.String()))
 	return
 }
 

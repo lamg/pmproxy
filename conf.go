@@ -39,6 +39,8 @@ type Conf struct {
 	// StPath is the path of the directory with static files
 	// to be used by the web user interface
 	StPath string `json:"stPath"`
+	// LoginAddr is the login web interface URL
+	LoginAddr string `json:"loginAddr"`
 	// CertFl is the cert.pem file path used to start the HTTPS
 	// server that serves the web user interface
 	CertFl string `json:"certFl"`
@@ -145,7 +147,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc)
-		p = NewPMProxy(qa, rl, c.GrpIface)
+		p = NewPMProxy(qa, rl, c.LoginAddr, c.GrpIface)
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)
 	}
