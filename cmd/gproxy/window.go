@@ -180,8 +180,14 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 			e = er.Err
 		}
 	}
+	var q *h.Request
 	if e == nil {
-		r, e = h.Get(adr + pmproxy.UserInfo)
+		q, e = h.NewRequest(h.MethodGet, adr+pmproxy.UserInfo,
+			nil)
+	}
+	if e == nil {
+		q.Header.Set(pmproxy.AuthHd, m.lr.Scrt)
+		r, e = h.DefaultClient.Do(q)
 	}
 	if e == nil {
 		m.usr = new(pmproxy.User)
