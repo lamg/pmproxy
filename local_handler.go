@@ -72,6 +72,7 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	if r.Method == h.MethodPost {
 		cr := new(credentials)
 		e = Decode(r.Body, cr)
+		r.Body.Close()
 		var lr *LogRs
 		if e == nil {
 			lr, e = p.qa.login(cr, addr)
@@ -126,6 +127,7 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 	} else if e == nil && r.Method == h.MethodPut {
 		nv := new(NameVal)
 		e = Decode(r.Body, nv)
+		r.Body.Close()
 		if e == nil {
 			e = p.qa.setCons(addr, s, nv)
 		}
