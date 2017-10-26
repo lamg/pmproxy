@@ -163,6 +163,7 @@ type loginSt struct {
 	ent *gtk.Button
 	bx  *gtk.Box
 	lr  *pmproxy.LogRs
+	usr *pmproxy.User
 }
 
 func (m *loginSt) entClicked(b *gtk.Button) {
@@ -180,8 +181,16 @@ func (m *loginSt) entClicked(b *gtk.Button) {
 		}
 	}
 	if e == nil {
+		r, e = h.Get(adr + pmproxy.UserInfo)
+	}
+	if e == nil {
+		m.usr = new(pmproxy.User)
+		pmproxy.Decode(r.Body, m.usr)
+		r.Body.Close()
+	}
+	if e == nil {
 		m.inf.SetText(fmt.Sprintf("Respuesta: %s Usuario:%s",
-			r.Status, m.lr.User.Name))
+			r.Status, m.usr.Name))
 		if r.StatusCode == h.StatusOK {
 			f, _ := os.Create(config)
 			if f != nil {
@@ -233,7 +242,7 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 		st.ucs.SetText(fmt.Sprintf("Consumo %s",
 			datasize.ByteSize(qc.Consumption).HumanReadable()))
 		st.inf.SetText(fmt.Sprintf("Usuario %s",
-			st.le.lr.User.UserName))
+			st.le.usr.UserName))
 	} else {
 		st.inf.SetText(e.Error())
 	}
