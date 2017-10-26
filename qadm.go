@@ -86,7 +86,7 @@ func (q *QAdm) logout(ip, s string) (e *errors.Error) {
 func (q *QAdm) getQuota(ip string, s string) (r uint64,
 	e *errors.Error) {
 	var u *User
-	u, e = q.sm.check(ip, s)
+	u, e = q.sm.userInfo(ip, s)
 	if e == nil {
 		var ok bool
 		r, ok = q.gq.Load(u.QuotaGroup)
@@ -104,9 +104,8 @@ func (q *QAdm) getQuota(ip string, s string) (r uint64,
 func (q *QAdm) setCons(ip, s string,
 	g *NameVal) (e *errors.Error) {
 	var u *User
-	u, e = q.sm.check(ip, s)
+	u, e = q.sm.userInfo(ip, s)
 	if e == nil && u.IsAdmin {
-		// TODO check the user exists
 		var y bool
 		y, e = q.sm.exists(s, g.Name)
 		if e == nil && y {
@@ -122,18 +121,18 @@ func (q *QAdm) setCons(ip, s string,
 	return
 }
 
-func (q *QAdm) userCons(ip, s string) (c uint64,
+func (q *QAdm) userCons(ip, s string) (cs uint64,
 	e *errors.Error) {
-	var u *User
-	u, e = q.sm.check(ip, s)
-	var ok bool
+	var c *credentials
+	c, e = q.sm.check(ip, s)
 	if e == nil {
-		c, ok = q.uc.Load(u.UserName)
+		var ok bool
+		cs, ok = q.uc.Load(c.User)
 		if !ok {
 			e = &errors.Error{
 				Code: ErrorUCLd,
 				Err: fmt.Errorf("Not found consupmtion for user %s",
-					u.UserName),
+					c.User),
 			}
 		}
 	}

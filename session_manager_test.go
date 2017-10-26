@@ -32,10 +32,10 @@ func TestSessionManager(t *testing.T) {
 		lr, e := sm.login(j.cr, j.ip)
 		require.True(t, (e == nil) == j.ok)
 		if j.ok {
-			var lu *User
-			lu, e = sm.check(j.ip, lr.Scrt)
+			var lc *credentials
+			lc, e = sm.check(j.ip, lr.Scrt)
 			require.True(t, e == nil)
-			require.True(t, lu.UserName == j.cr.User)
+			require.True(t, lc.User == j.cr.User)
 		} else {
 			require.True(t, e.Code == j.code)
 		}

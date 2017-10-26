@@ -25,8 +25,11 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
-- QAdm.setCons must check if the user exists before setting
+- Check if the ip address is in the group with access
+  to the proxy service
 - Redirection doesn't work
+  - Check if the address is local
+  - Make redirection only for non local addresses
 
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
@@ -41,7 +44,6 @@ Ríos's needs, which are the following:
 	"value":uint64
 }
 - LogRs {
-	"user":User
 	"scrt":string // this is the string sent in the header
 }
 - AHd{"authHd":string}
@@ -52,6 +54,8 @@ Ríos's needs, which are the following:
 | /api/auth       | DELETE |         | AHd | 200 or 400 |         |
 | /api/userStatus | GET    |         | AHd | 200 or 400 | QtCs    |
 | /api/userStatus | PUT    | NameVal | AHd | 200 or 400 |         |
+| /api/checkUser  | GET    |         | AHd | 200 or 400 |         |
+| /api/userInfo   | GET    |         | AHd | 200 or 400 | User    |
 
 
 ** Quota administration

@@ -31,7 +31,7 @@ func TestUserInfo(t *testing.T) {
 	}
 	require.True(t, ok, "Env var va[%d] = \"\"", i)
 	udb := NewLDB(adAddr, adSuff, adBDN, adAdmG, adQGPref)
-	u, e := udb.Login(uprUser, uprPass)
+	u, e := udb.UserInfo(uprUser, uprPass, uprUser)
 	if e != nil && e.Code == ErrorNetwork {
 		t.Log("No network connection")
 	} else {

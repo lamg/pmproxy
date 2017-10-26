@@ -18,6 +18,11 @@ const (
 	// The method PUT currently is used for setting
 	// the consumption of a secific user
 	UserStatus = "/api/userStatus"
+	// CheckUser is the path to get whether an user is logged
+	// with the supplied credentials
+	CheckUser = "/api/checkUser"
+	// UserInfo is the path for getting user information
+	UserInfo = "/api/userInfo"
 	// AuthHd header key of JWT value
 	AuthHd = "authHd"
 )
@@ -52,8 +57,11 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	mx := h.NewServeMux()
 	mx.HandleFunc(LogX, p.logXHF)
 	mx.HandleFunc(UserStatus, p.userStatusHF)
-	p.hn = cors.AllowAll().Handler(mx) //FIXME take care
-	// of allowing all origins
+	mx.HandleFunc(CheckUser, p.checkUserHF)
+	mx.HandleFunc(UserInfo, p.userInfoHF)
+	p.hn = cors.AllowAll().Handler(mx)
+	//FIXME only the web interface should do cross origin
+	// requests
 	return
 }
 
@@ -62,7 +70,6 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	var e *errors.Error
 
 	if r.Method == h.MethodPost {
-		// TODO return a JSON object with the token inside
 		cr := new(credentials)
 		e = Decode(r.Body, cr)
 		var lr *LogRs
@@ -126,6 +133,42 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		e = notSuppMeth(r.Method)
 	}
 
+	writeErr(w, e)
+}
+
+func (p *LocalHn) checkUserHF(w h.ResponseWriter, r *h.Request) {
+	s, e := getScrt(r.Header)
+	var addr string
+	if e == nil {
+		if r.Method == h.MethodGet {
+			addr, _, _ = net.SplitHostPort(r.RemoteAddr)
+		} else {
+			e = notSuppMeth(r.Method)
+		}
+	}
+	if e == nil {
+		_, e = p.qa.sm.check(addr, s)
+	}
+	writeErr(w, e)
+}
+
+func (p *LocalHn) userInfoHF(w h.ResponseWriter, r *h.Request) {
+	s, e := getScrt(r.Header)
+	var addr string
+	if e == nil {
+		if r.Method == h.MethodGet {
+			addr, _, _ = net.SplitHostPort(r.RemoteAddr)
+		} else {
+			e = notSuppMeth(r.Method)
+		}
+	}
+	var u *User
+	if e == nil {
+		u, e = p.qa.sm.userInfo(addr, s)
+	}
+	if e == nil {
+		e = Encode(w, u)
+	}
 	writeErr(w, e)
 }
 

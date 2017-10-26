@@ -52,14 +52,14 @@ func NewSMng(a UserDB, c *JWTCrypt) (s *SMng) {
 
 // LogRs is the login result sent as JSON
 type LogRs struct {
-	User *User  `json:"user"`
 	Scrt string `json:"scrt"`
 }
 
 func (s *SMng) login(c *credentials,
 	addr string) (lr *LogRs, e *errors.Error) {
 	lr = new(LogRs)
-	lr.User, e = s.udb.Login(c.User, c.Pass)
+	var u *User
+	u, e = s.udb.UserInfo(c.User, c.Pass, c.User)
 	if e == nil {
 		lr.Scrt, e = s.crt.encrypt(c)
 	}
@@ -68,7 +68,7 @@ func (s *SMng) login(c *credentials,
 		s.sessions.Range(func(key, value interface{}) (x bool) {
 			v, ok := value.(*User)
 			x = true
-			if ok && v.UserName == lr.User.UserName {
+			if ok && v.UserName == u.UserName {
 				prvAddr, _ = key.(string)
 				x = false
 			}
@@ -76,7 +76,7 @@ func (s *SMng) login(c *credentials,
 		})
 		s.sessions.Delete(prvAddr)
 		// user session at prvAddr closed
-		s.sessions.Store(addr, lr.User)
+		s.sessions.Store(addr, u)
 	}
 	return
 }
@@ -89,11 +89,26 @@ func (s *SMng) logout(ip, t string) (e *errors.Error) {
 	return
 }
 
-func (s *SMng) check(ip, t string) (u *User, e *errors.Error) {
+func (s *SMng) check(ip, t string) (c *credentials,
+	e *errors.Error) {
+	c, e = s.crt.checkUser(t)
+	if e == nil {
+		u := s.User(ip)
+		if u == nil || u.UserName != c.User {
+			e = &errors.Error{
+				Code: 0,
+				Err:  fmt.Errorf("User %s not logged", c.User),
+			}
+		}
+	}
+	return
+}
+
+func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 	var c *credentials
 	c, e = s.crt.checkUser(t)
 	if e == nil {
-		u, e = s.udb.Login(c.User, c.Pass)
+		u, e = s.udb.UserInfo(c.User, c.Pass, c.User)
 	}
 	var iv interface{}
 	if e == nil {

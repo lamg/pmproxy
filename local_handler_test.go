@@ -32,19 +32,16 @@ func TestServerLogInOut(t *testing.T) {
 	require.True(t, e == nil)
 	pm := NewLocalHn(qa, "")
 	require.True(t, e == nil)
-	tu := &User{"a", "a", false, "A"}
-	jtu, e := tu.ToJSON()
-	require.True(t, e == nil)
 	tss := []struct {
-		method string
-		route  string
-		body   string
-		ip     string
-		usr    string
+		method    string
+		route     string
+		body      string
+		ip        string
+		emptyScrt bool
 	}{
 		{h.MethodPost, LogX, `{"user":"a", "pass":"a"}`, cocoIP,
-			jtu},
-		{h.MethodDelete, LogX, jtu, cocoIP, ""},
+			false},
+		{h.MethodDelete, LogX, "", cocoIP, true},
 	}
 	var hd string
 	for i, j := range tss {
@@ -52,18 +49,13 @@ func TestServerLogInOut(t *testing.T) {
 		pm.ServeHTTP(rr, rq)
 		require.Equal(t, rr.Code, h.StatusOK, "%d: Code = %d", i,
 			rr.Code)
-		require.True(t, (rr.Body.Len() != 0) ==
-			(len(j.usr) != 0))
-		if len(j.usr) != 0 {
+		require.True(t, (rr.Body.Len() == 0) == j.emptyScrt)
+		if !j.emptyScrt {
 			// { this is a login and not a logout }
 			lg := new(LogRs)
 			e = Decode(rr.Body, lg)
 			require.True(t, e == nil)
 			hd = lg.Scrt
-			var s string
-			s, e = lg.User.ToJSON()
-			require.True(t, e == nil)
-			require.True(t, s == j.usr)
 		}
 	}
 }
@@ -80,7 +72,7 @@ func TestGetUserStatus(t *testing.T) {
 		pm, hd := loginServ(t, j.c, j.ip)
 		cv, ok := pm.qa.uc.Load(j.c.User)
 		require.True(t, ok)
-		usr, e := pm.qa.sm.check(j.ip, hd)
+		usr, e := pm.qa.sm.userInfo(j.ip, hd)
 		require.True(t, e == nil)
 		qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
 		require.True(t, ok)
@@ -121,6 +113,43 @@ func TestPutUserStatus(t *testing.T) {
 		// { the consumption obtained from the consumptions
 		//  dictionary directly, is equal to the sent as request
 		//  to set}
+	}
+}
+
+func TestCheckUserHF(t *testing.T) {
+	tss := []struct {
+		c     *credentials
+		ip    string
+		rCode int
+	}{
+		{coco, cocoIP, h.StatusOK},
+	}
+	for _, j := range tss {
+		pm, hd := loginServ(t, j.c, j.ip)
+		r, q := reqres(t, h.MethodGet, CheckUser, "", hd, j.ip)
+		pm.ServeHTTP(r, q)
+		require.True(t, r.Code == j.rCode)
+	}
+}
+
+func TestUserInfoHF(t *testing.T) {
+	tss := []struct {
+		c     *credentials
+		ip    string
+		rCode int
+		u     *User
+	}{
+		{coco, cocoIP, h.StatusOK, &User{UserName: coco.User}},
+	}
+	for _, j := range tss {
+		pm, hd := loginServ(t, j.c, j.ip)
+		r, q := reqres(t, h.MethodGet, UserInfo, "", hd, j.ip)
+		pm.ServeHTTP(r, q)
+		require.True(t, r.Code == j.rCode)
+		u := new(User)
+		e := Decode(r.Body, u)
+		require.True(t, e == nil)
+		require.True(t, u.UserName == j.u.UserName)
 	}
 }
 

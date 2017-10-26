@@ -9,7 +9,8 @@ import (
 
 // UserDB is an interface for abstracting user databases
 type UserDB interface {
-	Login(string, string) (*User, *errors.Error)
+	Authenticate(string, string) *errors.Error
+	UserInfo(string, string, string) (*User, *errors.Error)
 	Exists(string, string, string) (bool, *errors.Error)
 }
 
@@ -33,20 +34,28 @@ func NewLDB(adAddr, suff, bDN, admG, qgPref string) (r *LDB) {
 	return
 }
 
-// Login logs an user with user name u and password p
-func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
-	r = &User{UserName: u}
-	r.Name, e = db.ldp.FullName(u, p, u)
+// Authenticate authenticates the supplied credentials
+func (db *LDB) Authenticate(u, p string) (e *errors.Error) {
+	e = db.ldp.Authenticate(u, p)
+	return
+}
+
+// UserInfo gets the user's information
+func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
+	var mp map[string][]string
+	mp, e = db.ldp.FullRecord(u, p, usr)
+	r = &User{UserName: usr}
+	r.Name, e = db.ldp.FullName(mp)
 	var m string
 	if e == nil {
-		m, e = db.getQuotaGroup(u, p, u)
+		m, e = db.getQuotaGroup(mp)
 	}
 	if e == nil {
 		r.QuotaGroup = m
 	}
 	var fg string
 	if e == nil {
-		fg, e = db.ldp.DNFirstGroup(u, p, u)
+		fg, e = db.ldp.DNFirstGroup(mp)
 	}
 	if e == nil {
 		r.IsAdmin = fg == db.adminGroup
@@ -55,21 +64,20 @@ func (db *LDB) Login(u, p string) (r *User, e *errors.Error) {
 }
 
 // Exists tells if an user exists
-func (db *LDB) Exists(user, pass, usr string) (y bool,
+func (db *LDB) Exists(u, p, usr string) (y bool,
 	e *errors.Error) {
-	var s string
-	s, e = db.getQuotaGroup(user, pass, usr)
-	y = s == ""
+	_, e = db.UserInfo(u, p, usr)
+	y = e.Code != l.ErrorSearch
 	return
 }
 
 // GetQuotaGroup gets the group specified at distinguishedName
 // field
 // usr: sAMAccountName
-func (db *LDB) getQuotaGroup(user, pass, usr string) (g string,
+func (db *LDB) getQuotaGroup(mp map[string][]string) (g string,
 	e *errors.Error) {
 	var m []string
-	m, e = db.ldp.MembershipCNs(user, pass, usr)
+	m, e = db.ldp.MembershipCNs(mp)
 	if e == nil {
 		i, ok := 0, false
 		for !ok && i != len(m) {
@@ -83,7 +91,8 @@ func (db *LDB) getQuotaGroup(user, pass, usr string) (g string,
 		} else {
 			e = &errors.Error{
 				Code: ErrorMalformedRecord,
-				Err:  fmt.Errorf("Couldn't find the quota group for %s", usr),
+				Err: fmt.Errorf("Couldn't find the quota group for %s",
+					mp[l.SAMAccountName]),
 			}
 		}
 	}
@@ -118,13 +127,18 @@ func NewDAuth() (d *DAuth) {
 	return
 }
 
-// Login …
-func (d *DAuth) Login(u, p string) (r *User, e *errors.Error) {
+// Authenticate authenticates credentials
+func (d *DAuth) Authenticate(u, p string) (e *errors.Error) {
+	return
+}
+
+// UserInfo gets user information
+func (d *DAuth) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	if u == p {
 		r = &User{
-			Name:       u,
-			UserName:   u,
-			IsAdmin:    len(u) == 4,
+			Name:       usr,
+			UserName:   usr,
+			IsAdmin:    len(usr) == 4,
 			QuotaGroup: "A",
 		}
 		d.us = append(d.us, r)
