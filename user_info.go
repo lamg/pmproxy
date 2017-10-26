@@ -11,7 +11,6 @@ import (
 type UserDB interface {
 	Authenticate(string, string) *errors.Error
 	UserInfo(string, string, string) (*User, *errors.Error)
-	Exists(string, string, string) (bool, *errors.Error)
 }
 
 // LDB is an UserDB implementation using Ldap
@@ -60,14 +59,6 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	if e == nil {
 		r.IsAdmin = fg == db.adminGroup
 	}
-	return
-}
-
-// Exists tells if an user exists
-func (db *LDB) Exists(u, p, usr string) (y bool,
-	e *errors.Error) {
-	_, e = db.UserInfo(u, p, usr)
-	y = e.Code != l.ErrorSearch
 	return
 }
 
@@ -148,11 +139,5 @@ func (d *DAuth) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 			Err:  fmt.Errorf("Wrong password for %s", u),
 		}
 	}
-	return
-}
-
-// Exists implementation of UserDB interface
-func (d *DAuth) Exists(u, p, usr string) (y bool, e *errors.Error) {
-	y = true
 	return
 }

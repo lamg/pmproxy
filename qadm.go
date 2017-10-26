@@ -106,9 +106,8 @@ func (q *QAdm) setCons(ip, s string,
 	var u *User
 	u, e = q.sm.userInfo(ip, s)
 	if e == nil && u.IsAdmin {
-		var y bool
-		y, e = q.sm.exists(s, g.Name)
-		if e == nil && y {
+		e = q.sm.exists(s, g.Name)
+		if e == nil {
 			q.uc.Store(g.Name, g.Value)
 		}
 	} else if e == nil && !u.IsAdmin {

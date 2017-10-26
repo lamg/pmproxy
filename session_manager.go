@@ -143,12 +143,11 @@ func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 	return
 }
 
-func (s *SMng) exists(t, usr string) (y bool,
-	e *errors.Error) {
+func (s *SMng) exists(t, usr string) (e *errors.Error) {
 	var c *credentials
 	c, e = s.crt.checkUser(t)
 	if e == nil {
-		y, e = s.udb.Exists(c.User, c.Pass, usr)
+		_, e = s.udb.UserInfo(c.User, c.Pass, usr)
 	}
 	return
 }
