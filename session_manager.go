@@ -2,8 +2,9 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/lamg/errors"
 	"sync"
+
+	"github.com/lamg/errors"
 )
 
 const (

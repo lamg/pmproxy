@@ -3,12 +3,13 @@ package pmproxy
 import (
 	"context"
 	"fmt"
-	"github.com/lamg/errors"
-	g "github.com/lamg/goproxy"
 	"net"
 	h "net/http"
 	"strings"
 	"time"
+
+	"github.com/lamg/errors"
+	g "github.com/lamg/goproxy"
 )
 
 // PMProxy is the proxy server
@@ -42,9 +43,6 @@ func (p *PMProxy) forbiddenAcc(r *h.Request,
 	c *g.ProxyCtx) (q *h.Request, t *h.Response) {
 	q, t = r, g.NewResponse(r, "text/plain",
 		h.StatusForbidden, "No tiene acceso")
-	t.StatusCode = h.StatusMovedPermanently
-	t.Header.Set("Location",
-		fmt.Sprintf("%s/?url=%s", p.loginAddr, r.URL.String()))
 	return
 }
 
@@ -230,11 +228,24 @@ type RemoteAddr string
 
 const rmAddr = "RemoteAddress"
 
-func (p *PMProxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
-	q := r.WithContext(context.WithValue(context.Background(),
-		RemoteAddr(rmAddr),
-		r.RemoteAddr))
-	p.px.ServeHTTP(w, q)
+func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
+	r *h.Request) {
+	ra, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if p.qa.nlf(ra) {
+		h.Redirect(w, r,
+			fmt.Sprintf("%s/?url=%s", p.loginAddr,
+				r.URL.String()),
+			h.StatusTemporaryRedirect)
+		// { redirected to the proxy's web interface
+		//	 with the requested URL as parameter }
+	} else {
+		q := r.WithContext(context.WithValue(context.Background(),
+			RemoteAddr(rmAddr),
+			r.RemoteAddr))
+		p.px.ServeHTTP(w, q)
+		// { served with request's remote address in
+		//   in context's values }
+	}
 }
 
 // Dialer is an interface to custom dialers that
