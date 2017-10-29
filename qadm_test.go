@@ -1,12 +1,13 @@
 package pmproxy
 
 import (
-	"github.com/lamg/errors"
-	"github.com/stretchr/testify/require"
 	rg "regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/lamg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadAccStr(t *testing.T) {
@@ -176,7 +177,7 @@ func TestNlf(t *testing.T) {
 		{pepeIP, false},
 	}
 	for i, j := range tss {
-		b := qa.nlf(j.ip)
+		b := qa.loggedAndQuota(j.ip)
 		require.True(t, j.logged == b, "At %d %t ≠ %t",
 			i, j.logged, b)
 	}

@@ -3,13 +3,14 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/lamg/errors"
-	"github.com/stretchr/testify/require"
 	"net"
 	h "net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/lamg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -21,8 +22,9 @@ const (
 func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
-		p = NewPMProxy(qa, rl, "",
+		rmng := NewRRConnMng(nil, qa, rl,
 			map[string]string{"B": "eth0", "A": "eth1"})
+		p = NewPMProxy(rmng, "")
 	}
 	return
 }

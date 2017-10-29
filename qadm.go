@@ -3,10 +3,11 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/lamg/errors"
 	"io"
 	rg "regexp"
 	"time"
+
+	"github.com/lamg/errors"
 )
 
 const (
@@ -146,8 +147,7 @@ func (q *QAdm) addCons(ip string, c uint64) {
 	}
 }
 
-// nlf ≡ not logged ∨ finished quota
-func (q *QAdm) nlf(ip string) (b bool) {
+func (q *QAdm) loggedAndQuota(ip string) (y bool) {
 	var u *User
 	u = q.sm.User(ip)
 	var cons, quota uint64
@@ -155,7 +155,7 @@ func (q *QAdm) nlf(ip string) (b bool) {
 		cons, _ = q.uc.Load(u.UserName)
 		quota, _ = q.gq.Load(u.QuotaGroup)
 	}
-	b = cons >= quota
+	y = cons >= quota
 	return
 }
 
@@ -190,7 +190,7 @@ func (q *QAdm) canReq(ip, host, port string,
 		(port == "443" || port == "80" || port == ""),
 		dailyRestr || intervalRestr
 
-	if !okPort || q.nlf(ip) || restrTime {
+	if !okPort || q.loggedAndQuota(ip) || restrTime {
 		c = c * -1
 	}
 	//{ q.nlf(ip) ∨ d inside forbidden interval ⇒ c < 0 }
