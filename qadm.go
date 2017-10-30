@@ -215,6 +215,7 @@ func (q *QAdm) canReq(ip, host, port string,
 	} else if noQuota && !f {
 		cs = &CauseCD{"no quota", host}
 	}
+	fmt.Printf("notLogged:%t %v\n", notLogged, cs)
 	return
 }
 
