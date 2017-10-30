@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"crypto/rsa"
 	"io"
+	"net/url"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -144,13 +145,19 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		udb = NewLDB(c.ADAddr, c.ADAccSf, c.BDN, c.AdmGrp,
 			c.GrpQtPref)
 	}
+	var lga *url.URL
+	if e == nil {
+		var ec error
+		lga, ec = url.Parse(c.LoginAddr)
+		e = errors.NewForwardErr(ec)
+	}
 	if e == nil {
 		cry := NewJWTCrypt(pkey)
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc)
 		rmng := NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface)
-		p = NewPMProxy(rmng, c.LoginAddr)
+		p = NewPMProxy(rmng, lga)
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)
 	}

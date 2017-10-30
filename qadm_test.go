@@ -145,7 +145,7 @@ func TestCanReq(t *testing.T) {
 	for i, j := range cases {
 		tm, e := time.Parse(time.RFC3339, j.tm)
 		require.True(t, e == nil, "Time at %d", i)
-		c := qa.canReq(j.ip, j.host, j.port, tm)
+		c, _ := qa.canReq(j.ip, j.host, j.port, tm)
 		require.True(t, c == j.k, "%.1f ≠ %.1f at %d", c, j.k, i)
 	}
 }
@@ -173,11 +173,11 @@ func TestNlf(t *testing.T) {
 		ip     string
 		logged bool
 	}{
-		{cocoIP, true},
-		{pepeIP, false},
+		{cocoIP, false},
+		{pepeIP, true},
 	}
 	for i, j := range tss {
-		b := qa.loggedAndQuota(j.ip)
+		b := qa.isLogged(j.ip)
 		require.True(t, j.logged == b, "At %d %t ≠ %t",
 			i, j.logged, b)
 	}

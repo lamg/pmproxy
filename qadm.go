@@ -147,15 +147,20 @@ func (q *QAdm) addCons(ip string, c uint64) {
 	}
 }
 
-func (q *QAdm) loggedAndQuota(ip string) (y bool) {
-	var u *User
-	u = q.sm.User(ip)
+func (q *QAdm) hasQuota(ip string) (y bool) {
+	u := q.sm.User(ip)
 	var cons, quota uint64
 	if u != nil {
 		cons, _ = q.uc.Load(u.UserName)
 		quota, _ = q.gq.Load(u.QuotaGroup)
 	}
-	y = cons >= quota
+	y = cons < quota
+	return
+}
+
+func (q *QAdm) isLogged(ip string) (y bool) {
+	u := q.sm.User(ip)
+	y = u != nil
 	return
 }
 
@@ -163,7 +168,7 @@ func (q *QAdm) loggedAndQuota(ip string) (y bool) {
 // c ≥ 0 means c * Response.ContentLength = UserConsumption
 // { l is a string with the form host:port }
 func (q *QAdm) canReq(ip, host, port string,
-	d time.Time) (c float32) {
+	d time.Time) (c float32, cs *CauseCD) {
 	var i int
 	//f ≡ found l.Host in r.al[].hostname
 	var f bool
@@ -186,14 +191,30 @@ func (q *QAdm) canReq(ip, host, port string,
 			!res.Daily && d.After(res.Start) && d.Before(res.End),
 			res.Daily && inDayInterval(d, res.Start, res.End)
 	}
-	okPort, restrTime :=
+	okPort, restrTime, notLogged, noQuota :=
 		(port == "443" || port == "80" || port == ""),
-		dailyRestr || intervalRestr
+		dailyRestr || intervalRestr,
+		!q.isLogged(ip),
+		!q.hasQuota(ip)
 
-	if !okPort || q.loggedAndQuota(ip) || restrTime {
-		c = c * -1
+	if !okPort || notLogged || noQuota || restrTime {
+		c, cs = c*-1, new(CauseCD)
 	}
-	//{ q.nlf(ip) ∨ d inside forbidden interval ⇒ c < 0 }
+	if f && c < 0 {
+		cs = &CauseCD{"forbidden site", host}
+	} else if !okPort {
+		cs = &CauseCD{"forbidden port", port}
+	} else if dailyRestr {
+		cs = &CauseCD{"daily restriction",
+			res.Start.String() + " " + res.End.String()}
+	} else if intervalRestr {
+		cs = &CauseCD{"time restriction",
+			res.Start.String() + " " + res.End.String()}
+	} else if notLogged {
+		cs = &CauseCD{"not logged", ip}
+	} else if noQuota && !f {
+		cs = &CauseCD{"no quota", host}
+	}
 	return
 }
 

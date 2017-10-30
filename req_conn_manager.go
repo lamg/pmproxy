@@ -35,11 +35,20 @@ func (m *RRConnMng) GetConn(nt, ad string,
 	return
 }
 
+// CauseCD represents the cause a request cannot
+// be processed
+type CauseCD struct {
+	Type string
+	Data string
+}
+
 // CanDo says wether the request can be
 // processed at the supplied time
-func (m *RRConnMng) CanDo(r *h.Request, t time.Time) (y bool) {
-	k, _ := getK(m.qa, r.Host, r.RemoteAddr)
-	y = k < 0
+// TODO return the cause when !y
+func (m *RRConnMng) CanDo(r *h.Request, t time.Time) (d *CauseCD) {
+	hs, pr, _ := net.SplitHostPort(r.Host)
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	_, d = m.qa.canReq(ip, hs, pr, t)
 	return
 }
 
@@ -47,7 +56,7 @@ func (m *RRConnMng) CanDo(r *h.Request, t time.Time) (y bool) {
 func getK(qa *QAdm, host, raddr string) (k float32, ip string) {
 	hs, pr, _ := net.SplitHostPort(host)
 	ip, _, _ = net.SplitHostPort(raddr)
-	k = qa.canReq(ip, hs, pr, time.Now())
+	k, _ = qa.canReq(ip, hs, pr, time.Now())
 	return
 }
 

@@ -5,9 +5,9 @@ package pmproxy
 
 import (
 	"context"
-	"fmt"
 	"net"
 	h "net/http"
+	"net/url"
 	"time"
 
 	g "github.com/lamg/goproxy"
@@ -16,12 +16,12 @@ import (
 // PMProxy is the proxy server
 type PMProxy struct {
 	px      *g.ProxyHttpServer
-	wIntURL string
+	wIntURL *url.URL
 	rmng    *RRConnMng
 }
 
 // NewPMProxy creates a new PMProxy
-func NewPMProxy(r *RRConnMng, wi string) (p *PMProxy) {
+func NewPMProxy(r *RRConnMng, wi *url.URL) (p *PMProxy) {
 	p = &PMProxy{g.NewProxyHttpServer(), wi, r}
 
 	p.px.OnResponse().DoFunc(p.procResp)
@@ -67,11 +67,10 @@ const rmAddr = "RemoteAddress"
 
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
-	if p.rmng.CanDo(r, time.Now()) {
-		h.Redirect(w, r,
-			fmt.Sprintf("%s/?url=%s", p.wIntURL,
-				r.URL.String()),
-			h.StatusTemporaryRedirect)
+	cs := p.rmng.CanDo(r, time.Now())
+	if cs != nil {
+		url := causeToURL(cs, p.wIntURL)
+		h.Redirect(w, r, url, h.StatusTemporaryRedirect)
 		// { redirected to the proxy's web interface
 		//	 with the requested URL as parameter }
 	} else {
@@ -81,4 +80,15 @@ func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 		// { served with request's remote address in
 		//   in context's values }
 	}
+}
+
+func causeToURL(cs *CauseCD, wi *url.URL) (r string) {
+	query := make(url.Values)
+	query.Set("cause", cs.Type)
+	query.Set("data", cs.Data)
+	rq, u := url.QueryEscape(query.Encode()), new(url.URL)
+	*u = *wi
+	u.RawQuery = rq
+	r = u.String()
+	return
 }

@@ -25,11 +25,8 @@ Ríos's needs, which are the following:
 ** TODO General Tasks
 - Integration
 - Improve document
-- Check if the ip address is in the group with access
-  to the proxy service
-- Redirection doesn't work
-  - Check if the address is local
-  - Make redirection only for non local addresses
+- Flexible restrictions and access to resources
+  specification
 
 ** HTTP user interface
 - Cred: {"user":string, "pass":string}
