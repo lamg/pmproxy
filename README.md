@@ -69,6 +69,11 @@ LogRs {
 | /api/checkUser  | GET    |         | AHd  | Cd |       |
 | /api/userInfo   | GET    |         | AHd  | Cd | User  |
 
+## PMProxy clients
+
+There are two clients, `pmuser` and `pmuser-gtk`. The formeris a command line program, and the latter, as its name indicates, a GUI in GTK+. TODO Close session in
+pmuser-gtk.
+
 ## Tasks
 
 - Redirect URL with information on the cause of redirection

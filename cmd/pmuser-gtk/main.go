@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/gotk3/gotk3/glib"
-	"github.com/gotk3/gotk3/gtk"
 	"log"
 	"os"
+
+	"github.com/gotk3/gotk3/glib"
+	"github.com/gotk3/gotk3/gtk"
 )
 
-var config = ".gproxy"
+var config = ".pmuser-gtk"
 
 func main() {
-	ap, e := gtk.ApplicationNew("com.github.lamg.gproxy",
+	ap, e := gtk.ApplicationNew("com.github.lamg.pmuser-gtk",
 		glib.APPLICATION_FLAGS_NONE)
 	if e == nil {
 		ap.Connect("activate", activate)

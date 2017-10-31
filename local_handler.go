@@ -3,12 +3,13 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/lamg/errors"
-	"github.com/rs/cors"
 	"io"
 	"io/ioutil"
 	"net"
 	h "net/http"
+
+	"github.com/lamg/errors"
+	"github.com/rs/cors"
 )
 
 const (

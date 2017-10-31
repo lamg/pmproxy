@@ -172,6 +172,7 @@ func TestUnsMethod(t *testing.T) {
 	}{
 		{LogX, h.MethodConnect, ""},
 		{UserStatus, h.MethodConnect, hd},
+		{UserInfo, h.MethodConnect, hd},
 	}
 	for _, j := range tss {
 		r, q := reqres(t, j.meth, j.path, "", j.scrt, cocoIP)
