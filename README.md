@@ -79,3 +79,4 @@ in the main thread.
 - Redirect URL with information on the cause of redirection
 - Flexible restrictions and access to resources specifications
 - Too many open files error in server
+- Deal with empty scheme when an HTTPS request needs to be redirected
