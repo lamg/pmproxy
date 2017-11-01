@@ -70,9 +70,7 @@ func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	cs := p.rmng.CanDo(r, time.Now())
 	if cs != nil {
 		url := causeToURL(cs, p.wIntURL)
-		if r.URL.Scheme == "" {
-			r.URL.Scheme = "https"
-		}
+		println(r.URL.Scheme)
 		h.Redirect(w, r, url, h.StatusTemporaryRedirect)
 		// { redirected to the proxy's web interface
 		//	 with the requested URL as parameter }
