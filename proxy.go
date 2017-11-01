@@ -5,7 +5,6 @@ package pmproxy
 
 import (
 	"context"
-	"fmt"
 	"net"
 	h "net/http"
 	"net/url"
@@ -71,9 +70,6 @@ func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	cs := p.rmng.CanDo(r, time.Now())
 	if cs != nil {
 		url := causeToURL(cs, p.wIntURL)
-		fmt.Printf("%v %s\n", url, r.URL.String())
-		// fmt.Printf("url: %v\n", url)
-		//  http://10.2.24.145:4000?cause%3Dnot%2Blogged%26data%3D10.2.9.9
 		h.Redirect(w, r, url, h.StatusTemporaryRedirect)
 		// { redirected to the proxy's web interface
 		//	 with the requested URL as parameter }
