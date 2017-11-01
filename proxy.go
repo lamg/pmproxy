@@ -86,7 +86,7 @@ func causeToURL(cs *CauseCD, wi *url.URL) (r string) {
 	query := make(url.Values)
 	query.Set("cause", cs.Type)
 	query.Set("data", cs.Data)
-	rq, u := url.QueryEscape(query.Encode()), new(url.URL)
+	rq, u := query.Encode(), new(url.URL)
 	*u = *wi
 	u.RawQuery = rq
 	r = u.String()
