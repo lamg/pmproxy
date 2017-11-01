@@ -69,8 +69,8 @@ const rmAddr = "RemoteAddress"
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
 	cs := p.rmng.CanDo(r, time.Now())
-	fmt.Printf("%v %s\n", cs, r.URL.String())
 	if cs != nil {
+		fmt.Printf("%v %s\n", cs, r.URL.String())
 		url := causeToURL(cs, p.wIntURL)
 		// fmt.Printf("url: %v\n", url)
 		//  http://10.2.24.145:4000?cause%3Dnot%2Blogged%26data%3D10.2.9.9
