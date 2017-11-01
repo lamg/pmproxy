@@ -6,6 +6,7 @@ import (
 
 	"github.com/c2h5oh/datasize"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy"
 )
 
@@ -64,11 +65,10 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 	if e == nil {
 		qc = new(pmproxy.QtCs)
 		ec := pmproxy.Decode(r.Body, qc)
-		if ec != nil {
-			e = ec.Err
-		}
+		e = errors.UnwrapErr(ec)
 	}
 	if e == nil {
+		r.Body.Close()
 		if st.le.usr != nil {
 			st.uqt.SetText(fmt.Sprintf("Cuota %s",
 				datasize.ByteSize(qc.Quota).HumanReadable()))

@@ -32,26 +32,26 @@ detailed descriptions.
 
 ## REST API
 
-```json
+```go
 Cred {
-  "user":string,
-  "pass":string
+  "user" string,
+  "pass" string
 }
 
 User {
-  "userName":string,
-  "name":string,
-  "isAdmin":bool,
-  "quotaGroup":uint64
+  "userName" string,
+  "name" string,
+  "isAdmin" bool,
+  "quotaGroup" uint64
 }
 
 NameVal {
-  "name":string,
-  "value":uint64
+  "name" string,
+  "value" uint64
 }
 
 LogRs {
-  "scrt":string // this is the string sent in the header
+  "scrt" string // this is the string sent in the header
 }
 ```
 
@@ -71,8 +71,8 @@ LogRs {
 
 ## PMProxy clients
 
-There are two clients, `pmuser` and `pmuser-gtk`. The former is a command line program, and the latter, as its name indicates, a GUI in GTK+. TODO Close session in
-pmuser-gtk.
+There are two clients, `pmuser` and `pmuser-gtk`. The former is a command line program, and the latter, as its name indicates, a GUI in GTK+. TODO slow operations not
+in the main thread.
 
 ## Tasks
 

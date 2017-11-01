@@ -201,7 +201,7 @@ func Decode(r io.Reader, v interface{}) (e *errors.Error) {
 	if ec != nil {
 		e = &errors.Error{
 			Code: ErrorDecode,
-			Err:  ec,
+			Err:  fmt.Errorf("%s at %s", ec.Error(), string(bs)),
 		}
 	}
 	return
