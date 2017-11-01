@@ -5,6 +5,7 @@ package pmproxy
 
 import (
 	"context"
+	"fmt"
 	"net"
 	h "net/http"
 	"net/url"
@@ -68,6 +69,7 @@ const rmAddr = "RemoteAddress"
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
 	cs := p.rmng.CanDo(r, time.Now())
+	fmt.Printf("%v\n", cs)
 	if cs != nil {
 		url := causeToURL(cs, p.wIntURL)
 		// fmt.Printf("url: %v\n", url)
