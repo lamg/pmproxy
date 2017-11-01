@@ -40,7 +40,9 @@ func newLoginBox(lg *loginInf) (st *loginSt, e error) {
 	if e == nil {
 		st.adr, e = gtk.EntryNew()
 	}
-
+	if e == nil {
+		st.inf, e = gtk.LabelNew("Info")
+	}
 	if e == nil {
 		st.pst.SetVisibility(false)
 		st.adr.SetText(lg.Addr)
@@ -48,16 +50,14 @@ func newLoginBox(lg *loginInf) (st *loginSt, e error) {
 		st.pst.SetText(lg.Pass)
 		st.lr = &pmproxy.LogRs{Scrt: lg.Scrt}
 		y := isLogged(lg.Addr, lg.Scrt)
-		var btTxt string
-		if y {
-			btTxt = "Salir"
-		} else {
-			btTxt = "Entrar"
+		st.ent, e = gtk.ButtonNewWithLabel("")
+		if e == nil {
+			if y {
+				e = st.updateAtLogin(lg.Addr)
+			} else {
+				e = st.updateAtLogout()
+			}
 		}
-		st.ent, e = gtk.ButtonNewWithLabel(btTxt)
-	}
-	if e == nil {
-		st.inf, e = gtk.LabelNew("Info")
 	}
 	if e == nil {
 		st.inf.SetLineWrap(true)
@@ -86,12 +86,20 @@ func isLogged(addr, scrt string) (y bool) {
 
 func (m *loginSt) entClicked(b *gtk.Button) {
 	adr, e := m.adr.GetText()
+	var y bool
 	if e == nil {
-		y := isLogged(adr, m.lr.Scrt)
+		y = isLogged(adr, m.lr.Scrt)
 		if y {
-			m.logout(b, adr)
+			e = m.logout(b, adr)
 		} else {
-			m.login(b, adr)
+			e = m.login(b, adr)
+		}
+	}
+	if e == nil {
+		if y {
+			e = m.updateAtLogout()
+		} else {
+			e = m.updateAtLogin(adr)
 		}
 	}
 }
@@ -105,8 +113,7 @@ func (m *loginSt) logout(b *gtk.Button, adr string) (e error) {
 		r, e = h.DefaultClient.Do(q)
 	}
 	if e == nil && r.StatusCode == h.StatusOK {
-		b.SetLabel("Entrar")
-		m.inf.SetText("OK")
+		m.updateAtLogout()
 	} else if e == nil {
 		m.inf.SetText(fmt.Sprintf("Error: %d", r.StatusCode))
 	} else {
@@ -135,11 +142,27 @@ func (m *loginSt) login(b *gtk.Button, adr string) (e error) {
 			}
 		}
 	}
+	if e == nil {
+		lg := &loginInf{
+			Addr: adr,
+			User: ust,
+			Pass: pst,
+			Scrt: m.lr.Scrt,
+		}
+		writeConfig(lg)
+		e = m.updateAtLogin(adr)
+	}
+	return
+}
+
+// updateAtLogin updates GUI to reflect the user is logged
+func (m *loginSt) updateAtLogin(adr string) (e error) {
 	var q *h.Request
 	if e == nil {
 		q, e = h.NewRequest(h.MethodGet, adr+pmproxy.UserInfo,
 			nil)
 	}
+	var r *h.Response
 	if e == nil {
 		q.Header.Set(pmproxy.AuthHd, m.lr.Scrt)
 		r, e = h.DefaultClient.Do(q)
@@ -152,23 +175,28 @@ func (m *loginSt) login(b *gtk.Button, adr string) (e error) {
 	if e == nil {
 		m.inf.SetText(fmt.Sprintf("Respuesta: %s Usuario:%s",
 			r.Status, m.usr.Name))
-		b.SetLabel("Salir")
-		if r.StatusCode == h.StatusOK {
-			f, _ := os.Create(config)
-			if f != nil {
-				lg := &loginInf{
-					Addr: adr,
-					User: ust,
-					Pass: pst,
-					Scrt: m.lr.Scrt,
-				}
-				pmproxy.Encode(f, lg)
-				f.Close()
-			}
-		}
+		m.ent.SetLabel("Salir")
 	}
 	if e != nil {
 		m.inf.SetText(fmt.Sprintf("Error: %s", e.Error()))
+	}
+	return
+}
+
+// updateAtLogout updates GUI to reflect no user is logged
+func (m *loginSt) updateAtLogout() (e error) {
+	m.ent.SetLabel("Entrar")
+	m.inf.SetText("Sesión cerrada")
+	m.lr.Scrt = ""
+	return
+}
+
+func writeConfig(lg *loginInf) (e error) {
+	var f *os.File
+	f, e = os.Create(config)
+	if e == nil {
+		pmproxy.Encode(f, lg)
+		f.Close()
 	}
 	return
 }

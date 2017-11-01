@@ -69,12 +69,14 @@ func (st *infoSt) rfrClicked(b *gtk.Button) {
 		}
 	}
 	if e == nil {
-		st.uqt.SetText(fmt.Sprintf("Cuota %s",
-			datasize.ByteSize(qc.Quota).HumanReadable()))
-		st.ucs.SetText(fmt.Sprintf("Consumo %s",
-			datasize.ByteSize(qc.Consumption).HumanReadable()))
-		st.inf.SetText(fmt.Sprintf("Usuario %s",
-			st.le.usr.UserName))
+		if st.le.usr != nil {
+			st.uqt.SetText(fmt.Sprintf("Cuota %s",
+				datasize.ByteSize(qc.Quota).HumanReadable()))
+			st.ucs.SetText(fmt.Sprintf("Consumo %s",
+				datasize.ByteSize(qc.Consumption).HumanReadable()))
+			st.inf.SetText(fmt.Sprintf("Usuario %s",
+				st.le.usr.UserName))
+		}
 	} else {
 		st.inf.SetText(e.Error())
 	}

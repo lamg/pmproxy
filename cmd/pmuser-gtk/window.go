@@ -19,6 +19,9 @@ func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
 			pmproxy.Decode(rd, lg)
 			rd.Close()
 		}
+		h.DefaultClient.Transport = &h.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 		st, e = stack(lg)
 	}
 	var hd *gtk.HeaderBar
@@ -26,9 +29,6 @@ func initW(a *gtk.Application, rd io.ReadCloser) (e error) {
 		hd, e = header(st)
 	}
 	if e == nil {
-		h.DefaultClient.Transport = &h.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
 		w.SetIconName("system-users")
 		w.SetTitlebar(hd)
 		w.Add(st)

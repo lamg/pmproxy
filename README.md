@@ -71,7 +71,7 @@ LogRs {
 
 ## PMProxy clients
 
-There are two clients, `pmuser` and `pmuser-gtk`. The formeris a command line program, and the latter, as its name indicates, a GUI in GTK+. TODO Close session in
+There are two clients, `pmuser` and `pmuser-gtk`. The former is a command line program, and the latter, as its name indicates, a GUI in GTK+. TODO Close session in
 pmuser-gtk.
 
 ## Tasks
