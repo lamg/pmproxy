@@ -67,8 +67,7 @@ func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	cs := p.rmng.CanDo(r, time.Now())
 	if cs != nil {
 		url := causeToURL(cs, p.wIntURL)
-		r.URL.Host = r.URL.Hostname()
-		r.URL.Scheme = "http"
+		r, _ = h.NewRequest(h.MethodGet, "http://google.com", nil)
 		h.Redirect(w, r, url, h.StatusTemporaryRedirect)
 		// { redirected to the proxy's web interface
 		//	 with the requested URL as parameter }
