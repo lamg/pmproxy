@@ -52,14 +52,6 @@ func (m *RRConnMng) CanDo(r *h.Request, t time.Time) (d *CauseCD) {
 	return
 }
 
-// TODO candidate for QAdm method
-func getK(qa *QAdm, host, raddr string) (k float32, ip string) {
-	hs, pr, _ := net.SplitHostPort(host)
-	ip, _, _ = net.SplitHostPort(raddr)
-	k, _ = qa.canReq(ip, hs, pr, time.Now())
-	return
-}
-
 // ProcResponse process responses according configuration
 func (m *RRConnMng) ProcResponse(p *h.Response) (r *h.Response) {
 	var log *Log
@@ -85,11 +77,6 @@ func (m *RRConnMng) ProcResponse(p *h.Response) (r *h.Response) {
 			// MIME type parameters droped
 		}
 		log.ContentType = ct
-		k, ip := getK(m.qa, r.Request.Host, r.Request.RemoteAddr)
-		if k > 0 {
-			cs := float32(r.Request.ContentLength) * k
-			m.qa.addCons(ip, uint64(cs))
-		}
 		m.rl.record(log)
 	}
 	r = p
@@ -185,7 +172,7 @@ type conCount struct {
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	k, ip := getK(c.qa, c.addr, c.rAddr)
+	k, ip := c.getK()
 	if k >= 0 {
 		n, e = c.Conn.Read(p)
 		// { n ≥ 0 }
@@ -194,5 +181,12 @@ func (c *conCount) Read(p []byte) (n int, e error) {
 	} else {
 		e = fmt.Errorf("No tiene acceso")
 	}
+	return
+}
+
+func (c *conCount) getK() (k float32, ip string) {
+	hs, pr, _ := net.SplitHostPort(c.addr)
+	ip, _, _ = net.SplitHostPort(c.rAddr)
+	k, _ = c.qa.canReq(ip, hs, pr, time.Now())
 	return
 }
