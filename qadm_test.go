@@ -98,22 +98,24 @@ func TestGetQuota(t *testing.T) {
 }
 
 func TestAddCons(t *testing.T) {
-	qa, s, e := initTestQAdm(coco, cocoIP)
+	qa, s, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
 	tss := []struct {
-		ip  string
-		dwn uint64
-		hd  string
+		ip   string
+		host string
+		dwn  int
+		hd   string
 	}{
-		{cocoIP, 1024, s},
+		{pepeIP, "cubadebate.cu", 1024, s},
 	}
 	for _, j := range tss {
 		nc, e := qa.userCons(j.ip, j.hd)
 		require.True(t, e == nil)
-		qa.addCons(j.ip, j.dwn)
+		qa.cons(j.ip, j.host, time.Now(), j.dwn)
 		n, e := qa.userCons(j.ip, j.hd)
 		require.True(t, e == nil)
-		require.True(t, n == nc+j.dwn, "%d≠%d", n, nc+j.dwn)
+		ac := nc + uint64(j.dwn)
+		require.True(t, n == ac, "%d≠%d", n, ac)
 	}
 }
 

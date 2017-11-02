@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	rg "regexp"
 	"time"
 
@@ -139,12 +140,27 @@ func (q *QAdm) userCons(ip, s string) (cs uint64,
 	return
 }
 
-func (q *QAdm) addCons(ip string, c uint64) {
-	u := q.sm.User(ip)
-	if u != nil {
-		n, _ := q.uc.Load(u.UserName)
-		q.uc.Store(u.UserName, n+c)
+func (q *QAdm) cons(uAdr, host string, t time.Time,
+	p int) (y bool) {
+	hs, pr, _ := net.SplitHostPort(host)
+	ip, _, _ := net.SplitHostPort(uAdr)
+	if hs == "" {
+		hs = host
 	}
+	if ip == "" {
+		ip = uAdr
+	}
+	k, cs := q.canReq(ip, hs, pr, t)
+	if cs == nil {
+		c := uint64(k * float32(p))
+		u := q.sm.User(ip)
+		y = u != nil
+		if y {
+			n, _ := q.uc.Load(u.UserName)
+			q.uc.Store(u.UserName, n+c)
+		}
+	}
+	return
 }
 
 func (q *QAdm) hasQuota(ip string) (y bool) {
