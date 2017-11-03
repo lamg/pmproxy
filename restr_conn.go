@@ -14,8 +14,10 @@ type conCount struct {
 }
 
 func (c *conCount) Read(p []byte) (n int, e error) {
-	if c.qa.cons(c.rAddr, c.addr, time.Now(), len(p)) {
-		n, e = c.Conn.Read(p)
+	rp := make([]byte, len(p))
+	n, e = c.Conn.Read(rp)
+	if c.qa.cons(c.rAddr, c.addr, time.Now(), n) {
+		copy(p, rp)
 	} else {
 		e = fmt.Errorf("No tiene acceso")
 	}
