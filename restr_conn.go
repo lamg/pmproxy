@@ -19,6 +19,7 @@ func (c *conCount) Read(p []byte) (n int, e error) {
 	if c.qa.cons(c.rAddr, c.addr, time.Now(), n) {
 		copy(p, rp)
 	} else {
+		c.Close()
 		e = fmt.Errorf("No tiene acceso")
 	}
 	return
