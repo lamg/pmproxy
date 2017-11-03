@@ -114,7 +114,7 @@ func (m *RRConnMng) newConn(ntw, addr string,
 		tca := &net.TCPAddr{IP: la.IP}
 		d := &net.Dialer{
 			LocalAddr: tca,
-			Timeout:   90 * time.Second,
+			Timeout:   10 * time.Second,
 		}
 		cn, e = d.Dial(ntw, addr)
 	}
