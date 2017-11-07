@@ -5,6 +5,19 @@ detailed descriptions.
 
 ## Request processing
 
+Request processing is done in layers:
+
+### Layer 0
+
+A request and a time is received. A connection with restrictions is sent. In this layer there is opportunity of determining parameters of the connection using the request and the time, or maybe the absence of connection. This connection paramaters include local address, consumption coeficient and connection speed.
+
+- RemoteAddr, *url.URL, time.Time
+- rConn
+
+### Layer 1
+
+An amount of bytes is received. A byte slice is sent, with an amount less or equal to the received.
+
 - Requests made from an IP with not logged user are redirected to the web interface.
 
 - Requests made from an IP with a logged user, but withconsumed quota are redirected to the web interface.

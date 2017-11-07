@@ -2,25 +2,44 @@ package pmproxy
 
 import (
 	"fmt"
-	"net"
+	"io"
+	"net/url"
 	"time"
+
+	"github.com/lamg/clock"
 )
 
-type conCount struct {
-	net.Conn
-	qa    *QAdm
-	addr  string
-	rAddr string
+// initPar groups the initial parameters
+type initPar struct {
+	RemoteAddr string
+	url        *url.URL
+	tm         time.Time
 }
 
-func (c *conCount) Read(p []byte) (n int, e error) {
+type rConn struct {
+	io.ReadCloser
+	cn Cons
+	// Throttle coeficient
+	tc float32
+	// End time of this connection
+	end time.Time
+	clk clock.Clock
+}
+
+func (c *rConn) Read(p []byte) (n int, e error) {
 	rp := make([]byte, len(p))
-	n, e = c.Conn.Read(rp)
-	if c.qa.cons(c.rAddr, c.addr, time.Now(), n) {
+	n, e = c.Read(rp)
+	ok := c.cn.Increase(n)
+	if ok && c.clk.Now().Before(c.end) {
 		copy(p, rp)
 	} else {
 		c.Close()
 		e = fmt.Errorf("No tiene acceso")
 	}
 	return
+}
+
+// Cons interfaces with consumption storage
+type Cons interface {
+	Increase(int) bool
 }
