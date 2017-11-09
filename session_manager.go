@@ -108,9 +108,6 @@ func (s *SMng) check(ip, t string) (c *credentials,
 func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 	var c *credentials
 	c, e = s.crt.checkUser(t)
-	if e == nil {
-		u, e = s.udb.UserInfo(c.User, c.Pass, c.User)
-	}
 	var iv interface{}
 	if e == nil {
 		var ok bool
@@ -122,10 +119,9 @@ func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 			}
 		}
 	}
-	var lu *User
 	if e == nil {
 		var ok bool
-		lu, ok = iv.(*User)
+		u, ok = iv.(*User)
 		if !ok {
 			e = &errors.Error{
 				Code: ErrorDictDef,
@@ -134,7 +130,7 @@ func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 			}
 		}
 	}
-	if e == nil && !u.Equal(lu) {
+	if e == nil && u.UserName != c.User {
 		e = &errors.Error{
 			Code: ErrorOverwritten,
 			Err: fmt.Errorf("%s is not logged in %s",
