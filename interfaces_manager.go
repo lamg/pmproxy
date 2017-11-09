@@ -1,29 +1,25 @@
 package pmproxy
 
-type mtIface struct {
-	rm    *ReqMatcher
-	iface string
+// MtIface associates a *ReqMatcher with a network
+// interface name
+type MtIface struct {
+	*ReqMatcher
+	Iface string `json:"iface"`
 }
 
 // IMng manages interfaces
-type IMng struct {
-	ih []mtIface
-}
+type IMng []MtIface
 
 // Interface returns the interface associated to
 // the request
-func (m *IMng) Interface(r *usrRC) (s string) {
-	i, b := 0, false
-	for !b && i != len(m.ih) {
-		b = m.ih[i].rm.Match(r)
-		if !b {
-			i = i + 1
-		}
+func (m IMng) Interface(r *usrRC) (s string) {
+	mt := make([]Matcher, len(m))
+	for i, j := range m {
+		mt[i] = j
 	}
-	// { bounded linear search with ReqMatcher.Match
-	//	 as predicate }
+	b, i := BLS(mt, r)
 	if b {
-		s = m.ih[i].iface
+		s = m[i].Iface
 	}
 	return
 }

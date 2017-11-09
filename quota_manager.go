@@ -1,36 +1,27 @@
 package pmproxy
 
-// mtCfQt associates a ReqMatcher with consumption
+// MtCfQt associates a ReqMatcher with consumption
 // coeficient and quota
-type mtCfQt struct {
-	rm *ReqMatcher
-	k  float32
-	t  uint64
+type MtCfQt struct {
+	*ReqMatcher
+	// Consumption coeficient
+	K float32 `json:"k"`
+	// Quota
+	T uint64 `json:"t"`
 }
 
 // QMng manages quotas
-type QMng struct {
-	// Hierarchy of coeficients and quotas.
-	// mtCfQt associations with lower index are higher
-	// in the hierarchy.
-	qh []mtCfQt
-
-	// TODO define hierarchy of quotas
-}
+type QMng []MtCfQt
 
 // Quota determines the coeficient and quota
-func (q *QMng) Quota(u *usrRC) (k float32, t uint64) {
-	i, b := 0, false
-	for !b && i != len(q.qh) {
-		b = q.qh[i].rm.Match(u)
-		if !b {
-			i = i + 1
-		}
+func (q QMng) Quota(u *usrRC) (k float32, t uint64) {
+	mc := make([]Matcher, len(q))
+	for i, j := range q {
+		mc[i] = j
 	}
-	// { bounded linear search with ReqMatcher.Match as
-	// predicate }
+	b, i := BLS(mc, u)
 	if b {
-		k, t = q.qh[i].k, q.qh[i].t
+		k, t = q[i].K, q[i].T
 	} else {
 		// { not found }
 		k, t = -1, 0

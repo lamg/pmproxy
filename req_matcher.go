@@ -10,6 +10,7 @@ type ReqMatcher struct {
 
 // Match does de actual matching
 func (r *ReqMatcher) Match(u *usrRC) (y bool) {
+	// TODO
 	return
 }
 
@@ -23,6 +24,8 @@ type Matcher interface {
 func BLS(ms []Matcher, u *usrRC) (b bool,
 	i int) {
 	b, i = false, 0
+	// { (b = (exists i: 0<=i<len(ms): ms[i].Match(u)) =
+	//	 i!=len(ms)) and 0<=i<=len(ms) }
 	for !b && i != len(ms) {
 		b = ms[i].Match(u)
 		if !b {
