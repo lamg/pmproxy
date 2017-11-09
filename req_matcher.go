@@ -1,11 +1,47 @@
 package pmproxy
 
+import (
+	"net"
+	"regexp"
+
+	rt "github.com/lamg/rtimespan"
+)
+
+// IPRangeM is an IP range matcher, with a time
+// interval/rule
+type IPRangeM struct {
+	// convert IP to byte slice and compare
+	Start, End net.IP
+	Span       *rt.RSpan
+}
+
+// LDAPGroupM matches the user's LDAP group
+type LDAPGroupM struct {
+	Name string
+	Span *rt.RSpan
+}
+
+// URLM matches by URL
+type URLM struct {
+	HostR *regexp.Regexp
+	Ports []int
+	Span  *rt.RSpan
+}
+
+// UsersM matches by user name
+type UsersM struct {
+	Users []string
+	Span  *rt.RSpan
+}
+
+// ContM matches by content type
+type ContM struct {
+	MIMET []string
+	Span  *rt.RSpan
+}
+
 // ReqMatcher matches requests
 type ReqMatcher struct {
-	// Group-time
-	// RemoteAddr-time
-	// Host-time
-	// User-time
 }
 
 // Match does de actual matching

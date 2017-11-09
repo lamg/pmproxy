@@ -10,6 +10,8 @@ type reqConn struct {
 	rAddr string
 	url   *url.URL
 	tm    time.Time
+	// content type
+	contTpe string
 }
 
 // Connector processes connection requests
@@ -26,5 +28,8 @@ func (n *Connector) GetConn(r *reqConn) (c net.Conn, e error) {
 	if e == nil {
 		qc, e = n.qm.attachInc(uc)
 	}
+	// goes to every resource manager, associates to
+	// the request, using a matcher, some resource it
+	// manages
 	return
 }

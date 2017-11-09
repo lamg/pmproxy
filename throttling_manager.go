@@ -26,8 +26,8 @@ func (t TMng) ThrottSpec(u *usrRC) (d time.Duration,
 	if b {
 		d, c = t[i].Intv, t[i].Cap
 	} else {
-		// TODO define these values
-		d, c = 0, 0
+		d, c = time.Millisecond, 1024
+		// 1 KiB/ms
 	}
 	return
 }
