@@ -127,15 +127,7 @@ func (q *QAdm) userCons(ip, s string) (cs uint64,
 	var c *credentials
 	c, e = q.sm.check(ip, s)
 	if e == nil {
-		var ok bool
-		cs, ok = q.uc.Load(c.User)
-		if !ok {
-			e = &errors.Error{
-				Code: ErrorUCLd,
-				Err: fmt.Errorf("Not found consupmtion for user %s",
-					c.User),
-			}
-		}
+		cs, _ = q.uc.Load(c.User)
 	}
 	return
 }
