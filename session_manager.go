@@ -115,7 +115,7 @@ func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 		if !ok {
 			e = &errors.Error{
 				Code: errorCheck,
-				Err:  fmt.Errorf("User %s not logged", u.Name),
+				Err:  fmt.Errorf("Not logged from %s", ip),
 			}
 		}
 	}
