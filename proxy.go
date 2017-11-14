@@ -67,6 +67,7 @@ func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
 	cs := p.rmng.CanDo(r, time.Now())
 	if cs != nil {
+		w.Header().Set("Connection", "close")
 		url := causeToURL(cs, p.wIntURL)
 		h.Redirect(w, r, url, h.StatusTemporaryRedirect)
 		// { redirected to the proxy's web interface
