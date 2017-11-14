@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/lamg/errors"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
-	"log"
-	"net/http"
 )
 
 func main() {
@@ -36,9 +38,23 @@ func main() {
 		}
 	}
 	if e == nil {
-		go http.ListenAndServeTLS(c.UISrvAddr, c.CertFl, c.KeyFl,
-			lh)
-		e = http.ListenAndServe(c.ProxySrvAddr, pm)
+		// Setting timeouts according
+		// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+		webUI := &http.Server{
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			Addr:         c.UISrvAddr,
+			Handler:      lh,
+		}
+		go webUI.ListenAndServeTLS(c.CertFl, c.KeyFl)
+		proxy := &http.Server{
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			Addr:         c.ProxySrvAddr,
+			Handler:      pm,
+		}
+
+		e = proxy.ListenAndServe()
 	}
 	if e != nil {
 		log.Fatal(e.Error())
