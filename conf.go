@@ -76,8 +76,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			c.LogBName == nc.LogBName &&
 			c.ProxySrvAddr == nc.ProxySrvAddr && c.Quota == nc.Quota &&
 			c.RsDt == nc.RsDt && c.StPath == nc.StPath &&
-			c.UISrvAddr == nc.UISrvAddr && c.DataDir == nc.DataDir &&
-			c.HostName == nc.HostName
+			c.UISrvAddr == nc.UISrvAddr
 	}
 	if ok {
 		for k, v := range c.GrpIface {

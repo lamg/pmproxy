@@ -37,8 +37,6 @@ func TestConfPMProxy(t *testing.T) {
 }
 
 var pconf = &Conf{
-	DataDir:      "dir",
-	HostName:     "proxy.org",
 	ProxySrvAddr: ":9080",
 	GrpIface:     map[string]string{"UPR-Internet-Full": "eth0"},
 	GrpQtPref:    "UPR-Internet-",
