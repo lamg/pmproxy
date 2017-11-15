@@ -15,6 +15,11 @@ import (
 
 // Conf stores data for initializing PMProxy
 type Conf struct {
+	// DataDir is the directory where certificates are
+	DataDir string `json:"dataDir"`
+	// HostName is the domain name associated to the server's
+	// IP
+	HostName string `json:"hostName"`
 	// ProxySrvAddr host:port to serve the proxy
 	ProxySrvAddr string `json:"proxySrvAddr"`
 	// GrpIface group-network interface dictionary file path
@@ -71,7 +76,8 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			c.LogBName == nc.LogBName &&
 			c.ProxySrvAddr == nc.ProxySrvAddr && c.Quota == nc.Quota &&
 			c.RsDt == nc.RsDt && c.StPath == nc.StPath &&
-			c.UISrvAddr == nc.UISrvAddr
+			c.UISrvAddr == nc.UISrvAddr && c.DataDir == nc.DataDir &&
+			c.HostName == nc.HostName
 	}
 	if ok {
 		for k, v := range c.GrpIface {

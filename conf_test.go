@@ -1,9 +1,10 @@
 package pmproxy
 
 import (
+	"testing"
+
 	fs "github.com/lamg/filesystem"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestConfPMProxy(t *testing.T) {
@@ -36,6 +37,8 @@ func TestConfPMProxy(t *testing.T) {
 }
 
 var pconf = &Conf{
+	DataDir:      "dir",
+	HostName:     "proxy.org",
 	ProxySrvAddr: ":9080",
 	GrpIface:     map[string]string{"UPR-Internet-Full": "eth0"},
 	GrpQtPref:    "UPR-Internet-",
@@ -57,6 +60,8 @@ var pconf = &Conf{
 
 var conf = `
 {
+	"dataDir":"dir",
+	"hostName":"proxy.org",
 	"proxySrvAddr": ":9080",
 	"grpIface": {"UPR-Internet-Full":"eth0"},
 	"grpQtPref":"UPR-Internet-",

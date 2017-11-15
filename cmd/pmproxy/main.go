@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -9,6 +12,7 @@ import (
 	"github.com/lamg/errors"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 func main() {
@@ -38,16 +42,34 @@ func main() {
 		}
 	}
 	if e == nil {
+		hostPolicy := func(ctx context.Context,
+			host string) (e error) {
+			if host != c.HostName {
+				e = fmt.Errorf(
+					"acme/autocert: only %s host is allowed",
+					c.HostName)
+			}
+			return
+		}
+		m := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: hostPolicy,
+			Cache:      autocert.DirCache(c.DataDir),
+		}
 		// Setting timeouts according
-		// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+		// https://blog.cloudflare.com/
+		// the-complete-guide-to-golang-net-http-timeouts/
 		webUI := &http.Server{
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			IdleTimeout:  120 * time.Second,
 			Addr:         c.UISrvAddr,
 			Handler:      lh,
+			TLSConfig: &tls.Config{
+				GetCertificate: m.GetCertificate,
+			},
 		}
-		go webUI.ListenAndServeTLS(c.CertFl, c.KeyFl)
+		go webUI.ListenAndServeTLS("", "")
 		proxy := &http.Server{
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
