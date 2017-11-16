@@ -112,12 +112,12 @@ func (m *RRConnMng) newConn(ntw, addr string,
 	var cn net.Conn
 	if e == nil {
 		tca := &net.TCPAddr{IP: la.IP}
-		println(tca.String())
 		d := &net.Dialer{
 			LocalAddr: tca,
 			Timeout:   10 * time.Second,
 		}
 		cn, e = d.Dial(ntw, addr)
+		println(e == nil)
 	}
 	if e == nil {
 		c = &conCount{cn, m.qa, addr, r.RemoteAddr}
