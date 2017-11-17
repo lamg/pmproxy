@@ -117,9 +117,6 @@ func (m *RRConnMng) newConn(ntw, addr string,
 			Timeout:   10 * time.Second,
 		}
 		cn, e = d.Dial(ntw, addr)
-		if e != nil {
-			println(e.Error())
-		}
 	}
 	if e == nil {
 		c = &conCount{cn, m.qa, addr, r.RemoteAddr}
