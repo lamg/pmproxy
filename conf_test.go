@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"testing"
-	"time"
 
 	fs "github.com/lamg/filesystem"
 	"github.com/stretchr/testify/require"
@@ -39,36 +38,22 @@ func TestConfPMProxy(t *testing.T) {
 
 var pconf = &Conf{
 	ProxySrvAddr: ":9080",
-	GrpThrottle: map[string]*ThrSpec{
-		"A": &ThrSpec{
-			// 500 KiB/s
-			Capacity: 500 * 1024,
-			Interval: time.Second,
-		},
-		"B": &ThrSpec{
-			// 80 KiB/s
-			Capacity: 80 * 1024,
-			Interval: time.Second,
-		},
-	},
-	GrpIface: map[string]string{
-		"UPR-Internet-Full": "eth0",
-	},
-	GrpQtPref: "UPR-Internet-",
-	LogBName:  "logs/access.log",
-	AccExcp:   "accExcp.json",
-	RsDt:      "2017-09-30T00:00:00-04:00",
-	Cons:      "consumos.json",
-	Quota:     "cuotas.json",
-	UISrvAddr: ":8081",
-	AdmGrp:    "_GrupoRedes",
-	StPath:    "public",
-	LoginAddr: "http://10.2.24.145:4000",
-	CertFl:    "cert.pem",
-	KeyFl:     "key.pem",
-	ADAddr:    "10.2.24.35:636",
-	ADAccSf:   "@upr.edu.cu",
-	BDN:       "dc=upr,dc=edu,dc=cu",
+	GrpIface:     map[string]string{"UPR-Internet-Full": "eth0"},
+	GrpQtPref:    "UPR-Internet-",
+	LogBName:     "logs/access.log",
+	AccExcp:      "accExcp.json",
+	RsDt:         "2017-09-30T00:00:00-04:00",
+	Cons:         "consumos.json",
+	Quota:        "cuotas.json",
+	UISrvAddr:    ":8081",
+	AdmGrp:       "_GrupoRedes",
+	StPath:       "public",
+	LoginAddr:    "http://10.2.24.145:4000",
+	CertFl:       "cert.pem",
+	KeyFl:        "key.pem",
+	ADAddr:       "10.2.24.35:636",
+	ADAccSf:      "@upr.edu.cu",
+	BDN:          "dc=upr,dc=edu,dc=cu",
 }
 
 var conf = `
@@ -77,10 +62,6 @@ var conf = `
 	"hostName":"proxy.org",
 	"proxySrvAddr": ":9080",
 	"grpIface": {"UPR-Internet-Full":"eth0"},
-	"grpThrottle":{
-		"A": {"capacity":512000,"interval":1000000000},
-		"B": {"capacity":81920,"interval":1000000000}
-	},
 	"grpQtPref":"UPR-Internet-",
 	"logBName":"logs/access.log",
 	"accExcp":"accExcp.json",
@@ -98,7 +79,6 @@ var conf = `
 	"bdn":"dc=upr,dc=edu,dc=cu"
 }
 `
-
 var accR = `[
 	{"hostRE":"google.com.cu","start":null,"end":null,"consCfc":0},
 	{"hostRE":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},

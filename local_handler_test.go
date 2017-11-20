@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
@@ -24,20 +23,7 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
 		rmng := NewRRConnMng(nil, qa, rl,
-			map[string]string{"B": "eth0", "A": "eth1"},
-			map[string]*ThrSpec{
-				"A": &ThrSpec{
-					// 500 KiB/s
-					Capacity: 500 * 1024,
-					Interval: time.Second,
-				},
-				"B": &ThrSpec{
-					// 80 KiB/s
-					Capacity: 80 * 1024,
-					Interval: time.Second,
-				},
-			},
-		)
+			map[string]string{"B": "eth0", "A": "eth1"})
 		p = NewPMProxy(rmng, new(url.URL))
 	}
 	return
