@@ -25,7 +25,7 @@ type Conf struct {
 	// GrpIface group-network interface dictionary file path
 	GrpIface map[string]string `json:"grpIface"`
 	// GrpThrottle group-network throttle specification dictionary
-	GrpThrottle map[string]*ThrSpec `json:"grpThrottle"`
+	GrpThrottle map[string]float64 `json:"grpThrottle"`
 	// GrpQtPref quota group prefix in memberOf field in AD
 	GrpQtPref string `json:"grpQtPref"`
 	// LogBName is the logs base path and name
@@ -99,10 +99,9 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 	}
 	if ok {
 		for k, v := range c.GrpThrottle {
-			var th *ThrSpec
+			var th float64
 			th, ok = nc.GrpThrottle[k]
-			ok = ok && th.Capacity == v.Capacity &&
-				th.Interval == v.Interval
+			ok = ok && th == v
 			if !ok {
 				break
 			}

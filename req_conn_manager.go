@@ -2,15 +2,14 @@ package pmproxy
 
 import (
 	"fmt"
-	"io"
 	"net"
 	h "net/http"
 	"strings"
 	"time"
 
-	rl "github.com/juju/ratelimit"
 	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
+	"golang.org/x/tools/godoc/util"
 )
 
 // RRConnMng manages requests, responses and connections
@@ -21,13 +20,13 @@ type RRConnMng struct {
 	qa  *QAdm
 	rl  *RLog
 	uf  map[string]string
-	ts  map[string]*ThrSpec
+	ts  map[string]float64
 }
 
 // NewRRConnMng creates a new RRConnMng
 func NewRRConnMng(d dl.Dialer, q *QAdm,
 	l *RLog, u map[string]string,
-	t map[string]*ThrSpec) (r *RRConnMng) {
+	t map[string]float64) (r *RRConnMng) {
 	r = &RRConnMng{d, q, l, u, t}
 	return
 }
@@ -122,39 +121,40 @@ func (m *RRConnMng) newConn(ntw, addr string,
 		}
 		cn, e = d.Dial(ntw, addr)
 	}
-	var ts *ThrSpec
+	var ts float64
 	if e == nil {
 		ts, e = m.getThrottle(r.RemoteAddr)
 	}
-	var bk *rl.Bucket
+	var bk *util.Throttle
 	if e == nil {
-		bk = rl.NewBucket(ts.Interval, ts.Capacity)
+		bk = util.NewThrottle(ts, time.Millisecond)
 	}
 	if e == nil {
 		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
-		c = newBkConn(r, bk)
+		c = newThConn(r, bk)
 	}
 	return
 }
 
-type bkConn struct {
+type thConn struct {
 	net.Conn
-	rd io.Reader
-	wr io.Writer
+	thr *util.Throttle
 }
 
-func newBkConn(c net.Conn, bk *rl.Bucket) (b *bkConn) {
-	b = &bkConn{c, rl.Reader(c, bk), rl.Writer(c, bk)}
+func newThConn(c net.Conn, thr *util.Throttle) (b *thConn) {
+	b = &thConn{c, thr}
 	return
 }
 
-func (b *bkConn) Read(p []byte) (n int, e error) {
-	n, e = b.rd.Read(p)
+func (b *thConn) Read(p []byte) (n int, e error) {
+	b.thr.Throttle()
+	n, e = b.Conn.Read(p)
 	return
 }
 
-func (b *bkConn) Write(p []byte) (n int, e error) {
-	n, e = b.wr.Write(p)
+func (b *thConn) Write(p []byte) (n int, e error) {
+	b.thr.Throttle()
+	n, e = b.Conn.Write(p)
 	return
 }
 
@@ -181,7 +181,7 @@ func (m *RRConnMng) getUsrNtIf(r string) (n string,
 
 // getThrottle returns the duration and capacity for
 // using it rl.NewBucket
-func (m *RRConnMng) getThrottle(r string) (t *ThrSpec,
+func (m *RRConnMng) getThrottle(r string) (t float64,
 	e error) {
 	var ip string
 	ip, _, e = net.SplitHostPort(r)

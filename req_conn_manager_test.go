@@ -15,8 +15,7 @@ func TestThrottle(t *testing.T) {
 	require.NoError(t, ec)
 	ts0, ok := c.GrpThrottle["A"]
 	require.True(t, ok)
-	require.True(t, ts.Capacity == ts0.Capacity &&
-		ts.Interval == ts0.Interval)
+	require.True(t, ts == ts0, "%.1f != %.1f", ts, ts0)
 }
 
 func newRRConnMng(t *testing.T) (m *RRConnMng, c *Conf) {

@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"testing"
-	"time"
 
 	fs "github.com/lamg/filesystem"
 	"github.com/stretchr/testify/require"
@@ -39,17 +38,9 @@ func TestConfPMProxy(t *testing.T) {
 
 var pconf = &Conf{
 	ProxySrvAddr: ":9080",
-	GrpThrottle: map[string]*ThrSpec{
-		"A": &ThrSpec{
-			// 500 KiB/s
-			Capacity: 500 * 1024,
-			Interval: time.Second,
-		},
-		"B": &ThrSpec{
-			// 80 KiB/s
-			Capacity: 80 * 1024,
-			Interval: time.Second,
-		},
+	GrpThrottle: map[string]float64{
+		"A": 0.9,
+		"B": 0.8,
 	},
 	GrpIface: map[string]string{
 		"UPR-Internet-Full": "eth0",
@@ -78,8 +69,8 @@ var conf = `
 	"proxySrvAddr": ":9080",
 	"grpIface": {"UPR-Internet-Full":"eth0"},
 	"grpThrottle":{
-		"A": {"capacity":512000,"interval":1000000000},
-		"B": {"capacity":81920,"interval":1000000000}
+		"A": 0.9,
+		"B": 0.8
 	},
 	"grpQtPref":"UPR-Internet-",
 	"logBName":"logs/access.log",
