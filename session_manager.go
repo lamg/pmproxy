@@ -23,7 +23,7 @@ var ()
 // IPUser is an interface for getting *User associated to
 // user's names.
 type IPUser interface {
-	User(string) *User
+	User(string) (*User, error)
 }
 
 // credentials is a pair of user and password made for
@@ -94,12 +94,14 @@ func (s *SMng) check(ip, t string) (c *credentials,
 	e *errors.Error) {
 	c, e = s.crt.checkUser(t)
 	if e == nil {
-		u := s.User(ip)
-		if u == nil || u.UserName != c.User {
-			e = &errors.Error{
-				Code: 0,
-				Err:  fmt.Errorf("User %s not logged", c.User),
-			}
+		u, ec := s.User(ip)
+		if ec != nil {
+			e = errors.NewForwardErr(ec)
+			e.Code = errorCheck
+		} else if u.UserName != c.User {
+			e = errors.NewForwardErr(
+				fmt.Errorf("User %s not logged", c.User))
+			e.Code = errorCheck
 		}
 	}
 	return
@@ -150,10 +152,12 @@ func (s *SMng) exists(t, usr string) (e *errors.Error) {
 }
 
 // User returns the User struct associated to ip
-func (s *SMng) User(ip string) (u *User) {
+func (s *SMng) User(ip string) (u *User, e error) {
 	iv, ok := s.sessions.Load(ip)
 	if ok {
 		u, _ = iv.(*User)
+	} else {
+		e = fmt.Errorf("Not logged %s", ip)
 	}
 	return
 }

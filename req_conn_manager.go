@@ -9,6 +9,7 @@ import (
 
 	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
+	"golang.org/x/tools/godoc/util"
 )
 
 // RRConnMng manages requests, responses and connections
@@ -19,12 +20,14 @@ type RRConnMng struct {
 	qa  *QAdm
 	rl  *RLog
 	uf  map[string]string
+	ts  map[string]float64
 }
 
 // NewRRConnMng creates a new RRConnMng
 func NewRRConnMng(d dl.Dialer, q *QAdm,
-	l *RLog, u map[string]string) (r *RRConnMng) {
-	r = &RRConnMng{d, q, l, u}
+	l *RLog, u map[string]string,
+	t map[string]float64) (r *RRConnMng) {
+	r = &RRConnMng{d, q, l, u, t}
 	return
 }
 
@@ -118,42 +121,76 @@ func (m *RRConnMng) newConn(ntw, addr string,
 		}
 		cn, e = d.Dial(ntw, addr)
 	}
+	var ts float64
 	if e == nil {
 		c = &conCount{cn, m.qa, addr, r.RemoteAddr}
 	}
+	var bk *util.Throttle
+	if e == nil {
+		bk = util.NewThrottle(ts, time.Millisecond)
+	}
+	if e == nil {
+		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
+		c = newThConn(r, bk)
+	}
+	return
+}
+
+type thConn struct {
+	net.Conn
+	thr *util.Throttle
+}
+
+func newThConn(c net.Conn, thr *util.Throttle) (b *thConn) {
+	b = &thConn{c, thr}
+	return
+}
+
+func (b *thConn) Read(p []byte) (n int, e error) {
+	b.thr.Throttle()
+	n, e = b.Conn.Read(p)
+	return
+}
+
+func (b *thConn) Write(p []byte) (n int, e error) {
+	b.thr.Throttle()
+	n, e = b.Conn.Write(p)
 	return
 }
 
 func (m *RRConnMng) getUsrNtIf(r string) (n string,
 	e *errors.Error) {
-	h, _, ec := net.SplitHostPort(r)
+	ip, _, ec := net.SplitHostPort(r)
 	e = errors.NewForwardErr(ec)
-	var v interface{}
-	if e == nil {
-		var ok bool
-		v, ok = m.qa.sm.sessions.Load(h)
-		if !ok {
-			e = &errors.Error{
-				Code: errors.ErrorKey,
-				Err: fmt.Errorf("Not found key %s in p.qa.sm.sessions",
-					h),
-			}
-		}
-	}
 	var u *User
 	if e == nil {
-		var ok bool
-		u, ok = v.(*User)
-		if !ok {
-			e = &errors.Error{
-				Code: errors.ErrorTypeAssertion,
-				Err:  fmt.Errorf("v is not an *User"),
-			}
-		}
+		u, ec = m.qa.sm.User(ip)
+		e = errors.NewForwardErr(ec)
 	}
 	if e == nil {
 		var ok bool
 		n, ok = m.uf[u.QuotaGroup]
+		if !ok {
+			e = errors.NewForwardErr(
+				fmt.Errorf("Not found interface for %s", u.QuotaGroup))
+		}
+	}
+	return
+}
+
+// getThrottle returns the duration and capacity for
+// using it rl.NewBucket
+func (m *RRConnMng) getThrottle(r string) (t float64,
+	e error) {
+	var ip string
+	ip, _, e = net.SplitHostPort(r)
+	var u *User
+	if e == nil {
+		u, e = m.qa.sm.User(ip)
+	}
+	if e == nil {
+		var ok bool
+		t, ok = m.ts[u.QuotaGroup]
 		if !ok {
 			e = &errors.Error{
 				Code: errors.ErrorKey,

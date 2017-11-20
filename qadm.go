@@ -145,8 +145,8 @@ func (q *QAdm) cons(uAdr, host string, t time.Time,
 	k, cs := q.canReq(ip, hs, pr, t)
 	if cs == nil {
 		c := uint64(k * float32(p))
-		u := q.sm.User(ip)
-		y = u != nil
+		u, e := q.sm.User(ip)
+		y = e == nil
 		if y {
 			n, _ := q.uc.Load(u.UserName)
 			q.uc.Store(u.UserName, n+c)
@@ -156,9 +156,9 @@ func (q *QAdm) cons(uAdr, host string, t time.Time,
 }
 
 func (q *QAdm) hasQuota(ip string) (y bool) {
-	u := q.sm.User(ip)
+	u, e := q.sm.User(ip)
 	var cons, quota uint64
-	if u != nil {
+	if e == nil {
 		cons, _ = q.uc.Load(u.UserName)
 		quota, _ = q.gq.Load(u.QuotaGroup)
 	}
@@ -167,8 +167,8 @@ func (q *QAdm) hasQuota(ip string) (y bool) {
 }
 
 func (q *QAdm) isLogged(ip string) (y bool) {
-	u := q.sm.User(ip)
-	y = u != nil
+	_, e := q.sm.User(ip)
+	y = e == nil
 	return
 }
 

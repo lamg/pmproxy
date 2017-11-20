@@ -38,22 +38,28 @@ func TestConfPMProxy(t *testing.T) {
 
 var pconf = &Conf{
 	ProxySrvAddr: ":9080",
-	GrpIface:     map[string]string{"UPR-Internet-Full": "eth0"},
-	GrpQtPref:    "UPR-Internet-",
-	LogBName:     "logs/access.log",
-	AccExcp:      "accExcp.json",
-	RsDt:         "2017-09-30T00:00:00-04:00",
-	Cons:         "consumos.json",
-	Quota:        "cuotas.json",
-	UISrvAddr:    ":8081",
-	AdmGrp:       "_GrupoRedes",
-	StPath:       "public",
-	LoginAddr:    "http://10.2.24.145:4000",
-	CertFl:       "cert.pem",
-	KeyFl:        "key.pem",
-	ADAddr:       "10.2.24.35:636",
-	ADAccSf:      "@upr.edu.cu",
-	BDN:          "dc=upr,dc=edu,dc=cu",
+	GrpThrottle: map[string]float64{
+		"A": 0.9,
+		"B": 0.8,
+	},
+	GrpIface: map[string]string{
+		"UPR-Internet-Full": "eth0",
+	},
+	GrpQtPref: "UPR-Internet-",
+	LogBName:  "logs/access.log",
+	AccExcp:   "accExcp.json",
+	RsDt:      "2017-09-30T00:00:00-04:00",
+	Cons:      "consumos.json",
+	Quota:     "cuotas.json",
+	UISrvAddr: ":8081",
+	AdmGrp:    "_GrupoRedes",
+	StPath:    "public",
+	LoginAddr: "http://10.2.24.145:4000",
+	CertFl:    "cert.pem",
+	KeyFl:     "key.pem",
+	ADAddr:    "10.2.24.35:636",
+	ADAccSf:   "@upr.edu.cu",
+	BDN:       "dc=upr,dc=edu,dc=cu",
 }
 
 var conf = `
@@ -62,6 +68,10 @@ var conf = `
 	"hostName":"proxy.org",
 	"proxySrvAddr": ":9080",
 	"grpIface": {"UPR-Internet-Full":"eth0"},
+	"grpThrottle":{
+		"A": 0.9,
+		"B": 0.8
+	},
 	"grpQtPref":"UPR-Internet-",
 	"logBName":"logs/access.log",
 	"accExcp":"accExcp.json",

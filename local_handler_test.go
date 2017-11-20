@@ -23,7 +23,12 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL()
 	if e == nil {
 		rmng := NewRRConnMng(nil, qa, rl,
-			map[string]string{"B": "eth0", "A": "eth1"})
+			map[string]string{"B": "eth0", "A": "eth1"},
+			map[string]float64{
+				"A": 0.9,
+				"B": 0.8,
+			},
+		)
 		p = NewPMProxy(rmng, new(url.URL))
 	}
 	return

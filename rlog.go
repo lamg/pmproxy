@@ -1,9 +1,10 @@
 package pmproxy
 
 import (
+	"io"
+
 	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
-	"io"
 )
 
 const (
@@ -32,14 +33,13 @@ func (rl *RLog) setZero() {
 }
 
 func (rl *RLog) record(l *Log) {
-	u := rl.iu.User(l.Addr)
-	if u == nil {
+	u, e := rl.iu.User(l.Addr)
+	if e != nil {
 		l.User = "-"
 	} else {
 		l.User = u.UserName
 	}
-	var ec error
-	_, ec = rl.w.Write([]byte(l.String() + "\n"))
+	_, ec := rl.w.Write([]byte(l.String() + "\n"))
 	if ec != nil {
 		rl.e = &errors.Error{
 			Code: ErrorRecWrt,
