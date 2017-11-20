@@ -24,6 +24,8 @@ type Conf struct {
 	ProxySrvAddr string `json:"proxySrvAddr"`
 	// GrpIface group-network interface dictionary file path
 	GrpIface map[string]string `json:"grpIface"`
+	// GrpThrottle group-network throttle specification dictionary
+	GrpThrottle map[string]*ThrSpec `json:"grpThrottle"`
 	// GrpQtPref quota group prefix in memberOf field in AD
 	GrpQtPref string `json:"grpQtPref"`
 	// LogBName is the logs base path and name
@@ -63,6 +65,12 @@ type Conf struct {
 	BDN string `json:"bdn"`
 }
 
+// ThrSpec is the network throttle specification
+type ThrSpec struct {
+	Capacity int64         `json:"capacity"`
+	Interval time.Duration `json:"interval"`
+}
+
 // Equal is the equality comparison
 func (c *Conf) Equal(v interface{}) (ok bool) {
 	var nc *Conf
@@ -80,9 +88,22 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 	}
 	if ok {
 		for k, v := range c.GrpIface {
-			ok = nc.GrpIface[k] == v
+			var s string
+			s, ok = nc.GrpIface[k]
+			ok = ok && s == v
 			if !ok {
 				// linear search in maps forces to use break
+				break
+			}
+		}
+	}
+	if ok {
+		for k, v := range c.GrpThrottle {
+			var th *ThrSpec
+			th, ok = nc.GrpThrottle[k]
+			ok = ok && th.Capacity == v.Capacity &&
+				th.Interval == v.Interval
+			if !ok {
 				break
 			}
 		}
@@ -161,7 +182,8 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc)
-		rmng := NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface)
+		rmng := NewRRConnMng(dl.NewOSDialer(), qa, rl,
+			c.GrpIface, c.GrpThrottle)
 		p = NewPMProxy(rmng, lga)
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)

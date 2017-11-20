@@ -2,11 +2,13 @@ package pmproxy
 
 import (
 	"fmt"
+	"io"
 	"net"
 	h "net/http"
 	"strings"
 	"time"
 
+	rl "github.com/juju/ratelimit"
 	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
 )
@@ -19,12 +21,14 @@ type RRConnMng struct {
 	qa  *QAdm
 	rl  *RLog
 	uf  map[string]string
+	ts  map[string]*ThrSpec
 }
 
 // NewRRConnMng creates a new RRConnMng
 func NewRRConnMng(d dl.Dialer, q *QAdm,
-	l *RLog, u map[string]string) (r *RRConnMng) {
-	r = &RRConnMng{d, q, l, u}
+	l *RLog, u map[string]string,
+	t map[string]*ThrSpec) (r *RRConnMng) {
+	r = &RRConnMng{d, q, l, u, t}
 	return
 }
 
@@ -118,40 +122,51 @@ func (m *RRConnMng) newConn(ntw, addr string,
 		}
 		cn, e = d.Dial(ntw, addr)
 	}
+	var ts *ThrSpec
 	if e == nil {
-		c = &conCount{cn, m.qa, addr, r.RemoteAddr}
+		ts, e = m.getThrottle(r.RemoteAddr)
 	}
+	var bk *rl.Bucket
+	if e == nil {
+		bk = rl.NewBucket(ts.Interval, ts.Capacity)
+	}
+	if e == nil {
+		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
+		c = newBkConn(r, bk)
+	}
+	return
+}
+
+type bkConn struct {
+	net.Conn
+	rd io.Reader
+	wr io.Writer
+}
+
+func newBkConn(c net.Conn, bk *rl.Bucket) (b *bkConn) {
+	b = &bkConn{c, rl.Reader(c, bk), rl.Writer(c, bk)}
+	return
+}
+
+func (b *bkConn) Read(p []byte) (n int, e error) {
+	n, e = b.rd.Read(p)
+	return
+}
+
+func (b *bkConn) Write(p []byte) (n int, e error) {
+	n, e = b.wr.Write(p)
 	return
 }
 
 func (m *RRConnMng) getUsrNtIf(r string) (n string,
 	e *errors.Error) {
-	h, _, ec := net.SplitHostPort(r)
+	ip, _, ec := net.SplitHostPort(r)
 	e = errors.NewForwardErr(ec)
-	var v interface{}
-	if e == nil {
-		var ok bool
-		v, ok = m.qa.sm.sessions.Load(h)
-		if !ok {
-			e = &errors.Error{
-				Code: errors.ErrorKey,
-				Err: fmt.Errorf("Not found key %s in p.qa.sm.sessions",
-					h),
-			}
-		}
-	}
 	var u *User
 	if e == nil {
-		var ok bool
-		u, ok = v.(*User)
-		if !ok {
-			e = &errors.Error{
-				Code: errors.ErrorTypeAssertion,
-				Err:  fmt.Errorf("v is not an *User"),
-			}
-		}
+		u = m.qa.sm.User(ip)
 	}
-	if e == nil {
+	if e == nil && u != nil {
 		var ok bool
 		n, ok = m.uf[u.QuotaGroup]
 		if !ok {
@@ -159,6 +174,27 @@ func (m *RRConnMng) getUsrNtIf(r string) (n string,
 				Code: errors.ErrorKey,
 				Err:  fmt.Errorf("Not found key %s", u.QuotaGroup),
 			}
+		}
+	}
+	return
+}
+
+// getThrottle returns the duration and capacity for
+// using it rl.NewBucket
+func (m *RRConnMng) getThrottle(r string) (t *ThrSpec,
+	e error) {
+	var ip string
+	ip, _, e = net.SplitHostPort(r)
+	var u *User
+	if e == nil {
+		u = m.qa.sm.User(ip)
+	}
+	if e == nil && u != nil {
+		var ok bool
+		t, ok = m.ts[u.QuotaGroup]
+		if !ok {
+			e = fmt.Errorf("Not found throttling spec for %s",
+				u.QuotaGroup)
 		}
 	}
 	return
