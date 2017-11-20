@@ -123,15 +123,15 @@ func (m *RRConnMng) newConn(ntw, addr string,
 	}
 	var ts float64
 	if e == nil {
-		c = &conCount{cn, m.qa, addr, r.RemoteAddr}
+		ts, e = m.getThrottle(r.RemoteAddr)
 	}
-	var bk *util.Throttle
+	var thr *util.Throttle
 	if e == nil {
-		bk = util.NewThrottle(ts, time.Millisecond)
+		thr = util.NewThrottle(ts, time.Millisecond)
 	}
 	if e == nil {
 		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
-		c = newThConn(r, bk)
+		c = newThConn(r, thr)
 	}
 	return
 }
