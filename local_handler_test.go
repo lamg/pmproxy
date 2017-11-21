@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
+
+	"github.com/lamg/clock"
 
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
@@ -19,8 +22,16 @@ const (
 	ErrorServeHTTP = iota
 )
 
+func tClock() (c clock.Clock) {
+	c = &clock.TClock{
+		Intv: time.Second,
+		Time: dtTime(),
+	}
+	return
+}
+
 func initPMProxy() (p *PMProxy, e *errors.Error) {
-	qa, rl, e := initQARL()
+	qa, rl, e := initQARL(tClock())
 	if e == nil {
 		rmng := NewRRConnMng(nil, qa, rl,
 			map[string]string{"B": "eth0", "A": "eth1"},
@@ -35,7 +46,7 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 }
 
 func TestServerLogInOut(t *testing.T) {
-	qa, _, e := initQARL()
+	qa, _, e := initQARL(tClock())
 	require.True(t, e == nil)
 	pm := NewLocalHn(qa, "")
 	require.True(t, e == nil)
@@ -187,7 +198,7 @@ func TestUnsMethod(t *testing.T) {
 }
 
 func loginServ(t *testing.T, c *credentials, ip string) (lh *LocalHn, s string) {
-	qa, _, e := initQARL()
+	qa, _, e := initQARL(tClock())
 	require.True(t, e == nil)
 
 	lh = NewLocalHn(qa, "")

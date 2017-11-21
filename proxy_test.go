@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
+func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e *errors.Error) {
 	// init of l
 	var bf *bytes.Buffer
 	bf = bytes.NewBufferString(accR)
@@ -30,28 +30,33 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 		da, cry := NewDAuth(), NewJWTCrypt(pKey)
 		sm = NewSMng(da, cry)
 	}
-	var dt time.Time
-	if e == nil {
-		var ec error
-		dt, ec = time.Parse(time.RFC3339, dtPrs)
-		e = errors.NewForwardErr(ec)
-	}
-	var cl clock.Clock
 	var gq *QuotaMap
 	if e == nil {
-		cl = &clock.TClock{Intv: time.Second, Time: dt}
-		gqp := NewPersister(w.NewDWF(), dt, time.Second, cl)
+		cl = &clock.TClock{Intv: time.Second, Time: dtTime()}
+		gqp := NewPersister(w.NewDWF(), dtTime(), time.Second,
+			cl)
 		gq, e = NewQMFromR(bytes.NewBufferString(quota), gqp)
 	}
 
 	var uc *ConsMap
 	if e == nil {
-		ucp := NewPersister(w.NewDWF(), dt, time.Second, cl)
+		ucp := NewPersister(w.NewDWF(), dtTime(), time.Second,
+			cl)
 		uc, e = NewCMFromR(bytes.NewBufferString(cons), ucp)
 	}
 	qa = NewQAdm(sm, gq, uc, l, cl)
 	// rl initialization
 	rl = NewRLog(w.NewDWF(), sm)
+	return
+}
+
+func dtTime() (dt time.Time) {
+	var e error
+	dt, e = time.Parse(time.RFC3339,
+		"2017-10-03T14:00:00-04:00")
+	if e != nil {
+		panic(e.Error())
+	}
 	return
 }
 

@@ -62,7 +62,7 @@ func TestLoadAccStr(t *testing.T) {
 
 func initTestQAdm(c *credentials, ip string) (qa *QAdm,
 	s string, e *errors.Error) {
-	qa, _, e = initQARL()
+	qa, _, e = initQARL(tClock())
 	var lr *LogRs
 	if e == nil {
 		lr, e = qa.login(c, ip)

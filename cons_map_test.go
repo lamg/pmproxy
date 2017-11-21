@@ -6,22 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lamg/clock"
-
 	"github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	dtPrs = "2017-10-03T14:00:00-04:00"
-)
-
 func TestConsMap(t *testing.T) {
-	dw := wfact.NewDWF()
-	dt, ec := time.Parse(time.RFC3339, dtPrs)
-	require.NoError(t, ec)
-	tc := &clock.TClock{Intv: time.Second, Time: dt}
-	pr := NewPersister(dw, dt, time.Second, tc)
+	dw, tc := wfact.NewDWF(), tClock()
+	pr := NewPersister(dw, dtTime(), time.Second, tc)
 	cm, e := NewCMFromR(strings.NewReader(cons), pr)
 	require.True(t, e == nil)
 	usr := []struct {
@@ -40,7 +31,7 @@ func TestConsMap(t *testing.T) {
 	cm.fillBuffer()
 	pr.persistNow(cm.bf)
 	om := new(OMap)
-	ec = json.Unmarshal(dw.Content(), om)
+	ec := json.Unmarshal(dw.Content(), om)
 	require.NoError(t, ec)
 	for i := 0; i != len(usr); i++ {
 		ucm, rc := om.UserCons[usr[i].user], usr[i].cons

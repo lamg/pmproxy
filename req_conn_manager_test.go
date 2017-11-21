@@ -25,7 +25,7 @@ func newRRConnMng(t *testing.T) (m *RRConnMng, c *Conf) {
 	require.True(t, e == nil)
 	var qa *QAdm
 	var rl *RLog
-	qa, rl, e = initQARL()
+	qa, rl, e = initQARL(tClock())
 	require.True(t, e == nil)
 	m = NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface,
 		c.GrpThrottle)
