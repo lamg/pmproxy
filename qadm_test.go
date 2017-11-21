@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lamg/clock"
+
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -111,7 +113,7 @@ func TestAddCons(t *testing.T) {
 	for _, j := range tss {
 		nc, e := qa.userCons(j.ip, j.hd)
 		require.True(t, e == nil)
-		qa.cons(j.ip, j.host, time.Now(), j.dwn)
+		qa.cons(j.ip, j.host, j.dwn)
 		n, e := qa.userCons(j.ip, j.hd)
 		require.True(t, e == nil)
 		ac := nc + uint64(j.dwn)
@@ -121,33 +123,39 @@ func TestAddCons(t *testing.T) {
 
 func TestCanReq(t *testing.T) {
 	qa, _, e := initTestQAdm(pepe, pepeIP)
+	stl := []string{
+		"2006-01-02T08:00:01-04:00",
+		"2006-01-02T08:00:01-04:00",
+		"2006-01-02T08:00:01-04:00",
+		"2006-01-02T08:00:00-04:00",
+		"2006-01-02T08:00:00-04:00",
+		"2006-01-02T08:00:00-04:00",
+		"2006-01-02T08:00:00-04:00",
+	}
+	ts := make([]time.Time, len(stl))
+	for i, j := range stl {
+		var ec error
+		ts[i], ec = time.Parse(time.RFC3339, j)
+		require.NoError(t, ec)
+	}
+	qa.cl = clock.NewTLClock(ts)
 	require.True(t, e == nil)
 	cases := []struct {
 		host string
 		port string
-		tm   string
 		ip   string
 		k    float32
 	}{
-		{"14ymedio.com", "443",
-			"2006-01-02T08:00:01-04:00", cocoIP, -1},
-		{"google.com.cu", "443",
-			"2006-01-02T08:00:01-04:00", cocoIP, 0},
-		{"facebook.com", "443",
-			"2006-01-02T08:00:01-04:00", pepeIP, -1.5},
-		{"facebook.com", "443",
-			"2006-01-02T08:00:00-04:00", pepeIP, 1.5},
-		{"debian.org", "80", "2006-01-02T08:00:00-04:00",
-			pepeIP, 1},
-		{"news.ycombinator.com", "443",
-			"2006-01-02T08:00:00-04:00", pepeIP, 1},
-		{"news.ycombinator.com", "441",
-			"2006-01-02T08:00:00-04:00", pepeIP, -1},
+		{"14ymedio.com", "443", cocoIP, -1},
+		{"google.com.cu", "443", cocoIP, 0},
+		{"facebook.com", "443", pepeIP, -1.5},
+		{"facebook.com", "443", pepeIP, 1.5},
+		{"debian.org", "80", pepeIP, 1},
+		{"news.ycombinator.com", "443", pepeIP, 1},
+		{"news.ycombinator.com", "441", pepeIP, -1},
 	}
 	for i, j := range cases {
-		tm, e := time.Parse(time.RFC3339, j.tm)
-		require.True(t, e == nil, "Time at %d", i)
-		c, _ := qa.canReq(j.ip, j.host, j.port, tm)
+		c, _ := qa.canReq(j.ip, j.host, j.port)
 		require.True(t, c == j.k, "%.1f ≠ %.1f at %d", c, j.k, i)
 	}
 }

@@ -8,6 +8,8 @@ import (
 	rg "regexp"
 	"time"
 
+	"github.com/lamg/clock"
+
 	"github.com/lamg/errors"
 )
 
@@ -60,16 +62,18 @@ type QAdm struct {
 	uc *ConsMap
 	// List of access exceptions
 	al []AccExcp
+	cl clock.Clock
 }
 
 // NewQAdm creates a new QAdm instance
 func NewQAdm(sm *SMng, gq *QuotaMap, uc *ConsMap,
-	al []AccExcp) (q *QAdm) {
+	al []AccExcp, cl clock.Clock) (q *QAdm) {
 	q = &QAdm{
 		sm: sm,
 		gq: gq,
 		uc: uc,
 		al: al,
+		cl: cl,
 	}
 	return
 }
@@ -132,8 +136,7 @@ func (q *QAdm) userCons(ip, s string) (cs uint64,
 	return
 }
 
-func (q *QAdm) cons(uAdr, host string, t time.Time,
-	p int) (y bool) {
+func (q *QAdm) cons(uAdr, host string, p int) (y bool) {
 	hs, pr, _ := net.SplitHostPort(host)
 	ip, _, _ := net.SplitHostPort(uAdr)
 	if hs == "" {
@@ -142,7 +145,7 @@ func (q *QAdm) cons(uAdr, host string, t time.Time,
 	if ip == "" {
 		ip = uAdr
 	}
-	k, cs := q.canReq(ip, hs, pr, t)
+	k, cs := q.canReq(ip, hs, pr)
 	if cs == nil {
 		c := uint64(k * float32(p))
 		u, e := q.sm.User(ip)
@@ -175,8 +178,9 @@ func (q *QAdm) isLogged(ip string) (y bool) {
 // c < 0 means that the request cannot be made
 // c ≥ 0 means c * Response.ContentLength = UserConsumption
 // { l is a string with the form host:port }
-func (q *QAdm) canReq(ip, host, port string,
-	d time.Time) (c float32, cs *CauseCD) {
+func (q *QAdm) canReq(ip, host,
+	port string) (c float32, cs *CauseCD) {
+	d := q.cl.Now()
 	var i int
 	//f ≡ found l.Host in r.al[].hostname
 	var f bool

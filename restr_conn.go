@@ -3,7 +3,6 @@ package pmproxy
 import (
 	"fmt"
 	"net"
-	"time"
 )
 
 type conCount struct {
@@ -16,7 +15,7 @@ type conCount struct {
 func (c *conCount) Read(p []byte) (n int, e error) {
 	rp := make([]byte, len(p))
 	n, e = c.Conn.Read(rp)
-	if c.qa.cons(c.rAddr, c.addr, time.Now(), n) {
+	if c.qa.cons(c.rAddr, c.addr, n) {
 		copy(p, rp)
 	} else {
 		c.Close()

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lamg/clock"
+
 	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
@@ -28,19 +30,26 @@ func initQARL() (qa *QAdm, rl *RLog, e *errors.Error) {
 		da, cry := NewDAuth(), NewJWTCrypt(pKey)
 		sm = NewSMng(da, cry)
 	}
-
+	var dt time.Time
+	if e == nil {
+		var ec error
+		dt, ec = time.Parse(time.RFC3339, dtPrs)
+		e = errors.NewForwardErr(ec)
+	}
+	var cl clock.Clock
 	var gq *QuotaMap
 	if e == nil {
-		gqp := NewPersister(w.NewDWF(), time.Now(), time.Second)
+		cl = &clock.TClock{Intv: time.Second, Time: dt}
+		gqp := NewPersister(w.NewDWF(), dt, time.Second, cl)
 		gq, e = NewQMFromR(bytes.NewBufferString(quota), gqp)
 	}
 
 	var uc *ConsMap
 	if e == nil {
-		ucp := NewPersister(w.NewDWF(), time.Now(), time.Second)
+		ucp := NewPersister(w.NewDWF(), dt, time.Second, cl)
 		uc, e = NewCMFromR(bytes.NewBufferString(cons), ucp)
 	}
-	qa = NewQAdm(sm, gq, uc, l)
+	qa = NewQAdm(sm, gq, uc, l, cl)
 	// rl initialization
 	rl = NewRLog(w.NewDWF(), sm)
 	return
@@ -71,7 +80,7 @@ func TestLocalRequest(t *testing.T) {
 		}
 		pm.ServeHTTP(rr, rq)
 		require.True(t, rr.Code == j.code,
-			"Status = %d at %d", rr.Code, i)
+			"%d != %d at %d", rr.Code, j.code, i)
 	}
 }
 

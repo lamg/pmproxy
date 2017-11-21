@@ -48,10 +48,10 @@ type CauseCD struct {
 // CanDo says wether the request can be
 // processed at the supplied time
 // TODO return the cause when !y
-func (m *RRConnMng) CanDo(r *h.Request, t time.Time) (d *CauseCD) {
+func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
 	hs, pr, _ := net.SplitHostPort(r.Host)
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	_, d = m.qa.canReq(ip, hs, pr, t)
+	_, d = m.qa.canReq(ip, hs, pr)
 	return
 }
 
@@ -153,7 +153,6 @@ func (b *thConn) Read(p []byte) (n int, e error) {
 }
 
 func (b *thConn) Write(p []byte) (n int, e error) {
-	b.thr.Throttle()
 	n, e = b.Conn.Write(p)
 	return
 }

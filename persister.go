@@ -1,10 +1,13 @@
 package pmproxy
 
 import (
-	"github.com/lamg/errors"
-	w "github.com/lamg/wfact"
 	"io"
 	"time"
+
+	"github.com/lamg/clock"
+
+	"github.com/lamg/errors"
+	w "github.com/lamg/wfact"
 )
 
 // Persister persists objects that can be represented
@@ -15,12 +18,13 @@ type Persister struct {
 	wf w.WriterFct
 	dt time.Time
 	iv time.Duration
+	c  clock.Clock
 }
 
 // NewPersister creates a Persister struct
 func NewPersister(wf w.WriterFct, dt time.Time,
-	iv time.Duration) (p *Persister) {
-	p = &Persister{wf, dt, iv}
+	iv time.Duration, c clock.Clock) (p *Persister) {
+	p = &Persister{wf, dt, iv, c}
 	return
 }
 
@@ -37,7 +41,7 @@ func (p *Persister) persistNow(r io.Reader) (e *errors.Error) {
 // Persist persists the content of r as described previously
 func (p *Persister) Persist(r io.Reader) (b bool,
 	e *errors.Error) {
-	t := newTime(p.dt, p.iv)
+	t := newTime(p.dt, p.iv, p.c)
 	b = t != p.dt
 	if b {
 		p.dt, e = t, p.persistNow(r)
@@ -45,12 +49,13 @@ func (p *Persister) Persist(r io.Reader) (b bool,
 	return
 }
 
-// time.Now() - d > i ≡ n ≠ d
+// clock.Now() - d > i ≡ n ≠ d
 // n ≠ d ⇒ n - d < i
-func newTime(d time.Time, i time.Duration) (n time.Time) {
+func newTime(d time.Time, i time.Duration,
+	c clock.Clock) (n time.Time) {
 	var nw time.Time
 	var ta time.Duration
-	nw = time.Now()
+	nw = c.Now()
 	// { nw - d < 290 years (by time.Duration's doc.)}
 	var ci time.Duration
 	ci = nw.Sub(d)

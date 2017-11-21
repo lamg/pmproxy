@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/lamg/errors"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/lamg/errors"
 )
 
 // ConsMap maintains a dictionary of user to consumption
@@ -68,6 +69,14 @@ func NewCMFromR(r io.Reader,
 
 // Load loads a value associated to a key in the dictionary
 func (p *ConsMap) Load(key string) (v uint64, ok bool) {
+	n := newTime(p.lr, p.rt, p.pr.c)
+	if n != p.lr {
+		p.Reset()
+		p.lr = n
+	}
+	// Reset if it's time to do so, triggered not
+	// at the reset time, but when a value is requested
+	// (lazy reset).
 	var iv interface{}
 	iv, ok = p.mp.Load(key)
 	if ok {
@@ -81,7 +90,7 @@ func (p *ConsMap) Load(key string) (v uint64, ok bool) {
 
 // Store stores a key-value pair in the dictionary
 func (p *ConsMap) Store(key string, val uint64) {
-	n := newTime(p.lr, p.rt)
+	n := newTime(p.lr, p.rt, p.pr.c)
 	if n != p.lr {
 		p.Reset()
 		p.lr = n

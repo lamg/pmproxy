@@ -43,23 +43,23 @@ var pconf = &Conf{
 		"B": 0.8,
 	},
 	GrpIface: map[string]string{
-		"UPR-Internet-Full": "eth0",
+		"X-Y": "eth0",
 	},
-	GrpQtPref: "UPR-Internet-",
+	GrpQtPref: "X-",
 	LogBName:  "logs/access.log",
 	AccExcp:   "accExcp.json",
 	RsDt:      "2017-09-30T00:00:00-04:00",
 	Cons:      "consumos.json",
 	Quota:     "cuotas.json",
 	UISrvAddr: ":8081",
-	AdmGrp:    "_GrupoRedes",
+	AdmGrp:    "Adm",
 	StPath:    "public",
-	LoginAddr: "http://10.2.24.145:4000",
+	LoginAddr: "http://1.1.1.1:4000",
 	CertFl:    "cert.pem",
 	KeyFl:     "key.pem",
-	ADAddr:    "10.2.24.35:636",
-	ADAccSf:   "@upr.edu.cu",
-	BDN:       "dc=upr,dc=edu,dc=cu",
+	ADAddr:    "2.2.2.2:636",
+	ADAccSf:   "@example.org",
+	BDN:       "dc=example,dc=org",
 }
 
 var conf = `
@@ -67,26 +67,26 @@ var conf = `
 	"dataDir":"dir",
 	"hostName":"proxy.org",
 	"proxySrvAddr": ":9080",
-	"grpIface": {"UPR-Internet-Full":"eth0"},
+	"grpIface": {"X-Y":"eth0"},
 	"grpThrottle":{
 		"A": 0.9,
 		"B": 0.8
 	},
-	"grpQtPref":"UPR-Internet-",
+	"grpQtPref":"X-",
 	"logBName":"logs/access.log",
 	"accExcp":"accExcp.json",
 	"rsDt":"2017-09-30T00:00:00-04:00",
 	"cons":"consumos.json",
 	"quota":"cuotas.json",
 	"uiSrvAddr":":8081",
-	"admGrp": "_GrupoRedes",
+	"admGrp": "Adm",
 	"stPath":"public",
-	"loginAddr":"http://10.2.24.145:4000",
+	"loginAddr":"http://1.1.1.1:4000",
 	"certFl":"cert.pem",
 	"keyFl":"key.pem",
-	"adAddr":"10.2.24.35:636",
-	"adAccSf":"@upr.edu.cu",
-	"bdn":"dc=upr,dc=edu,dc=cu"
+	"adAddr":"2.2.2.2:636",
+	"adAccSf":"@example.org",
+	"bdn":"dc=example,dc=org"
 }
 `
 var accR = `[
@@ -97,7 +97,7 @@ var accR = `[
 
 var cons = `{
 	 "lastReset":"2017-10-02T14:00:00-04:00",
-	 "resetTime":1000000000,
+	 "resetTime":604800000000000,
 	 "userCons":{
 			"coco": 8192,
 			"pepe": 1024

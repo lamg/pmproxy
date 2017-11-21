@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/lamg/clock"
+
 	"github.com/dgrijalva/jwt-go"
 	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
@@ -114,13 +116,14 @@ func ParseConf(r io.Reader) (c *Conf, e *errors.Error) {
 func ConfPMProxy(c *Conf, dAuth bool,
 	fsm fs.FileSystem) (p *PMProxy, lh *LocalHn,
 	e *errors.Error) {
+	cl := new(clock.OSClock)
 	f, ec := fsm.Open(c.Quota)
 	e = errors.NewForwardErr(ec)
 	// { c.Quota opened as f ≡ e = nil }
 	var gq *QuotaMap
 	if e == nil {
 		gqp := NewPersister(wfact.NewTruncater(c.Quota, fsm),
-			time.Now(), 5*time.Minute)
+			time.Now(), 5*time.Minute, cl)
 		gq, e = NewQMFromR(f, gqp)
 		f.Close()
 	}
@@ -131,7 +134,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	var uc *ConsMap
 	if e == nil {
 		ucp := NewPersister(wfact.NewTruncater(c.Cons, fsm),
-			time.Now(), 5*time.Minute)
+			time.Now(), 5*time.Minute, cl)
 		uc, e = NewCMFromR(f, ucp)
 		f.Close()
 	}
@@ -172,7 +175,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		cry := NewJWTCrypt(pkey)
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
-		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc)
+		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)
 		rmng := NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface,
 			c.GrpThrottle)
 		p = NewPMProxy(rmng, lga)
