@@ -53,6 +53,7 @@ func (r *ReqMatcher) Match(u *usrRC) (y bool) {
 // Matcher is an interface for matching *usrRC
 type Matcher interface {
 	Match(*usrRC) bool
+	// JSON marshal and unmarshal
 }
 
 // BLS is the Bounded Linear Search algorithm, using
