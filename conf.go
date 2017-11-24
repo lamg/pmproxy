@@ -3,8 +3,11 @@ package pmproxy
 import (
 	"crypto/rsa"
 	"io"
+	h "net/http"
 	"net/url"
 	"time"
+
+	"github.com/vinxi/ip"
 
 	"github.com/lamg/clock"
 
@@ -17,6 +20,8 @@ import (
 
 // Conf stores data for initializing PMProxy
 type Conf struct {
+	// IPRanges defines the IPs allowed to use the proxy
+	IPRanges []string `json:"ipRanges"`
 	// DataDir is the directory where certificates are
 	DataDir string `json:"dataDir"`
 	// HostName is the domain name associated to the server's
@@ -101,6 +106,13 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			}
 		}
 	}
+	ok = ok && len(c.IPRanges) == len(nc.IPRanges)
+	for i := 0; ok && i != len(c.IPRanges); {
+		ok = c.IPRanges[i] == nc.IPRanges[i]
+		if ok {
+			i = i + 1
+		}
+	}
 	return
 }
 
@@ -114,8 +126,7 @@ func ParseConf(r io.Reader) (c *Conf, e *errors.Error) {
 // ConfPMProxy uses supplied configuration to initialize
 // an instance of PMProxy
 func ConfPMProxy(c *Conf, dAuth bool,
-	fsm fs.FileSystem) (p *PMProxy, lh *LocalHn,
-	e *errors.Error) {
+	fsm fs.FileSystem) (ph, lh h.Handler, e *errors.Error) {
 	cl := new(clock.OSClock)
 	f, ec := fsm.Open(c.Quota)
 	e = errors.NewForwardErr(ec)
@@ -178,9 +189,19 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)
 		rmng := NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface,
 			c.GrpThrottle)
-		p = NewPMProxy(rmng, lga)
+		p, pf := NewPMProxy(rmng, lga), ip.New(c.IPRanges...)
+		ph = &ipFilter{pf.FilterHTTP(p)}
 		// TODO serve HTTPS with valid certificate
 		lh = NewLocalHn(qa, c.StPath)
 	}
 	return
+}
+
+type ipFilter struct {
+	f func(h.ResponseWriter, *h.Request)
+}
+
+func (p *ipFilter) ServeHTTP(w h.ResponseWriter,
+	r *h.Request) {
+	p.f(w, r)
 }

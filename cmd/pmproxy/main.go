@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	h "net/http"
+
 	"github.com/lamg/errors"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
@@ -28,8 +30,7 @@ func main() {
 			e = ec.Err
 		}
 	}
-	var lh *pmproxy.LocalHn
-	var pm *pmproxy.PMProxy
+	var lh, pm h.Handler
 	if e == nil {
 		var ec *errors.Error
 		pm, lh, ec = pmproxy.ConfPMProxy(c, dAuth, os)

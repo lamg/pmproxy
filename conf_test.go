@@ -1,10 +1,14 @@
 package pmproxy
 
 import (
+	"net/http/httptest"
 	"testing"
+
+	h "net/http"
 
 	fs "github.com/lamg/filesystem"
 	"github.com/stretchr/testify/require"
+	"github.com/vinxi/ip"
 )
 
 func TestConfPMProxy(t *testing.T) {
@@ -36,7 +40,31 @@ func TestConfPMProxy(t *testing.T) {
 	require.True(t, ec == nil)
 }
 
+func TestIPRanges(t *testing.T) {
+	f := ip.New("192.168.1.1/28")
+	hf := func(w h.ResponseWriter, r *h.Request) {
+	}
+	s := &ipFilter{f.FilterHTTP(&ipFilter{hf})}
+	rq, e := h.NewRequest(h.MethodGet, "http://a.org", nil)
+	require.NoError(t, e)
+	al := []struct {
+		ip   string
+		code int
+	}{
+		{"192.168.2.1:8000", 403},
+		{"192.168.1.1:8000", 200},
+	}
+	for _, j := range al {
+		rq.RemoteAddr = j.ip
+		rp := httptest.NewRecorder()
+		s.ServeHTTP(rp, rq)
+		require.True(t, rp.Code == j.code, "%d != %d",
+			rp.Code, j.code)
+	}
+}
+
 var pconf = &Conf{
+	IPRanges:     []string{"192.168.1.1/28"},
 	ProxySrvAddr: ":9080",
 	GrpThrottle: map[string]float64{
 		"A": 0.9,
@@ -64,6 +92,7 @@ var pconf = &Conf{
 
 var conf = `
 {
+	"ipRanges":["192.168.1.1/28"],
 	"dataDir":"dir",
 	"hostName":"proxy.org",
 	"proxySrvAddr": ":9080",
