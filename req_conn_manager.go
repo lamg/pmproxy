@@ -9,7 +9,7 @@ import (
 
 	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
-	"golang.org/x/tools/godoc/util"
+	"github.com/lamg/pmproxy/util"
 )
 
 // RRConnMng manages requests, responses and connections
