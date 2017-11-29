@@ -9,6 +9,8 @@ Request processing is done in layers:
 
 ### Layer 0
 
+- Each layer like quota, must have access to all connection paremeters, HTTP request and response. Each one will expose an interface equal to a plain proxy, for making independent layers that can be added or eliminated from the layer stack easily.
+
 A request and a time is received. A connection with restrictions is sent. In this layer there is opportunity of determining parameters of the connection using the request and the time, or maybe the absence of connection. This connection paramaters include local address, consumption coeficient and connection speed. The amount of connections made from determined IP should be considered too, since the amount of opened connections is limited (`ulimit` command). Currently is being tested with (`ulimit -n 30000`).
 
 - RemoteAddr, *url.URL, time.Time
