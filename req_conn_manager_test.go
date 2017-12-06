@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -27,8 +26,7 @@ func newRRConnMng(t *testing.T) (m *RRConnMng, c *Conf) {
 	var rl *RLog
 	qa, rl, e = initQARL(tClock())
 	require.True(t, e == nil)
-	m = NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface,
-		c.GrpThrottle)
+	m = NewRRConnMng(qa, rl, c.GrpIface, c.GrpThrottle)
 	qa.login(coco, cocoIP)
 	return
 }

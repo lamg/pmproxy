@@ -12,7 +12,6 @@ import (
 	"github.com/lamg/clock"
 
 	"github.com/dgrijalva/jwt-go"
-	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/wfact"
@@ -187,7 +186,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)
-		rmng := NewRRConnMng(dl.NewOSDialer(), qa, rl, c.GrpIface,
+		rmng := NewRRConnMng(qa, rl, c.GrpIface,
 			c.GrpThrottle)
 		p, pf := NewPMProxy(rmng, lga), ip.New(c.IPRanges...)
 		ph = &ipFilter{pf.FilterHTTP(p)}

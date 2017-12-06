@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	dl "github.com/lamg/dialer"
 	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy/util"
 )
@@ -16,18 +15,17 @@ import (
 // made to the proxy server, according the program
 // configuration
 type RRConnMng struct {
-	dlr dl.Dialer
-	qa  *QAdm
-	rl  *RLog
-	uf  map[string]string
-	ts  map[string]float64
+	qa *QAdm
+	rl *RLog
+	uf map[string]string
+	ts map[string]float64
 }
 
 // NewRRConnMng creates a new RRConnMng
-func NewRRConnMng(d dl.Dialer, q *QAdm,
-	l *RLog, u map[string]string,
+func NewRRConnMng(q *QAdm, l *RLog,
+	u map[string]string,
 	t map[string]float64) (r *RRConnMng) {
-	r = &RRConnMng{d, q, l, u, t}
+	r = &RRConnMng{q, l, u, t}
 	return
 }
 

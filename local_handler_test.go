@@ -33,7 +33,7 @@ func tClock() (c clock.Clock) {
 func initPMProxy() (p *PMProxy, e *errors.Error) {
 	qa, rl, e := initQARL(tClock())
 	if e == nil {
-		rmng := NewRRConnMng(nil, qa, rl,
+		rmng := NewRRConnMng(qa, rl,
 			map[string]string{"B": "eth0", "A": "eth1"},
 			map[string]float64{
 				"A": 0.9,
