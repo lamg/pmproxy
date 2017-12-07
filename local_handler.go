@@ -7,12 +7,15 @@ import (
 	"io/ioutil"
 	"net"
 	h "net/http"
+	"path"
 
 	"github.com/lamg/errors"
 	"github.com/rs/cors"
 )
 
 const (
+	// ProxyA path to automatic proxy configuration file
+	ProxyA = "/proxy.pac"
 	// LogX path to login, logout (POST, DELETE)
 	LogX = "/api/auth"
 	// UserStatus path to get status (GET, PUT)
@@ -56,6 +59,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 		stPath: sp,
 	}
 	mx := h.NewServeMux()
+	mx.HandleFunc(ProxyA, p.proxyA)
 	mx.HandleFunc(LogX, p.logXHF)
 	mx.HandleFunc(UserStatus, p.userStatusHF)
 	mx.HandleFunc(CheckUser, p.checkUserHF)
@@ -64,6 +68,10 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 	//FIXME only the web interface should do cross origin
 	// requests
 	return
+}
+
+func (p *LocalHn) proxyA(w h.ResponseWriter, r *h.Request) {
+	h.ServeFile(w, r, path.Join(p.stPath, ProxyA))
 }
 
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {

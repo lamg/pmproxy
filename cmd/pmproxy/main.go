@@ -45,7 +45,7 @@ func main() {
 		webUI := &http.Server{
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			IdleTimeout:  0,
 			Addr:         c.UISrvAddr,
 			Handler:      lh,
 		}
@@ -53,7 +53,7 @@ func main() {
 		proxy := &http.Server{
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			IdleTimeout:  0,
 			Addr:         c.ProxySrvAddr,
 			Handler:      pm,
 		}

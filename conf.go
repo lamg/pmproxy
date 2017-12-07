@@ -21,11 +21,6 @@ import (
 type Conf struct {
 	// IPRanges defines the IPs allowed to use the proxy
 	IPRanges []string `json:"ipRanges"`
-	// DataDir is the directory where certificates are
-	DataDir string `json:"dataDir"`
-	// HostName is the domain name associated to the server's
-	// IP
-	HostName string `json:"hostName"`
 	// ProxySrvAddr host:port to serve the proxy
 	ProxySrvAddr string `json:"proxySrvAddr"`
 	// GrpIface group-network interface dictionary file path
@@ -38,8 +33,6 @@ type Conf struct {
 	LogBName string `json:"logBName"`
 	// AccExcp path of the file with AccExcp JSON format
 	AccExcp string `json:"accExcp"`
-	// RsDt is the last reset date
-	RsDt string `json:"rsDt"`
 	// Cons path to the file with the user-consumption
 	// JSON dictionary
 	Cons string `json:"cons"`
@@ -83,7 +76,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			c.GrpQtPref == nc.GrpQtPref && c.KeyFl == nc.KeyFl &&
 			c.LogBName == nc.LogBName &&
 			c.ProxySrvAddr == nc.ProxySrvAddr && c.Quota == nc.Quota &&
-			c.RsDt == nc.RsDt && c.StPath == nc.StPath &&
+			c.StPath == nc.StPath &&
 			c.UISrvAddr == nc.UISrvAddr
 	}
 	if ok {
