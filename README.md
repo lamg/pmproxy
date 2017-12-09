@@ -71,8 +71,7 @@ LogRs {
 
 ## PMProxy clients
 
-There are two clients, `pmuser` and `pmuser-gtk`. The former is a command line program, and the latter, as its name indicates, a GUI in GTK+. TODO slow operations not
-in the main thread.
+There are two clients, `pmuser` and `pmuser-gtk`. The former is a command line program, and the latter, as its name indicates, a GUI in GTK+.
 
 ## Configuration file
 
@@ -118,11 +117,28 @@ PMProxy is deployed as a systemd service in this case. The following conditions 
 
 - pmproxy executable must be in the PATH environment variable of the selected user for running the service.
 
-- A configuration file must be created, let's say with the name conf.json.
+- A configuration file must be created with the format described above (ex. conf.yaml).
+
+- A certificate and a private key files must be created, with PEM format (ex. cert.pem and key.pem).
+
+- A quotas file with the format described above must be created. Notice that with an empty map the proxy will not respond to any requests (ex. quotas.json).
+
+- A consumptions file with consumption cycle duration and last consumption cycle end's date fields are mandatory (ex. cons.json).
+
+- An access exceptions file with the format described above. The array of JSON objects may be empty (ex. `[]` in accExcp.json file).
+
+- A service file must be created and placed in ...The following is an example of its contents
+
+```conf
+[oeu]
+oeu
+
+```
 
 ## Tasks
 
-- Redirect URL with information on the cause of redirection
-- Flexible restrictions and access to resources specifications
-- Deal with HTTPS requests that need to be redirected
-- Substitute calls to time.Now for a call to an environment independent procedure
+- [ ] Flexible restrictions and access to resources specifications
+- [ ] Replace redirection with a page informing the error and a link to the login page when needed.
+- [ ] English grammar
+- [ ] Slow operations not in GUI's main thread
+- [ ] Add html template and parse it in NewPMProxy
