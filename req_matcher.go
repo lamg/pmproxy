@@ -133,7 +133,7 @@ func ForAllExists(r [][]Predicate,
 // which equivales to all predicates false
 // for the supplied value
 type SPred struct {
-	// Requests matchers/etc/lightdm/lightdm.conf
+	// Requests matchers
 	RMts []Predicate `json:"rMts"`
 	i    int
 }
