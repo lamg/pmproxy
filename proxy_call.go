@@ -9,15 +9,20 @@ type PMProxy struct {
 	proxy h.Handler
 }
 
+type proxReq struct {
+	w   h.ResponseWriter
+	r   *h.Request
+	msg string
+}
+
 // ProcMsg processes a message or a request if there is
 // no message
-func (p *PMProxy) ProcMsg(w h.ResponseWriter, r *h.Request,
-	mc <-chan string) {
-	m := <-mc
-	if m != "" {
-		w.Write([]byte(m))
+func (p *PMProxy) ProcMsg(pr <-chan *proxReq) {
+	r := <-pr
+	if r.msg != "" {
+		r.w.Write([]byte(r.msg))
 	} else {
-		p.proxy.ServeHTTP(w, r)
+		p.proxy.ServeHTTP(r.w, r.r)
 	}
 }
 
@@ -29,5 +34,5 @@ func (p *PMProxy) ServeProxy(w h.ResponseWriter,
 	// { stored channels }
 	mc := make(chan string)
 	go MultMsg(mcs, mc)
-	p.ProcMsg(w, r, mc)
+	// TODO
 }
