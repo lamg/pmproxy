@@ -21,11 +21,13 @@ func (p *PMProxy) ProcMsg(w h.ResponseWriter, r *h.Request,
 	}
 }
 
-func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
+// ServeProxy is the h.HandlerFunc for proxying requests
+func (p *PMProxy) ServeProxy(w h.ResponseWriter,
 	r *h.Request) {
-	mcs := make([]chan string, 0)
+	mcs := make([]chan string, 1)
+	//go SessionFlt(r, mcs[0])
 	// { stored channels }
 	mc := make(chan string)
-	MultMsg(mcs, mc)
+	go MultMsg(mcs, mc)
 	p.ProcMsg(w, r, mc)
 }
