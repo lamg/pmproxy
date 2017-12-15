@@ -115,9 +115,9 @@ The configuration file is in JSON format. Following is the configuration fields 
 
 PMProxy is deployed as a systemd service in this case. The following conditions must be true:
 
-- pmproxy executable must be in the PATH environment variable of the selected user for running the service.
+- pmproxy executable must be in `/usr/local/bin/pmproxy`.
 
-- A configuration file must be created with the format described above (ex. conf.yaml).
+- A configuration file must be created with the format described above (ex. conf.yaml) (currently configuration is in JSON format).
 
 - A certificate and a private key files must be created, with PEM format (ex. cert.pem and key.pem).
 
@@ -127,12 +127,24 @@ PMProxy is deployed as a systemd service in this case. The following conditions 
 
 - An access exceptions file with the format described above. The array of JSON objects may be empty (ex. `[]` in accExcp.json file).
 
-- A service file must be created and placed in ...The following is an example of its contents
+- The previosly described files must be in `/etc/pmproxy/` directory.
+
+- A service file must be created and placed in `/etc/systemd/system/pmproxy.service` The following is an example of its contents
 
 ```conf
-[oeu]
-oeu
+[Unit]
+Description=PMProxy Service
+After=network.target
 
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/etc/pmproxy
+ExecStart=/usr/local/bin/pmproxy -c /etc/pmproxy/conf.json
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ## Tasks
