@@ -143,11 +143,5 @@ oeu
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
-- [ ] Plugable modules for filtering requests with http.Handler as interface
-- [ ] Think: there is an algorithm who's only interested in yes or no answer to the continue question, therefore it shouldn't have access only to that information
-  - [ ] there is an algorithm that can show a message when continue is false
-  - [ ] there is a context where requests have information associated and there is part of the algorithm that requires that information
-  - [ ] the message is generated according a state that changes after each request is processed
-
-- There are several algorithms whose parallel execution gives me the result I want at the end. Could be some comunication between them, the challenge is defining the minimal interface between them.
-- [ ] "Concurrentize" this program
+- [x] Structured Programming with Channels
+- [ ] LoginUser
