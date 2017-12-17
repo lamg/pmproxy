@@ -11,7 +11,22 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-func notSuppMeth(m string) (e error) {
+const (
+	// AuthHd header key of JWT value
+	AuthHd = "authHd"
+	// MalformedHd is the error message sent when the
+	// header of a request is empty
+	MalformedHd = "Malformed header"
+	// NotJWTUser is the error message sent when the
+	// JWTUser type assertion fails. This is a fatal
+	// security breach since it can only occurr when
+	// the private key is compromised.
+	NotJWTUser = `False JWTUser type assertion. 
+	Security breach. Private key compromised`
+)
+
+// NotSuppMeth is the not supported method message
+func NotSuppMeth(m string) (e error) {
 	e = fmt.Errorf("Not supported method %s", m)
 	return
 }
@@ -79,8 +94,12 @@ func (j *JWTCrypt) checkUser(s string) (u string, e error) {
 	if e == nil {
 		var ok bool
 		clm, ok = t.Claims.(*JWTUser)
-		if !ok {
-			e = fmt.Errorf("False JWTUser type assertion")
+		if !ok || clm.User == "" {
+			panic(NotJWTUser)
+			// { the private key was used to sign something
+			//   different from a *JWTUser, which is not
+			//   done in this program, therefore it has
+			//   been compromised }
 		}
 	}
 	if e == nil {
@@ -89,13 +108,10 @@ func (j *JWTCrypt) checkUser(s string) (u string, e error) {
 	return
 }
 
-// AuthHd header key of JWT value
-const AuthHd = "authHd"
-
 func (j *JWTCrypt) getUser(a h.Header) (u string, e error) {
 	s := a.Get(AuthHd)
 	if s == "" {
-		e = fmt.Errorf("Malformed header")
+		e = fmt.Errorf(MalformedHd)
 	}
 	if e == nil {
 		u, e = j.checkUser(s)

@@ -1,4 +1,2 @@
-*.go~
-*.org~
-*.out
-.vscode/launch.json
+*.test
+.vscode

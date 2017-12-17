@@ -21,7 +21,7 @@ type ProxHnd struct {
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
 	stop, ph := false, &ProxHnd{RW: w, Rq: r}
-	for i := 0; !stop; {
+	for i := 0; !stop && i != len(p.Pr); i++ {
 		p.Pr[i] <- ph
 		stop = <-p.Stop
 	}

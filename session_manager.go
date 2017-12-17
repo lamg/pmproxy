@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -34,8 +35,8 @@ type SMng struct {
 }
 
 // NewSMng creates a new SMng
-func NewSMng(usr, adm Auth, rq <-chan *ProxHnd,
-	sc chan<- bool, uc chan<- string, cr *JWTCrypt) (s *SMng) {
+func NewSMng(usr, adm Auth, cr *JWTCrypt, rq <-chan *ProxHnd,
+	sc chan<- bool, uc chan<- string) (s *SMng) {
 	s = &SMng{
 		sa:  new(sync.Map),
 		su:  new(sync.Map),
@@ -50,18 +51,9 @@ func NewSMng(usr, adm Auth, rq <-chan *ProxHnd,
 	return
 }
 
-// Login opens a session for an user
-func (s *SMng) Login(user, pass, ip string) (e error) {
-	e = s.usr.Authenticate(user, pass)
-	if e == nil {
-		login(s.su, s.swS, user, ip)
-	}
-	return
-}
-
-// LoginUser is used by administrator to log an user
-func (s *SMng) LoginUser(adm, admIP, user, ip string) (e error) {
-	e = checkUser(s.sa, adm, ip)
+// loginUser is used by administrator to log an user
+func (s *SMng) loginUser(adm, admIP, user, ip string) (e error) {
+	e = checkUser(s.sa, adm, admIP)
 	if e == nil {
 		login(s.su, s.swS, user, ip)
 	}
@@ -83,10 +75,8 @@ func login(m, sw *sync.Map, user, ip string) {
 	//   this session. prevIP = "" if that session doesn't
 	//   exists }
 	if prevIP != "" {
-		sw.Store(prevIP,
-			fmt.Sprintf("Sesión cerrada por %s", ip))
-		sw.Store(ip,
-			fmt.Sprintf("Sesión recuperada desde %s", prevIP))
+		sw.Store(prevIP, ClsByMsg(ip))
+		sw.Store(ip, RcvFrMsg(prevIP))
 		// { prevIP and ip prepared for receiving
 		//   a notification  }
 		m.Delete(prevIP)
@@ -95,15 +85,21 @@ func login(m, sw *sync.Map, user, ip string) {
 	m.Store(ip, user)
 }
 
-// Logout closes a session
-func (s *SMng) Logout(user, ip string) (e error) {
-	logout(s.su, user, ip)
+// ClsByMsg is the closed by message
+func ClsByMsg(ip string) (m string) {
+	m = fmt.Sprintf("Sesión cerrada por %s", ip)
 	return
 }
 
-// LogoutUser is used by administrators to close an user
+// RcvFrMsg is the recovered from message
+func RcvFrMsg(ip string) (m string) {
+	m = fmt.Sprintf("Sesión recuperada desde %s", ip)
+	return
+}
+
+// logoutUser is used by administrators to close an user
 // session
-func (s *SMng) LogoutUser(adm, admIP, usr, ip string) (e error) {
+func (s *SMng) logoutUser(adm, admIP, usr, ip string) (e error) {
 	e = checkUser(s.sa, adm, admIP)
 	if e == nil {
 		e = logout(s.su, usr, ip)
@@ -116,8 +112,21 @@ func logout(m *sync.Map, user, ip string) (e error) {
 	if ok && u == user {
 		m.Delete(ip)
 	} else {
-		e = fmt.Errorf("User %s not logged in %s", user, ip)
+		e = errors.New(NotOpBySMsg(user, ip))
 	}
+	return
+}
+
+// NotOpBySMsg is the not opened by session message
+func NotOpBySMsg(user, ip string) (m string) {
+	m = fmt.Sprintf("No hay sesión abierta por %s en %s",
+		user, ip)
+	return
+}
+
+// NotOpInSMsg is the not opened in session message
+func NotOpInSMsg(ip string) (m string) {
+	m = fmt.Sprintf("No hay sesión abierta en %s", ip)
 	return
 }
 
@@ -125,27 +134,36 @@ func logout(m *sync.Map, user, ip string) (e error) {
 // the status (opened/closed session) of the IP which
 // made it
 func (s *SMng) HandleAuth() {
-	ph := <-s.rq
-	ip, _, _ := net.SplitHostPort(ph.Rq.RemoteAddr)
-	u, ok := s.su.Load(ip)
-	var stop bool
-	if !ok {
-		// use HTML template here
-		ph.RW.Write(
-			[]byte(fmt.Sprintf("No hay sesión abierta en %s", ip)))
-		stop = true
-	}
-	var v interface{}
-	v, ok = s.swS.Load(ip)
-	if ok {
-		msg := v.(string)
-		// use HTML template here
-		ph.RW.Write([]byte(msg))
-		stop = true
-	}
-	s.sc <- stop
-	if !stop {
-		s.uc <- u.(string)
+	for {
+		ph := <-s.rq
+		ip, _, _ := net.SplitHostPort(ph.Rq.RemoteAddr)
+		u, ok := s.su.Load(ip)
+		v, sw := s.swS.Load(ip)
+		stop := false
+		if !ok && !sw {
+			// { session is closed and there's no message }
+			// use HTML template here
+			ph.RW.Write([]byte(NotOpInSMsg(ip)))
+			stop = true
+		} else if sw {
+			msg := v.(string)
+			// use HTML template here
+			ph.RW.Write([]byte(msg))
+			stop = true
+			// { message written, if appears,
+			//   be the session closed or not }
+		}
+		s.sc <- stop
+		if !stop {
+			s.uc <- u.(string)
+		} else {
+			s.uc <- ""
+		}
+		// { ph.Rq.RemoteAddr's IP is logged in = boolean
+		//   sent to the stop channel (s.sc). In case that boolean
+		//   is true the user's name logged from that IP is
+		//   sent to s.uc, otherwise the empty string is sent.
+		//	 Also in the last case a message is written to ph.RW}
 	}
 }
 
@@ -162,11 +180,11 @@ func (s *SMng) SrvUserSession(w h.ResponseWriter,
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e error
 	if r.Method == h.MethodPost {
-		e = srvLogin(s.su, s.swS, s.usr, ip, r.Body)
+		e = srvLogin(s.su, s.swS, s.cr, s.usr, ip, r.Body, w)
 	} else if r.Method == h.MethodDelete {
 		e = srvLogout(s.su, s.swS, s.cr, ip, r.Header)
 	} else {
-		e = notSuppMeth(r.Method)
+		e = NotSuppMeth(r.Method)
 	}
 	writeErr(w, e)
 }
@@ -178,14 +196,14 @@ func (s *SMng) SrvAdmSession(w h.ResponseWriter,
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	var e error
 	if r.Method == h.MethodPost {
-		e = srvLogin(s.sa, s.swS, s.adm, ip, r.Body)
+		e = srvLogin(s.sa, s.swS, s.cr, s.adm, ip, r.Body, w)
 	} else if r.Method == h.MethodDelete {
 		e = srvLogout(s.sa, s.swS, s.cr, ip, r.Header)
 	} else if r.Method == h.MethodGet {
 		// { administrator can get the map of logged users }
-		e = srvSessions(s.su, s.cr, r.Header, ip, w)
+		e = srvSessions(s.sa, s.su, s.cr, r.Header, ip, w)
 	} else {
-		e = notSuppMeth(r.Method)
+		e = NotSuppMeth(r.Method)
 	}
 	writeErr(w, e)
 }
@@ -201,29 +219,38 @@ type UsrIP struct {
 func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	ui := new(UsrIP)
-	e := Decode(r.Body, ui)
+	var e error
+	if r.Body != nil {
+		e = Decode(r.Body, ui)
+	}
 	var adm string
 	if e == nil {
 		adm, e = s.cr.getUser(r.Header)
 	}
 	if e == nil && r.Method == h.MethodPost {
-		e = s.LoginUser(adm, ip, ui.User, ui.IP)
-	} else if e == nil && r.Method == h.MethodDelete {
-		e = s.LogoutUser(adm, ip, ui.User, ui.IP)
+		e = s.loginUser(adm, ip, ui.User, ui.IP)
+	} else if e == nil && r.Method == h.MethodPut {
+		e = s.logoutUser(adm, ip, ui.User, ui.IP)
 	} else if e == nil {
-		e = notSuppMeth(r.Method)
+		e = NotSuppMeth(r.Method)
 	}
 	writeErr(w, e)
 }
 
-func srvLogin(m, sw *sync.Map, a Auth, ip string, r io.Reader) (e error) {
+func srvLogin(m, sw *sync.Map, cr *JWTCrypt, a Auth,
+	ip string, r io.Reader, w io.Writer) (e error) {
 	uc := new(UsrCrd)
 	e = Decode(r, uc)
 	if e == nil {
 		e = a.Authenticate(uc.User, uc.Pass)
 	}
+	var s string
 	if e == nil {
-		login(m, sw, uc.Pass, ip)
+		login(m, sw, uc.User, ip)
+		s, e = cr.encrypt(uc.User)
+	}
+	if e == nil {
+		w.Write([]byte(s))
 	}
 	// { session opened ≡ e = nil }
 	return
@@ -240,12 +267,14 @@ func srvLogout(m, sw *sync.Map, cr *JWTCrypt, ip string,
 	return
 }
 
-func srvSessions(m *sync.Map, cr *JWTCrypt, a h.Header,
+func srvSessions(n, m *sync.Map, cr *JWTCrypt, a h.Header,
 	ip string, w io.Writer) (e error) {
 	var usr string
 	usr, e = cr.getUser(a)
-	if v, ok := m.Load(ip); e == nil && ok &&
-		v.(string) == usr {
+	if e == nil {
+		e = checkUser(n, usr, ip)
+	}
+	if e == nil {
 		mp := make(map[string]string)
 		m.Range(func(k, v interface{}) (c bool) {
 			c, mp[k.(string)] = true, v.(string)
@@ -257,11 +286,10 @@ func srvSessions(m *sync.Map, cr *JWTCrypt, a h.Header,
 	return
 }
 
-func checkUser(m *sync.Map, u, ip string) (e error) {
-	x, ok := m.Load(ip)
-	ok = ok && x.(string) == u
-	if !ok {
-		e = fmt.Errorf("Not logged %s at %s", u, ip)
+func checkUser(m *sync.Map, usr, ip string) (e error) {
+	v, ok := m.Load(ip)
+	if !ok || v.(string) != usr {
+		e = errors.New(NotOpBySMsg(usr, ip))
 	}
 	return
 }
