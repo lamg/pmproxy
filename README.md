@@ -129,7 +129,7 @@ PMProxy is deployed as a systemd service in this case. The following conditions 
 
 - The previosly described files must be in `/etc/pmproxy/` directory.
 
-- A service file must be created and placed in `/etc/systemd/system/pmproxy.service` The following is an example of its contents
+- A service file must be created and placed in `/etc/systemd/system/pmproxy.service` Below there's an example of its contents.
 
 ```conf
 [Unit]
@@ -139,12 +139,21 @@ After=network.target
 [Service]
 Type=simple
 User=root
+LimitNOFILE=49152
 WorkingDirectory=/etc/pmproxy
-ExecStart=/usr/local/bin/pmproxy -c /etc/pmproxy/conf.json
+ExecStart=$GOPATH/bin/pmproxy -c /etc/pmproxy/conf.json
 Restart=on-abort
 
 [Install]
 WantedBy=multi-user.target
+```
+
+- The GOPATH variable is not meant to be an environment variable, it should be replaced by the actual GOPATH value, so `go get -u github.com/lamg/pmproxy` will deploy the `pmproxy` executable.
+
+- Is important defining `LimitNOFILE=49152` because systemd ignores `/etc/security/limits.conf`. Otherwise according the user load, very soon the error `http: Accept error: accept tcp [::]:8080: accept4: too many open files` will appear. The limits configuration can be checked by executing:
+
+```sh
+cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 ```
 
 ## Tasks
