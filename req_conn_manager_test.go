@@ -26,7 +26,8 @@ func newRRConnMng(t *testing.T) (m *RRConnMng, c *Conf) {
 	var rl *RLog
 	qa, rl, e = initQARL(tClock())
 	require.True(t, e == nil)
-	m = NewRRConnMng(qa, rl, c.GrpIface, c.GrpThrottle)
+	m = NewRRConnMng(qa, rl, c.GrpIface, c.GrpThrottle,
+		c.GlobThrottle)
 	qa.login(coco, cocoIP)
 	return
 }

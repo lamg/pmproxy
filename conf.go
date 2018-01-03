@@ -25,6 +25,8 @@ type Conf struct {
 	ProxySrvAddr string `json:"proxySrvAddr"`
 	// GrpIface group-network interface dictionary file path
 	GrpIface map[string]string `json:"grpIface"`
+	// Global throttling fraction
+	GlobThrottle float64 `json:"globThrottle"`
 	// GrpThrottle group-network throttle specification dictionary
 	GrpThrottle map[string]float64 `json:"grpThrottle"`
 	// GrpQtPref quota group prefix in memberOf field in AD
@@ -73,6 +75,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			c.ADAddr == nc.ADAddr && c.AdmGrp == nc.AdmGrp &&
 			c.BDN == nc.BDN && c.CertFl == nc.CertFl &&
 			c.Cons == nc.Cons &&
+			c.GlobThrottle == nc.GlobThrottle &&
 			c.GrpQtPref == nc.GrpQtPref && c.KeyFl == nc.KeyFl &&
 			c.LogBName == nc.LogBName &&
 			c.ProxySrvAddr == nc.ProxySrvAddr && c.Quota == nc.Quota &&
@@ -180,7 +183,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)
 		rmng := NewRRConnMng(qa, rl, c.GrpIface,
-			c.GrpThrottle)
+			c.GrpThrottle, c.GlobThrottle)
 		p, pf := NewPMProxy(rmng, lga), ip.New(c.IPRanges...)
 		ph = &ipFilter{pf.FilterHTTP(p)}
 		// TODO serve HTTPS with valid certificate

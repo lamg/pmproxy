@@ -19,13 +19,17 @@ type RRConnMng struct {
 	rl *RLog
 	uf map[string]string
 	ts map[string]float64
+	// global throttle
+	gt *util.Throttle
 }
 
 // NewRRConnMng creates a new RRConnMng
-func NewRRConnMng(q *QAdm, l *RLog,
-	u map[string]string,
-	t map[string]float64) (r *RRConnMng) {
-	r = &RRConnMng{q, l, u, t}
+func NewRRConnMng(q *QAdm, l *RLog, u map[string]string,
+	t map[string]float64, gt float64) (r *RRConnMng) {
+	r = &RRConnMng{
+		q, l, u, t,
+		util.NewThrottle(gt, time.Millisecond),
+	}
 	return
 }
 
@@ -129,22 +133,23 @@ func (m *RRConnMng) newConn(ntw, addr string,
 	}
 	if e == nil {
 		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
-		c = newThConn(r, thr)
+		c = newThConn(r, thr, m.gt)
 	}
 	return
 }
 
 type thConn struct {
 	net.Conn
-	thr *util.Throttle
+	thr, gt *util.Throttle
 }
 
-func newThConn(c net.Conn, thr *util.Throttle) (b *thConn) {
-	b = &thConn{c, thr}
+func newThConn(c net.Conn, thr, gt *util.Throttle) (b *thConn) {
+	b = &thConn{c, thr, gt}
 	return
 }
 
 func (b *thConn) Read(p []byte) (n int, e error) {
+	b.gt.Throttle()
 	b.thr.Throttle()
 	n, e = b.Conn.Read(p)
 	return

@@ -66,6 +66,7 @@ func TestIPRanges(t *testing.T) {
 var pconf = &Conf{
 	IPRanges:     []string{"192.168.1.1/28"},
 	ProxySrvAddr: ":9080",
+	GlobThrottle: 0.5,
 	GrpThrottle: map[string]float64{
 		"A": 0.9,
 		"B": 0.8,
@@ -96,6 +97,7 @@ var conf = `
 	"hostName":"proxy.org",
 	"proxySrvAddr": ":9080",
 	"grpIface": {"X-Y":"eth0"},
+	"globThrottle":0.5,
 	"grpThrottle":{
 		"A": 0.9,
 		"B": 0.8
