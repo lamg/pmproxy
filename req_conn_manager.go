@@ -5,6 +5,7 @@ import (
 	"net"
 	h "net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lamg/errors"
@@ -17,18 +18,25 @@ import (
 type RRConnMng struct {
 	qa *QAdm
 	rl *RLog
+	// group-interface
 	uf map[string]string
+	// group-throttle
 	ts map[string]float64
 	// global throttle
 	gt *util.Throttle
+	// ip-conn amount TODO
+	ic *sync.Map
+	// max conn
+	mc int
 }
 
 // NewRRConnMng creates a new RRConnMng
 func NewRRConnMng(q *QAdm, l *RLog, u map[string]string,
-	t map[string]float64, gt float64) (r *RRConnMng) {
+	t map[string]float64, gt float64, mc int) (r *RRConnMng) {
 	r = &RRConnMng{
 		q, l, u, t,
 		util.NewThrottle(gt, time.Millisecond),
+		new(sync.Map), mc,
 	}
 	return
 }
@@ -112,6 +120,21 @@ func (m *RRConnMng) newConn(ntw, addr string,
 		}
 		if i == len(addr) {
 			e = fmt.Errorf("Not found IPv4 address")
+		}
+	}
+	if e == nil {
+		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+		v, ok := m.ic.Load(ip)
+		nc := 0
+		if ok {
+			nc = v.(int)
+		}
+		if nc == m.mc {
+			e = fmt.Errorf("Maximun number of connections %d reached for %s",
+				m.mc, ip)
+		} else {
+			nc = nc + 1
+			m.ic.Store(ip, nc)
 		}
 	}
 	var cn net.Conn

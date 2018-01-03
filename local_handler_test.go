@@ -40,6 +40,7 @@ func initPMProxy() (p *PMProxy, e *errors.Error) {
 				"B": 0.8,
 			},
 			0.5,
+			10,
 		)
 		p = NewPMProxy(rmng, new(url.URL))
 	}

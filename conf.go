@@ -23,6 +23,8 @@ type Conf struct {
 	IPRanges []string `json:"ipRanges"`
 	// ProxySrvAddr host:port to serve the proxy
 	ProxySrvAddr string `json:"proxySrvAddr"`
+	// MaxConn is the maximum number of connections per host
+	MaxConn int `json:"maxConn"`
 	// GrpIface group-network interface dictionary file path
 	GrpIface map[string]string `json:"grpIface"`
 	// Global throttling fraction
@@ -75,6 +77,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			c.ADAddr == nc.ADAddr && c.AdmGrp == nc.AdmGrp &&
 			c.BDN == nc.BDN && c.CertFl == nc.CertFl &&
 			c.Cons == nc.Cons &&
+			c.MaxConn == nc.MaxConn &&
 			c.GlobThrottle == nc.GlobThrottle &&
 			c.GrpQtPref == nc.GrpQtPref && c.KeyFl == nc.KeyFl &&
 			c.LogBName == nc.LogBName &&
@@ -183,7 +186,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)
 		rmng := NewRRConnMng(qa, rl, c.GrpIface,
-			c.GrpThrottle, c.GlobThrottle)
+			c.GrpThrottle, c.GlobThrottle, c.MaxConn)
 		p, pf := NewPMProxy(rmng, lga), ip.New(c.IPRanges...)
 		ph = &ipFilter{pf.FilterHTTP(p)}
 		// TODO serve HTTPS with valid certificate
