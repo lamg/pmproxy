@@ -122,8 +122,9 @@ func (m *RRConnMng) newConn(ntw, addr string,
 			e = fmt.Errorf("Not found IPv4 address")
 		}
 	}
+	var ip string
 	if e == nil {
-		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
 		v, ok := m.ic.Load(ip)
 		nc := 0
 		if ok {
@@ -156,7 +157,7 @@ func (m *RRConnMng) newConn(ntw, addr string,
 	}
 	if e == nil {
 		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
-		c = newThConn(r, thr, m.gt)
+		c = newThConn(r, thr, m.gt, m.ic, ip)
 	}
 	return
 }
@@ -164,10 +165,13 @@ func (m *RRConnMng) newConn(ntw, addr string,
 type thConn struct {
 	net.Conn
 	thr, gt *util.Throttle
+	ic      *sync.Map
+	ip      string
 }
 
-func newThConn(c net.Conn, thr, gt *util.Throttle) (b *thConn) {
-	b = &thConn{c, thr, gt}
+func newThConn(c net.Conn, thr, gt *util.Throttle,
+	ic *sync.Map, ip string) (b *thConn) {
+	b = &thConn{c, thr, gt, ic, ip}
 	return
 }
 
@@ -180,6 +184,17 @@ func (b *thConn) Read(p []byte) (n int, e error) {
 
 func (b *thConn) Write(p []byte) (n int, e error) {
 	n, e = b.Conn.Write(p)
+	return
+}
+
+func (b *thConn) Close() (e error) {
+	v, ok := b.ic.Load(b.ip)
+	if !ok {
+		e = fmt.Errorf("Connection from %s doesn't exists in map", b.ip)
+	}
+	if e == nil {
+		b.ic.Store(b.ip, v.(int)-1)
+	}
 	return
 }
 
