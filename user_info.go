@@ -2,9 +2,10 @@ package pmproxy
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/lamg/errors"
 	l "github.com/lamg/ldaputil"
-	"strings"
 )
 
 // UserDB is an interface for abstracting user databases
@@ -15,9 +16,9 @@ type UserDB interface {
 
 // LDB is an UserDB implementation using Ldap
 type LDB struct {
-	ldp        *l.Ldap
-	adminGroup string
-	qgPref     string
+	ldp       *l.Ldap
+	adminName string
+	qgPref    string
 }
 
 // NewLDB creates a new LDB
@@ -28,8 +29,8 @@ type LDB struct {
 // of this system.
 // qgPref: The group prefix of the group in membership that
 // defines the users quota group
-func NewLDB(adAddr, suff, bDN, admG, qgPref string) (r *LDB) {
-	r = &LDB{l.NewLdap(adAddr, suff, bDN), admG, qgPref}
+func NewLDB(adAddr, suff, bDN, admN, qgPref string) (r *LDB) {
+	r = &LDB{l.NewLdap(adAddr, suff, bDN), admN, qgPref}
 	return
 }
 
@@ -52,12 +53,8 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	if e == nil {
 		r.QuotaGroup = m
 	}
-	var fg string
 	if e == nil {
-		fg, e = db.ldp.DNFirstGroup(mp)
-	}
-	if e == nil {
-		r.IsAdmin = fg == db.adminGroup
+		r.IsAdmin = usr == db.adminName
 	}
 	return
 }

@@ -48,7 +48,7 @@ type Conf struct {
 	// AdmGrp is the group the administrators of this system
 	// belong, which is associated to their user name in the
 	// AD
-	AdmGrp string `json:"admGrp"`
+	AdmName string `json:"admName"`
 	// StPath is the path of the directory with static files
 	// to be used by the web user interface
 	StPath string `json:"stPath"`
@@ -74,7 +74,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 	nc, ok = v.(*Conf)
 	if ok {
 		ok = c.AccExcp == nc.AccExcp && c.ADAccSf == nc.ADAccSf &&
-			c.ADAddr == nc.ADAddr && c.AdmGrp == nc.AdmGrp &&
+			c.ADAddr == nc.ADAddr && c.AdmName == nc.AdmName &&
 			c.BDN == nc.BDN && c.CertFl == nc.CertFl &&
 			c.Cons == nc.Cons &&
 			c.MaxConn == nc.MaxConn &&
@@ -171,7 +171,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	if dAuth {
 		udb = NewDAuth()
 	} else {
-		udb = NewLDB(c.ADAddr, c.ADAccSf, c.BDN, c.AdmGrp,
+		udb = NewLDB(c.ADAddr, c.ADAccSf, c.BDN, c.AdmName,
 			c.GrpQtPref)
 	}
 	var lga *url.URL
