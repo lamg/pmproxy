@@ -27,12 +27,12 @@ type RRConnMng struct {
 	// ip-conn amount TODO
 	ic *sync.Map
 	// max conn
-	mc int
+	mc byte
 }
 
 // NewRRConnMng creates a new RRConnMng
 func NewRRConnMng(q *QAdm, l *RLog, u map[string]string,
-	t map[string]float64, gt float64, mc int) (r *RRConnMng) {
+	t map[string]float64, gt float64, mc byte) (r *RRConnMng) {
 	r = &RRConnMng{
 		q, l, u, t,
 		util.NewThrottle(gt, time.Millisecond),
@@ -122,21 +122,30 @@ func (m *RRConnMng) newConn(ntw, addr string,
 			e = fmt.Errorf("Not found IPv4 address")
 		}
 	}
-	var ip string
+	var ac *actConn
 	if e == nil {
-		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
+		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 		v, ok := m.ic.Load(ip)
-		nc := 0
 		if ok {
-			nc = v.(int)
-		}
-		if nc == m.mc {
-			e = fmt.Errorf("Maximun number of connections %d reached for %s",
-				m.mc, ip)
+			ac = v.(*actConn)
+			if ac.amount == m.mc {
+				e = fmt.Errorf("Maximun number of connections %d reached for %s",
+					m.mc, ip)
+			} else {
+				ac.amount++
+			}
 		} else {
-			nc = nc + 1
-			m.ic.Store(ip, nc)
+			ac = &actConn{amount: 0, last: time.Now()}
 		}
+		m.ic.Range(func(k, v interface{}) (b bool) {
+			ac := v.(*actConn)
+			if time.Now().Sub(ac.last) >= time.Minute {
+				ac.amount, ac.last = 0, time.Now()
+			}
+			b = true
+			return
+		})
+		// { all users inactive for one minute set 0 connections }
 	}
 	var cn net.Conn
 	if e == nil {
@@ -157,27 +166,32 @@ func (m *RRConnMng) newConn(ntw, addr string,
 	}
 	if e == nil {
 		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
-		c = newThConn(r, thr, m.gt, m.ic, ip)
+		c = newThConn(r, thr, m.gt, ac)
 	}
 	return
+}
+
+type actConn struct {
+	amount byte
+	last   time.Time
 }
 
 type thConn struct {
 	net.Conn
 	thr, gt *util.Throttle
-	ic      *sync.Map
-	ip      string
+	ac      *actConn
 }
 
 func newThConn(c net.Conn, thr, gt *util.Throttle,
-	ic *sync.Map, ip string) (b *thConn) {
-	b = &thConn{c, thr, gt, ic, ip}
+	ac *actConn) (b *thConn) {
+	b = &thConn{c, thr, gt, ac}
 	return
 }
 
 func (b *thConn) Read(p []byte) (n int, e error) {
 	b.gt.Throttle()
 	b.thr.Throttle()
+	b.ac.last = time.Now()
 	n, e = b.Conn.Read(p)
 	return
 }
@@ -188,12 +202,8 @@ func (b *thConn) Write(p []byte) (n int, e error) {
 }
 
 func (b *thConn) Close() (e error) {
-	v, ok := b.ic.Load(b.ip)
-	if !ok {
-		e = fmt.Errorf("Connection from %s doesn't exists in map", b.ip)
-	}
-	if e == nil {
-		b.ic.Store(b.ip, v.(int)-1)
+	if b.ac.amount != 0 {
+		b.ac.amount--
 	}
 	return
 }

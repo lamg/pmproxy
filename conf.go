@@ -24,7 +24,7 @@ type Conf struct {
 	// ProxySrvAddr host:port to serve the proxy
 	ProxySrvAddr string `json:"proxySrvAddr"`
 	// MaxConn is the maximum number of connections per host
-	MaxConn int `json:"maxConn"`
+	MaxConn byte `json:"maxConn"`
 	// GrpIface group-network interface dictionary file path
 	GrpIface map[string]string `json:"grpIface"`
 	// Global throttling fraction
