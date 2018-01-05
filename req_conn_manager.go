@@ -184,15 +184,11 @@ func (b *thConn) Read(p []byte) (n int, e error) {
 	return
 }
 
-func (b *thConn) Write(p []byte) (n int, e error) {
-	n, e = b.Conn.Write(p)
-	return
-}
-
 func (b *thConn) Close() (e error) {
 	if b.ac.amount != 0 {
 		b.ac.amount--
 	}
+	e = b.Conn.Close()
 	return
 }
 
