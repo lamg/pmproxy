@@ -22,9 +22,7 @@ type RRConnMng struct {
 	uf map[string]string
 	// group-throttle
 	ts map[string]float64
-	// global throttle
-	gt *util.Throttle
-	// ip-conn amount TODO
+	// ip-conn amount
 	ic *sync.Map
 	// max conn
 	mc byte
@@ -32,11 +30,11 @@ type RRConnMng struct {
 
 // NewRRConnMng creates a new RRConnMng
 func NewRRConnMng(q *QAdm, l *RLog, u map[string]string,
-	t map[string]float64, gt float64, mc byte) (r *RRConnMng) {
+	t map[string]float64, mc byte) (r *RRConnMng) {
 	r = &RRConnMng{
 		q, l, u, t,
-		util.NewThrottle(gt, time.Millisecond),
-		new(sync.Map), mc,
+		new(sync.Map),
+		mc,
 	}
 	return
 }
@@ -129,22 +127,15 @@ func (m *RRConnMng) newConn(ntw, addr string,
 		if ok {
 			ac = v.(*actConn)
 			if ac.amount == m.mc {
-				e = fmt.Errorf("Maximun number of connections %d reached for %s",
+				e = fmt.Errorf(
+					"Número máximo de conexiones %d alcanzado para %s",
 					m.mc, ip)
 			} else {
 				ac.amount++
 			}
 		} else {
-			ac = &actConn{amount: 0, last: time.Now()}
+			ac = &actConn{amount: 0}
 		}
-		m.ic.Range(func(k, v interface{}) (b bool) {
-			ac := v.(*actConn)
-			if time.Now().Sub(ac.last) >= time.Minute {
-				ac.amount, ac.last = 0, time.Now()
-			}
-			b = true
-			return
-		})
 		// { all users inactive for one minute set 0 connections }
 	}
 	var cn net.Conn
@@ -166,32 +157,29 @@ func (m *RRConnMng) newConn(ntw, addr string,
 	}
 	if e == nil {
 		r := &conCount{cn, m.qa, addr, r.RemoteAddr}
-		c = newThConn(r, thr, m.gt, ac)
+		c = newThConn(r, thr, ac)
 	}
 	return
 }
 
 type actConn struct {
 	amount byte
-	last   time.Time
 }
 
 type thConn struct {
 	net.Conn
-	thr, gt *util.Throttle
-	ac      *actConn
+	thr *util.Throttle
+	ac  *actConn
 }
 
-func newThConn(c net.Conn, thr, gt *util.Throttle,
+func newThConn(c net.Conn, thr *util.Throttle,
 	ac *actConn) (b *thConn) {
-	b = &thConn{c, thr, gt, ac}
+	b = &thConn{c, thr, ac}
 	return
 }
 
 func (b *thConn) Read(p []byte) (n int, e error) {
-	b.gt.Throttle()
 	b.thr.Throttle()
-	b.ac.last = time.Now()
 	n, e = b.Conn.Read(p)
 	return
 }

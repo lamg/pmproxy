@@ -67,7 +67,6 @@ var pconf = &Conf{
 	IPRanges:     []string{"192.168.1.1/28"},
 	ProxySrvAddr: ":9080",
 	MaxConn:      10,
-	GlobThrottle: 0.5,
 	GrpThrottle: map[string]float64{
 		"A": 0.9,
 		"B": 0.8,
@@ -99,7 +98,6 @@ var conf = `
 	"proxySrvAddr": ":9080",
 	"grpIface": {"X-Y":"eth0"},
 	"maxConn": 10,
-	"globThrottle":0.5,
 	"grpThrottle":{
 		"A": 0.9,
 		"B": 0.8
