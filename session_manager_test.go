@@ -25,14 +25,12 @@ type tARq struct {
 }
 
 func TestLogin(t *testing.T) {
-	ua, aa, cr, rq, sc, uc :=
+	ua, aa, cr, ur :=
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt(),
-		make(chan *pm.ProxHnd),
-		make(chan bool),
-		make(chan string)
-	s := pm.NewSMng(ua, aa, cr, rq, sc, uc)
+		&tUsrRec{}
+	s := pm.NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 	hs := []struct {
 		// user-password
@@ -63,7 +61,7 @@ func TestLogin(t *testing.T) {
 		if j.okRq {
 			// { handler logs in users that can make requests
 			//   to the proxy }
-			testHandle(t, s, rq, sc, uc, ts)
+			testHandle(t, ts, s, ur)
 			// { tested proxy handling requests according the
 			// status in ts's IPs (logged or not) }
 		}
@@ -90,22 +88,28 @@ func testAuthH(t *testing.T, a h.HandlerFunc, ts []*tARq) {
 	}
 }
 
-func testHandle(t *testing.T, s *pm.SMng, rq chan *pm.ProxHnd,
-	sc chan bool, uc chan string, ts []*tARq) {
-	go s.HandleAuth()
-	for i, j := range ts {
-		w, r := reqres(t, h.MethodGet, "", "", "", j.ip)
-		rq <- &pm.ProxHnd{Rq: r, RW: w}
-		b, usr := <-sc, <-uc
-		require.Equal(t, j.ok, !b, "At %d", i)
-		if b {
+type tUsrRec struct {
+	cUsr string
+}
+
+func (u *tUsrRec) Rec(usr string) {
+	u.cUsr = usr
+}
+
+func testHandle(t *testing.T, aq []*tARq, s pm.MaybeResp,
+	u *tUsrRec) {
+	for i, q := range aq {
+		w, r := reqres(t, h.MethodGet, "", "", "", q.ip)
+		y := s.Resp(w, r)
+		require.Equal(t, q.ok, !y, "At %d", i)
+		if y {
 			require.Equal(t,
 				// To be changed when HTML start to be used
-				pm.NotOpInSMsg(j.ip),
+				pm.NotOpInSMsg(q.ip),
 				w.Body.String(), "At %d", i)
 		} else {
-			require.Equal(t, j.usr, usr, "%s != %s at %d",
-				usr, j.usr, i)
+			require.Equal(t, q.usr, u.cUsr, "%s != %s at %d",
+				q.usr, u.cUsr, i)
 		}
 	}
 }
@@ -115,7 +119,7 @@ func TestLogout(t *testing.T) {
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, nil, nil, nil)
+	s := pm.NewSMng(ua, aa, cr, &tUsrRec{})
 	// { initialized SMng }
 	ts := []struct {
 		m  map[string]string
@@ -184,7 +188,7 @@ func TestNotSuppMeth(t *testing.T) {
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, nil, nil, nil)
+	s := pm.NewSMng(ua, aa, cr, new(tUsrRec))
 	// { initialized SMng }
 	hs := []struct {
 		hn h.HandlerFunc
@@ -208,7 +212,7 @@ func TestAdmGetSessions(t *testing.T) {
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, nil, nil, nil)
+	s := pm.NewSMng(ua, aa, cr, new(tUsrRec))
 	// { initialized SMng }
 	ta := makeTRq(usrAuthM, 0, true)
 	testAuthH(t, s.SrvUserSession, ta)
@@ -251,14 +255,12 @@ func TestAdmGetSessions(t *testing.T) {
 }
 
 func TestSwappedSessions(t *testing.T) {
-	ua, aa, cr, rq, sc, uc :=
+	ua, aa, cr, ur :=
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt(),
-		make(chan *pm.ProxHnd),
-		make(chan bool),
-		make(chan string)
-	s := pm.NewSMng(ua, aa, cr, rq, sc, uc)
+		new(tUsrRec)
+	s := pm.NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 	ta := makeTRq(usrAuthM, 0, true)
 	testAuthH(t, s.SrvUserSession, ta)
@@ -269,21 +271,18 @@ func TestSwappedSessions(t *testing.T) {
 	//   sent to users. That message is useful in case of an
 	//   account being stealed. }
 	// { len(ta) = len(tb) }
-	go s.HandleAuth()
 	for i := 0; i != len(ta); i++ {
 		w, r := reqres(t, h.MethodGet, "", "", "", ta[i].ip)
-		rq <- &pm.ProxHnd{Rq: r, RW: w}
-		stop, usr := <-sc, <-uc
+		stop := s.Resp(w, r)
 		require.True(t, stop, "At %d", i)
-		require.Empty(t, usr, "At %d", i)
+		require.Empty(t, ur.cUsr, "At %d", i)
 		require.Equal(t, pm.ClsByMsg(tb[i].ip), w.Body.String(),
 			"At %d", i)
 		// { closed by message received }
 		w, r = reqres(t, h.MethodGet, "", "", "", tb[i].ip)
-		rq <- &pm.ProxHnd{Rq: r, RW: w}
-		stop, usr = <-sc, <-uc
+		stop = s.Resp(w, r)
 		require.True(t, stop, "At %d", i)
-		require.Empty(t, usr, "At %d", i)
+		require.Empty(t, ur.cUsr, "At %d", i)
 		require.Equal(t, pm.RcvFrMsg(ta[i].ip), w.Body.String(),
 			"At %d", i)
 		// { recovered from message received }
@@ -304,11 +303,12 @@ func TestFatalSecurityBreach(t *testing.T) {
 	scrt, e = tk.SignedString(p)
 	require.NoError(t, e)
 
-	ua, aa, cr :=
+	ua, aa, cr, ur :=
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
-		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, nil, nil, nil)
+		testJWTCrypt(),
+		new(tUsrRec)
+	s := pm.NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 
 	w, r := reqres(t, h.MethodDelete, "", "", "", "")
@@ -325,18 +325,15 @@ func TestFatalSecurityBreach(t *testing.T) {
 }
 
 func TestSrvAdmMngS(t *testing.T) {
-	ua, aa, cr, rq, sc, uc :=
+	ua, aa, cr, ur :=
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt(),
-		make(chan *pm.ProxHnd),
-		make(chan bool),
-		make(chan string)
-	s := pm.NewSMng(ua, aa, cr, rq, sc, uc)
+		new(tUsrRec)
+	s := pm.NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 	ta := makeTRq(admAuthM, 0, true)
 	testAuthH(t, s.SrvAdmSession, ta)
-	go s.HandleAuth()
 	for i, j := range ta {
 		tu := makeTRq(usrAuthM, len(admAuthM), true)
 		for k, l := range tu {
@@ -348,18 +345,18 @@ func TestSrvAdmMngS(t *testing.T) {
 				i, k, w.Body.String())
 			// { logged in l.usr from l.ip }
 			w, r = reqres(t, h.MethodGet, "", "", "", l.ip)
-			rq <- &pm.ProxHnd{Rq: r, RW: w}
-			require.False(t, <-sc, "At %d,%d", i, k)
-			require.Equal(t, l.usr, <-uc)
+			stop := s.Resp(w, r)
+			require.False(t, stop, "At %d,%d", i, k)
+			require.Equal(t, l.usr, ur.cUsr)
 			// { l.usr can make requests and is returned by <-uc }
 			w, r = reqres(t, h.MethodPut, "", body, j.body, j.ip)
 			s.SrvAdmMngS(w, r)
 			require.Equal(t, h.StatusOK, w.Code, "At %d,%d", i, k)
 			// { logged out l.usr from l.ip }
 			w, r = reqres(t, h.MethodGet, "", "", "", l.ip)
-			rq <- &pm.ProxHnd{Rq: r, RW: w}
-			require.True(t, <-sc, "At %d,%d", i, k)
-			require.Empty(t, <-uc)
+			stop = s.Resp(w, r)
+			require.True(t, stop, "At %d,%d", i, k)
+			require.Empty(t, ur.cUsr)
 			// { l.usr cannot make requests }
 		}
 		w, r := reqres(t, h.MethodDelete, "", "", j.body, j.ip)

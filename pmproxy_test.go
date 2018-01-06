@@ -9,18 +9,25 @@ import (
 	pm "github.com/lamg/pmproxy"
 )
 
+type tMR struct {
+	r   bool
+	msg string
+}
+
+func (m *tMR) Resp(w h.ResponseWriter, r *h.Request) (y bool) {
+	y = m.r
+	w.Write([]byte(m.msg))
+	return
+}
+
 func TestServeHTTP(t *testing.T) {
-	rw, sc := make([]chan *pm.ProxHnd, 1), make(chan bool)
-	rw[0] = make(chan *pm.ProxHnd)
-	rrw := make([]chan<- *pm.ProxHnd, 1)
-	rrw[0] = rw[0]
+	amsg := "test message"
 	prx := &pm.PMProxy{
-		Pr:   rrw,
-		Stop: sc,
+		Pr: []pm.MaybeResp{
+			&tMR{r: false, msg: ""},
+			&tMR{r: true, msg: amsg}},
 	}
 	w, r := reqres(t, h.MethodGet, "", "", "", "")
-	go prx.ServeHTTP(w, r)
-	ph := <-rw[0]
-	require.Equal(t, h.MethodGet, ph.Rq.Method)
-	sc <- true
+	prx.ServeHTTP(w, r)
+	require.Equal(t, w.Body.String(), amsg)
 }

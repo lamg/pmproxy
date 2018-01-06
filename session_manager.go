@@ -14,6 +14,11 @@ type Auth interface {
 	Authenticate(string, string) error
 }
 
+// UsrRec is an user receiver
+type UsrRec interface {
+	Rec(string)
+}
+
 // SMng handles opened sessions
 type SMng struct {
 	// ip - administrator user
@@ -26,26 +31,20 @@ type SMng struct {
 	usr Auth
 	// authenticator for administrators
 	adm Auth
-	rq  <-chan *ProxHnd
-	// sc: stop channel
-	sc chan<- bool
-	// uc: user name channel
-	uc chan<- string
+	// user receiver for logged users
+	Ur UsrRec
 	cr *JWTCrypt
 }
 
 // NewSMng creates a new SMng
-func NewSMng(usr, adm Auth, cr *JWTCrypt, rq <-chan *ProxHnd,
-	sc chan<- bool, uc chan<- string) (s *SMng) {
+func NewSMng(usr, adm Auth, cr *JWTCrypt, ur UsrRec) (s *SMng) {
 	s = &SMng{
 		sa:  new(sync.Map),
 		su:  new(sync.Map),
 		swS: new(sync.Map),
 		usr: usr,
 		adm: adm,
-		rq:  rq,
-		sc:  sc,
-		uc:  uc,
+		Ur:  ur,
 		cr:  cr,
 	}
 	return
@@ -130,41 +129,33 @@ func NotOpInSMsg(ip string) (m string) {
 	return
 }
 
-// HandleAuth handles requests to the proxy sccording
-// the status (opened/closed session) of the IP which
-// made it
-func (s *SMng) HandleAuth() {
-	for {
-		ph := <-s.rq
-		ip, _, _ := net.SplitHostPort(ph.Rq.RemoteAddr)
-		u, ok := s.su.Load(ip)
-		v, sw := s.swS.Load(ip)
-		stop := false
-		if !ok && !sw {
-			// { session is closed and there's no message }
-			// use HTML template here
-			ph.RW.Write([]byte(NotOpInSMsg(ip)))
-			stop = true
-		} else if sw {
-			msg := v.(string)
-			// use HTML template here
-			ph.RW.Write([]byte(msg))
-			stop = true
-			// { message written, if appears,
-			//   be the session closed or not }
-		}
-		s.sc <- stop
-		if !stop {
-			s.uc <- u.(string)
-		} else {
-			s.uc <- ""
-		}
-		// { ph.Rq.RemoteAddr's IP is logged in = boolean
-		//   sent to the stop channel (s.sc). In case that boolean
-		//   is true the user's name logged from that IP is
-		//   sent to s.uc, otherwise the empty string is sent.
-		//	 Also in the last case a message is written to ph.RW}
+// Resp is the MaybeResp implementation. It handles requests to the
+// proxy according the status (opened/closed session) of the IP
+// which made it
+func (s *SMng) Resp(w h.ResponseWriter, r *h.Request) (y bool) {
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	u, ok := s.su.Load(ip)
+	v, sw := s.swS.Load(ip)
+	if !ok && !sw {
+		// { session is closed and there's no message }
+		// use HTML template here
+		w.Write([]byte(NotOpInSMsg(ip)))
+	} else if sw {
+		msg := v.(string)
+		// use HTML template here
+		w.Write([]byte(msg))
+		s.swS.Delete(ip)
+		// { message written, if appears,
+		//   be the session closed or not
+		//	 and deleted for avoiding inconsistencies }
 	}
+	y = sw || !ok
+	if !y {
+		s.Ur.Rec(u.(string))
+	} else {
+		s.Ur.Rec("")
+	}
+	return
 }
 
 // UsrCrd user credentials

@@ -6,23 +6,20 @@ import (
 
 // PMProxy does some preprocessing before proxying
 type PMProxy struct {
-	Pr   []chan<- *ProxHnd
-	Stop <-chan bool
+	Pr []MaybeResp
 }
 
-// ProxHnd has the parameters for handling a proxy request
-// and response
-type ProxHnd struct {
-	RW h.ResponseWriter
-	Rq *h.Request
+// MaybeResp abstracts an h.Handler that may
+// respond to an *h.Request
+type MaybeResp interface {
+	Resp(w h.ResponseWriter, r *h.Request) bool
 }
 
 // ServeProxy is the h.HandlerFunc for proxying requests
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
-	stop, ph := false, &ProxHnd{RW: w, Rq: r}
+	stop := false
 	for i := 0; !stop && i != len(p.Pr); i++ {
-		p.Pr[i] <- ph
-		stop = <-p.Stop
+		stop = p.Pr[i].Resp(w, r)
 	}
 }
