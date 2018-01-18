@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lamg/errors"
 	"os"
+	"time"
 )
 
 const (
@@ -38,7 +39,7 @@ func (rl *RLog) record(l *Log) {
 		l.User = u.UserName
 	}
 	rl.wr.Write([]byte(fmt.Sprintf("%s %s %s %s\n",
-		l.User, l.Time.String(), l.URI, l.Addr)))
+		l.User, l.Time.Format(time.RFC3339), l.URI, l.Addr)))
 	rl.wr.Sync()
 }
 
