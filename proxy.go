@@ -73,6 +73,14 @@ func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 		// { redirected to the proxy's web interface
 		//	 with the requested URL as parameter }
 	} else {
+		// TODO log experimental
+		addr, _, _ := net.SplitHostPort(r.RemoteAddr)
+		log := &Log{
+			Addr: addr,
+			Time: p.rmng.qa.cl.Now(),
+			URI:  r.URL.String(),
+		}
+		p.rmng.rl.record(log)
 		q := r.WithContext(context.WithValue(context.Background(),
 			RemoteAddr(rmAddr), r))
 		p.px.ServeHTTP(w, q)

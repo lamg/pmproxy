@@ -46,7 +46,7 @@ func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e *errors.Error) {
 	}
 	qa = NewQAdm(sm, gq, uc, l, cl)
 	// rl initialization
-	rl = NewRLog(w.NewDWF(), sm)
+	rl = NewRLog(nil, sm)
 	return
 }
 

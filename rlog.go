@@ -1,10 +1,9 @@
 package pmproxy
 
 import (
-	"io"
-
+	"fmt"
 	"github.com/lamg/errors"
-	w "github.com/lamg/wfact"
+	"os"
 )
 
 const (
@@ -14,22 +13,21 @@ const (
 
 // RLog records Log structs to an io.Writer
 type RLog struct {
-	wr w.WriterFct
-	w  io.Writer
+	wr *os.File
 	e  *errors.Error
 	iu IPUser
 }
 
 // NewRLog creates a new RLog
-func NewRLog(wr w.WriterFct, iu IPUser) (rl *RLog) {
-	rl = &RLog{wr: wr, iu: iu, w: wr.Current()}
+func NewRLog(wr *os.File, iu IPUser) (rl *RLog) {
+	rl = &RLog{wr: wr, iu: iu}
 	rl.setZero()
 	return
 }
 
 func (rl *RLog) setZero() {
-	rl.wr.NextWriter()
-	rl.w, rl.e = rl.wr.Current(), rl.wr.Err()
+	// rl.wr.NextWriter()
+	// rl.w, rl.e = rl.wr.Current(), rl.wr.Err()
 }
 
 func (rl *RLog) record(l *Log) {
@@ -39,13 +37,9 @@ func (rl *RLog) record(l *Log) {
 	} else {
 		l.User = u.UserName
 	}
-	_, ec := rl.w.Write([]byte(l.String() + "\n"))
-	if ec != nil {
-		rl.e = &errors.Error{
-			Code: ErrorRecWrt,
-			Err:  ec,
-		}
-	}
+	rl.wr.Write([]byte(fmt.Sprintf("%s %s %s %s\n",
+		l.User, l.Time.String(), l.URI, l.Addr)))
+	rl.wr.Sync()
 }
 
 func (rl *RLog) err() (e *errors.Error) {
