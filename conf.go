@@ -181,7 +181,8 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	if e == nil {
 		cry := NewJWTCrypt(pkey)
 		sm := NewSMng(udb, cry)
-		dt, _ := os.Create(c.LogBName + cl.Now().String())
+		dt, _ := os.Create(c.LogBName +
+			cl.Now().Format(time.RFC3339))
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)
 		rmng := NewRRConnMng(qa, rl, c.GrpIface,
 			c.GrpThrottle, c.MaxConn)
