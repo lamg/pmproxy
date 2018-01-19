@@ -14,9 +14,13 @@ type tMR struct {
 	msg string
 }
 
-func (m *tMR) Resp(w h.ResponseWriter, r *h.Request) (y bool) {
-	y = m.r
+func (m *tMR) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	w.Write([]byte(m.msg))
+	return
+}
+
+func (m *tMR) V() (y bool) {
+	y = m.r
 	return
 }
 

@@ -1,8 +1,10 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	h "net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -14,17 +16,17 @@ import (
 // QCMng manages quotas and consumptions
 type QCMng struct {
 	// resource-*Quota
-	Quota *sync.Map
+	Rm *RdMng
 	// resource-*Cons
 	Cons *sync.Map
 	// determines resources
-	QDet ResDet
-	CDet ResDet
+	Det ResDet
 	//
 	Cl clock.Clock
 	// current user
 	cUsr string
 	qr   QtCsRec
+	okQt bool
 }
 
 // QtCsRec is a receiver of *QtCs
@@ -40,30 +42,36 @@ func (q *QCMng) Rec(usr string) {
 // MaybeResp handles requests to the proxy. If any
 // has no resource associated, then it will respond
 // with an error page
-func (q *QCMng) MaybeResp(w h.ResponseWriter, r *h.Request) (y bool) {
+func (q *QCMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	nw := q.Cl.Now()
-	resq := q.QDet.Det(r, nw, q.cUsr)
-	v, ok := q.Quota.Load(resq)
-	var u interface{}
-	if ok {
-		resc := q.CDet.Det(r, nw, q.cUsr)
-		u, ok = q.Cons.Load(resc)
+	res, e := q.Det.Det(r, nw, q.cUsr)
+	var cs *Cons
+	if e == nil {
+		v, ok := q.Cons.Load(res.InD.Det(r, nw, q.cUsr))
+		if ok {
+			cs = v.(*Cons)
+		} else {
+			e = NoResourceMsg(r, nw, q.cUsr)
+		}
 	}
-	if ok {
-		cs, qt := u.(*Cons), v.(*Quota)
-		q.qr.Rec(&QtCs{Qt: qt, Cs: cs})
+	if e == nil {
+		q.qr.Rec(&QtCs{Qt: res.Qt, Cs: cs})
+	} else {
+		w.Write([]byte(e.Error()))
 	}
-	if !ok {
-		w.Write([]byte(NoResourceMsg(r, nw, q.cUsr)))
-	}
-	y = !ok
+	q.okQt = e != nil
+	return
+}
+
+func (q *QCMng) V() (y bool) {
+	y = q.okQt
 	return
 }
 
 // NoResourceMsg is the message sent when no resource is found
 // for processing the request
-func NoResourceMsg(r *h.Request, t time.Time, usr string) (s string) {
-	s = fmt.Sprintf("No resource found for %s in %s at %s", usr,
+func NoResourceMsg(r *h.Request, t time.Time, usr string) (e error) {
+	e = fmt.Errorf("No resource found for %s in %s at %s", usr,
 		r.RemoteAddr, t.Format(time.RFC3339))
 	return
 }
@@ -74,25 +82,75 @@ type QtCs struct {
 	Cs *Cons
 }
 
+// TODO following handlers expose resource managing interface.
+// Implement JSON marshal and unmarshal in types to be modified
+// by those handlers
+
+// SrvQt is an h.HandleFunc for serving and modifying quotas
+func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
+	var e error
+	if r.Method == h.MethodGet {
+
+	} else if r.Method == h.MethodPost {
+
+	} else if r.Method == h.MethodPut {
+
+	} else if r.Method == h.MethodDelete {
+
+	} else {
+		e = NotSuppMeth(r.Method)
+	}
+	writeErr(w, e)
+}
+
+// SrvCs is an h.HandleFunc for serving and modifying
+// consumptions
+func (q *QCMng) SrvCs(w h.ResponseWriter, r *h.Request) {
+	var e error
+	if r.Method == h.MethodGet {
+
+	} else if r.Method == h.MethodPost {
+
+	} else if r.Method == h.MethodPut {
+
+	} else if r.Method == h.MethodDelete {
+
+	} else {
+		e = NotSuppMeth(r.Method)
+	}
+	writeErr(w, e)
+}
+
 // Quota represents the parameters and resources
 // available for determined connection
 type Quota struct {
 	// Maximum amount of bytes available for downloading
-	Dwn uint64
+	Dwn uint64 `json:"dwn"`
 	// Network interface the connection must be made over
-	Iface string
+	Iface string `json:"iface"`
 	// Time span for consuming/using this resource
-	Span *rt.RSpan
+	Span *rt.RSpan `json:"span"`
 	// Connection's throttling specification
-	Thr float64
+	Thr float64 `json:"thr"`
 	// Maximum amount of connections per host
-	MCn byte
+	MCn byte `json:"mCn"`
+	// Maybe a proxy for handling requests
+	Proxy string `json:"proxy"`
+	proxy *url.URL
+}
+
+func (q *Quota) UnmarshalJSON(data []byte) (e error) {
+	e = json.Unmarshal(data, q)
+	if e == nil {
+		q.proxy, e = url.Parse(q.Proxy)
+	}
+	return
 }
 
 // Cons represents the consumed quota, if can be
 type Cons struct {
 	// Amount of downloaded bytes
-	Dwn uint64
+	Dwn uint64 `json:"dwn"`
 	// Amount of used connections
-	Cns byte
+	Cns byte `json:"cns"`
 }

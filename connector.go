@@ -40,6 +40,8 @@ func newRConn(cl clock.Clock, qc *QtCs,
 	}
 	var cn net.Conn
 	if e == nil {
+		// TODO reemplazar el dialer por uno
+		// que sirva para hacer pruebas
 		tca := &net.TCPAddr{IP: la.IP}
 		d := &net.Dialer{
 			LocalAddr: tca,

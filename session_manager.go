@@ -32,8 +32,9 @@ type SMng struct {
 	// authenticator for administrators
 	adm Auth
 	// user receiver for logged users
-	Ur UsrRec
-	cr *JWTCrypt
+	Ur   UsrRec
+	cr   *JWTCrypt
+	resp bool
 }
 
 // NewSMng creates a new SMng
@@ -129,10 +130,10 @@ func NotOpInSMsg(ip string) (m string) {
 	return
 }
 
-// Resp is the MaybeResp implementation. It handles requests to the
+// ServeHTTP handles requests to the
 // proxy according the status (opened/closed session) of the IP
 // which made it
-func (s *SMng) Resp(w h.ResponseWriter, r *h.Request) (y bool) {
+func (s *SMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	u, ok := s.su.Load(ip)
 	v, sw := s.swS.Load(ip)
@@ -149,12 +150,17 @@ func (s *SMng) Resp(w h.ResponseWriter, r *h.Request) (y bool) {
 		//   be the session closed or not
 		//	 and deleted for avoiding inconsistencies }
 	}
-	y = sw || !ok
-	if !y {
+	s.resp = sw || !ok
+	if !s.resp {
 		s.Ur.Rec(u.(string))
 	} else {
 		s.Ur.Rec("")
 	}
+	return
+}
+
+func (s *SMng) V() (b bool) {
+	b = s.resp
 	return
 }
 

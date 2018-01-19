@@ -100,8 +100,9 @@ func testHandle(t *testing.T, aq []*tARq, s pm.MaybeResp,
 	u *tUsrRec) {
 	for i, q := range aq {
 		w, r := reqres(t, h.MethodGet, "", "", "", q.ip)
-		y := s.Resp(w, r)
-		require.Equal(t, q.ok, !y, "At %d", i)
+		s.ServeHTTP(w, r)
+		y := s.V()
+		require.Equal(t, q.ok, !s.V(), "At %d", i)
 		if y {
 			require.Equal(t,
 				// To be changed when HTML start to be used
@@ -273,14 +274,16 @@ func TestSwappedSessions(t *testing.T) {
 	// { len(ta) = len(tb) }
 	for i := 0; i != len(ta); i++ {
 		w, r := reqres(t, h.MethodGet, "", "", "", ta[i].ip)
-		stop := s.Resp(w, r)
+		s.ServeHTTP(w, r)
+		stop := s.V()
 		require.True(t, stop, "At %d", i)
 		require.Empty(t, ur.cUsr, "At %d", i)
 		require.Equal(t, pm.ClsByMsg(tb[i].ip), w.Body.String(),
 			"At %d", i)
 		// { closed by message received }
 		w, r = reqres(t, h.MethodGet, "", "", "", tb[i].ip)
-		stop = s.Resp(w, r)
+		s.ServeHTTP(w, r)
+		stop = s.V()
 		require.True(t, stop, "At %d", i)
 		require.Empty(t, ur.cUsr, "At %d", i)
 		require.Equal(t, pm.RcvFrMsg(ta[i].ip), w.Body.String(),
@@ -345,7 +348,8 @@ func TestSrvAdmMngS(t *testing.T) {
 				i, k, w.Body.String())
 			// { logged in l.usr from l.ip }
 			w, r = reqres(t, h.MethodGet, "", "", "", l.ip)
-			stop := s.Resp(w, r)
+			s.ServeHTTP(w, r)
+			stop := s.V()
 			require.False(t, stop, "At %d,%d", i, k)
 			require.Equal(t, l.usr, ur.cUsr)
 			// { l.usr can make requests and is returned by <-uc }
@@ -354,7 +358,8 @@ func TestSrvAdmMngS(t *testing.T) {
 			require.Equal(t, h.StatusOK, w.Code, "At %d,%d", i, k)
 			// { logged out l.usr from l.ip }
 			w, r = reqres(t, h.MethodGet, "", "", "", l.ip)
-			stop = s.Resp(w, r)
+			s.ServeHTTP(w, r)
+			stop = s.V()
 			require.True(t, stop, "At %d,%d", i, k)
 			require.Empty(t, ur.cUsr)
 			// { l.usr cannot make requests }
