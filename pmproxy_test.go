@@ -1,12 +1,10 @@
-package pmproxy_test
+package pmproxy
 
 import (
 	h "net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	pm "github.com/lamg/pmproxy"
 )
 
 type tMR struct {
@@ -26,8 +24,8 @@ func (m *tMR) V() (y bool) {
 
 func TestServeHTTP(t *testing.T) {
 	amsg := "test message"
-	prx := &pm.PMProxy{
-		Pr: []pm.MaybeResp{
+	prx := &PMProxy{
+		Pr: []MaybeResp{
 			&tMR{r: false, msg: ""},
 			&tMR{r: true, msg: amsg}},
 	}

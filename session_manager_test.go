@@ -1,4 +1,4 @@
-package pmproxy_test
+package pmproxy
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
-	pm "github.com/lamg/pmproxy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +29,7 @@ func TestLogin(t *testing.T) {
 		&tAuth{admAuthM},
 		testJWTCrypt(),
 		&tUsrRec{}
-	s := pm.NewSMng(ua, aa, cr, ur)
+	s := NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 	hs := []struct {
 		// user-password
@@ -96,7 +95,7 @@ func (u *tUsrRec) Rec(usr string) {
 	u.cUsr = usr
 }
 
-func testHandle(t *testing.T, aq []*tARq, s pm.MaybeResp,
+func testHandle(t *testing.T, aq []*tARq, s MaybeResp,
 	u *tUsrRec) {
 	for i, q := range aq {
 		w, r := reqres(t, h.MethodGet, "", "", "", q.ip)
@@ -106,7 +105,7 @@ func testHandle(t *testing.T, aq []*tARq, s pm.MaybeResp,
 		if y {
 			require.Equal(t,
 				// To be changed when HTML start to be used
-				pm.NotOpInSMsg(q.ip),
+				NotOpInSMsg(q.ip),
 				w.Body.String(), "At %d", i)
 		} else {
 			require.Equal(t, q.usr, u.cUsr, "%s != %s at %d",
@@ -120,7 +119,7 @@ func TestLogout(t *testing.T) {
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, &tUsrRec{})
+	s := NewSMng(ua, aa, cr, &tUsrRec{})
 	// { initialized SMng }
 	ts := []struct {
 		m  map[string]string
@@ -155,7 +154,7 @@ func TestLogout(t *testing.T) {
 			j.hn.ServeHTTP(w, r)
 			require.Equal(t, h.StatusBadRequest, w.Code,
 				"At %d,%d", i, k)
-			rs := pm.NotOpBySMsg(l.usr, l.ip)
+			rs := NotOpBySMsg(l.usr, l.ip)
 			require.Equal(t, rs, w.Body.String())
 			// { trying to log out ofter logged out produces an
 			//   error message }
@@ -171,6 +170,11 @@ func makeTRq(m map[string]string, ips int,
 	r = make([]*tARq, len(m))
 	i := ips
 	for k, v := range m {
+		// el usuario que se loguea desde ip
+		// depende del orden en que se recorra m
+		// y ese orden no siempre es el mismo, por
+		// lo tanto no se cumple la precondición de
+		// TestSwappedSessions
 		ip := make([]byte, 4)
 		ip[3] = ip[3] + byte(i)
 		r[i-ips] = &tARq{
@@ -179,6 +183,8 @@ func makeTRq(m map[string]string, ips int,
 			ip:   net.IP(ip).String(),
 			ok:   ok,
 		}
+		println("k: " + k + " ip: " + r[i-ips].ip)
+
 		i = i + 1
 	}
 	return
@@ -189,7 +195,7 @@ func TestNotSuppMeth(t *testing.T) {
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, new(tUsrRec))
+	s := NewSMng(ua, aa, cr, new(tUsrRec))
 	// { initialized SMng }
 	hs := []struct {
 		hn h.HandlerFunc
@@ -202,7 +208,7 @@ func TestNotSuppMeth(t *testing.T) {
 		for k, l := range j.ns {
 			w, r := reqres(t, l, "", "", "", "")
 			j.hn(w, r)
-			rs := pm.NotSuppMeth(l)
+			rs := NotSuppMeth(l)
 			require.Equal(t, rs.Error(), w.Body.String(), "At %d,%d", i, k)
 		}
 	}
@@ -213,7 +219,7 @@ func TestAdmGetSessions(t *testing.T) {
 		&tAuth{usrAuthM},
 		&tAuth{admAuthM},
 		testJWTCrypt()
-	s := pm.NewSMng(ua, aa, cr, new(tUsrRec))
+	s := NewSMng(ua, aa, cr, new(tUsrRec))
 	// { initialized SMng }
 	ta := makeTRq(usrAuthM, 0, true)
 	testAuthH(t, s.SrvUserSession, ta)
@@ -234,7 +240,7 @@ func TestAdmGetSessions(t *testing.T) {
 		s.SrvAdmSession(w, r)
 		require.Equal(t, h.StatusOK, w.Code, "At %d", i)
 		mp := make(map[string]string)
-		e := pm.Decode(w.Body, &mp)
+		e := Decode(w.Body, &mp)
 		require.NoError(t, e, "At %d", i)
 		for k, l := range ta {
 			require.Equal(t, l.usr, mp[l.ip], "At %d,%d", i, k)
@@ -248,7 +254,7 @@ func TestAdmGetSessions(t *testing.T) {
 		w, r = reqres(t, h.MethodGet, "", "", scrt, nli)
 		s.SrvAdmSession(w, r)
 		require.Equal(t, h.StatusBadRequest, w.Code, "At %d", i)
-		require.Equal(t, pm.NotOpBySMsg(j.usr, nli),
+		require.Equal(t, NotOpBySMsg(j.usr, nli),
 			w.Body.String(), "At %d", i)
 		// { An error returned for a GET request with a valid
 		//   user but with wrong IP (nli) }
@@ -261,12 +267,26 @@ func TestSwappedSessions(t *testing.T) {
 		&tAuth{admAuthM},
 		testJWTCrypt(),
 		new(tUsrRec)
-	s := pm.NewSMng(ua, aa, cr, ur)
+	s := NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 	ta := makeTRq(usrAuthM, 0, true)
+	for _, j := range ta {
+		println(j.ip)
+	}
 	testAuthH(t, s.SrvUserSession, ta)
 	tb := makeTRq(usrAuthM, len(usrAuthM), true)
+	for _, j := range tb {
+		println(j.ip)
+	}
 	testAuthH(t, s.SrvUserSession, tb)
+	s.swS.Range(func(k, v interface{}) (b bool) {
+		print("k: ")
+		println(k.(string))
+		print("v: ")
+		println(v.(string))
+		b = true
+		return
+	})
 	// { logged same users in ta but from different IPs.
 	//   This is done for testing the swapped session message
 	//   sent to users. That message is useful in case of an
@@ -278,7 +298,7 @@ func TestSwappedSessions(t *testing.T) {
 		stop := s.V()
 		require.True(t, stop, "At %d", i)
 		require.Empty(t, ur.cUsr, "At %d", i)
-		require.Equal(t, pm.ClsByMsg(tb[i].ip), w.Body.String(),
+		require.Equal(t, ClsByMsg(tb[i].ip), w.Body.String(),
 			"At %d", i)
 		// { closed by message received }
 		w, r = reqres(t, h.MethodGet, "", "", "", tb[i].ip)
@@ -286,7 +306,7 @@ func TestSwappedSessions(t *testing.T) {
 		stop = s.V()
 		require.True(t, stop, "At %d", i)
 		require.Empty(t, ur.cUsr, "At %d", i)
-		require.Equal(t, pm.RcvFrMsg(ta[i].ip), w.Body.String(),
+		require.Equal(t, RcvFrMsg(ta[i].ip), w.Body.String(),
 			"At %d", i)
 		// { recovered from message received }
 	}
@@ -311,18 +331,18 @@ func TestFatalSecurityBreach(t *testing.T) {
 		&tAuth{admAuthM},
 		testJWTCrypt(),
 		new(tUsrRec)
-	s := pm.NewSMng(ua, aa, cr, ur)
+	s := NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 
 	w, r := reqres(t, h.MethodDelete, "", "", "", "")
 	s.SrvUserSession(w, r)
 	require.Equal(t, h.StatusBadRequest, w.Code)
-	require.Equal(t, pm.MalformedHd, w.Body.String())
+	require.Equal(t, MalformedHd, w.Body.String())
 	// { malformed header tested }
 	w, r = reqres(t, h.MethodDelete, "", "", scrt, "")
 	defer func() {
 		msg := recover()
-		require.Equal(t, pm.NotJWTUser, msg)
+		require.Equal(t, NotJWTUser, msg)
 	}()
 	s.SrvUserSession(w, r)
 }
@@ -333,7 +353,7 @@ func TestSrvAdmMngS(t *testing.T) {
 		&tAuth{admAuthM},
 		testJWTCrypt(),
 		new(tUsrRec)
-	s := pm.NewSMng(ua, aa, cr, ur)
+	s := NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
 	ta := makeTRq(admAuthM, 0, true)
 	testAuthH(t, s.SrvAdmSession, ta)
@@ -367,7 +387,7 @@ func TestSrvAdmMngS(t *testing.T) {
 		w, r := reqres(t, h.MethodDelete, "", "", j.body, j.ip)
 		s.SrvAdmMngS(w, r)
 		require.Equal(t, h.StatusBadRequest, w.Code)
-		require.Equal(t, pm.NotSuppMeth(h.MethodDelete).Error(),
+		require.Equal(t, NotSuppMeth(h.MethodDelete).Error(),
 			w.Body.String())
 		// { not supported method tested }
 	}
@@ -385,19 +405,19 @@ func reqres(t *testing.T, meth, path, body, hd, addr string) (r *ht.ResponseReco
 	q.Host = net.JoinHostPort(q.Host, "443")
 	q.RemoteAddr = net.JoinHostPort(addr, "443")
 	if hd != "" {
-		q.Header.Set(pm.AuthHd, hd)
+		q.Header.Set(AuthHd, hd)
 	}
 	r = ht.NewRecorder()
 	require.NoError(t, e)
 	return
 }
 
-func testJWTCrypt() (cr *pm.JWTCrypt) {
+func testJWTCrypt() (cr *JWTCrypt) {
 	pk, e := jwt.ParseRSAPrivateKeyFromPEM([]byte(privKey))
 	if e != nil {
 		panic(e.Error())
 	}
-	cr = pm.NewJWTCrypt(pk)
+	cr = NewJWTCrypt(pk)
 	return
 }
 

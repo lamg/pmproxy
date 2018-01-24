@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	rs "github.com/lamg/rtimespan"
 	"net"
 	h "net/http"
@@ -16,17 +17,32 @@ import (
 // and user. A nil field matches all elements.
 type Cond struct {
 	// ip is contained by one of the *net.IPNet
-	Net []*net.IPNet
+	// in CIDR format
+	Net []string `json:"net"`
 	// time is contained by one of the *rs.RSpan
-	Rs []*rs.RSpan
+	Rs []*rs.RSpan `json:"rs"`
 	// LDAP filter format string for the user
-	LFlt string
+	LFlt string `json:"lFlt"`
 	// usr is in Usrs
-	Usrs []string
+	Usrs []string `json:"usrs"`
 	// request.URL.Hostname() is in ReqHost
-	ReqHost []string
+	ReqHost []string `json:"reqHost"`
 	// request.URL.Port() is in ReqPort
-	ReqPort []string
+	ReqPort []string `json:"reqPort"`
+	// constructed with values in Net, for determining
+	// if an IP belongs to the following networks
+	nt []*net.IPNet
+}
+
+func (c *Cond) UnmarshalJSON(p []byte) (e error) {
+	e = json.Unmarshal(p, c)
+	if e == nil {
+		c.nt = make([]*net.IPNet, len(c.Net))
+	}
+	for i := 0; e == nil && i != len(c.Net); i++ {
+		_, c.nt[i], e = net.ParseCIDR(c.Net[i])
+	}
+	return
 }
 
 // Bool implementation for Cond
@@ -42,7 +58,7 @@ type evCond struct {
 func (v *evCond) V() (y bool) {
 	hs, _, _ := net.SplitHostPort(v.r.RemoteAddr)
 	cs := []Bool{
-		&netC{nt: v.c.Net, ip: net.ParseIP(hs)},
+		&netC{nt: v.c.nt, ip: net.ParseIP(hs)},
 		&tmC{t: v.t, s: v.c.Rs},
 		&ldBool{usr: v.usr, ldf: v.ld, e: v.e},
 		&strSC{slc: v.c.Usrs, x: v.usr},

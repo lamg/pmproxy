@@ -6,6 +6,33 @@ import (
 	"time"
 )
 
+// RdMng manages a resource determinator
+type RdMng struct {
+	rs  []*Res
+	LdF LdapFlt
+}
+
+// Det is the ResDet implementation
+func (d *RdMng) Det(r *h.Request, t time.Time,
+	usr string) (s *Res, e error) {
+	ec, err := make([]Bool, len(d.rs)), new(err)
+	for i, j := range d.rs {
+		ec[i] = &evCond{
+			c:  j.Cn,
+			r:  r,
+			t:  t,
+			ld: d.LdF,
+			e:  err,
+		}
+	}
+	y, i := BoundedLinearSearch(ec)
+	e = err.e
+	if y {
+		s = d.rs[i]
+	}
+	return
+}
+
 // Res groups a resource group an a resource individual
 type Res struct {
 	Cn  *Cond  `json:"cn"`
@@ -43,31 +70,4 @@ type ResDet interface {
 // to LDAP server.
 type LdapFlt interface {
 	UserOK(string) (bool, error)
-}
-
-// RdMng manages a resource determinator
-type RdMng struct {
-	rs  []*Res
-	LdF LdapFlt
-}
-
-// Det is the ResDet implementation
-func (d *RdMng) Det(r *h.Request, t time.Time,
-	usr string) (s *Res, e error) {
-	ec, err := make([]Bool, len(d.rs)), new(err)
-	for i, j := range d.rs {
-		ec[i] = &evCond{
-			c:  j.Cn,
-			r:  r,
-			t:  t,
-			ld: d.LdF,
-			e:  err,
-		}
-	}
-	y, i := BoundedLinearSearch(ec)
-	e = err.e
-	if y {
-		s = d.rs[i]
-	}
-	return
 }

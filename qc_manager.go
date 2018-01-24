@@ -86,17 +86,42 @@ type QtCs struct {
 // Implement JSON marshal and unmarshal in types to be modified
 // by those handlers
 
+const (
+	index = "index"
+)
+
 // SrvQt is an h.HandleFunc for serving and modifying quotas
 func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
 	var e error
 	if r.Method == h.MethodGet {
-
+		Encode(w, q.Rm.rs)
 	} else if r.Method == h.MethodPost {
-
+		// add quota rule
+		rs := new(Res)
+		e = Decode(r.Body, rs)
+		if e == nil {
+			q.Rm.rs = append(q.Rm.rs, rs)
+		}
 	} else if r.Method == h.MethodPut {
-
+		// replace quota rule
+		rs := new(Res)
+		e = Decode(r.Body, rs)
+		var ind int
+		if e == nil {
+			_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
+		}
+		if e == nil && 0 <= ind && ind < len(q.Rm.rs) {
+			q.Rm.rs[ind] = rs
+		}
 	} else if r.Method == h.MethodDelete {
-
+		// delete quota rule
+		var ind int
+		_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
+		if e == nil && ind < len(q.Rm.rs) {
+			q.Rm.rs[ind], q.Rm.rs[0] = q.Rm.rs[0], q.Rm.rs[ind]
+			// what happens when len is 0?
+			q.Rm.rs = q.Rm.rs[1:]
+		}
 	} else {
 		e = NotSuppMeth(r.Method)
 	}
