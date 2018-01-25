@@ -33,28 +33,29 @@ func TestLogin(t *testing.T) {
 	// { initialized SMng }
 	hs := []struct {
 		// user-password
-		um map[string]string
+		us []string
+		ps []string
 		// h.HandlerFunc to send the log in request
 		aHn h.HandlerFunc
 		// okRq means if the h.HandlerFunc is meant to log in
 		// users that can make requests
 		okRq bool
 	}{
-		{usrAuthM, s.SrvUserSession, true},
-		{admAuthM, s.SrvAdmSession, false},
+		{usrAuthU, usrAuthP, s.SrvUserSession, true},
+		{admAuthU, admAuthP, s.SrvAdmSession, false},
 	}
 	for _, j := range hs {
-		t0 := makeTRq(j.um, 0, true)
+		t0 := makeTRq(j.us, j.ps, 0, true)
 		// { t0 has valid users and passwords for logging in
 		//   using j.aHn }
-		mn := make(map[string]string)
+		fu, fp := make([]string, len(t0)), make([]string, len(t0))
 		for i := range t0 {
 			fk := fmt.Sprintf("%d", i)
-			mn[fk] = fk
+			fu[i], fp[i] = fk, fk
 		}
-		t1 := makeTRq(mn, len(j.um), false)
+		t1 := makeTRq(fu, fp, len(j.us), false)
 		ts := append(t0, t1...)
-		// { ts[i:] has invalid users for loging in using j.aHn}
+		// { ts[i:] has invalid users for loging in using j.aHn }
 		testAuthH(t, j.aHn, ts)
 		// { tested j.aHn for all login requests in ts }
 		if j.okRq {
@@ -122,16 +123,17 @@ func TestLogout(t *testing.T) {
 	s := NewSMng(ua, aa, cr, &tUsrRec{})
 	// { initialized SMng }
 	ts := []struct {
-		m  map[string]string
+		us []string
+		ps []string
 		hn h.HandlerFunc
 	}{
-		{usrAuthM, s.SrvUserSession},
-		{admAuthM, s.SrvAdmSession},
+		{usrAuthU, usrAuthP, s.SrvUserSession},
+		{admAuthU, admAuthP, s.SrvAdmSession},
 	}
 	ips := 0 // ips is the number in the IP's last octet
 	for i, j := range ts {
-		ta := makeTRq(j.m, ips, true)
-		ips = ips + len(j.m)
+		ta := makeTRq(j.us, j.ps, ips, true)
+		ips = ips + len(j.us)
 		// { ips augmented for not overlaping with the next
 		//   iteration IPs }
 		for k, l := range ta {
@@ -164,28 +166,26 @@ func TestLogout(t *testing.T) {
 
 // makeTRq creates a slice of test authentication requests
 // ips is the starting of generated IPs's last octet
-func makeTRq(m map[string]string, ips int,
+func makeTRq(usr, pss []string, ips int,
 	ok bool) (r []*tARq) {
 	// { ips + len(m) < 256 }
-	r = make([]*tARq, len(m))
-	i := ips
-	for k, v := range m {
+	r = make([]*tARq, len(usr))
+	n := ips
+	for i, j := range usr {
 		// el usuario que se loguea desde ip
 		// depende del orden en que se recorra m
 		// y ese orden no siempre es el mismo, por
 		// lo tanto no se cumple la precondición de
 		// TestSwappedSessions
 		ip := make([]byte, 4)
-		ip[3] = ip[3] + byte(i)
-		r[i-ips] = &tARq{
-			usr:  k,
-			pass: v,
+		ip[3] = ip[3] + byte(n)
+		r[n-ips] = &tARq{
+			usr:  j,
+			pass: pss[i],
 			ip:   net.IP(ip).String(),
 			ok:   ok,
 		}
-		println("k: " + k + " ip: " + r[i-ips].ip)
-
-		i = i + 1
+		n = n + 1
 	}
 	return
 }
@@ -221,10 +221,10 @@ func TestAdmGetSessions(t *testing.T) {
 		testJWTCrypt()
 	s := NewSMng(ua, aa, cr, new(tUsrRec))
 	// { initialized SMng }
-	ta := makeTRq(usrAuthM, 0, true)
+	ta := makeTRq(usrAuthU, usrAuthP, 0, true)
 	testAuthH(t, s.SrvUserSession, ta)
 	// { logged all users in usrAuthM }
-	ts := makeTRq(admAuthM, len(usrAuthM), true)
+	ts := makeTRq(admAuthU, admAuthP, len(usrAuthU), true)
 	for i, j := range ts {
 		w, r := reqres(t,
 			h.MethodPost,
@@ -269,24 +269,10 @@ func TestSwappedSessions(t *testing.T) {
 		new(tUsrRec)
 	s := NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
-	ta := makeTRq(usrAuthM, 0, true)
-	for _, j := range ta {
-		println(j.ip)
-	}
+	ta := makeTRq(usrAuthU, usrAuthP, 0, true)
 	testAuthH(t, s.SrvUserSession, ta)
-	tb := makeTRq(usrAuthM, len(usrAuthM), true)
-	for _, j := range tb {
-		println(j.ip)
-	}
+	tb := makeTRq(usrAuthU, usrAuthP, len(usrAuthM), true)
 	testAuthH(t, s.SrvUserSession, tb)
-	s.swS.Range(func(k, v interface{}) (b bool) {
-		print("k: ")
-		println(k.(string))
-		print("v: ")
-		println(v.(string))
-		b = true
-		return
-	})
 	// { logged same users in ta but from different IPs.
 	//   This is done for testing the swapped session message
 	//   sent to users. That message is useful in case of an
@@ -355,10 +341,10 @@ func TestSrvAdmMngS(t *testing.T) {
 		new(tUsrRec)
 	s := NewSMng(ua, aa, cr, ur)
 	// { initialized SMng }
-	ta := makeTRq(admAuthM, 0, true)
+	ta := makeTRq(admAuthU, admAuthP, 0, true)
 	testAuthH(t, s.SrvAdmSession, ta)
 	for i, j := range ta {
-		tu := makeTRq(usrAuthM, len(admAuthM), true)
+		tu := makeTRq(usrAuthU, usrAuthP, len(admAuthM), true)
 		for k, l := range tu {
 			body := fmt.Sprintf(`{"user":"%s","ip":"%s"}`,
 				l.usr, l.ip)
@@ -436,6 +422,10 @@ func (a *tAuth) Authenticate(user, pass string) (e error) {
 }
 
 var (
+	usrAuthU = []string{"coco", "pepe"}
+	usrAuthP = []string{"s", "s0"}
+	admAuthU = []string{"adm", "adm0"}
+	admAuthP = []string{"t", "t0"}
 	usrAuthM = map[string]string{
 		"coco": "s",
 		"pepe": "s0",
