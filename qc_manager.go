@@ -106,6 +106,7 @@ func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
 		// replace quota rule
 		rs := new(Res)
 		e = Decode(r.Body, rs)
+		println("put")
 		var ind int
 		if e == nil {
 			_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
