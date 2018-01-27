@@ -25,6 +25,11 @@ const (
 	Security breach. Private key compromised`
 )
 
+func IndexOutOfRange() (e error) {
+	e = fmt.Errorf("Index out of range")
+	return
+}
+
 // NotSuppMeth is the not supported method message
 func NotSuppMeth(m string) (e error) {
 	e = fmt.Errorf("Not supported method %s", m)
@@ -54,7 +59,7 @@ func Decode(r io.Reader, v interface{}) (e error) {
 // Encode encodes an object in JSON notation into w
 func Encode(w io.Writer, v interface{}) (e error) {
 	cd := json.NewEncoder(w)
-	cd.SetIndent("	", "")
+	cd.SetIndent("", "	")
 	e = cd.Encode(v)
 	return
 }

@@ -57,6 +57,8 @@ func (q *QCMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	if e == nil {
 		q.qr.Rec(&QtCs{Qt: res.Qt, Cs: cs})
 	} else {
+		// The message should be written to the user interface
+		// rather than the response
 		w.Write([]byte(e.Error()))
 	}
 	q.okQt = e != nil
@@ -93,8 +95,13 @@ const (
 // SrvQt is an h.HandleFunc for serving and modifying quotas
 func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
 	var e error
-	if r.Method == h.MethodGet {
-		Encode(w, q.Rm.rs)
+	var ind int
+	_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
+	if e != nil || !(0 <= ind && ind < len(q.Rm.rs)) {
+		e = IndexOutOfRange()
+	}
+	if e == nil && r.Method == h.MethodGet {
+		e = Encode(w, q.Rm.rs[ind])
 	} else if r.Method == h.MethodPost {
 		// add quota rule
 		rs := new(Res)
@@ -102,29 +109,16 @@ func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
 		if e == nil {
 			q.Rm.rs = append(q.Rm.rs, rs)
 		}
-	} else if r.Method == h.MethodPut {
+	} else if e == nil && r.Method == h.MethodPut {
 		// replace quota rule
 		rs := new(Res)
 		e = Decode(r.Body, rs)
-		println("put")
-		var ind int
-		if e == nil {
-			_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
-		}
-		if e == nil && 0 <= ind && ind < len(q.Rm.rs) {
-			q.Rm.rs[ind] = rs
-		}
-	} else if r.Method == h.MethodDelete {
+		q.Rm.rs[ind] = rs
+	} else if e == nil && r.Method == h.MethodDelete {
 		// delete quota rule
-		var ind int
-		_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
-		if e == nil && ind < len(q.Rm.rs) {
-			q.Rm.rs[ind], q.Rm.rs[0] = q.Rm.rs[0], q.Rm.rs[ind]
-			// what happens when len is 0?
-			q.Rm.rs = q.Rm.rs[1:]
-		}
-	} else {
-		e = NotSuppMeth(r.Method)
+		q.Rm.rs[ind], q.Rm.rs[0] = q.Rm.rs[0], q.Rm.rs[ind]
+		// what happens when len is 0?
+		q.Rm.rs = q.Rm.rs[1:]
 	}
 	writeErr(w, e)
 }
@@ -150,6 +144,11 @@ func (q *QCMng) SrvCs(w h.ResponseWriter, r *h.Request) {
 // Quota represents the parameters and resources
 // available for determined connection
 type Quota struct {
+	QuotaJ
+	proxy *url.URL
+}
+
+type QuotaJ struct {
 	// Maximum amount of bytes available for downloading
 	Dwn uint64 `json:"dwn"`
 	// Network interface the connection must be made over
@@ -162,13 +161,16 @@ type Quota struct {
 	MCn byte `json:"mCn"`
 	// Maybe a proxy for handling requests
 	Proxy string `json:"proxy"`
-	proxy *url.URL
 }
 
 func (q *Quota) UnmarshalJSON(data []byte) (e error) {
-	e = json.Unmarshal(data, q)
+	qj := QuotaJ{}
+	e = json.Unmarshal(data, &qj)
 	if e == nil {
 		q.proxy, e = url.Parse(q.Proxy)
+	}
+	if e == nil {
+		q.QuotaJ = qj
 	}
 	return
 }

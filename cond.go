@@ -16,6 +16,11 @@ import (
 // Cond is a condition for matching a request, time
 // and user. A nil field matches all elements.
 type Cond struct {
+	CondJ
+	nt []*net.IPNet
+}
+
+type CondJ struct {
 	// ip is contained by one of the *net.IPNet
 	// in CIDR format
 	Net []string `json:"net"`
@@ -31,16 +36,19 @@ type Cond struct {
 	ReqPort []string `json:"reqPort"`
 	// constructed with values in Net, for determining
 	// if an IP belongs to the following networks
-	nt []*net.IPNet
 }
 
 func (c *Cond) UnmarshalJSON(p []byte) (e error) {
-	e = json.Unmarshal(p, c)
+	cj := CondJ{}
+	e = json.Unmarshal(p, &cj)
 	if e == nil {
-		c.nt = make([]*net.IPNet, len(c.Net))
+		c.nt = make([]*net.IPNet, len(cj.Net))
 	}
 	for i := 0; e == nil && i != len(c.Net); i++ {
-		_, c.nt[i], e = net.ParseCIDR(c.Net[i])
+		_, c.nt[i], e = net.ParseCIDR(cj.Net[i])
+	}
+	if e == nil {
+		c.CondJ = cj
 	}
 	return
 }

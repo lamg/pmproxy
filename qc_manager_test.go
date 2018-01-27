@@ -21,37 +21,46 @@ func TestSrvRes(t *testing.T) {
 		rs[i] = new(Res)
 	}
 	// post a few
-	for _, j := range rs {
+	for i, j := range rs {
 		bf := bytes.NewBufferString("")
 		e := Encode(bf, j)
 		require.NoError(t, e)
 		r, q := reqres(t, h.MethodPost, "", bf.String(), "", "")
 		qc.SrvRes(r, q)
 		require.True(t, r.Code == h.StatusOK)
+		require.Equal(t, i+1, len(qc.Rm.rs))
 	}
 	// check all them are there
-	require.Equal(t, len(rs), len(qc.Rm.rs))
+	for i := 0; i != len(qc.Rm.rs)+1; i++ {
+		r, q := reqres(t, h.MethodGet,
+			fmt.Sprintf("/?index=%d", i), "", "", "")
+		qc.SrvRes(r, q)
+		if i == len(qc.Rm.rs) {
+			require.Equal(t, IndexOutOfRange().Error(), r.Body.String())
+			require.Equal(t, h.StatusBadRequest, r.Code)
+		} else {
+			grs := new(Res)
+			require.Equal(t, h.StatusOK, r.Code, "At %d", i)
+			e := Decode(r.Body, &grs)
+			require.NoError(t, e)
+		}
+	}
 	// replace all
 	rpl := make([]*Res, 10)
 	for i := range rpl {
 		rpl[i] = &Res{
 			Cn: &Cond{
-				Usrs: usrAuthU,
+				CondJ: CondJ{Usrs: usrAuthU},
 			},
-			InD: UsrDet(""),
+			InD: &Idet{Sel: "user"},
 		}
-		// TODO stackoverflow, I think because Idet isn't
-		// properly defined for serialization
 		bf := bytes.NewBufferString("")
 		e := Encode(bf, rpl[i])
 		require.NoError(t, e)
-		println(bf.String())
 		r, q := reqres(t,
 			h.MethodPut, fmt.Sprintf("/?index=%d", i),
 			bf.String(), "", "")
-
 		qc.SrvRes(r, q)
-		println("ko")
 		require.Equal(t, h.StatusOK, r.Code)
 	}
 	// check all were replaced
@@ -66,4 +75,13 @@ func TestSrvRes(t *testing.T) {
 	}
 	// check none are there
 	require.Equal(t, 0, len(qc.Rm.rs))
+	// check invalid url produces index out of range
+	r, q := reqres(t, h.MethodDelete, "", "", "", "")
+	qc.SrvRes(r, q)
+	require.Equal(t, h.StatusBadRequest, r.Code)
+	require.Equal(t, IndexOutOfRange().Error(), r.Body.String())
+}
+
+func TestSrvCs(t *testing.T) {
+	// TODO
 }

@@ -37,25 +37,20 @@ func (d *RdMng) Det(r *h.Request, t time.Time,
 type Res struct {
 	Cn  *Cond  `json:"cn"`
 	Qt  *Quota `json:"qt"`
-	InD Idet   `json:"inD"`
+	InD *Idet  `json:"inD"`
 	// hacer este tipo representable como JSON
 }
 
-type Idet interface {
-	Det(*h.Request, time.Time, string) string
+type Idet struct {
+	Sel string
 }
 
-type UsrDet string
-
-func (d UsrDet) Det(r *h.Request, t time.Time, u string) (s string) {
-	s = u
-	return
-}
-
-type IPDet string
-
-func (d IPDet) Det(r *h.Request, t time.Time, u string) (s string) {
-	s, _, _ = net.SplitHostPort(r.RemoteAddr)
+func (d *Idet) Det(r *h.Request, t time.Time, u string) (s string) {
+	if d.Sel == "user" {
+		s = u
+	} else if d.Sel == "ip" {
+		s, _, _ = net.SplitHostPort(r.RemoteAddr)
+	}
 	return
 }
 
