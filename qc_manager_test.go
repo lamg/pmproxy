@@ -83,5 +83,66 @@ func TestSrvRes(t *testing.T) {
 }
 
 func TestSrvCs(t *testing.T) {
-	// TODO
+	qc := &QCMng{
+		Cons: new(sync.Map),
+	}
+	l, cns, dwn := uint32(10), uint32(10), uint64(256)
+	// fill qc.Cons with some user-*Cons pairs
+	for i := uint32(0); i != l; i++ {
+		qc.Cons.Store(fmt.Sprint(i), &Cons{
+			Cns: cns + i,
+			Dwn: dwn + uint64(i),
+		})
+	}
+	// check all them are there
+	for i := uint32(0); i != l; i++ {
+		w, r := reqres(t, h.MethodGet,
+			fmt.Sprintf("/?key=%d", i), "", "", "")
+		qc.SrvCs(w, r)
+		require.Equal(t, h.StatusOK, w.Code)
+		cs := new(Cons)
+		e := Decode(w.Body, cs)
+		require.NoError(t, e)
+		require.Equal(t, cns+i, cs.Cns)
+		require.Equal(t, dwn+uint64(i), cs.Dwn)
+	}
+	// replace all of them
+	for i := uint32(0); i != l; i++ {
+		bf, cs := bytes.NewBufferString(""), &Cons{
+			Cns: cns * i,
+			Dwn: dwn * uint64(i),
+		}
+		e := Encode(bf, cs)
+		require.NoError(t, e)
+		w, r := reqres(t, h.MethodPut,
+			fmt.Sprintf("/?key=%d", i), bf.String(), "", "")
+		qc.SrvCs(w, r)
+		require.Equal(t, h.StatusOK, w.Code)
+	}
+	// check all them are there
+	for i := uint32(0); i != l; i++ {
+		w, r := reqres(t, h.MethodGet,
+			fmt.Sprintf("/?key=%d", i), "", "", "")
+		qc.SrvCs(w, r)
+		require.Equal(t, h.StatusOK, w.Code)
+		cs := new(Cons)
+		e := Decode(w.Body, cs)
+		require.NoError(t, e)
+		require.Equal(t, cns*i, cs.Cns)
+		require.Equal(t, dwn*uint64(i), cs.Dwn)
+	}
+	// delete all of them
+	for i := uint32(0); i != l; i++ {
+		w, r := reqres(t, h.MethodDelete,
+			fmt.Sprintf("/?key=%d", i), "", "", "")
+		qc.SrvCs(w, r)
+		require.Equal(t, h.StatusOK, w.Code)
+	}
+	// check none are there
+	cont := 0
+	qc.Cons.Range(func(k, v interface{}) (b bool) {
+		b, cont = true, cont+1
+		return
+	})
+	require.Equal(t, 0, cont)
 }

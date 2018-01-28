@@ -92,14 +92,17 @@ const (
 	index = "index"
 )
 
-// SrvQt is an h.HandleFunc for serving and modifying quotas
-func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
-	var e error
-	var ind int
-	_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &ind)
-	if e != nil || !(0 <= ind && ind < len(q.Rm.rs)) {
+func getIndex(r *h.Request, l int) (i int, e error) {
+	_, e = fmt.Sscanf(r.URL.Query().Get(index), "%d", &i)
+	if e != nil || !(0 <= i && i < l) {
 		e = IndexOutOfRange()
 	}
+	return
+}
+
+// SrvQt is an h.HandleFunc for serving and modifying quotas
+func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
+	ind, e := getIndex(r, len(q.Rm.rs))
 	if e == nil && r.Method == h.MethodGet {
 		e = Encode(w, q.Rm.rs[ind])
 	} else if r.Method == h.MethodPost {
@@ -117,26 +120,45 @@ func (q *QCMng) SrvRes(w h.ResponseWriter, r *h.Request) {
 	} else if e == nil && r.Method == h.MethodDelete {
 		// delete quota rule
 		q.Rm.rs[ind], q.Rm.rs[0] = q.Rm.rs[0], q.Rm.rs[ind]
-		// what happens when len is 0?
 		q.Rm.rs = q.Rm.rs[1:]
 	}
 	writeErr(w, e)
 }
 
+const (
+	key = "key"
+)
+
+func NotFoundKey() (e error) {
+	e = fmt.Errorf("Not found key")
+	return
+}
+
+func getKey(r *h.Request) (k string, e error) {
+	k = r.URL.Query().Get(key)
+	if k == "" {
+		e = NotFoundKey()
+	}
+	return
+}
+
 // SrvCs is an h.HandleFunc for serving and modifying
 // consumptions
 func (q *QCMng) SrvCs(w h.ResponseWriter, r *h.Request) {
-	var e error
-	if r.Method == h.MethodGet {
-
-	} else if r.Method == h.MethodPost {
-
-	} else if r.Method == h.MethodPut {
-
-	} else if r.Method == h.MethodDelete {
-
-	} else {
-		e = NotSuppMeth(r.Method)
+	k, e := getKey(r)
+	if e == nil && r.Method == h.MethodGet {
+		v, ok := q.Cons.Load(k)
+		if ok {
+			e = Encode(w, v)
+		}
+	} else if e == nil && r.Method == h.MethodPut {
+		cs := new(Cons)
+		e = Decode(r.Body, cs)
+		if e == nil {
+			q.Cons.Store(k, cs)
+		}
+	} else if e == nil && r.Method == h.MethodDelete {
+		q.Cons.Delete(k)
 	}
 	writeErr(w, e)
 }
@@ -180,5 +202,5 @@ type Cons struct {
 	// Amount of downloaded bytes
 	Dwn uint64 `json:"dwn"`
 	// Amount of used connections
-	Cns byte `json:"cns"`
+	Cns uint32 `json:"cns"`
 }
