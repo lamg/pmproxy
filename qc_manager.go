@@ -39,13 +39,13 @@ func (q *QCMng) Rec(usr string) {
 	q.cUsr = usr
 }
 
-// MaybeResp handles requests to the proxy. If any
+// ServeHTTP handles requests to the proxy. If any
 // has no resource associated, then it will respond
 // with an error page
 func (q *QCMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	nw := q.Cl.Now()
 	res, e := q.Det.Det(r, nw, q.cUsr)
-	var cs *Cons
+	cs := new(Cons)
 	if e == nil {
 		v, ok := q.Cons.Load(res.InD.Det(r, nw, q.cUsr))
 		if ok {
@@ -180,7 +180,7 @@ type QuotaJ struct {
 	// Connection's throttling specification
 	Thr float64 `json:"thr"`
 	// Maximum amount of connections per host
-	MCn byte `json:"mCn"`
+	MCn uint32 `json:"mCn"`
 	// Maybe a proxy for handling requests
 	Proxy string `json:"proxy"`
 }
