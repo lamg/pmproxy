@@ -20,6 +20,14 @@ type Cond struct {
 	nt []*net.IPNet
 }
 
+func (c *Cond) InitNets(ns []string) (e error) {
+	c.Net, c.nt = ns, make([]*net.IPNet, len(ns))
+	for i := 0; e == nil && i != len(ns); i++ {
+		_, c.nt[i], e = net.ParseCIDR(ns[i])
+	}
+	return
+}
+
 type CondJ struct {
 	// ip is contained by one of the *net.IPNet
 	// in CIDR format
@@ -156,12 +164,15 @@ type tmC struct {
 }
 
 func (m *tmC) V() (y bool) {
-	bs := make([]Bool, len(m.s))
-	for i, j := range m.s {
-		bs[i] = &rs.BRSpan{S: j, T: m.t}
+	y = false
+	if len(m.s) != 0 {
+		bs := make([]Bool, len(m.s))
+		for i, j := range m.s {
+			bs[i] = &rs.BRSpan{S: j, T: m.t}
+		}
+		ok, _ := BoundedLinearSearch(bs)
+		y = !ok
 	}
-	ok, _ := BoundedLinearSearch(bs)
-	y = !ok
 	return
 }
 

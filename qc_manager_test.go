@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestSrvRes(t *testing.T) {
@@ -154,34 +155,40 @@ func TestServeHTTPQCMng(t *testing.T) {
 	prx0url := "http://proxy.goo.com:8080"
 	prx0, e := url.Parse(prx0url)
 	require.NoError(t, e)
+	trec, tcl := new(tQtCsRec), &tClock{tm: time.Now()}
+	qt0 := &Quota{
+		QuotaJ: QuotaJ{
+			Dwn:   1024,
+			Iface: "eth0",
+			MCn:   256,
+			Proxy: prx0url,
+		},
+		proxy: prx0,
+	}
+	cn0 := &Cond{
+		CondJ: CondJ{
+			ReqPort: []string{":443", ":8080"},
+			Usrs:    usrAuthU,
+		},
+	}
+	e = cn0.InitNets([]string{"55.2.0.0/16", "55.3.67.0/24"})
+	require.NoError(t, e)
 	qc := &QCMng{
+		Cl: tcl,
+		Qr: trec,
 		Rm: &RdMng{
 			rs: []*Res{
 				&Res{
-					Cn: &Cond{
-						CondJ: CondJ{
-							Net:     []string{"55.2.0.0/16", "55.3.67.0/24"},
-							ReqPort: []string{":443", ":8080"},
-							Usrs:    usrAuthU,
-						},
-					},
+					Cn: cn0,
 					InD: &Idet{
 						Sel: "user",
 					},
-					Qt: &Quota{
-						QuotaJ: QuotaJ{
-							Dwn:   1024,
-							Iface: "eth0",
-							MCn:   256,
-							Proxy: prx0url,
-						},
-						proxy: prx0,
-					},
+					Qt: qt0,
 				},
 			},
+			// FIXME ldap filter not initialized
 		},
 		Cons: new(sync.Map),
-		qr:   new(tQtCsRec),
 	}
 	// check rules work
 	trs := []struct {
@@ -189,20 +196,49 @@ func TestServeHTTPQCMng(t *testing.T) {
 		user string
 		addr string
 		qc   *QtCs
-	}{}
-	for i, j := range trs {
+	}{
+		{"https://google.com.cu", "coco", "0.0.0.0", nil},
+		{"https://google.com.cu", "coco", "55.2.0.1",
+			&QtCs{Qt: qt0},
+		},
+	}
+	for _, j := range trs {
 		// make requests
+		w, r := reqres(t, h.MethodGet, j.url, "", "", j.addr)
+		qc.Rec(j.user)
+		qc.ServeHTTP(w, r)
 		// check state is OK
+		if j.qc == nil {
+			require.Equal(t,
+				NoResourceMsg(r, tcl.Now(), j.user).Error(),
+				w.Body.String())
+		} else {
+			// TODO nil pointer ...
+			require.Equal(t, j.qc.Qt.Dwn, trec.qc.Qt.Dwn)
+			require.Equal(t, j.qc.Qt.Iface, trec.qc.Qt.Iface)
+			require.Equal(t, j.qc.Qt.MCn, trec.qc.Qt.MCn)
+			require.Equal(t, j.qc.Qt.Proxy, trec.qc.Qt.Proxy)
+			require.Equal(t, j.qc.Qt.Span.Start,
+				trec.qc.Qt.Span.Start)
+			require.Equal(t, j.qc.Qt.Thr, trec.qc.Qt.Thr)
+		}
 	}
 }
 
 type tQtCsRec struct {
-	qcs []*QtCs
+	qc *QtCs
 }
 
 func (r *tQtCsRec) Rec(qc *QtCs) {
-	if r.qcs == nil {
-		r.qcs = make([]*QtCs, 0)
-	}
-	r.qcs = append(r.qcs, qc)
+	r.qc = qc
+	return
+}
+
+type tClock struct {
+	tm time.Time
+}
+
+func (c *tClock) Now() (t time.Time) {
+	t = c.tm
+	return
 }

@@ -19,13 +19,11 @@ type QCMng struct {
 	Rm *RdMng
 	// resource-*Cons
 	Cons *sync.Map
-	// determines resources
-	Det ResDet
-	//
-	Cl clock.Clock
+	Cl   clock.Clock
 	// current user
 	cUsr string
-	qr   QtCsRec
+	// Quota-Consumption receiver
+	Qr   QtCsRec
 	okQt bool
 }
 
@@ -44,18 +42,22 @@ func (q *QCMng) Rec(usr string) {
 // with an error page
 func (q *QCMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	nw := q.Cl.Now()
-	res, e := q.Det.Det(r, nw, q.cUsr)
+	res, e := q.Rm.Det(r, nw, q.cUsr)
 	cs := new(Cons)
 	if e == nil {
-		v, ok := q.Cons.Load(res.InD.Det(r, nw, q.cUsr))
+		println("ok")
+		println(res == nil)
+		println(res.Cn.Net[0])
+		ind := res.InD.Det(r, nw, q.cUsr)
+		v, ok := q.Cons.Load(ind)
 		if ok {
 			cs = v.(*Cons)
 		} else {
-			e = NoResourceMsg(r, nw, q.cUsr)
+			q.Cons.Store(ind, cs)
 		}
 	}
 	if e == nil {
-		q.qr.Rec(&QtCs{Qt: res.Qt, Cs: cs})
+		q.Qr.Rec(&QtCs{Qt: res.Qt, Cs: cs})
 	} else {
 		// The message should be written to the user interface
 		// rather than the response

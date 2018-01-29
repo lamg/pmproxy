@@ -29,6 +29,8 @@ func (d *RdMng) Det(r *h.Request, t time.Time,
 	e = err.e
 	if y {
 		s = d.rs[i]
+	} else {
+		e = NoResourceMsg(r, t, usr)
 	}
 	return
 }
