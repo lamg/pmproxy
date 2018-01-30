@@ -26,6 +26,10 @@ func (d *RdMng) Det(r *h.Request, t time.Time,
 		}
 	}
 	y, i := BoundedLinearSearch(ec)
+	print("y: ")
+	println(y)
+	print("i: ")
+	println(i)
 	e = err.e
 	if y {
 		s = d.rs[i]

@@ -173,6 +173,7 @@ func TestServeHTTPQCMng(t *testing.T) {
 	}
 	e = cn0.InitNets([]string{"55.2.0.0/16", "55.3.67.0/24"})
 	require.NoError(t, e)
+	tldf := &tLdFlt{usrs: usrAuthU}
 	qc := &QCMng{
 		Cl: tcl,
 		Qr: trec,
@@ -186,6 +187,7 @@ func TestServeHTTPQCMng(t *testing.T) {
 					Qt: qt0,
 				},
 			},
+			LdF: tldf,
 			// FIXME ldap filter not initialized
 		},
 		Cons: new(sync.Map),
@@ -213,7 +215,7 @@ func TestServeHTTPQCMng(t *testing.T) {
 				NoResourceMsg(r, tcl.Now(), j.user).Error(),
 				w.Body.String())
 		} else {
-			// TODO nil pointer ...
+			require.False(t, qc.V())
 			require.Equal(t, j.qc.Qt.Dwn, trec.qc.Qt.Dwn)
 			require.Equal(t, j.qc.Qt.Iface, trec.qc.Qt.Iface)
 			require.Equal(t, j.qc.Qt.MCn, trec.qc.Qt.MCn)
@@ -223,6 +225,18 @@ func TestServeHTTPQCMng(t *testing.T) {
 			require.Equal(t, j.qc.Qt.Thr, trec.qc.Qt.Thr)
 		}
 	}
+}
+
+type tLdFlt struct {
+	usrs []string
+}
+
+func (l *tLdFlt) UserOK(usr string) (ok bool, e error) {
+	ok = false
+	for i := 0; !ok && i != len(l.usrs); i++ {
+		ok = l.usrs[i] == usr
+	}
+	return
 }
 
 type tQtCsRec struct {

@@ -45,9 +45,6 @@ func (q *QCMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	res, e := q.Rm.Det(r, nw, q.cUsr)
 	cs := new(Cons)
 	if e == nil {
-		println("ok")
-		println(res == nil)
-		println(res.Cn.Net[0])
 		ind := res.InD.Det(r, nw, q.cUsr)
 		v, ok := q.Cons.Load(ind)
 		if ok {
@@ -63,6 +60,7 @@ func (q *QCMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 		// rather than the response
 		w.Write([]byte(e.Error()))
 	}
+	println(e.Error())
 	q.okQt = e != nil
 	return
 }
