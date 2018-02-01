@@ -57,11 +57,7 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	}
 	if e == nil {
 		r.QuotaGroup = m
-	}
-	if e == nil {
-		for i := 0; !r.IsAdmin && i != len(db.adminNames); i++ {
-			r.IsAdmin = db.adminNames[i] == u
-		}
+		r.IsAdmin, _ = elementOf(db.adminNames, usr)
 	}
 	return
 }
