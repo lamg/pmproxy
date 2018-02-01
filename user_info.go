@@ -16,9 +16,9 @@ type UserDB interface {
 
 // LDB is an UserDB implementation using Ldap
 type LDB struct {
-	ldp       *l.Ldap
-	adminName string
-	qgPref    string
+	ldp        *l.Ldap
+	adminNames []string
+	qgPref     string
 }
 
 // NewLDB creates a new LDB
@@ -29,8 +29,13 @@ type LDB struct {
 // of this system.
 // qgPref: The group prefix of the group in membership that
 // defines the users quota group
-func NewLDB(adAddr, suff, bDN, admN, qgPref string) (r *LDB) {
-	r = &LDB{l.NewLdap(adAddr, suff, bDN), admN, qgPref}
+func NewLDB(adAddr, suff, bDN, qgPref string,
+	admNs []string) (r *LDB) {
+	r = &LDB{
+		ldp:        l.NewLdap(adAddr, suff, bDN),
+		adminNames: admNs,
+		qgPref:     qgPref,
+	}
 	return
 }
 
@@ -44,7 +49,7 @@ func (db *LDB) Authenticate(u, p string) (e *errors.Error) {
 func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	var mp map[string][]string
 	mp, e = db.ldp.FullRecord(u, p, usr)
-	r = &User{UserName: usr}
+	r = &User{UserName: usr, IsAdmin: false}
 	r.Name, e = db.ldp.FullName(mp)
 	var m string
 	if e == nil {
@@ -54,7 +59,9 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 		r.QuotaGroup = m
 	}
 	if e == nil {
-		r.IsAdmin = usr == db.adminName
+		for i := 0; !r.IsAdmin && i != len(db.adminNames); i++ {
+			r.IsAdmin = db.adminNames[i] == usr
+		}
 	}
 	return
 }

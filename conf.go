@@ -47,7 +47,7 @@ type Conf struct {
 	// AdmGrp is the group the administrators of this system
 	// belong, which is associated to their user name in the
 	// AD
-	AdmName string `json:"admName"`
+	AdmNames []string `json:"admNames"`
 	// StPath is the path of the directory with static files
 	// to be used by the web user interface
 	StPath string `json:"stPath"`
@@ -73,7 +73,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 	nc, ok = v.(*Conf)
 	if ok {
 		ok = c.AccExcp == nc.AccExcp && c.ADAccSf == nc.ADAccSf &&
-			c.ADAddr == nc.ADAddr && c.AdmName == nc.AdmName &&
+			c.ADAddr == nc.ADAddr &&
 			c.BDN == nc.BDN && c.CertFl == nc.CertFl &&
 			c.Cons == nc.Cons &&
 			c.MaxConn == nc.MaxConn &&
@@ -82,6 +82,12 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 			c.ProxySrvAddr == nc.ProxySrvAddr && c.Quota == nc.Quota &&
 			c.StPath == nc.StPath &&
 			c.UISrvAddr == nc.UISrvAddr
+	}
+	if ok {
+		ok = len(c.AdmNames) == len(nc.AdmNames)
+	}
+	for i := 0; ok && i != len(c.AdmNames); i++ {
+		ok = c.AdmNames[i] == nc.AdmNames[i]
 	}
 	if ok {
 		for k, v := range c.GrpIface {
@@ -169,8 +175,8 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	if dAuth {
 		udb = NewDAuth()
 	} else {
-		udb = NewLDB(c.ADAddr, c.ADAccSf, c.BDN, c.AdmName,
-			c.GrpQtPref)
+		udb = NewLDB(c.ADAddr, c.ADAccSf, c.BDN, c.GrpQtPref,
+			c.AdmNames)
 	}
 	var lga *url.URL
 	if e == nil {
