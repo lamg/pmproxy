@@ -167,7 +167,7 @@ func TestServeHTTPQCMng(t *testing.T) {
 	}
 	cn0 := &Cond{
 		CondJ: CondJ{
-			ReqPort: []string{":443", ":8080"},
+			ReqPort: []string{"", ":443", ":8080"},
 			Usrs:    usrAuthU,
 		},
 	}
@@ -188,7 +188,6 @@ func TestServeHTTPQCMng(t *testing.T) {
 				},
 			},
 			LdF: tldf,
-			// FIXME ldap filter not initialized
 		},
 		Cons: new(sync.Map),
 	}
@@ -204,7 +203,7 @@ func TestServeHTTPQCMng(t *testing.T) {
 			&QtCs{Qt: qt0},
 		},
 	}
-	for _, j := range trs {
+	for i, j := range trs {
 		// make requests
 		w, r := reqres(t, h.MethodGet, j.url, "", "", j.addr)
 		qc.Rec(j.user)
@@ -215,7 +214,7 @@ func TestServeHTTPQCMng(t *testing.T) {
 				NoResourceMsg(r, tcl.Now(), j.user).Error(),
 				w.Body.String())
 		} else {
-			require.False(t, qc.V())
+			require.False(t, qc.V(), "At %d", i)
 			require.Equal(t, j.qc.Qt.Dwn, trec.qc.Qt.Dwn)
 			require.Equal(t, j.qc.Qt.Iface, trec.qc.Qt.Iface)
 			require.Equal(t, j.qc.Qt.MCn, trec.qc.Qt.MCn)

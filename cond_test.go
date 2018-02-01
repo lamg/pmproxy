@@ -54,7 +54,7 @@ func TestTmC(t *testing.T) {
 		},
 		{
 			start: []string{
-				//"2018-01-21T00:01:00Z",
+				"2018-01-21T00:01:00Z",
 				"2018-01-22T00:01:00Z",
 			},
 			active: []time.Duration{
@@ -90,5 +90,57 @@ func TestTmC(t *testing.T) {
 			t: tm,
 		}
 		require.Equal(t, j.fails, tmc.V(), "At %d", i)
+	}
+}
+
+func TestLdBool(t *testing.T) {
+	tl := &tLdFlt{usrs: usrAuthU}
+	usrs := append(usrAuthU, admAuthU...)
+	ts := make([]struct {
+		usr string
+		ok  bool
+	},
+		len(usrs))
+	for i, j := range usrs {
+		ts[i] = struct {
+			usr string
+			ok  bool
+		}{j, i < len(admAuthU)}
+	}
+	for i, j := range ts {
+		lb := &ldBool{
+			usr: j.usr,
+			ldf: tl,
+			e:   new(err),
+		}
+		require.NotEqual(t, j.ok, lb.V(), "At %d j.ok: %t", i,
+			j.ok)
+	}
+}
+
+func TestStrSC(t *testing.T) {
+	ts := []struct {
+		slc []string
+		x   string
+		ok  bool
+	}{
+		{
+			slc: []string{"a", "b", "c"},
+			x:   "a",
+			ok:  true,
+		}, {
+			slc: make([]string, 0),
+			x:   "a",
+			ok:  true,
+		},
+		{
+			slc: []string{"x", "y", "z"},
+			x:   "a",
+			ok:  false,
+		},
+	}
+	for i, j := range ts {
+		st := &strSC{slc: j.slc, x: j.x}
+		require.NotEqual(t, j.ok, st.V(), "At %d", i)
 	}
 }

@@ -120,13 +120,13 @@ type strSC struct {
 }
 
 func (s *strSC) V() (y bool) {
-	ok := s.slc != nil
-	if y {
+	y = false
+	if s.slc != nil && len(s.slc) != 0 {
 		i := sort.SearchStrings(s.slc, s.x)
-		ok = i != len(s.slc) && s.slc[i] == s.x
+		ok := i != len(s.slc) && s.slc[i] == s.x
+		y = !ok
 	}
 	// { ok ≡ s.slc = nil ∨ s.x exists in s.slc }
-	y = !ok
 	return
 }
 
