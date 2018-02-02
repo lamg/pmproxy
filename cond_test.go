@@ -4,6 +4,7 @@ import (
 	rs "github.com/lamg/rtimespan"
 	"github.com/stretchr/testify/require"
 	"net"
+	h "net/http"
 	"testing"
 	"time"
 )
@@ -142,5 +143,28 @@ func TestStrSC(t *testing.T) {
 	for i, j := range ts {
 		st := &strSC{slc: j.slc, x: j.x}
 		require.NotEqual(t, j.ok, st.V(), "At %d", i)
+	}
+}
+
+func TestEvCond(t *testing.T) {
+	cn0 := &Cond{
+		CondJ: CondJ{
+			ReqPort: []string{"", ":443", ":8080"},
+			Usrs:    usrAuthU,
+		},
+	}
+	nw := time.Now()
+	e = cn0.InitNets([]string{"55.2.0.0/16", "55.3.67.0/24"})
+	require.NoError(t, e)
+	ts := []struct {
+		ul  string
+		t   string
+		usr string
+	}{
+		{
+			ul:  "http://google.com",
+			t:   nw.Format(time.RFC3339),
+			usr: "coco",
+		},
 	}
 }

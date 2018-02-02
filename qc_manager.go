@@ -72,7 +72,8 @@ func (q *QCMng) V() (y bool) {
 
 // NoResourceMsg is the message sent when no resource is found
 // for processing the request
-func NoResourceMsg(r *h.Request, t time.Time, usr string) (e error) {
+func NoResourceMsg(r *h.Request, t time.Time,
+	usr string) (e error) {
 	e = fmt.Errorf("No resource found for %s in %s at %s", usr,
 		r.RemoteAddr, t.Format(time.RFC3339))
 	return
