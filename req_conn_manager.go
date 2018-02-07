@@ -203,11 +203,30 @@ func (m *RRConnMng) getUsrNtIf(r string) (n string,
 	}
 	if e == nil {
 		var ok bool
-		n, ok = m.uf[u.QuotaGroup]
+		n, ok = interStr(m.uf, u.QuotaGroups)
 		if !ok {
 			e = errors.NewForwardErr(
-				fmt.Errorf("Not found interface for %s", u.QuotaGroup))
+				fmt.Errorf("Not found interface for %s",
+					u.QuotaGroups))
 		}
+	}
+	return
+}
+
+func interStr(m map[string]string,
+	s []string) (r string, ok bool) {
+	ok = false
+	for i := 0; !ok && i != len(s); i++ {
+		r, ok = m[s[i]]
+	}
+	return
+}
+
+func interFl(m map[string]float64,
+	s []string) (r float64, ok bool) {
+	ok = false
+	for i := 0; !ok && i != len(s); i++ {
+		r, ok = m[s[i]]
 	}
 	return
 }
@@ -224,11 +243,11 @@ func (m *RRConnMng) getThrottle(r string) (t float64,
 	}
 	if e == nil {
 		var ok bool
-		t, ok = m.ts[u.QuotaGroup]
+		t, ok = interFl(m.ts, u.QuotaGroups)
 		if !ok {
 			e = &errors.Error{
 				Code: errors.ErrorKey,
-				Err:  fmt.Errorf("Not found key %s", u.QuotaGroup),
+				Err:  fmt.Errorf("Not found key %s", u.QuotaGroups),
 			}
 		}
 	}

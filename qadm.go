@@ -94,13 +94,18 @@ func (q *QAdm) getQuota(ip string, s string) (r uint64,
 	var u *User
 	u, e = q.sm.userInfo(ip, s)
 	if e == nil {
-		var ok bool
-		r, ok = q.gq.Load(u.QuotaGroup)
-		if !ok {
-			e = &errors.Error{
-				Code: ErrorLQ,
-				Err: fmt.Errorf("Not found quota for %s",
-					u.UserName),
+		ok := true
+		for i := 0; ok && i != len(u.QuotaGroups); i++ {
+			var nr uint64
+			nr, ok = q.gq.Load(u.QuotaGroups[i])
+			if ok {
+				r += nr
+			} else {
+				e = &errors.Error{
+					Code: ErrorLQ,
+					Err: fmt.Errorf("Not found quota for %s",
+						u.UserName),
+				}
 			}
 		}
 	}
@@ -163,7 +168,10 @@ func (q *QAdm) hasQuota(ip string) (y bool) {
 	var cons, quota uint64
 	if e == nil {
 		cons, _ = q.uc.Load(u.UserName)
-		quota, _ = q.gq.Load(u.QuotaGroup)
+		for i := 0; i != len(u.QuotaGroups); i++ {
+			r, _ := q.gq.Load(u.QuotaGroups[i])
+			quota += r
+		}
 	}
 	y = cons < quota
 	return

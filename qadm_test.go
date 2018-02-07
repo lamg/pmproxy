@@ -78,8 +78,8 @@ func TestSetCons(t *testing.T) {
 	qa, scrt, e := initTestQAdm(pepe, pepeIP)
 	require.True(t, e == nil)
 	tss := []NameVal{
-		NameVal{gProf, qProf},
-		NameVal{gEst, qEst},
+		NameVal{"a", qProf},
+		NameVal{pepe.User, qEst},
 	}
 	for _, j := range tss {
 		e = qa.setCons(pepeIP, scrt, &j)
@@ -97,6 +97,15 @@ func TestGetQuota(t *testing.T) {
 	v, e := qa.getQuota(pepeIP, scrt)
 	require.True(t, e == nil)
 	require.True(t, v == qProf, "%d≠%d", v, qProf)
+	cuco, cucoIP := "cuco", "3.3.3.3"
+	var lr *LogRs
+	lr, e = qa.login(&credentials{User: cuco, Pass: cuco},
+		cucoIP)
+	require.Nil(t, e)
+	v, e = qa.getQuota(cucoIP, lr.Scrt)
+	require.Equal(t, uint64(qEst+qProf), v)
+	// { since cuco is in group A and also B
+	// then its quota is A's quota + B's quota}
 }
 
 func TestAddCons(t *testing.T) {

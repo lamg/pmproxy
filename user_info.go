@@ -51,12 +51,12 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	mp, e = db.ldp.FullRecord(u, p, usr)
 	r = &User{UserName: usr, IsAdmin: false}
 	r.Name, e = db.ldp.FullName(mp)
-	var m string
+	var m []string
 	if e == nil {
-		m, e = db.getQuotaGroup(mp)
+		m, e = db.getQuotaGroups(mp)
 	}
 	if e == nil {
-		r.QuotaGroup = m
+		r.QuotaGroups = m
 		r.IsAdmin, _ = elementOf(db.adminNames, usr)
 	}
 	return
@@ -65,24 +65,21 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 // GetQuotaGroup gets the group specified at distinguishedName
 // field
 // usr: sAMAccountName
-func (db *LDB) getQuotaGroup(mp map[string][]string) (g string,
+func (db *LDB) getQuotaGroups(mp map[string][]string) (g []string,
 	e *errors.Error) {
 	var m []string
 	m, e = db.ldp.MembershipCNs(mp)
 	if e == nil {
-		i, ok := 0, false
-		for !ok && i != len(m) {
-			ok = strings.HasPrefix(m[i], db.qgPref)
-			if !ok {
-				i = i + 1
+		g = make([]string, 0, len(m))
+		for _, j := range m {
+			if strings.HasPrefix(j, db.qgPref) {
+				g = append(g, j)
 			}
 		}
-		if ok {
-			g = m[i]
-		} else {
+		if len(g) == 0 {
 			e = &errors.Error{
 				Code: ErrorMalformedRecord,
-				Err: fmt.Errorf("Couldn't find the quota group for %s",
+				Err: fmt.Errorf("Couldn't find quota groups in %s",
 					mp[l.SAMAccountName]),
 			}
 		}
@@ -109,12 +106,38 @@ func hasElementOf(a, b []string) (ok bool, i int) {
 
 // DAuth is an UserDB
 type DAuth struct {
-	us []*User
+	us map[string]*User
 }
 
 // NewDAuth …
 func NewDAuth() (d *DAuth) {
-	d = &DAuth{make([]*User, 0)}
+	d = new(DAuth)
+	d.us = map[string]*User{
+		coco.User: &User{
+			Name:        coco.User,
+			UserName:    coco.User,
+			IsAdmin:     true,
+			QuotaGroups: []string{"A"},
+		},
+		pepe.User: &User{
+			Name:        pepe.User,
+			UserName:    pepe.User,
+			IsAdmin:     true,
+			QuotaGroups: []string{"A"},
+		},
+		"cuco": &User{
+			Name:        "cuco",
+			UserName:    "cuco",
+			IsAdmin:     false,
+			QuotaGroups: []string{"A", "B"},
+		},
+		"a": &User{
+			Name:        "a",
+			UserName:    "a",
+			IsAdmin:     false,
+			QuotaGroups: []string{"A"},
+		},
+	}
 	return
 }
 
@@ -126,13 +149,14 @@ func (d *DAuth) Authenticate(u, p string) (e *errors.Error) {
 // UserInfo gets user information
 func (d *DAuth) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	if u == p {
-		r = &User{
-			Name:       usr,
-			UserName:   usr,
-			IsAdmin:    len(usr) == 4,
-			QuotaGroup: "A",
+		var ok bool
+		r, ok = d.us[usr]
+		if !ok {
+			e = &errors.Error{
+				Code: l.ErrorAuth,
+				Err:  fmt.Errorf("User %s doesn't exists", usr),
+			}
 		}
-		d.us = append(d.us, r)
 	} else {
 		e = &errors.Error{
 			Code: l.ErrorAuth,

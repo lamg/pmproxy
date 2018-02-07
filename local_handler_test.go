@@ -93,7 +93,7 @@ func TestGetUserStatus(t *testing.T) {
 		require.True(t, ok)
 		usr, e := pm.qa.sm.userInfo(j.ip, hd)
 		require.True(t, e == nil)
-		qv, ok := pm.qa.gq.Load(usr.QuotaGroup)
+		qv, ok := pm.qa.gq.Load(usr.QuotaGroups[0])
 		require.True(t, ok)
 		// { cv and qv are the consumption and quota of j.c }
 		rr, rq := reqres(t, h.MethodGet, UserStatus, "", hd, j.ip)

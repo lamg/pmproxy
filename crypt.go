@@ -28,10 +28,10 @@ const (
 // User is the type representing a logged user into the
 // system
 type User struct {
-	UserName   string `json:"userName"`
-	Name       string `json:"name"`
-	IsAdmin    bool   `json:"isAdmin"`
-	QuotaGroup string `json:"quotaGroup"`
+	UserName    string   `json:"userName"`
+	Name        string   `json:"name"`
+	IsAdmin     bool     `json:"isAdmin"`
+	QuotaGroups []string `json:"quotaGroup"`
 }
 
 // Equal says whether this user is equal to
@@ -41,7 +41,11 @@ func (u *User) Equal(v interface{}) (ok bool) {
 	lu, ok = v.(*User)
 	if ok {
 		ok = u.Name == lu.Name && u.IsAdmin == lu.IsAdmin &&
-			u.QuotaGroup == lu.QuotaGroup && u.UserName == lu.UserName
+			u.UserName == lu.UserName &&
+			len(u.QuotaGroups) == len(lu.QuotaGroups)
+		for i := 0; ok && i != len(u.QuotaGroups); i++ {
+			ok = u.QuotaGroups[i] == lu.QuotaGroups[i]
+		}
 	}
 	return
 }
