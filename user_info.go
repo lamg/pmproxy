@@ -109,38 +109,6 @@ type DAuth struct {
 	us map[string]*User
 }
 
-// NewDAuth …
-func NewDAuth() (d *DAuth) {
-	d = new(DAuth)
-	d.us = map[string]*User{
-		coco.User: &User{
-			Name:        coco.User,
-			UserName:    coco.User,
-			IsAdmin:     true,
-			QuotaGroups: []string{"A"},
-		},
-		pepe.User: &User{
-			Name:        pepe.User,
-			UserName:    pepe.User,
-			IsAdmin:     true,
-			QuotaGroups: []string{"A"},
-		},
-		"cuco": &User{
-			Name:        "cuco",
-			UserName:    "cuco",
-			IsAdmin:     false,
-			QuotaGroups: []string{"A", "B"},
-		},
-		"a": &User{
-			Name:        "a",
-			UserName:    "a",
-			IsAdmin:     false,
-			QuotaGroups: []string{"A"},
-		},
-	}
-	return
-}
-
 // Authenticate authenticates credentials
 func (d *DAuth) Authenticate(u, p string) (e *errors.Error) {
 	return

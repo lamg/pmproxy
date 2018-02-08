@@ -27,7 +27,7 @@ func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e *errors.Error) {
 
 	var sm *SMng
 	if e == nil {
-		da, cry := NewDAuth(), NewJWTCrypt(pKey)
+		da, cry := newDAuth(), NewJWTCrypt(pKey)
 		sm = NewSMng(da, cry)
 	}
 	var gq *QuotaMap

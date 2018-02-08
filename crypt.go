@@ -28,7 +28,9 @@ const (
 // User is the type representing a logged user into the
 // system
 type User struct {
-	UserName    string   `json:"userName"`
+	// user account name
+	UserName string `json:"userName"`
+	// person name
 	Name        string   `json:"name"`
 	IsAdmin     bool     `json:"isAdmin"`
 	QuotaGroups []string `json:"quotaGroup"`

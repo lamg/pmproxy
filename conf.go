@@ -173,7 +173,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	}
 	var udb UserDB
 	if dAuth {
-		udb = NewDAuth()
+		udb = new(DAuth)
 	} else {
 		udb = NewLDB(c.ADAddr, c.ADAccSf, c.BDN, c.GrpQtPref,
 			c.AdmNames)

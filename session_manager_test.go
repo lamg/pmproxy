@@ -16,7 +16,7 @@ var (
 func TestSessionManager(t *testing.T) {
 	pKey, e := parseKey()
 	require.True(t, e == nil)
-	a, c := NewDAuth(), NewJWTCrypt(pKey)
+	a, c := newDAuth(), NewJWTCrypt(pKey)
 	sm := NewSMng(a, c)
 	tss := []struct {
 		cr   *credentials
@@ -46,4 +46,35 @@ func TestSessionManager(t *testing.T) {
 	require.True(t, e.Code == errorCheck)
 	_, e = sm.check(pepeIP, lr1.Scrt)
 	require.True(t, e == nil)
+}
+
+func newDAuth() (d *DAuth) {
+	d = new(DAuth)
+	d.us = map[string]*User{
+		coco.User: &User{
+			Name:        coco.User,
+			UserName:    coco.User,
+			IsAdmin:     true,
+			QuotaGroups: []string{"A"},
+		},
+		pepe.User: &User{
+			Name:        pepe.User,
+			UserName:    pepe.User,
+			IsAdmin:     true,
+			QuotaGroups: []string{"A"},
+		},
+		"cuco": &User{
+			Name:        "cuco",
+			UserName:    "cuco",
+			IsAdmin:     false,
+			QuotaGroups: []string{"A", "B"},
+		},
+		"a": &User{
+			Name:        "a",
+			UserName:    "a",
+			IsAdmin:     false,
+			QuotaGroups: []string{"A"},
+		},
+	}
+	return
 }
