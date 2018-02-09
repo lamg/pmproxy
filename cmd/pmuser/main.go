@@ -1,12 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy"
 	"github.com/marcusolsson/tui-go"
+	"gopkg.in/yaml.v2"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"os/user"
+	"path"
 )
 
 type credentials struct {
@@ -14,9 +21,33 @@ type credentials struct {
 	Pass string `json:"pass"`
 }
 
+type Conf struct {
+	User      string `yaml:"user"`
+	Pass      string `yaml:"pass"`
+	ProxyAddr string `yaml:"proxyAddr"`
+}
+
+const conf = ".pmuser.yaml"
+
 func main() {
-	u := newUi()
-	ui, e := tui.New(u.box)
+	osUsr, e := user.Current()
+	var fl io.ReadCloser
+	var cfPath string
+	var d error
+	if e == nil {
+		cfPath = path.Join(osUsr.HomeDir, conf)
+		fl, d = os.Open(cfPath)
+	}
+	cf := new(Conf)
+	if e == nil && d == nil {
+		e = yaml.Unmarshal(fl, cf)
+		fl.Close()
+	}
+	var u *ui
+	if e == nil {
+		u = newUi(cf, cfPath)
+		ui, e = tui.New(u.box)
+	}
 	if e == nil {
 		ui.SetKeybinding("Esc", func() { ui.Quit() })
 		e = ui.Run()
@@ -30,22 +61,6 @@ func main() {
 	// flag.StringVar(&proxyAddr, "a", "", "Proxy address")
 	// flag.Parse()
 
-	// cr := &credentials{user, pass}
-	// bs, e := json.Marshal(&cr)
-	// var r *http.Response
-	// if e == nil {
-	// 	http.DefaultClient.Transport = &http.Transport{
-	// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	// 	}
-	// 	r, e = http.Post(proxyAddr+pmproxy.LogX, "text/json",
-	// 		bytes.NewReader(bs))
-	// }
-	// var lr *pmproxy.LogRs
-	// if e == nil {
-	// 	lr = new(pmproxy.LogRs)
-	// 	e = pmproxy.Decode(r.Body, lr)
-	// 	r.Body.Close()
-	// }
 	// var cons string
 	// if e == nil {
 	// 	cons, e = get(proxyAddr, pmproxy.UserStatus, lr.Scrt)
@@ -66,14 +81,21 @@ var logo = `
 `
 
 type ui struct {
+	user, pass       *tui.Entry
 	sidebar, wrkArea *tui.Box
+	status           *tui.StatusBar
 	sessB, qcB       *tui.Button
 	box              *tui.Box
 	scrt             string
+	proxyAddr        string
 }
 
-func newUi() (u *ui) {
+func newUi(cf *Conf) (u *ui) {
 	u = new(ui)
+	u.proxyAddr = cf.ProxyAddr
+	u.user, u.pass = tui.NewEntry(), tui.NewEntry()
+	u.user.SetText(cf.User)
+	u.pass.SetText(cf.Pass)
 	u.sessB, u.qcB, u.wrkArea = tui.NewButton("[Sesión]"),
 		tui.NewButton("[Cuota y consumo]"),
 		tui.NewVBox()
@@ -81,7 +103,9 @@ func newUi() (u *ui) {
 	u.sidebar.SetBorder(true)
 	u.sessB.OnActivated(func(b *tui.Button) { u.showLoginBox() })
 	u.qcB.OnActivated(func(b *tui.Button) { u.showQC() })
-	u.box = tui.NewHBox(u.sidebar, u.wrkArea)
+	hb := tui.NewHBox(u.sidebar, u.wrkArea)
+	u.status = tui.NewStatusBar("Listo.")
+	u.box = tui.NewVBox(hb, u.status)
 	tui.DefaultFocusChain.Set(u.sessB, u.qcB)
 	return
 }
@@ -89,39 +113,77 @@ func newUi() (u *ui) {
 func (u *ui) showLoginBox() {
 	u.wrkArea.Remove(0)
 
-	user := tui.NewEntry()
-	user.SetFocused(true)
+	u.user.SetFocused(true)
 
-	pass := tui.NewEntry()
-	pass.SetEchoMode(tui.EchoModePassword)
+	u.pass.SetEchoMode(tui.EchoModePassword)
 
 	form := tui.NewGrid(0, 0)
 	form.AppendRow(
 		tui.NewLabel("Usuario"),
 		tui.NewLabel("Contraseña"),
 	)
-	form.AppendRow(user, pass)
-	status := tui.NewStatusBar("Listo.")
+	form.AppendRow(u.user, u.pass)
 
 	login := tui.NewButton("[Abrir]")
 	login.OnActivated(func(b *tui.Button) {
-		status.SetText("Sesión abierta.")
+		u.login()
 	})
 
 	logout := tui.NewButton("[Cerrar]")
 	logout.OnActivated(func(b *tui.Button) {
-		status.SetText("Sesión cerrada")
+		u.status.SetText("Sesión cerrada")
 	})
+
+	buttons := tui.NewHBox(
+		tui.NewSpacer(),
+		tui.NewPadder(1, 0, login),
+		tui.NewPadder(1, 0, logout),
+	)
+
+	lbLogo := tui.NewLabel(logo)
+	window := tui.NewVBox(
+		tui.NewPadder(10, 1, lbLogo),
+		tui.NewPadder(12, 0, tui.NewLabel("Bienvenido a PMProxy")),
+		tui.NewPadder(1, 1, form),
+		buttons,
+	)
+	window.SetBorder(true)
 
 	tui.DefaultFocusChain.Set(user, pass, login, logout, u.qcB,
 		u.sessB)
-	u.wrkArea.Append(form)
+	tui.DefaultFocusChain.FocusNext(u.sessB)
+	u.wrkArea.Append(window)
 }
 
 func (u *ui) showQC() {
 	u.wrkArea.Remove(0)
 	lb := tui.NewLabel("Estado de cuota y consumo")
 	u.wrkArea.Append(lb)
+}
+
+func (u *ui) login() {
+	cr := &credentials{u.user.Text(), u.pass.Text()}
+	bs, e := json.Marshal(&cr)
+	var r *http.Response
+	if e == nil {
+		http.DefaultClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		r, e = http.Post(u.proxyAddr+pmproxy.LogX, "text/json",
+			bytes.NewReader(bs))
+	}
+	var lr *pmproxy.LogRs
+	if e == nil {
+		lr = new(pmproxy.LogRs)
+		e = pmproxy.Decode(r.Body, lr)
+		r.Body.Close()
+	}
+	if e == nil {
+		u.scrt = lr.Scrt
+		u.status.SetText("Sesión abierta.")
+	} else {
+		u.status.SetText(e.Error())
+	}
 }
 
 func get(addr, path, hd string) (r string, e *errors.Error) {
