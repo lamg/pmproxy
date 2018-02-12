@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
-	"github.com/lamg/errors"
+	"fmt"
+	"github.com/c2h5oh/datasize"
 	"github.com/lamg/pmproxy"
 	"github.com/marcusolsson/tui-go"
 	"gopkg.in/yaml.v2"
@@ -38,19 +40,25 @@ func main() {
 		cfPath = path.Join(osUsr.HomeDir, conf)
 		fl, d = os.Open(cfPath)
 	}
+	var bs []byte
+	if e == nil {
+		bs, e = ioutil.ReadAll(fl)
+	}
 	cf := new(Conf)
 	if e == nil && d == nil {
-		e = yaml.Unmarshal(fl, cf)
+		e = yaml.Unmarshal(bs, cf)
+		fmt.Printf("%v\n", cf)
 		fl.Close()
 	}
 	var u *ui
+	var tu tui.UI
 	if e == nil {
 		u = newUi(cf, cfPath)
-		ui, e = tui.New(u.box)
+		tu, e = tui.New(u.box)
 	}
 	if e == nil {
-		ui.SetKeybinding("Esc", func() { ui.Quit() })
-		e = ui.Run()
+		tu.SetKeybinding("Esc", func() { tu.Quit() })
+		e = tu.Run()
 	}
 	if e != nil {
 		log.Print(e.Error())
@@ -61,10 +69,6 @@ func main() {
 	// flag.StringVar(&proxyAddr, "a", "", "Proxy address")
 	// flag.Parse()
 
-	// var cons string
-	// if e == nil {
-	// 	cons, e = get(proxyAddr, pmproxy.UserStatus, lr.Scrt)
-	// }
 	// if e == nil {
 	// 	log.Print(cons)
 	// }
@@ -90,7 +94,7 @@ type ui struct {
 	proxyAddr        string
 }
 
-func newUi(cf *Conf) (u *ui) {
+func newUi(cf *Conf, cfPath string) (u *ui) {
 	u = new(ui)
 	u.proxyAddr = cf.ProxyAddr
 	u.user, u.pass = tui.NewEntry(), tui.NewEntry()
@@ -131,7 +135,7 @@ func (u *ui) showLoginBox() {
 
 	logout := tui.NewButton("[Cerrar]")
 	logout.OnActivated(func(b *tui.Button) {
-		u.status.SetText("Sesión cerrada")
+		u.logout()
 	})
 
 	buttons := tui.NewHBox(
@@ -149,15 +153,31 @@ func (u *ui) showLoginBox() {
 	)
 	window.SetBorder(true)
 
-	tui.DefaultFocusChain.Set(user, pass, login, logout, u.qcB,
-		u.sessB)
+	tui.DefaultFocusChain.Set(u.user, u.pass, login, logout,
+		u.qcB, u.sessB)
 	tui.DefaultFocusChain.FocusNext(u.sessB)
 	u.wrkArea.Append(window)
 }
 
 func (u *ui) showQC() {
 	u.wrkArea.Remove(0)
-	lb := tui.NewLabel("Estado de cuota y consumo")
+	cons, e := get(u.proxyAddr, pmproxy.UserStatus, u.scrt)
+	var qc *pmproxy.QtCs
+	if e == nil {
+		qc = new(pmproxy.QtCs)
+		e = json.Unmarshal(cons, qc)
+	}
+	var msg string
+	if e == nil {
+		qt, cs := datasize.ByteSize(qc.Quota),
+			datasize.ByteSize(qc.Consumption)
+		msg = fmt.Sprintf("Cuota: %s Consumo: %s",
+			qt.HumanReadable(), cs.HumanReadable())
+
+	} else {
+		msg = e.Error()
+	}
+	lb := tui.NewLabel(msg)
 	u.wrkArea.Append(lb)
 }
 
@@ -175,7 +195,10 @@ func (u *ui) login() {
 	var lr *pmproxy.LogRs
 	if e == nil {
 		lr = new(pmproxy.LogRs)
-		e = pmproxy.Decode(r.Body, lr)
+		ec := pmproxy.Decode(r.Body, lr)
+		if ec != nil {
+			e = ec.Err
+		}
 		r.Body.Close()
 	}
 	if e == nil {
@@ -186,28 +209,36 @@ func (u *ui) login() {
 	}
 }
 
-func get(addr, path, hd string) (r string, e *errors.Error) {
-	var q *http.Request
+func (u *ui) logout() {
+	q, e := http.NewRequest(http.MethodDelete,
+		u.proxyAddr+pmproxy.LogX, nil)
+	var r *http.Response
 	if e == nil {
-		var ec error
-		q, ec = http.NewRequest(http.MethodGet, addr+path, nil)
-		e = errors.NewForwardErr(ec)
+		q.Header.Set(pmproxy.AuthHd, u.scrt)
+		r, e = http.DefaultClient.Do(q)
 	}
+	if e == nil {
+		if r.StatusCode == http.StatusOK {
+			u.status.SetText("Sesión cerrada")
+		} else {
+			u.status.SetText(
+				fmt.Sprintf("El servidor devolvió %d", r.StatusCode))
+		}
+	} else {
+		u.status.SetText(e.Error())
+	}
+}
+
+func get(addr, path, hd string) (bs []byte, e error) {
+	var q *http.Request
+	q, e = http.NewRequest(http.MethodGet, addr+path, nil)
 	var p *http.Response
 	if e == nil {
-		var ec error
 		q.Header.Set(pmproxy.AuthHd, hd)
-		p, ec = http.DefaultClient.Do(q)
-		e = errors.NewForwardErr(ec)
-	}
-	var bs []byte
-	if e == nil {
-		var ec error
-		bs, ec = ioutil.ReadAll(p.Body)
-		e = errors.NewForwardErr(ec)
+		p, e = http.DefaultClient.Do(q)
 	}
 	if e == nil {
-		r = string(bs)
+		bs, e = ioutil.ReadAll(p.Body)
 	}
 	return
 }

@@ -139,6 +139,11 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		if e == nil {
 			e = p.qa.setCons(addr, s, nv)
 		}
+	} else if e == nil && r.Method == h.MethodPost {
+		_, e = p.qa.sm.userInfo(addr, s)
+		if e == nil {
+
+		}
 	} else {
 		e = notSuppMeth(r.Method)
 	}
