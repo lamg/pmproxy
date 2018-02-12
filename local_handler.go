@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net"
 	h "net/http"
-	"path"
 
 	"github.com/lamg/errors"
 	"github.com/rs/cors"
@@ -59,7 +58,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 		stPath: sp,
 	}
 	mx := h.NewServeMux()
-	mx.HandleFunc(ProxyA, p.proxyA)
+	mx.HandleFunc("/", p.proxyA)
 	mx.HandleFunc(LogX, p.logXHF)
 	mx.HandleFunc(UserStatus, p.userStatusHF)
 	mx.HandleFunc(CheckUser, p.checkUserHF)
@@ -71,7 +70,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 }
 
 func (p *LocalHn) proxyA(w h.ResponseWriter, r *h.Request) {
-	h.ServeFile(w, r, path.Join(p.stPath, ProxyA))
+	h.ServeFile(w, r, p.stPath)
 }
 
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
