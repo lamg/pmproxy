@@ -165,7 +165,7 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		if e == nil {
 			e = Encode(w, qc)
 		}
-	} else {
+	} else if e == nil {
 		e = notSuppMeth(r.Method)
 	}
 
