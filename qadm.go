@@ -107,12 +107,6 @@ func (q *QAdm) getUsrQuota(u *User) (r uint64,
 		nr, ok = q.gq.Load(u.QuotaGroups[i])
 		if ok {
 			r += nr
-		} else {
-			e = &errors.Error{
-				Code: ErrorLQ,
-				Err: fmt.Errorf("Not found quota for %s",
-					u.UserName),
-			}
 		}
 	}
 	return

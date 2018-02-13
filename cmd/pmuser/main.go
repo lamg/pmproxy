@@ -190,22 +190,29 @@ func (u *ui) showUsrQC() {
 	ue, bt, lb := tui.NewEntry(), tui.NewButton("[Obtener]"),
 		tui.NewLabel("Cuota y consumo del usuario introducido")
 	bt.OnActivated(func(b *tui.Button) {
-		r, e := http.Post(u.proxyAddr+pmproxy.UserStatus,
-			"text/plain", bytes.NewBufferString(ue.Text()))
+		q, e := http.NewRequest(http.MethodPost,
+			u.proxyAddr+pmproxy.UserStatus,
+			bytes.NewBufferString(ue.Text()))
+		var r *http.Response
+		if e == nil {
+			q.Header.Set(pmproxy.AuthHd, u.scrt)
+			r, e = http.DefaultClient.Do(q)
+		}
+		var bs []byte
+		if e == nil {
+			bs, e = ioutil.ReadAll(r.Body)
+		}
 		var qc *pmproxy.QtCs
 		if e == nil {
 			qc = new(pmproxy.QtCs)
-			ec := pmproxy.Decode(r.Body, qc)
-			if ec != nil {
-				e = ec.Err
-			}
+			e = json.Unmarshal(bs, qc)
 		}
 		if e == nil {
 			lb.SetText(fmt.Sprintf("Cuota: %s Consumo: %s",
 				datasize.ByteSize(qc.Quota).HumanReadable(),
 				datasize.ByteSize(qc.Consumption).HumanReadable()))
 		} else {
-			lb.SetText(e.Error())
+			lb.SetText(string(bs))
 		}
 	})
 
