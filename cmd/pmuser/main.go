@@ -32,6 +32,9 @@ type Conf struct {
 const conf = ".pmuser.yaml"
 
 func main() {
+	http.DefaultClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	osUsr, e := user.Current()
 	var fl io.ReadCloser
 	var cfPath string
@@ -47,7 +50,6 @@ func main() {
 	cf := new(Conf)
 	if e == nil && d == nil {
 		e = yaml.Unmarshal(bs, cf)
-		fmt.Printf("%v\n", cf)
 		fl.Close()
 	}
 	var u *ui
@@ -88,7 +90,7 @@ type ui struct {
 	user, pass       *tui.Entry
 	sidebar, wrkArea *tui.Box
 	status           *tui.StatusBar
-	sessB, qcB       *tui.Button
+	sessB, qcB, qcuB *tui.Button
 	box              *tui.Box
 	scrt             string
 	proxyAddr        string
@@ -100,17 +102,19 @@ func newUi(cf *Conf, cfPath string) (u *ui) {
 	u.user, u.pass = tui.NewEntry(), tui.NewEntry()
 	u.user.SetText(cf.User)
 	u.pass.SetText(cf.Pass)
-	u.sessB, u.qcB, u.wrkArea = tui.NewButton("[Sesión]"),
+	u.sessB, u.qcB, u.qcuB, u.wrkArea = tui.NewButton("[Sesión]"),
 		tui.NewButton("[Cuota y consumo]"),
+		tui.NewButton("[Cuota y consumo de otro usuario]"),
 		tui.NewVBox()
-	u.sidebar = tui.NewVBox(u.sessB, u.qcB)
+	u.sidebar = tui.NewVBox(u.sessB, u.qcB, u.qcuB)
 	u.sidebar.SetBorder(true)
 	u.sessB.OnActivated(func(b *tui.Button) { u.showLoginBox() })
 	u.qcB.OnActivated(func(b *tui.Button) { u.showQC() })
+	u.qcuB.OnActivated(func(b *tui.Button) { u.showUsrQC() })
 	hb := tui.NewHBox(u.sidebar, u.wrkArea)
 	u.status = tui.NewStatusBar("Listo.")
 	u.box = tui.NewVBox(hb, u.status)
-	tui.DefaultFocusChain.Set(u.sessB, u.qcB)
+	tui.DefaultFocusChain.Set(u.sessB, u.qcB, u.qcuB)
 	return
 }
 
@@ -154,7 +158,7 @@ func (u *ui) showLoginBox() {
 	window.SetBorder(true)
 
 	tui.DefaultFocusChain.Set(u.user, u.pass, login, logout,
-		u.qcB, u.sessB)
+		u.qcB, u.qcuB, u.sessB)
 	tui.DefaultFocusChain.FocusNext(u.sessB)
 	u.wrkArea.Append(window)
 }
@@ -181,14 +185,41 @@ func (u *ui) showQC() {
 	u.wrkArea.Append(lb)
 }
 
+func (u *ui) showUsrQC() {
+	u.wrkArea.Remove(0)
+	ue, bt, lb := tui.NewEntry(), tui.NewButton("[Obtener]"),
+		tui.NewLabel("Cuota y consumo del usuario introducido")
+	bt.OnActivated(func(b *tui.Button) {
+		r, e := http.Post(u.proxyAddr+pmproxy.UserStatus,
+			"text/plain", bytes.NewBufferString(ue.Text()))
+		var qc *pmproxy.QtCs
+		if e == nil {
+			qc = new(pmproxy.QtCs)
+			ec := pmproxy.Decode(r.Body, qc)
+			if ec != nil {
+				e = ec.Err
+			}
+		}
+		if e == nil {
+			lb.SetText(fmt.Sprintf("Cuota: %s Consumo: %s",
+				datasize.ByteSize(qc.Quota).HumanReadable(),
+				datasize.ByteSize(qc.Consumption).HumanReadable()))
+		} else {
+			lb.SetText(e.Error())
+		}
+	})
+
+	tui.DefaultFocusChain.Set(ue, bt, u.sessB, u.qcB, u.qcuB)
+	ue.SetFocused(true)
+	bx := tui.NewVBox(ue, bt, lb)
+	u.wrkArea.Append(bx)
+}
+
 func (u *ui) login() {
 	cr := &credentials{u.user.Text(), u.pass.Text()}
 	bs, e := json.Marshal(&cr)
 	var r *http.Response
 	if e == nil {
-		http.DefaultClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
 		r, e = http.Post(u.proxyAddr+pmproxy.LogX, "text/json",
 			bytes.NewReader(bs))
 	}

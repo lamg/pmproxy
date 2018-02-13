@@ -141,8 +141,29 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		}
 	} else if e == nil && r.Method == h.MethodPost {
 		_, e = p.qa.sm.userInfo(addr, s)
+		var bs []byte
 		if e == nil {
-
+			var ec error
+			bs, ec = ioutil.ReadAll(r.Body)
+			e = errors.NewForwardErr(ec)
+		}
+		var c *credentials
+		if e == nil {
+			c, e = p.qa.sm.crt.checkUser(s)
+		}
+		var u *User
+		if e == nil {
+			usr := string(bs)
+			u, e = p.qa.sm.udb.UserInfo(c.User, c.Pass, usr)
+		}
+		var qc *QtCs
+		if e == nil {
+			qc = new(QtCs)
+			qc.Consumption, _ = p.qa.uc.Load(u.UserName)
+			qc.Quota, e = p.qa.getUsrQuota(u)
+		}
+		if e == nil {
+			e = Encode(w, qc)
 		}
 	} else {
 		e = notSuppMeth(r.Method)

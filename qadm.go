@@ -94,18 +94,24 @@ func (q *QAdm) getQuota(ip string, s string) (r uint64,
 	var u *User
 	u, e = q.sm.userInfo(ip, s)
 	if e == nil {
-		ok := true
-		for i := 0; ok && i != len(u.QuotaGroups); i++ {
-			var nr uint64
-			nr, ok = q.gq.Load(u.QuotaGroups[i])
-			if ok {
-				r += nr
-			} else {
-				e = &errors.Error{
-					Code: ErrorLQ,
-					Err: fmt.Errorf("Not found quota for %s",
-						u.UserName),
-				}
+		r, e = q.getUsrQuota(u)
+	}
+	return
+}
+
+func (q *QAdm) getUsrQuota(u *User) (r uint64,
+	e *errors.Error) {
+	ok := true
+	for i := 0; ok && i != len(u.QuotaGroups); i++ {
+		var nr uint64
+		nr, ok = q.gq.Load(u.QuotaGroups[i])
+		if ok {
+			r += nr
+		} else {
+			e = &errors.Error{
+				Code: ErrorLQ,
+				Err: fmt.Errorf("Not found quota for %s",
+					u.UserName),
 			}
 		}
 	}
