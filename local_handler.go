@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	h "net/http"
+	"path"
 
 	"github.com/lamg/errors"
 	"github.com/rs/cors"
@@ -70,7 +71,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 }
 
 func (p *LocalHn) proxyA(w h.ResponseWriter, r *h.Request) {
-	h.ServeFile(w, r, p.stPath)
+	h.ServeFile(w, r, path.Join(p.stPath, r.URL.Path[1:]))
 }
 
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
