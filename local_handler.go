@@ -73,7 +73,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 func (p *LocalHn) proxyA(w h.ResponseWriter, r *h.Request) {
 	var pth string
 	if r.URL.Path == "/login" {
-		pth = ""
+		pth = "index.html"
 	} else {
 		pth = r.URL.Path[1:]
 	}
