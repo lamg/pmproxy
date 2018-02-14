@@ -71,12 +71,7 @@ func NewLocalHn(qa *QAdm, sp string) (p *LocalHn) {
 }
 
 func (p *LocalHn) proxyA(w h.ResponseWriter, r *h.Request) {
-	var pth string
-	if r.URL.Path == "/login" {
-		pth = "index.html"
-	} else {
-		pth = r.URL.Path[1:]
-	}
+	pth := r.URL.Path[1:]
 	h.ServeFile(w, r, path.Join(p.stPath, pth))
 }
 
