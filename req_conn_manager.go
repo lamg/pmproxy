@@ -64,15 +64,16 @@ func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
 }
 
 // ProcResponse process responses according configuration
-func (m *RRConnMng) ProcResponse(p *h.Response) (r *h.Response) {
+func (m *RRConnMng) ProcResponse(p *h.Response,
+	q *h.Request) (r *h.Response) {
 	if p != nil {
 		tm := time.Now()
 		log := &Log{
 			// User is set by p.rl.Log
-			Addr:      r.Request.RemoteAddr,
-			Meth:      r.Request.Method,
-			URI:       r.Request.URL.String(),
-			Proto:     r.Request.Proto,
+			Addr:      q.RemoteAddr,
+			Meth:      q.Method,
+			URI:       q.URL.String(),
+			Proto:     q.Proto,
 			Time:      tm,
 			Elapsed:   5 * time.Millisecond, //FIXME not the meaning of E.
 			From:      "-",

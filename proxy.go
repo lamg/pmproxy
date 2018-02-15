@@ -53,7 +53,7 @@ func (p *PMProxy) newConCountHTTPS(nt, ad string,
 
 func (p *PMProxy) procResp(r *h.Response,
 	c *g.ProxyCtx) (x *h.Response) {
-	x = p.rmng.ProcResponse(r)
+	x = p.rmng.ProcResponse(r, c.Req)
 	return
 }
 

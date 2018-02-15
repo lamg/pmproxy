@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/lamg/errors"
@@ -58,6 +59,7 @@ type LogRs struct {
 
 func (s *SMng) login(c *credentials,
 	addr string) (lr *LogRs, e *errors.Error) {
+	c.User = strings.ToLower(c.User)
 	lr = new(LogRs)
 	var u *User
 	u, e = s.udb.UserInfo(c.User, c.Pass, c.User)
