@@ -79,6 +79,7 @@ func (m *RRConnMng) ProcResponse(p *h.Response) (r *h.Response) {
 			From:      "-",
 			Action:    "TCP_MISS",
 			Hierarchy: "DIRECT",
+			RespSize:  uint64(p.ContentLength),
 		}
 		ct := r.Header.Get("Content-Type")
 		if ct == "" {

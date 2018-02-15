@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/lamg/errors"
 	"os"
-	"time"
 )
 
 const (
@@ -22,7 +21,7 @@ type RLog struct {
 // NewRLog creates a new RLog
 func NewRLog(wr *os.File, iu IPUser) (rl *RLog) {
 	rl = &RLog{wr: wr, iu: iu}
-	rl.setZero()
+	// rl.setZero()
 	return
 }
 
@@ -38,8 +37,7 @@ func (rl *RLog) record(l *Log) {
 	} else {
 		l.User = u.UserName
 	}
-	rl.wr.Write([]byte(fmt.Sprintf("%s %s %s %s\n",
-		l.User, l.Time.Format(time.RFC3339), l.URI, l.Addr)))
+	fmt.Fprintln(rl.wr, l.String())
 	rl.wr.Sync()
 }
 
