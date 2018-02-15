@@ -48,7 +48,7 @@ func (db *LDB) Authenticate(u, p string) (e *errors.Error) {
 // UserInfo gets the user's information
 func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 	var mp map[string][]string
-	u, usr = strings.ToLower(u), strings.ToLower(usr)
+	u, usr = myLower(u), myLower(usr)
 	mp, e = db.ldp.FullRecord(u, p, usr)
 	r = &User{UserName: usr, IsAdmin: false}
 	r.Name, e = db.ldp.FullName(mp)
