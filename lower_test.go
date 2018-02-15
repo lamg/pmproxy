@@ -12,6 +12,7 @@ func TestMyLower(t *testing.T) {
 	}{
 		{"Ángel", "angel"},
 		{"žůžo", "zuzo"},
+		{"Peña", "pena"},
 	}
 	for i, j := range ts {
 		ml := myLower(j.org)
