@@ -66,7 +66,7 @@ func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
 // ProcResponse process responses according configuration
 func (m *RRConnMng) ProcResponse(p *h.Response) (r *h.Response) {
 	var log *Log
-	if r != nil {
+	if p != nil {
 		tm := time.Now()
 		log = &Log{
 			// User is set by p.rl.Log
