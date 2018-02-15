@@ -65,10 +65,9 @@ func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
 
 // ProcResponse process responses according configuration
 func (m *RRConnMng) ProcResponse(p *h.Response) (r *h.Response) {
-	var log *Log
 	if p != nil {
 		tm := time.Now()
-		log = &Log{
+		log := &Log{
 			// User is set by p.rl.Log
 			Addr:      r.Request.RemoteAddr,
 			Meth:      r.Request.Method,

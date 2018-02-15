@@ -21,7 +21,7 @@ type PMProxy struct {
 func NewPMProxy(r *RRConnMng, wi *url.URL) (p *PMProxy) {
 	p = &PMProxy{g.NewProxyHttpServer(), wi, r}
 
-	p.px.OnResponse().DoFunc(p.procResp)
+	// p.px.OnResponse().DoFunc(p.procResp)
 	p.px.ConnectDial = p.newConCountHTTPS
 	p.px.Tr.DialContext = p.newConCountHTTP
 	p.px.Tr.IdleConnTimeout = 10 * time.Second
