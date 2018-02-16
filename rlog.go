@@ -3,7 +3,8 @@ package pmproxy
 import (
 	"fmt"
 	"github.com/lamg/errors"
-	"os"
+	wf "github.com/lamg/wfact"
+	"io"
 )
 
 const (
@@ -13,21 +14,22 @@ const (
 
 // RLog records Log structs to an io.Writer
 type RLog struct {
-	wr *os.File
+	wr wf.WriterFct
+	w  io.Writer
 	e  *errors.Error
 	iu IPUser
 }
 
 // NewRLog creates a new RLog
-func NewRLog(wr *os.File, iu IPUser) (rl *RLog) {
+func NewRLog(wr wf.WriterFct, iu IPUser) (rl *RLog) {
 	rl = &RLog{wr: wr, iu: iu}
-	// rl.setZero()
+	rl.setZero()
 	return
 }
 
 func (rl *RLog) setZero() {
-	// rl.wr.NextWriter()
-	// rl.w, rl.e = rl.wr.Current(), rl.wr.Err()
+	rl.wr.NextWriter()
+	rl.w, rl.e = rl.wr.Current(), rl.wr.Err()
 }
 
 func (rl *RLog) record(l *Log) {
@@ -37,8 +39,7 @@ func (rl *RLog) record(l *Log) {
 	} else {
 		l.User = u.UserName
 	}
-	fmt.Fprintln(rl.wr, l.String())
-	rl.wr.Sync()
+	fmt.Fprintln(rl.w, l.String())
 }
 
 func (rl *RLog) err() (e *errors.Error) {
