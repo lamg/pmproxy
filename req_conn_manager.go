@@ -70,12 +70,13 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 		tm := time.Now()
 		log := &Log{
 			// User is set by p.rl.Log
-			Addr:      q.RemoteAddr,
-			Meth:      q.Method,
-			URI:       q.URL.String(),
-			Proto:     q.Proto,
-			Time:      tm,
-			Elapsed:   5 * time.Millisecond, //FIXME not the meaning of E.
+			Addr:  q.RemoteAddr,
+			Meth:  q.Method,
+			URI:   q.URL.String(),
+			Proto: q.Proto,
+			Time:  tm,
+			//FIXME not the meaning of E.
+			Elapsed:   5 * time.Millisecond,
 			From:      "-",
 			Action:    "TCP_MISS",
 			Hierarchy: "DIRECT",
