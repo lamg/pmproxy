@@ -68,9 +68,10 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 	q *h.Request) (r *h.Response) {
 	if p != nil {
 		tm := time.Now()
+		addr, _, _ := net.SplitHostPort(q.RemoteAddr)
 		log := &Log{
 			// User is set by p.rl.Log
-			Addr:  q.RemoteAddr,
+			Addr:  addr,
 			Meth:  q.Method,
 			URI:   q.URL.String(),
 			Proto: q.Proto,
@@ -83,11 +84,13 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 			RespSize:  uint64(p.ContentLength),
 		}
 		ct := r.Header.Get("Content-Type")
+		sl := strings.Split(ct, ";")
+		if len(sl) != 0 {
+			ct = sl[0]
+			// MIME type parameters droped
+		}
 		if ct == "" {
 			ct = "-"
-		} else {
-			ct = strings.Split(ct, ";")[0]
-			// MIME type parameters droped
 		}
 		log.ContentType = ct
 		m.rl.record(log)
