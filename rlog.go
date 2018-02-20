@@ -39,6 +39,9 @@ func (rl *RLog) record(l *Log) {
 	} else {
 		l.User = u.UserName
 	}
+	if l.User == "luis.mendez" {
+		println(l.String())
+	}
 	fmt.Fprintln(rl.w, l.String())
 }
 
