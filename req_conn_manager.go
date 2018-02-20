@@ -94,6 +94,7 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 		}
 		log.ContentType = ct
 		m.rl.record(log)
+		println("ok")
 	}
 	r = p
 	return

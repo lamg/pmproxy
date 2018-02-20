@@ -56,8 +56,9 @@ func (p *PMProxy) procResp(r *h.Response,
 	hs, _, _ := net.SplitHostPort(c.Req.RemoteAddr)
 	if hs == "10.2.9.11" {
 		println(c.Req.URL.String())
+		p.rmng.ProcResponse(r, c.Req)
 	}
-	x = p.rmng.ProcResponse(r, c.Req)
+	x = r
 	return
 }
 
