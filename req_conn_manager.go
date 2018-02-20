@@ -85,6 +85,7 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 		}
 		println("ok0")
 		ct := r.Header.Get("Content-Type")
+		println("ok1")
 		sl := strings.Split(ct, ";")
 		if len(sl) != 0 {
 			ct = sl[0]
