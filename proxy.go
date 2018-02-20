@@ -47,6 +47,7 @@ func (p *PMProxy) newConCountHTTP(c context.Context, nt,
 
 func (p *PMProxy) newConCountHTTPS(nt, ad string,
 	c *g.ProxyCtx) (n net.Conn, e error) {
+	m.ProcResponse(nil, c.Req)
 	n, e = p.rmng.newConn(nt, ad, c.Req, time.Now())
 	return
 }

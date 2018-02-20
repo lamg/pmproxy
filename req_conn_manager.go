@@ -66,23 +66,23 @@ func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
 // ProcResponse process responses according configuration
 func (m *RRConnMng) ProcResponse(p *h.Response,
 	q *h.Request) (r *h.Response) {
+	addr, _, _ := net.SplitHostPort(q.RemoteAddr)
+	tm := time.Now()
+	log := &Log{
+		// User is set by p.rl.Log
+		Addr:  addr,
+		Meth:  q.Method,
+		URI:   q.URL.String(),
+		Proto: q.Proto,
+		Time:  tm,
+		//FIXME not the meaning of E.
+		Elapsed:   5 * time.Millisecond,
+		From:      "-",
+		Action:    "TCP_MISS",
+		Hierarchy: "DIRECT",
+	}
 	if p != nil {
-		tm := time.Now()
-		addr, _, _ := net.SplitHostPort(q.RemoteAddr)
-		log := &Log{
-			// User is set by p.rl.Log
-			Addr:  addr,
-			Meth:  q.Method,
-			URI:   q.URL.String(),
-			Proto: q.Proto,
-			Time:  tm,
-			//FIXME not the meaning of E.
-			Elapsed:   5 * time.Millisecond,
-			From:      "-",
-			Action:    "TCP_MISS",
-			Hierarchy: "DIRECT",
-			RespSize:  uint64(p.ContentLength),
-		}
+		log.RespSize = uint64(p.ContentLength)
 		ct := p.Header.Get("Content-Type")
 		sl := strings.Split(ct, ";")
 		if len(sl) != 0 {
@@ -93,8 +93,10 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 			ct = "-"
 		}
 		log.ContentType = ct
-		m.rl.record(log)
+	} else {
+		log.ContentType = "-"
 	}
+	m.rl.record(log)
 	r = p
 	return
 }
