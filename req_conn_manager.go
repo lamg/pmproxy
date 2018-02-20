@@ -83,6 +83,7 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 			Hierarchy: "DIRECT",
 			RespSize:  uint64(p.ContentLength),
 		}
+		println("ok0")
 		ct := r.Header.Get("Content-Type")
 		sl := strings.Split(ct, ";")
 		if len(sl) != 0 {
