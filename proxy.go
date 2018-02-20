@@ -53,7 +53,7 @@ func (p *PMProxy) newConCountHTTPS(nt, ad string,
 
 func (p *PMProxy) procResp(r *h.Response,
 	c *g.ProxyCtx) (x *h.Response) {
-	hs, _, e := net.SplitHostPort(c.Req.RemoteAddr)
+	hs, _, _ := net.SplitHostPort(c.Req.RemoteAddr)
 	if hs == "10.2.9.11" {
 		println(c.Req.URL.String())
 	}
