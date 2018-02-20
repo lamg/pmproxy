@@ -83,9 +83,7 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 			Hierarchy: "DIRECT",
 			RespSize:  uint64(p.ContentLength),
 		}
-		println("ok0")
 		ct := p.Header.Get("Content-Type")
-		println("ok1")
 		sl := strings.Split(ct, ";")
 		if len(sl) != 0 {
 			ct = sl[0]
@@ -96,7 +94,6 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 		}
 		log.ContentType = ct
 		m.rl.record(log)
-		println("ok")
 	}
 	r = p
 	return
