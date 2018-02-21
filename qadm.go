@@ -218,7 +218,7 @@ func (q *QAdm) canReq(ip, host,
 		!q.hasQuota(ip)
 
 	if !okPort || notLogged || noQuota || restrTime {
-		c, cs = c*-1, new(CauseCD)
+		c = c * -1
 	}
 	if f && c < 0 {
 		cs = &CauseCD{"forbidden site", host}
@@ -232,7 +232,7 @@ func (q *QAdm) canReq(ip, host,
 			res.Start.String() + " " + res.End.String()}
 	} else if notLogged {
 		cs = &CauseCD{"not logged", ip}
-	} else if noQuota && !f {
+	} else if noQuota && c != 0 {
 		cs = &CauseCD{"no quota", host}
 	}
 	return

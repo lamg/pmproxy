@@ -132,6 +132,7 @@ func TestAddCons(t *testing.T) {
 
 func TestCanReq(t *testing.T) {
 	qa, _, e := initTestQAdm(pepe, pepeIP)
+	qa.login(coco, cocoIP)
 	stl := []string{
 		"2006-01-02T08:00:01-04:00",
 		"2006-01-02T08:00:01-04:00",
@@ -164,8 +165,9 @@ func TestCanReq(t *testing.T) {
 		{"news.ycombinator.com", "441", pepeIP, -1},
 	}
 	for i, j := range cases {
-		c, _ := qa.canReq(j.ip, j.host, j.port)
+		c, cs := qa.canReq(j.ip, j.host, j.port)
 		require.True(t, c == j.k, "%.1f ≠ %.1f at %d", c, j.k, i)
+		require.True(t, c != 0 || cs == nil, "At %d", i)
 	}
 }
 
