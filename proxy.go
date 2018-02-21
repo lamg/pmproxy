@@ -67,6 +67,10 @@ const rmAddr = "RemoteAddress"
 func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
 	r *h.Request) {
 	cs := p.rmng.CanDo(r)
+	addr, _, _ = net.SplitHostPort(r.RemoteAddr)
+	if addr == "10.2.9.11" {
+		println(r.URL.String())
+	}
 	if cs != nil {
 		w.Header().Set("Connection", "close")
 		url := causeToURL(cs, p.wIntURL)
