@@ -141,6 +141,7 @@ func TestCanReq(t *testing.T) {
 		"2006-01-02T08:00:00-04:00",
 		"2006-01-02T08:00:00-04:00",
 		"2006-01-02T08:00:00-04:00",
+		"2006-01-02T08:00:00-04:00",
 	}
 	ts := make([]time.Time, len(stl))
 	for i, j := range stl {
@@ -160,6 +161,7 @@ func TestCanReq(t *testing.T) {
 		{"google.com.cu", "443", cocoIP, 0},
 		{"facebook.com", "443", pepeIP, -1.5},
 		{"facebook.com", "443", pepeIP, 1.5},
+		{"detectportal.firefox.com", "", cocoIP, 0},
 		{"debian.org", "80", pepeIP, 1},
 		{"news.ycombinator.com", "443", pepeIP, 1},
 		{"news.ycombinator.com", "441", pepeIP, -1},

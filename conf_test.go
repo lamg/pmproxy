@@ -121,7 +121,8 @@ var conf = `
 var accR = `[
 	{"hostRE":"google.com.cu","start":null,"end":null,"consCfc":0},
 	{"hostRE":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
- {"hostRE":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5}
+ {"hostRE":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5},
+	{"hostRE":"detectportal.firefox.com","start":null,"end":null,"consCfc":0}
  ]`
 
 var cons = `{

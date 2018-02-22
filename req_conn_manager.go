@@ -57,11 +57,14 @@ type CauseCD struct {
 // processed at the supplied time
 // TODO return the cause when !y
 func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
-	hs, pr, _ := net.SplitHostPort(r.URL.Host)
+	hs, pr, e := net.SplitHostPort(r.URL.Host)
+	if e != nil {
+		hs = r.URL.Host
+	}
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	c, d := m.qa.canReq(ip, hs, pr)
 	if ip == "10.2.9.11" {
-		println(r.URL.Host)
+		print("hs: " + hs + " pr: " + pr + " c: ")
 		println(c)
 		if d != nil {
 			println(d.Type)
