@@ -62,14 +62,7 @@ func (m *RRConnMng) CanDo(r *h.Request) (d *CauseCD) {
 		hs = r.URL.Host
 	}
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	c, d := m.qa.canReq(ip, hs, pr)
-	if ip == "10.2.9.11" {
-		print("hs: " + hs + " pr: " + pr + " c: ")
-		println(c)
-		if d != nil {
-			println(d.Type)
-		}
-	}
+	_, d = m.qa.canReq(ip, hs, pr)
 	return
 }
 
