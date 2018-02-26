@@ -92,8 +92,10 @@ func NewUI(cf *UConf, cfPath string, isAdm bool) (u *UI) {
 		u.qcuB = tui.NewButton("[Cuota y consumo de otro usuario]")
 		u.sidebar = tui.NewVBox(u.sessB, u.qcB, u.qcuB)
 		u.qcuB.OnActivated(func(b *tui.Button) { u.showUsrQC() })
+		tui.DefaultFocusChain.Set(u.sessB, u.qcB, u.qcuB)
 	} else {
 		u.sidebar = tui.NewVBox(u.sessB, u.qcB)
+		tui.DefaultFocusChain.Set(u.sessB, u.qcB)
 	}
 	u.sidebar.SetBorder(true)
 	u.sessB.OnActivated(func(b *tui.Button) { u.showLoginBox() })
@@ -101,7 +103,7 @@ func NewUI(cf *UConf, cfPath string, isAdm bool) (u *UI) {
 	hb := tui.NewHBox(u.sidebar, u.wrkArea)
 	u.status = tui.NewStatusBar("Listo.")
 	u.box = tui.NewVBox(hb, u.status)
-	tui.DefaultFocusChain.Set(u.sessB, u.qcB, u.qcuB)
+
 	return
 }
 
@@ -213,8 +215,10 @@ func (u *UI) showQC() {
 		msg = fmt.Sprintf("Cuota: %s Consumo: %s",
 			qt.HumanReadable(), cs.HumanReadable())
 
-	} else {
+	} else if len(cons) == 0 {
 		msg = e.Error()
+	} else {
+		msg = string(cons)
 	}
 	lb := tui.NewLabel(msg)
 	u.wrkArea.Append(lb)
@@ -228,14 +232,14 @@ func (u *UI) login() {
 		r, e = http.Post(u.proxy.Text()+LogX, "text/json",
 			bytes.NewReader(bs))
 	}
+	if e == nil {
+		bs, e = ioutil.ReadAll(r.Body)
+		r.Body.Close()
+	}
 	var lr *LogRs
 	if e == nil {
 		lr = new(LogRs)
-		ec := Decode(r.Body, lr)
-		if ec != nil {
-			e = ec.Err
-		}
-		r.Body.Close()
+		e = json.Unmarshal(bs, lr)
 	}
 	if e == nil {
 		u.conf.User, u.conf.Pass, u.conf.ProxyAddr = u.user.Text(),
@@ -252,7 +256,7 @@ func (u *UI) login() {
 			}
 		}
 	} else {
-		u.status.SetText(e.Error())
+		u.status.SetText(string(bs))
 	}
 }
 
