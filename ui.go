@@ -41,7 +41,6 @@ type UI struct {
 	box               *tui.Box
 	tu                tui.UI
 	scrt              string
-	proxyAddr         string
 	conf              *UConf
 }
 
@@ -79,7 +78,6 @@ func InitUI(isAdm bool) (ui *UI, e error) {
 func NewUI(cf *UConf, cfPath string, isAdm bool) (u *UI) {
 	u = new(UI)
 	u.conf = cf
-	u.proxyAddr = cf.ProxyAddr
 	u.user, u.pass, u.proxy = tui.NewEntry(), tui.NewEntry(),
 		tui.NewEntry()
 	u.user.SetText(cf.User)
@@ -118,7 +116,7 @@ func (u *UI) showUsrQC() {
 		tui.NewLabel("Cuota y consumo del usuario introducido")
 	bt.OnActivated(func(b *tui.Button) {
 		q, e := http.NewRequest(http.MethodPost,
-			u.proxyAddr+UserStatus,
+			u.conf.ProxyAddr+UserStatus,
 			bytes.NewBufferString(ue.Text()))
 		var r *http.Response
 		if e == nil {
@@ -202,7 +200,14 @@ func (u *UI) showLoginBox() {
 
 func (u *UI) showQC() {
 	u.wrkArea.Remove(0)
-	cons, e := get(u.proxyAddr, UserStatus, u.scrt)
+	var e error
+	if u.conf.ProxyAddr == "" || u.scrt == "" {
+		e = fmt.Errorf("No ha iniciado sesión")
+	}
+	var cons []byte
+	if e == nil {
+		cons, e = get(u.conf.ProxyAddr, UserStatus, u.scrt)
+	}
 	var qc *QtCs
 	if e == nil {
 		qc = new(QtCs)
@@ -215,7 +220,7 @@ func (u *UI) showQC() {
 		msg = fmt.Sprintf("Cuota: %s Consumo: %s",
 			qt.HumanReadable(), cs.HumanReadable())
 
-	} else if len(cons) == 0 {
+	} else if cons == nil {
 		msg = e.Error()
 	} else {
 		msg = string(cons)
@@ -225,11 +230,19 @@ func (u *UI) showQC() {
 }
 
 func (u *UI) login() {
-	cr := &credentials{u.user.Text(), u.pass.Text()}
-	bs, e := json.Marshal(&cr)
+	user, pass, proxy := u.user.Text(), u.pass.Text(), u.proxy.Text()
+	var e error
+	if user == "" || pass == "" || proxy == "" {
+		e = fmt.Errorf("Faltan campos por llenar")
+	}
+	var bs []byte
+	if e == nil {
+		cr := &credentials{user, pass}
+		bs, e = json.Marshal(&cr)
+	}
 	var r *http.Response
 	if e == nil {
-		r, e = http.Post(u.proxy.Text()+LogX, "text/json",
+		r, e = http.Post(proxy+LogX, "text/json",
 			bytes.NewReader(bs))
 	}
 	if e == nil {
@@ -242,9 +255,7 @@ func (u *UI) login() {
 		e = json.Unmarshal(bs, lr)
 	}
 	if e == nil {
-		u.conf.User, u.conf.Pass, u.conf.ProxyAddr = u.user.Text(),
-			u.pass.Text(),
-			u.proxy.Text()
+		u.conf.User, u.conf.Pass, u.conf.ProxyAddr = user, pass, proxy
 		u.scrt = lr.Scrt
 		u.status.SetText("Sesión abierta.")
 		bs, e := yaml.Marshal(u.conf)
@@ -255,14 +266,23 @@ func (u *UI) login() {
 				fl.Close()
 			}
 		}
-	} else {
+	} else if bs != nil {
 		u.status.SetText(string(bs))
+	} else {
+		u.status.SetText(e.Error())
 	}
 }
 
 func (u *UI) logout() {
-	q, e := http.NewRequest(http.MethodDelete,
-		u.proxyAddr+LogX, nil)
+	var e error
+	if u.scrt == "" {
+		e = fmt.Errorf("No ha abierto sesión")
+	}
+	var q *http.Request
+	if e == nil {
+		q, e = http.NewRequest(http.MethodDelete,
+			u.conf.ProxyAddr+LogX, nil)
+	}
 	var r *http.Response
 	if e == nil {
 		q.Header.Set(AuthHd, u.scrt)
