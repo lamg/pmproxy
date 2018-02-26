@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	u, e := pmproxy.InitUI(false)
+	u, e := pmproxy.InitUI(true)
 	if e == nil {
 		e = u.Run()
 	}
