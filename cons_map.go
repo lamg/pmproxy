@@ -127,9 +127,5 @@ func (p *ConsMap) fillBuffer() {
 
 // Reset sets all values to 0
 func (p *ConsMap) Reset() {
-	p.mp.Range(func(a, b interface{}) (x bool) {
-		p.mp.Store(a, uint64(0))
-		x = true
-		return
-	})
+	p.mp = new(sync.Map)
 }
