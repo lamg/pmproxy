@@ -9,7 +9,7 @@ detailed descriptions.
 
 - Requests made from an IP with a logged user, but with consumed quota are redirected to the web interface.
 
-- Requested amount of data increases the user's consumption. The increment of user's consumption isdetermined by adding to the current user's consumption a product of a number by the downloaded amount of data. The number is determined according parameters like user's IP, user's remaining quota, user's data available on Active Directory, the time the request is made. A negative number means the request must be denied.
+- Requested amount of data increases the user's consumption. The increment of user's consumption is determined by adding to the current user's consumption a product of a number by the downloaded amount of data. The number is determined according parameters like user's IP, requested URL, user's data available on Active Directory, the time the request is made. A negative number means the request must be denied.
 
 ## Response processing
 

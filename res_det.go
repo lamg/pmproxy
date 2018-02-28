@@ -3,72 +3,90 @@ package pmproxy
 import (
 	"net"
 	h "net/http"
+	"net/url"
 	"time"
 )
 
-// RdMng manages a resource determinator
-type RdMng struct {
-	rs  []*Res
-	LdF LdapFlt
+type CfDet struct {
+	Cf  int
+	Opt []Det
+	// access exception list
 }
 
-// Det is the ResDet implementation
-func (d *RdMng) Det(r *h.Request, t time.Time,
-	usr string) (s *Res, e error) {
-	ec, err := make([]Bool, len(d.rs)), new(err)
-	for i, j := range d.rs {
-		ec[i] = &evCond{
-			c:  j.Cn,
-			r:  r,
-			t:  t,
-			ld: d.LdF,
-			e:  err,
-		}
-	}
-	y, i := BoundedLinearSearch(ec)
-	print("y: ")
-	println(y)
-	print("i: ")
-	println(i)
-	e = err.e
-	if y {
-		s = d.rs[i]
-	} else {
-		e = NoResourceMsg(r, t, usr)
+func (c *CfDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
+	ok, e = BLS(c.Opt, r, d)
+	return
+}
+
+type IfaceDet struct {
+	Iface string
+	Opt   []Det
+}
+
+func (c *IfaceDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
+	ok, e = BLS(c.Opt, r, d)
+	return
+}
+
+type ProxyDet struct {
+	Proxy *url.URL
+	Opt   []Det
+}
+
+func (c *ProxyDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
+	ok, e = BLS(c.Opt, r, d)
+	return
+}
+
+type ThrDet struct {
+	Thr float64
+	Opt []Det
+}
+
+func (c *ThrDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
+	ok, e = BLS(c.Opt)
+	return
+}
+
+type QuotaDet struct {
+	Quota  uint64
+	UsrDet *SMng
+	QtM    *QMng
+}
+
+func (c *QuotaDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
+	ok, e = c.UsrDet.Det(r, d)
+	if ok && e == nil {
+		c.Quota, e = c.QtM.Get(c.UsrDet.User)
 	}
 	return
 }
 
-// Res groups a resource group an a resource individual
-type Res struct {
-	Cn  *Cond  `json:"cn"`
-	Qt  *Quota `json:"qt"`
-	InD *Idet  `json:"inD"`
-	// hacer este tipo representable como JSON
+type ConsDet struct {
+	Cons   *uint64
+	CsM    *CMng
+	UsrDet *SMng
 }
 
-type Idet struct {
-	Sel string
-}
-
-func (d *Idet) Det(r *h.Request, t time.Time, u string) (s string) {
-	if d.Sel == "user" {
-		s = u
-	} else if d.Sel == "ip" {
-		s, _, _ = net.SplitHostPort(r.RemoteAddr)
+func (c *ConsDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
+	ok, e = c.UsrDet.Det(r, d)
+	if ok && e == nil {
+		c.Cons, ok = c.CsM.Get(c.UsrDet.User)
 	}
 	return
+}
+
+type ConSpec struct {
+	Proxy    *url.URL
+	Iface    string
+	Cf       int
+	Throttle float64
+	Quota    uint64
+	Cons     *uint64
 }
 
 // ResDet determines a group and an individual
 // corresponding to the passed parameters
 type ResDet interface {
-	Det(*h.Request, time.Time, string) (r *Res, e error)
-}
-
-// LdapFlt filters users. Implementation may store in memory
-// filtering results for some time, for reducing requests
-// to LDAP server.
-type LdapFlt interface {
-	UserOK(string) (bool, error)
+	Det(*h.Request, time.Time) (bool, error)
 }

@@ -6,7 +6,12 @@ import (
 
 // PMProxy does some preprocessing before proxying
 type PMProxy struct {
-	Pr []MaybeResp
+	CfD []*CfDet
+	IfD []*IfaceDet
+	PrD []*ProxyDet
+	ThD []*ThrDet
+	QtD []*QuotaDet
+	CsD []*ConsDet
 }
 
 type MaybeResp interface {

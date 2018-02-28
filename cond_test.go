@@ -154,7 +154,7 @@ func TestEvCond(t *testing.T) {
 		},
 	}
 	nw := time.Now()
-	e = cn0.InitNets([]string{"55.2.0.0/16", "55.3.67.0/24"})
+	e := cn0.InitNets([]string{"55.2.0.0/16", "55.3.67.0/24"})
 	require.NoError(t, e)
 	ts := []struct {
 		ul  string
@@ -166,5 +166,8 @@ func TestEvCond(t *testing.T) {
 			t:   nw.Format(time.RFC3339),
 			usr: "coco",
 		},
+	}
+	for i, j := range ts {
+		evCond{}
 	}
 }

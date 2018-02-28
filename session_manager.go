@@ -7,16 +7,12 @@ import (
 	"net"
 	h "net/http"
 	"sync"
+	"time"
 )
 
 // Auth authenticates users
 type Auth interface {
-	Authenticate(string, string) error
-}
-
-// UsrRec is an user receiver
-type UsrRec interface {
-	Rec(string)
+	Authenticate(string, string) (string, error)
 }
 
 // SMng handles opened sessions
@@ -31,21 +27,19 @@ type SMng struct {
 	usr Auth
 	// authenticator for administrators
 	adm Auth
-	// user receiver for logged users
-	Ur   UsrRec
+	// current user
+	User string
 	cr   *JWTCrypt
-	resp bool
 }
 
 // NewSMng creates a new SMng
-func NewSMng(usr, adm Auth, cr *JWTCrypt, ur UsrRec) (s *SMng) {
+func NewSMng(usr, adm Auth, cr *JWTCrypt) (s *SMng) {
 	s = &SMng{
 		sa:  new(sync.Map),
 		su:  new(sync.Map),
 		swS: new(sync.Map),
 		usr: usr,
 		adm: adm,
-		Ur:  ur,
 		cr:  cr,
 	}
 	return
@@ -118,33 +112,33 @@ func logout(m *sync.Map, user, ip string) (e error) {
 }
 
 // NotOpBySMsg is the not opened by session message
-func NotOpBySMsg(user, ip string) (m string) {
-	m = fmt.Sprintf("No hay sesión abierta por %s en %s",
+func NotOpBySMsg(user, ip string) (e error) {
+	e = fmt.Errorf("No hay sesión abierta por %s en %s",
 		user, ip)
 	return
 }
 
 // NotOpInSMsg is the not opened in session message
-func NotOpInSMsg(ip string) (m string) {
-	m = fmt.Sprintf("No hay sesión abierta en %s", ip)
+func NotOpInSMsg(ip string) (e error) {
+	e = fmt.Errorf("No hay sesión abierta en %s", ip)
 	return
 }
 
 // ServeHTTP handles requests to the
 // proxy according the status (opened/closed session) of the IP
 // which made it
-func (s *SMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
+func (s *SMng) Det(r *h.Request, d time.Time) (ok bool, e error) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	u, ok := s.su.Load(ip)
 	v, sw := s.swS.Load(ip)
 	if !ok && !sw {
 		// { session is closed and there's no message }
 		// use HTML template here
-		w.Write([]byte(NotOpInSMsg(ip)))
+		e = NotOpInSMsg(ip)
 	} else if sw {
 		msg := v.(string)
 		// use HTML template here
-		w.Write([]byte(msg))
+		e = fmt.Errorf(msg)
 		s.swS.Delete(ip)
 		// { message written, if appears,
 		//   be the session closed or not
@@ -152,15 +146,10 @@ func (s *SMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	}
 	s.resp = sw || !ok
 	if !s.resp {
-		s.Ur.Rec(u.(string))
+		s.User = u.(string)
 	} else {
-		s.Ur.Rec("")
+		s.User = ""
 	}
-	return
-}
-
-func (s *SMng) V() (b bool) {
-	b = s.resp
 	return
 }
 
@@ -239,7 +228,7 @@ func srvLogin(m, sw *sync.Map, cr *JWTCrypt, a Auth,
 	uc := new(UsrCrd)
 	e = Decode(r, uc)
 	if e == nil {
-		e = a.Authenticate(uc.User, uc.Pass)
+		uc.User, e = a.Authenticate(uc.User, uc.Pass)
 	}
 	var s string
 	if e == nil {
