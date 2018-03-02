@@ -41,7 +41,7 @@ func TestConsMap(t *testing.T) {
 	cm.Reset()
 	for i := 0; i != len(usr); i++ {
 		v, ok := cm.Load(usr[i].user)
-		require.True(t, ok)
+		require.False(t, ok)
 		require.True(t, v == 0)
 	}
 }
