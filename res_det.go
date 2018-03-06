@@ -90,3 +90,29 @@ type ConSpec struct {
 type ResDet interface {
 	Det(*h.Request, time.Time) (bool, error)
 }
+
+type dBool struct {
+	dt Det
+	r  *h.Request
+	t  time.Time
+	e  error
+}
+
+func (d *dBool) V() (b bool) {
+	b, d.e = d.dt.Det(d.r, d.t)
+	b = b || d.e != nil
+	return
+}
+
+func BLS(d []Det, r *h.Request, t time.Time) (b bool, e error) {
+	ds := make([]Bool, len(d))
+	for i, j := range d {
+		ds[i] = &dBool{dt: j, r: r, t: t}
+	}
+	b, i := BoundedLinearSearch(ds)
+	if b {
+		e = ds[i].(*dBool).e
+		b = e == nil
+	}
+	return
+}
