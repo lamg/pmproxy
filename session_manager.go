@@ -28,7 +28,7 @@ type SMng struct {
 	// authenticator for administrators
 	adm Auth
 	// current user
-	User string
+	User *string
 	cr   *JWTCrypt
 }
 
@@ -146,9 +146,9 @@ func (s *SMng) Det(r *h.Request, d time.Time) (ok bool, e error) {
 	}
 	s.resp = sw || !ok
 	if !s.resp {
-		s.User = u.(string)
+		*s.User = u.(string)
 	} else {
-		s.User = ""
+		*s.User = ""
 	}
 	return
 }
