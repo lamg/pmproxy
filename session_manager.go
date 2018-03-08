@@ -33,14 +33,15 @@ type SMng struct {
 }
 
 // NewSMng creates a new SMng
-func NewSMng(usr, adm Auth, cr *JWTCrypt) (s *SMng) {
+func NewSMng(usr, adm Auth, cr *JWTCrypt, upt *string) (s *SMng) {
 	s = &SMng{
-		sa:  new(sync.Map),
-		su:  new(sync.Map),
-		swS: new(sync.Map),
-		usr: usr,
-		adm: adm,
-		cr:  cr,
+		sa:   new(sync.Map),
+		su:   new(sync.Map),
+		swS:  new(sync.Map),
+		usr:  usr,
+		adm:  adm,
+		cr:   cr,
+		User: upt,
 	}
 	return
 }

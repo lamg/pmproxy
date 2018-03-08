@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	rt "github.com/lamg/rtimespan"
 	"net"
 	h "net/http"
 	"net/url"
@@ -101,27 +102,58 @@ func (d *OrDet) Det(r *h.Request, t time.Time) (b bool, e error) {
 }
 
 type NegDet struct {
-	D ResDet
+	ResDet
 }
 
 func (d *NegDet) Det(r *h.Request, t time.Time) (b bool, e error) {
-	b, e = d.D.Det()
+	b, e = d.ResDet.Det()
 	b = !b
 	return
 }
 
-type RgIPDt struct {
-	IPn *net.IPNet
-}
+type RgIPDt *net.IPNet
 
-func (g *RgIPDt) Det(r *h.Request, t time.Time) (b bool, e error) {
+func (g RgIPDt) Det(r *h.Request, t time.Time) (b bool, e error) {
 	ip, _, e = net.SplitHostPort(r.RemoteAddr)
 	if e == nil {
 		ni := net.ParseIP(s)
 		if ni != nil {
-			b = g.IPn.Contains(ni)
+			b = g.Contains(ni)
 		} else {
 			e = fmt.Errorf("Cannot parse %s as IP", ip)
+		}
+	}
+	return
+}
+
+type TSpDt *rt.RSpan
+
+func (p TSpDt) Det(r *h.Request, t time.Time) (b bool, e error) {
+	b = p.ContainsTime(t)
+	return
+}
+
+type GrpDB interface {
+	Get(string) ([]string, error)
+}
+
+type GrpDt struct {
+	Gr    string
+	UsrDt *StringDet
+	GDB   GrpDB
+}
+
+func (p *GrpDt) Det(r *h.Request, t time.Time) (b bool, e error) {
+	b, e = p.UsrDt.Det(r, t)
+	var gs []string
+	if b {
+		gs, e = p.GDB.Get(p.UsrDt.Str)
+	}
+	i := 0
+	for b && e == nil && i != len(gs) {
+		b = gs[i] == p.Gr
+		if !b {
+			i = i + 1
 		}
 	}
 	return

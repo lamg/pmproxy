@@ -63,4 +63,4 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
-- [x] Structured Programming with Channels
+- [ ] Marshal and Unmarshal correctly NegDet, OrDet, AndDet (keeping the relation between ResDet)
