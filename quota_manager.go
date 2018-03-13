@@ -75,16 +75,6 @@ func NoResourceMsg(r *h.Request, t time.Time,
 	return
 }
 
-// QtCs quota cons pair
-type QtCs struct {
-	Qt *Quota
-	Cs *Cons
-}
-
-// TODO following handlers expose resource managing interface.
-// Implement JSON marshal and unmarshal in types to be modified
-// by those handlers
-
 const (
 	index = "index"
 )
@@ -102,44 +92,42 @@ func NotFoundKey() (e error) {
 	return
 }
 
-// Quota represents the parameters and resources
-// available for determined connection
-type Quota struct {
-	QuotaJ
-	proxy *url.URL
+type QuotaDet struct {
+	Quota uint64
+	QtM   *QMng
+	Usr   *StringDet
 }
 
-type QuotaJ struct {
-	// Maximum amount of bytes available for downloading
-	Dwn uint64 `json:"dwn"`
-	// Network interface the connection must be made over
-	Iface string `json:"iface"`
-	// Time span for consuming/using this resource
-	Span *rt.RSpan `json:"span"`
-	// Connection's throttling specification
-	Thr float64 `json:"thr"`
-	// Maximum amount of connections per host
-	MCn uint32 `json:"mCn"`
-	// Maybe a proxy for handling requests
-	Proxy string `json:"proxy"`
-}
-
-func (q *Quota) UnmarshalJSON(data []byte) (e error) {
-	qj := QuotaJ{}
-	e = json.Unmarshal(data, &qj)
-	if e == nil {
-		q.proxy, e = url.Parse(q.Proxy)
-	}
-	if e == nil {
-		q.QuotaJ = qj
+func (c *QuotaDet) Det(r *h.Request, d time.Time) (ok bool,
+	e error) {
+	ok, e = c.Usr.Det(r, d)
+	if ok && e == nil {
+		c.Quota, e = c.QtM.Get(c.Usr.Str)
 	}
 	return
 }
 
-// Cons represents the consumed quota, if can be
-type Cons struct {
-	// Amount of downloaded bytes
-	Dwn uint64 `json:"dwn"`
-	// Amount of used connections
-	Cns uint32 `json:"cns"`
+func (c *QuotaDet) MarshalJSON() (bs []byte, e error) {
+	mp := make(map[string]uint64)
+	c.QtM.AccQ.Range(func(k, v interface{}) (c bool) {
+		ks, vu := k.(string), v.(uint64)
+		mp[ks] = vu
+		return
+	})
+	bs, e = json.Marshal(&mp)
+	return
+}
+
+func (c *QuotaDet) UnmarshalJSON(bs []byte) (e error) {
+	mp := make(map[string]uint64)
+	e = json.Unmarshal(bs, &mp)
+	if e == nil {
+		c.QtM = &QMng{
+			AccQ: new(sync.Map),
+		}
+		for k, v := range mp {
+			c.QtM.AccQ.Store(k, v)
+		}
+	}
+	return
 }
