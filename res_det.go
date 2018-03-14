@@ -11,26 +11,48 @@ import (
 	"time"
 )
 
+type ConSpec struct {
+	Cf    int
+	Iface string
+	Proxy *url.URL
+	Quota uint64
+	Cons  *uint64
+	Rt    *Rate
+}
+
+type Rate struct {
+	Bytes     uint64
+	TimeLapse time.Duration
+}
+
+type Det interface {
+	Det(*h.Request, time.time, *ConSpec) bool
+}
+
 type ResDet struct {
+	// when unit is true Det returns the match of a predicate
+	// when unit is false Det returns the match of no predicate
+	Unit bool
+	Rs   *rt.RSpan
+	Rg   *net.IPNet
+	Ur   *regexp.Regexp
+	Gm   *GrpMtch
+	Um   *UsrMtch
 	// partial connection specification
 	Pr *ConSpec
-	Rs *rt.RSpan
-	Rg *net.IPNet
-	Ud *SMng
-	Ur *regexp.Regexp
-	Gm *GrpMtch
 	Cs *CMng
 	Qm *QMng
+	Dm *DMng
 }
 
 func (d *ResDet) Det(r *h.Request, t time.Time,
-	f *ConSpec) {
+	f *ConSpec) (b bool) {
 	ip, _, _ = net.SplitHostPort(r.RemoteAddr)
 	// ip != ""
 	bs := []bool{
 		d.Rs != nil && d.Rs.ContainsTime(t),
 		d.Rg != nil && contIP(d.Rg, ip),
-		d.Ud != nil && dictHas(d.Ud.su, ip),
+		d.Ud != nil && d.Um.Match(ip),
 		d.Ur != nil && d.Ur.MatchString(r.URL.HostName()),
 		d.Gm != nil && d.Gm.Match(ip),
 	}
@@ -38,8 +60,9 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 	for i != len(bs) && !bs[i] {
 		i = i + 1
 	}
-	if i != len(bs) {
-		addRes(f, d.Pr)
+	b = (i != len(bs)) == d.Unit
+	if b {
+		addRes(f, d.Pr, d.Qm, d.Cs, d.Dm, ip)
 	}
 	return
 }
@@ -51,170 +74,39 @@ func contIP(r *net.IPNet, ip string) (b bool) {
 	return
 }
 
-func dictHas(m *sync.Map, s string) (b bool) {
-	// m is a dictionary with only strings as keys
-	_, b = m.Load(s)
-	return
-}
-
-func addRes(s0, s1 *ConSpec) {
-	if s1.Cf != 1 {
-		s0.Cf = s1.Cf
+func addRes(s0, s1 *ConSpec, q *QMng, c *CMng, d *DMng, ip string) {
+	s0.Cf = s1.Cf
+	if s1.Iface != "" {
+		s0.Iface = s1.Iface
 	}
-	if s1.Cons != nil {
-		v, ok := d.Cs.Cons.Load(ip)
-		var u uint64
-		if ok {
-			u = v.(uint64)
-		}
-		f.Cons = &v
+	if s1.Proxy != nil {
+		s0.Proxy = s1.Proxy
 	}
-	return
-}
-
-type CfDet struct {
-	Cf int     `json:"cf"`
-	Rd *ResDet `json:"det"`
-}
-
-type StringDet struct {
-	Str string  `json:"str"`
-	Rd  *ResDet `json:"det"`
-}
-
-type ProxyDet struct {
-	Proxy *url.URL
-	Rd    *ResDet
-}
-
-type proxyJM struct {
-	Proxy string  `json:"proxy"`
-	Rd    *ResDet `json:"det"`
-}
-
-func (p *ProxyDet) MarshalJSON() (bs []byte, e error) {
-	pj := &proxyJM{
-		Proxy: p.Proxy.String(),
-		Rd:    p.ResDet,
+	if q != nil {
+		s0.Quota = q.Get(ip)
 	}
-	bs, e = json.Marshal(pj)
-	return
-}
-
-func (p *ProxyDet) UnmarshalJSON(bs []byte) (e error) {
-	pj := new(proxyJM)
-	e = json.Unmarshal(bs, pj)
-	if e == nil {
-		p.Rd = pj.ResDet
-		p.Proxy, e = url.Parse(pj.Proxy)
+	if c != nil {
+		s0.Cons = c.Get(ip)
+	}
+	if d != nil {
+		s0.Rt = d.Get(ip)
 	}
 	return
 }
 
-type ThrDet struct {
-	Thr float64 `json:"thr"`
-	Rd  *ResDet `json:"det"`
+type SqDet struct {
+	// when unit is true Det returns for all Ds Det is true
+	// when unit is false Det returns exists Det true in Ds
+	Unit bool
+	Ds   []Det
 }
 
-type ConsDet struct {
-	Cons *uint64
-	CsM  *CMng
-	Usr  *StringDet
-}
-
-func (c *ConsDet) Det(r *h.Request, d time.Time) (ok bool, e error) {
-	ok, e = c.Usr.Det(r, d)
-	if ok && e == nil {
-		c.Cons, ok = c.CsM.Get(c.Usr.Str)
-	}
-	return
-}
-
-type ConSpec struct {
-	Proxy    *url.URL
-	Iface    string
-	Cf       int
-	Throttle float64
-	Quota    uint64
-	Cons     *uint64
-}
-
-type AndDet struct {
-	Ds []ResDet
-}
-
-func (d *AndDet) Det(r *h.Request, t time.Time) (b bool, e error) {
-	b, i := true, 0
-	for b && e == nil && i != len(d.Ds) {
-		b, e = d.Ds[i].Det(r, t)
-		if b && e == nil {
-			i = i + 1
-		}
-	}
-	return
-}
-
-type OrDet struct {
-	Ds []ResDet
-}
-
-func (d *OrDet) Det(r *h.Request, t time.Time) (b bool, e error) {
-	b, i := false, 0
-	for !b && i != len(d.Ds) {
-		b, e = d.Ds[i].Det(r, t)
-		if !b {
-			i = i + 1
-		}
-	}
-	return
-}
-
-type NegDet struct {
-	ResDet
-}
-
-func (d *NegDet) Det(r *h.Request, t time.Time) (b bool, e error) {
-	b, e = d.ResDet.Det()
-	b = !b
-	return
-}
-
-type RgIPDt *net.IPNet
-
-func (g RgIPDt) Det(r *h.Request, t time.Time) (b bool, e error) {
-
-	return
-}
-
-type TSpDt *rt.RSpan
-
-func (p TSpDt) Det(r *h.Request, t time.Time) (b bool, e error) {
-	b = p.ContainsTime(t)
-	return
-}
-
-type GrpDB interface {
-	Get(string) ([]string, error)
-}
-
-type GrpDt struct {
-	Gr    string
-	UsrDt *StringDet
-	GDB   GrpDB
-}
-
-func (p *GrpDt) Det(r *h.Request, t time.Time) (b bool, e error) {
-	b, e = p.UsrDt.Det(r, t)
-	var gs []string
-	if b {
-		gs, e = p.GDB.Get(p.UsrDt.Str)
-	}
+func (d *SqDet) Det(r *h.Request, t time.Time,
+	c *ConSpec) (b bool) {
 	i := 0
-	for b && e == nil && i != len(gs) {
-		b = gs[i] == p.Gr
-		if !b {
-			i = i + 1
-		}
+	for i != len(d.Ds) && (d.Ds[i].Det(r, t, c) == d.Unt) {
+		i = i + 1
 	}
+	b = i != len(d.Ds)
 	return
 }
