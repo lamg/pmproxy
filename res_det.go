@@ -45,6 +45,45 @@ type ResDet struct {
 	Dm *DMng
 }
 
+type rdJ struct {
+	Unit bool      `json:"unit"`
+	Rs   *rt.RSpan `json:"rs"`
+	Rg   string    `json:"rg"`
+	Ur   string    `json:"ur"`
+	Gm   *GrpMtch  `json:"gm"`
+	Um   *UsrMtch  `json:"um"`
+
+	Pr *ConSpec `json:"pr"`
+}
+
+func (d *ResDet) MarshalJSON() (bs []byte, e error) {
+	j := &rdJ{
+		Unit: d.Unit,
+		Rs:   d.Rs,
+		Rg:   d.Rg,
+		Ur:   d.Ur,
+		Gm:   d.Gm,
+		Um:   d.Um,
+		Pr:   d.Pr,
+	}
+	bs, e = json.Marshal(j)
+	return
+}
+
+func (d *ResDet) UnmarshalJSON(bs []byte) (e error) {
+	v := new(rdJ)
+	e = json.Unmarshal(bs, v)
+	if e == nil {
+		d.Unit, d.Rs, d.Gm, d.Um, d.Pr = v.Unit, v.Rs, v.Gm, v.Um,
+			v.Pr
+		_, d.Rg, e = net.ParseCIDR(v.Rg)
+	}
+	if e == nil {
+		d.Ur, e = regexp.Compile(v.Ur)
+	}
+	return
+}
+
 func (d *ResDet) Det(r *h.Request, t time.Time,
 	f *ConSpec) (b bool) {
 	ip, _, _ = net.SplitHostPort(r.RemoteAddr)
@@ -97,8 +136,8 @@ func addRes(s0, s1 *ConSpec, q *QMng, c *CMng, d *DMng, ip string) {
 type SqDet struct {
 	// when unit is true Det returns for all Ds Det is true
 	// when unit is false Det returns exists Det true in Ds
-	Unit bool
-	Ds   []Det
+	Unit bool  `json:"unit"`
+	Ds   []Det `json:"ds"`
 }
 
 func (d *SqDet) Det(r *h.Request, t time.Time,
