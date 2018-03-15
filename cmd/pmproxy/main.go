@@ -51,7 +51,7 @@ func main() {
 		}
 		go webUI.ListenAndServeTLS(c.CertFl, c.KeyFl)
 		proxy := &http.Server{
-			ReadTimeout:  5 * time.Second,
+			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			IdleTimeout:  0,
 			Addr:         c.ProxySrvAddr,
