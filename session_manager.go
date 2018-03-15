@@ -17,47 +17,39 @@ type Auth interface {
 
 // SMng handles opened sessions
 type SMng struct {
-	// ip - administrator user
-	sa *sync.Map
 	// ip - user name
 	su *sync.Map
 	// swapped sessions map ip-message
 	swS *sync.Map
 	// authenticator for users
 	usr Auth
-	// authenticator for administrators
-	adm Auth
-	// current user
-	User *string
-	cr   *JWTCrypt
+	cr  *JWTCrypt
+	adm *UsrMtch
 }
 
 // NewSMng creates a new SMng
-func NewSMng(usr, adm Auth, cr *JWTCrypt, upt *string) (s *SMng) {
+func NewSMng(usr Auth, cr *JWTCrypt, adm *UsrMtch) (s *SMng) {
 	s = &SMng{
-		sa:   new(sync.Map),
-		su:   new(sync.Map),
-		swS:  new(sync.Map),
-		usr:  usr,
-		adm:  adm,
-		cr:   cr,
-		User: upt,
+		su:  new(sync.Map),
+		swS: new(sync.Map),
+		usr: usr,
+		cr:  cr,
+		adm: adm,
 	}
 	return
 }
 
 // loginUser is used by administrator to log an user
-func (s *SMng) loginUser(adm, admIP, user, ip string) (e error) {
-	e = checkUser(s.sa, adm, admIP)
-	if e == nil {
-		login(s.su, s.swS, user, ip)
+func (s *SMng) loginUser(admIP, user, ip string) (e error) {
+	if s.adm.Match(admIP) {
+		s.login(user, ip)
 	}
 	return
 }
 
-func login(m, sw *sync.Map, user, ip string) {
+func (s *SMng) login(user, ip string) {
 	var prevIP string
-	m.Range(func(k, v interface{}) (y bool) {
+	s.su.Range(func(k, v interface{}) (y bool) {
 		usr := v.(string)
 		y = usr != user
 		if !y {
@@ -70,14 +62,33 @@ func login(m, sw *sync.Map, user, ip string) {
 	//   this session. prevIP = "" if that session doesn't
 	//   exists }
 	if prevIP != "" {
-		sw.Store(prevIP, ClsByMsg(ip))
-		sw.Store(ip, RcvFrMsg(prevIP))
+		s.swS.Store(prevIP, ClsByMsg(ip))
+		s.swS.Store(ip, RcvFrMsg(prevIP))
 		// { prevIP and ip prepared for receiving
 		//   a notification  }
-		m.Delete(prevIP)
+		s.su.Delete(prevIP)
 		// { session in prevIP closed for user }
 	}
-	m.Store(ip, user)
+	s.su.Store(ip, user)
+}
+
+// logoutUser is used by administrators to close an user
+// session
+func (s *SMng) logoutUser(adm, admIP, usr, ip string) (e error) {
+	if s.adm.Match(admIP) {
+		e = s.logout(usr, ip)
+	}
+	return
+}
+
+func (s *SMng) logout(user, ip string) (e error) {
+	u, ok := s.su.Load(ip)
+	if ok && u == user {
+		m.Delete(ip)
+	} else {
+		e = NotOpBySMsg(user, ip)
+	}
+	return
 }
 
 // ClsByMsg is the closed by message
@@ -92,26 +103,6 @@ func RcvFrMsg(ip string) (m string) {
 	return
 }
 
-// logoutUser is used by administrators to close an user
-// session
-func (s *SMng) logoutUser(adm, admIP, usr, ip string) (e error) {
-	e = checkUser(s.sa, adm, admIP)
-	if e == nil {
-		e = logout(s.su, usr, ip)
-	}
-	return
-}
-
-func logout(m *sync.Map, user, ip string) (e error) {
-	u, ok := m.Load(ip)
-	if ok && u == user {
-		m.Delete(ip)
-	} else {
-		e = errors.New(NotOpBySMsg(user, ip))
-	}
-	return
-}
-
 // NotOpBySMsg is the not opened by session message
 func NotOpBySMsg(user, ip string) (e error) {
 	e = fmt.Errorf("No hay sesión abierta por %s en %s",
@@ -122,6 +113,14 @@ func NotOpBySMsg(user, ip string) (e error) {
 // NotOpInSMsg is the not opened in session message
 func NotOpInSMsg(ip string) (e error) {
 	e = fmt.Errorf("No hay sesión abierta en %s", ip)
+	return
+}
+
+func (s *SMng) Match(ip string) (usr, b bool) {
+	v, b := s.su.Load(ip)
+	if b {
+		usr = v.(string)
+	}
 	return
 }
 
@@ -170,25 +169,8 @@ func (s *SMng) SrvUserSession(w h.ResponseWriter,
 		e = srvLogin(s.su, s.swS, s.cr, s.usr, ip, r.Body, w)
 	} else if r.Method == h.MethodDelete {
 		e = srvLogout(s.su, s.swS, s.cr, ip, r.Header)
-	} else {
-		e = NotSuppMeth(r.Method)
-	}
-	writeErr(w, e)
-}
-
-// SrvAdmSession is an h.Handler used for administrative
-// tasks
-func (s *SMng) SrvAdmSession(w h.ResponseWriter,
-	r *h.Request) {
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	var e error
-	if r.Method == h.MethodPost {
-		e = srvLogin(s.sa, s.swS, s.cr, s.adm, ip, r.Body, w)
-	} else if r.Method == h.MethodDelete {
-		e = srvLogout(s.sa, s.swS, s.cr, ip, r.Header)
 	} else if r.Method == h.MethodGet {
-		// { administrator can get the map of logged users }
-		e = srvSessions(s.sa, s.su, s.cr, r.Header, ip, w)
+		e = s.srvSessions(r.Header, ip, w)
 	} else {
 		e = NotSuppMeth(r.Method)
 	}
@@ -210,14 +192,10 @@ func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
 	if r.Body != nil {
 		e = Decode(r.Body, ui)
 	}
-	var adm string
-	if e == nil {
-		adm, e = s.cr.getUser(r.Header)
-	}
 	if e == nil && r.Method == h.MethodPost {
-		e = s.loginUser(adm, ip, ui.User, ui.IP)
+		e = s.loginUser(ip, ui.User, ui.IP)
 	} else if e == nil && r.Method == h.MethodPut {
-		e = s.logoutUser(adm, ip, ui.User, ui.IP)
+		e = s.logoutUser(ip, ui.User, ui.IP)
 	} else if e == nil {
 		e = NotSuppMeth(r.Method)
 	}
@@ -254,16 +232,14 @@ func srvLogout(m, sw *sync.Map, cr *JWTCrypt, ip string,
 	return
 }
 
-func srvSessions(n, m *sync.Map, cr *JWTCrypt, a h.Header,
-	ip string, w io.Writer) (e error) {
-	var usr string
-	usr, e = cr.getUser(a)
+func (s *SMng) srvSessions(a h.Header, ip string, w io.Writer) (e error) {
+	usr, e := cr.getUser(a)
 	if e == nil {
-		e = checkUser(n, usr, ip)
+		s.adm.MatchUsr(usr, ip)
 	}
 	if e == nil {
 		mp := make(map[string]string)
-		m.Range(func(k, v interface{}) (c bool) {
+		s.su.Range(func(k, v interface{}) (c bool) {
 			c, mp[k.(string)] = true, v.(string)
 			return
 		})

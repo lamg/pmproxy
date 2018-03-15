@@ -63,4 +63,6 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
-- [ ] Marshal and Unmarshal correctly NegDet, OrDet, AndDet (keeping the relation between ResDet)
+- [ ] Marshal and Unmarshal correctly
+- [ ] Redefine the project according the types in res_det.go
+- [ ] Make github.com/lamg/ldaputil use a dedicated user and password for getting users's information (matchers.go:18)
