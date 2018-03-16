@@ -8,7 +8,6 @@ import (
 
 	h "net/http"
 
-	"github.com/lamg/errors"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
 )
@@ -24,19 +23,11 @@ func main() {
 	f, e := os.Open(conf)
 	var c *pmproxy.Conf
 	if e == nil {
-		var ec *errors.Error
-		c, ec = pmproxy.ParseConf(f)
-		if ec != nil {
-			e = ec.Err
-		}
+		c, e = pmproxy.ParseConf(f)
 	}
 	var lh, pm h.Handler
 	if e == nil {
-		var ec *errors.Error
-		pm, lh, ec = pmproxy.ConfPMProxy(c, dAuth, os)
-		if ec != nil {
-			e = ec.Err
-		}
+		pm, lh, e = pmproxy.ConfPMProxy(c, dAuth, os)
 	}
 	if e == nil {
 		// Setting timeouts according
