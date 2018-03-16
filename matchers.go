@@ -15,8 +15,11 @@ type GrpMtch struct {
 func (m *GrpMtch) Match(ip string) (b bool) {
 	usr, b := m.Um.Sm.Match(ip)
 	if b && m.Ld != nil {
-		m.Ld.FullRecord(user, pass, usr)
-		gs, e := m.Ld.MembershipCNs(mp)
+		mp, e := m.Ld.FullRecordAcc(usr)
+		var gs []string
+		if e == nil {
+			gs, e = m.Ld.MembershipCNs(mp)
+		}
 		if e == nil {
 			i := 0
 			for ; i != len(gs) && gs[i] != m.Grp; i++ {

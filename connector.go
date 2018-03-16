@@ -12,12 +12,13 @@ import (
 type rConn struct {
 	cl clock.Clock
 	net.Conn
-	qc *QtCs
+	qt uint64
+	cs *uint64
 	lm *util.Throttle
 }
 
-func newRConn(cl clock.Clock, qc *QtCs,
-	addr string) (r *rConn, e error) {
+func newRConn(cl clock.Clock, s *ConSpec, addr string) (r *rConn,
+	e error) {
 	var ief *net.Interface
 	ief, e = net.InterfaceByName(qc.Qt.Iface)
 	var laddr []net.Addr

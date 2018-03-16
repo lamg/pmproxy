@@ -65,4 +65,6 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Automatic session closing
 - [ ] Marshal and Unmarshal correctly
 - [ ] Redefine the project according the types in res_det.go
-- [ ] Make github.com/lamg/ldaputil use a dedicated user and password for getting users's information (matchers.go:18)
+- [ ] delay_manager.go
+- [ ] persistence_graph.go
+- [ ] how much bandwith of a channel consumes a connection at given rate

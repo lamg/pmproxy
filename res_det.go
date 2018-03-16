@@ -7,7 +7,6 @@ import (
 	h "net/http"
 	"net/url"
 	"regexp"
-	"sync"
 	"time"
 )
 
@@ -26,7 +25,7 @@ type Rate struct {
 }
 
 type Det interface {
-	Det(*h.Request, time.time, *ConSpec) bool
+	Det(*h.Request, time.Time, *ConSpec) bool
 }
 
 type ResDet struct {
@@ -41,7 +40,6 @@ type ResDet struct {
 	// partial connection specification
 	Pr *ConSpec
 	Cs *CMng
-	Qm *QMng
 	Dm *DMng
 }
 
