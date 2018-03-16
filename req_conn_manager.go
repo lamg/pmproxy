@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lamg/errors"
 	"github.com/lamg/pmproxy/util"
 )
 
@@ -106,8 +105,7 @@ func (m *RRConnMng) ProcResponse(p *h.Response,
 
 func (m *RRConnMng) newConn(ntw, addr string,
 	r *h.Request, t time.Time) (c net.Conn, e error) {
-	n, er := m.getUsrNtIf(r.RemoteAddr)
-	e = errors.UnwrapErr(er)
+	n, e := m.getUsrNtIf(r.RemoteAddr)
 	var ief *net.Interface
 	if e == nil {
 		ief, e = net.InterfaceByName(n)
@@ -203,21 +201,18 @@ func (b *thConn) Close() (e error) {
 }
 
 func (m *RRConnMng) getUsrNtIf(r string) (n string,
-	e *errors.Error) {
-	ip, _, ec := net.SplitHostPort(r)
-	e = errors.NewForwardErr(ec)
+	e error) {
+	ip, _, e := net.SplitHostPort(r)
 	var u *User
 	if e == nil {
-		u, ec = m.qa.sm.User(ip)
-		e = errors.NewForwardErr(ec)
+		u, e = m.qa.sm.User(ip)
 	}
 	if e == nil {
 		var ok bool
 		n, ok = interStr(m.uf, u.QuotaGroups)
 		if !ok {
-			e = errors.NewForwardErr(
-				fmt.Errorf("Not found interface for %s",
-					u.QuotaGroups))
+			e = fmt.Errorf("Not found interface for %s",
+				u.QuotaGroups)
 		}
 	}
 	return
@@ -245,8 +240,7 @@ func interFl(m map[string]float64,
 // using it rl.NewBucket
 func (m *RRConnMng) getThrottle(r string) (t float64,
 	e error) {
-	var ip string
-	ip, _, e = net.SplitHostPort(r)
+	ip, _, e := net.SplitHostPort(r)
 	var u *User
 	if e == nil {
 		u, e = m.qa.sm.User(ip)
@@ -255,10 +249,7 @@ func (m *RRConnMng) getThrottle(r string) (t float64,
 		var ok bool
 		t, ok = interFl(m.ts, u.QuotaGroups)
 		if !ok {
-			e = &errors.Error{
-				Code: errors.ErrorKey,
-				Err:  fmt.Errorf("Not found key %s", u.QuotaGroups),
-			}
+			e = fmt.Errorf("Not found key %s", u.QuotaGroups)
 		}
 	}
 	return

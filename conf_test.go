@@ -33,11 +33,11 @@ func TestConfPMProxy(t *testing.T) {
 
 	f, e := bfs.Open(cfile)
 	require.NoError(t, e)
-	c, ec := ParseConf(f)
-	require.True(t, ec == nil)
+	c, e := ParseConf(f)
+	require.NoError(t, e)
 	require.True(t, pconf.Equal(c), "%v", c)
-	_, _, ec = ConfPMProxy(c, true, bfs)
-	require.True(t, ec == nil)
+	_, _, e = ConfPMProxy(c, true, bfs)
+	require.NoError(t, e)
 }
 
 func TestIPRanges(t *testing.T) {

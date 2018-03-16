@@ -9,12 +9,11 @@ import (
 
 	"github.com/lamg/clock"
 
-	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 	"github.com/stretchr/testify/require"
 )
 
-func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e *errors.Error) {
+func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e error) {
 	// init of l
 	var bf *bytes.Buffer
 	bf = bytes.NewBufferString(accR)

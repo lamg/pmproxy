@@ -12,7 +12,6 @@ import (
 
 	"github.com/lamg/clock"
 
-	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +29,7 @@ func tClock() (c clock.Clock) {
 	return
 }
 
-func initPMProxy() (p *PMProxy, e *errors.Error) {
+func initPMProxy() (p *PMProxy, e error) {
 	qa, rl, e := initQARL(tClock())
 	if e == nil {
 		rmng := NewRRConnMng(qa, rl,
@@ -175,9 +174,9 @@ func TestUserInfoHF(t *testing.T) {
 func TestCode(t *testing.T) {
 	bf := bytes.NewBufferString("")
 	e := Encode(bf, make(chan int, 0))
-	require.True(t, e != nil && e.Code == ErrorEncode)
+	require.Error(t, e)
 	e = Decode(bf, 0)
-	require.True(t, e != nil && e.Code == ErrorDecode)
+	require.Error(t, e)
 }
 
 func TestUnsMethod(t *testing.T) {

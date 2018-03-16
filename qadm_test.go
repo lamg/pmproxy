@@ -8,7 +8,6 @@ import (
 
 	"github.com/lamg/clock"
 
-	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +15,7 @@ func TestLoadAccStr(t *testing.T) {
 	var sr *strings.Reader
 	sr = strings.NewReader(accR)
 	var l []AccExcp
-	var e *errors.Error
+	var e error
 	l, e = ReadAccExcp(sr)
 	require.True(t, e == nil)
 	tss := []AccExcp{
@@ -61,7 +60,7 @@ func TestLoadAccStr(t *testing.T) {
 }
 
 func initTestQAdm(c *credentials, ip string) (qa *QAdm,
-	s string, e *errors.Error) {
+	s string, e error) {
 	qa, _, e = initQARL(tClock())
 	var lr *LogRs
 	if e == nil {

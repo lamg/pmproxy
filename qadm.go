@@ -9,23 +9,6 @@ import (
 	"time"
 
 	"github.com/lamg/clock"
-
-	"github.com/lamg/errors"
-)
-
-const (
-	// ErrorReadAccExcp is the error returned by ReadAccExcp
-	ErrorReadAccExcp = iota
-	// ErrorUCLd is the error when loading a key at userCons call
-	ErrorUCLd
-	// ErrorSQNA is the error when setting a quota without being
-	// administrator, at setQuota call
-	ErrorSQNA
-	// ErrorMalformedRecord is the error returned when a record
-	// hasn't the required format
-	ErrorMalformedRecord
-	// ErrorLQ is the error when a quota doesn't appear
-	ErrorLQ
 )
 
 // NameVal name value pair
@@ -79,18 +62,18 @@ func NewQAdm(sm *SMng, gq *QuotaMap, uc *ConsMap,
 }
 
 func (q *QAdm) login(c *credentials,
-	addr string) (lr *LogRs, e *errors.Error) {
+	addr string) (lr *LogRs, e error) {
 	lr, e = q.sm.login(c, addr)
 	return
 }
 
-func (q *QAdm) logout(ip, s string) (e *errors.Error) {
+func (q *QAdm) logout(ip, s string) (e error) {
 	e = q.sm.logout(ip, s)
 	return
 }
 
 func (q *QAdm) getQuota(ip string, s string) (r uint64,
-	e *errors.Error) {
+	e error) {
 	var u *User
 	u, e = q.sm.userInfo(ip, s)
 	if e == nil {
@@ -100,20 +83,16 @@ func (q *QAdm) getQuota(ip string, s string) (r uint64,
 }
 
 func (q *QAdm) getUsrQuota(u *User) (r uint64,
-	e *errors.Error) {
-	ok := true
-	for i := 0; ok && i != len(u.QuotaGroups); i++ {
-		var nr uint64
-		nr, ok = q.gq.Load(u.QuotaGroups[i])
-		if ok {
-			r += nr
-		}
+	e error) {
+	for i := 0; i != len(u.QuotaGroups); i++ {
+		nr, _ := q.gq.Load(u.QuotaGroups[i])
+		r += nr
 	}
 	return
 }
 
 func (q *QAdm) setCons(ip, s string,
-	g *NameVal) (e *errors.Error) {
+	g *NameVal) (e error) {
 	var u *User
 	u, e = q.sm.userInfo(ip, s)
 	if e == nil && u.IsAdmin {
@@ -122,17 +101,14 @@ func (q *QAdm) setCons(ip, s string,
 			q.uc.Store(g.Name, g.Value)
 		}
 	} else if e == nil && !u.IsAdmin {
-		e = &errors.Error{
-			Code: ErrorSQNA,
-			Err: fmt.Errorf("%s is not an administrator",
-				u.UserName),
-		}
+		e = fmt.Errorf("%s is not an administrator",
+			u.UserName)
 	}
 	return
 }
 
 func (q *QAdm) userCons(ip, s string) (cs uint64,
-	e *errors.Error) {
+	e error) {
 	var c *credentials
 	c, e = q.sm.check(ip, s)
 	if e == nil {
@@ -250,23 +226,19 @@ type JAccExcp struct {
 
 // ReadAccExcp reads a []AccExcp serialized as JSON in
 // the content of the r io.Reader
-func ReadAccExcp(r io.Reader) (l []AccExcp, e *errors.Error) {
+func ReadAccExcp(r io.Reader) (l []AccExcp, e error) {
 	dc, jl := json.NewDecoder(r), make([]JAccExcp, 0)
-	ec := dc.Decode(&jl)
-	e = errors.NewForwardErr(ec)
+	e = dc.Decode(&jl)
 	if e == nil {
 		l = make([]AccExcp, len(jl))
 		for i := 0; e == nil && i != len(l); i++ {
-			r, ec := rg.Compile(jl[i].HostRE)
-			e = errors.NewForwardErr(ec)
+			var r *rg.Regexp
+			r, e = rg.Compile(jl[i].HostRE)
 			if e == nil {
 				l[i] = AccExcp{r, jl[i].Daily, jl[i].Start, jl[i].End,
 					jl[i].ConsCfc}
 			}
 		}
-	}
-	if e != nil {
-		e.Code = ErrorReadAccExcp
 	}
 	return
 }

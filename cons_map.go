@@ -7,8 +7,6 @@ import (
 	"io"
 	"sync"
 	"time"
-
-	"github.com/lamg/errors"
 )
 
 // ConsMap maintains a dictionary of user to consumption
@@ -49,20 +47,15 @@ type OMap struct {
 // NewCMFromR creates a new ConsMap reading a OMap serialized
 // as JSON in r
 func NewCMFromR(r io.Reader,
-	pr *Persister) (c *ConsMap, e *errors.Error) {
+	pr *Persister) (c *ConsMap, e error) {
 	d, om := json.NewDecoder(r), new(OMap)
-	ec := d.Decode(om)
-	if ec == nil {
+	e = d.Decode(om)
+	if e == nil {
 		if om.ResetT == 0 {
-			e = &errors.Error{
-				Code: errors.FormatErr,
-				Err:  fmt.Errorf("resetTime field must not be 0"),
-			}
+			e = fmt.Errorf("resetTime field must not be 0")
 		} else {
 			c = NewConsMap(om.LastReset, om.ResetT, om.UserCons, pr)
 		}
-	} else {
-		e = errors.NewForwardErr(ec)
 	}
 	return
 }

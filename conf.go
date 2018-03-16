@@ -12,7 +12,6 @@ import (
 	"github.com/lamg/clock"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/lamg/errors"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/wfact"
 )
@@ -118,7 +117,7 @@ func (c *Conf) Equal(v interface{}) (ok bool) {
 }
 
 // ParseConf parses a JSON formatted Conf object
-func ParseConf(r io.Reader) (c *Conf, e *errors.Error) {
+func ParseConf(r io.Reader) (c *Conf, e error) {
 	c = new(Conf)
 	e = Decode(r, c)
 	return
@@ -127,10 +126,9 @@ func ParseConf(r io.Reader) (c *Conf, e *errors.Error) {
 // ConfPMProxy uses supplied configuration to initialize
 // an instance of PMProxy
 func ConfPMProxy(c *Conf, dAuth bool,
-	fsm fs.FileSystem) (ph, lh h.Handler, e *errors.Error) {
+	fsm fs.FileSystem) (ph, lh h.Handler, e error) {
 	cl := new(clock.OSClock)
-	f, ec := fsm.Open(c.Quota)
-	e = errors.NewForwardErr(ec)
+	f, e := fsm.Open(c.Quota)
 	// { c.Quota opened as f ≡ e = nil }
 	var gq *QuotaMap
 	if e == nil {
@@ -140,7 +138,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		f.Close()
 	}
 	if e == nil {
-		f, ec = fsm.Open(c.Cons)
+		f, e = fsm.Open(c.Cons)
 	}
 	// { c.Cons opened as f ≡ e = nil }
 	var uc *ConsMap
@@ -153,17 +151,14 @@ func ConfPMProxy(c *Conf, dAuth bool,
 
 	var bs []byte
 	if e == nil {
-		bs, ec = fsm.ReadFile(c.KeyFl)
-		e = errors.NewForwardErr(ec)
+		bs, e = fsm.ReadFile(c.KeyFl)
 	}
 	var pkey *rsa.PrivateKey
 	if e == nil {
-		pkey, ec = jwt.ParseRSAPrivateKeyFromPEM(bs)
-		e = errors.NewForwardErr(ec)
+		pkey, e = jwt.ParseRSAPrivateKeyFromPEM(bs)
 	}
 	if e == nil {
-		f, ec = fsm.Open(c.AccExcp)
-		e = errors.NewForwardErr(ec)
+		f, e = fsm.Open(c.AccExcp)
 	}
 	var accExc []AccExcp
 	if e == nil {
@@ -179,9 +174,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	}
 	var lga *url.URL
 	if e == nil {
-		var ec error
-		lga, ec = url.Parse(c.LoginAddr)
-		e = errors.NewForwardErr(ec)
+		lga, e = url.Parse(c.LoginAddr)
 	}
 	if e == nil {
 		cry := NewJWTCrypt(pkey)

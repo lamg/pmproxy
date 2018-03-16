@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lamg/errors"
 	l "github.com/lamg/ldaputil"
 )
 
 // UserDB is an interface for abstracting user databases
 type UserDB interface {
-	Authenticate(string, string) *errors.Error
-	UserInfo(string, string, string) (*User, *errors.Error)
+	Authenticate(string, string) error
+	UserInfo(string, string, string) (*User, error)
 }
 
 // LDB is an UserDB implementation using Ldap
@@ -40,13 +39,13 @@ func NewLDB(adAddr, suff, bDN, qgPref string,
 }
 
 // Authenticate authenticates the supplied credentials
-func (db *LDB) Authenticate(u, p string) (e *errors.Error) {
+func (db *LDB) Authenticate(u, p string) (e error) {
 	e = db.ldp.Authenticate(u, p)
 	return
 }
 
 // UserInfo gets the user's information
-func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
+func (db *LDB) UserInfo(u, p, usr string) (r *User, e error) {
 	var mp map[string][]string
 	u, usr = myLower(u), myLower(usr)
 	mp, e = db.ldp.FullRecord(u, p, usr)
@@ -69,7 +68,7 @@ func (db *LDB) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
 // field
 // usr: sAMAccountName
 func (db *LDB) getQuotaGroups(mp map[string][]string) (g []string,
-	e *errors.Error) {
+	e error) {
 	var m []string
 	m, e = db.ldp.MembershipCNs(mp)
 	if e == nil {
@@ -80,11 +79,8 @@ func (db *LDB) getQuotaGroups(mp map[string][]string) (g []string,
 			}
 		}
 		if len(g) == 0 {
-			e = &errors.Error{
-				Code: ErrorMalformedRecord,
-				Err: fmt.Errorf("Couldn't find quota groups in %s",
-					mp[l.SAMAccountName]),
-			}
+			e = fmt.Errorf("Couldn't find quota groups in %s",
+				mp[l.SAMAccountName])
 		}
 	}
 	return
@@ -113,26 +109,20 @@ type DAuth struct {
 }
 
 // Authenticate authenticates credentials
-func (d *DAuth) Authenticate(u, p string) (e *errors.Error) {
+func (d *DAuth) Authenticate(u, p string) (e error) {
 	return
 }
 
 // UserInfo gets user information
-func (d *DAuth) UserInfo(u, p, usr string) (r *User, e *errors.Error) {
+func (d *DAuth) UserInfo(u, p, usr string) (r *User, e error) {
 	if u == p {
 		var ok bool
 		r, ok = d.us[usr]
 		if !ok {
-			e = &errors.Error{
-				Code: l.ErrorAuth,
-				Err:  fmt.Errorf("User %s doesn't exists", usr),
-			}
+			e = fmt.Errorf("User %s doesn't exists", usr)
 		}
 	} else {
-		e = &errors.Error{
-			Code: l.ErrorAuth,
-			Err:  fmt.Errorf("Wrong password for %s", u),
-		}
+		e = fmt.Errorf("Wrong password for %s", u)
 	}
 	return
 }

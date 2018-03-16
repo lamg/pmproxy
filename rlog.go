@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/lamg/errors"
 	wf "github.com/lamg/wfact"
 	"io"
 )
@@ -16,7 +15,7 @@ const (
 type RLog struct {
 	wr wf.WriterFct
 	w  io.Writer
-	e  *errors.Error
+	e  error
 	iu IPUser
 }
 
@@ -42,7 +41,7 @@ func (rl *RLog) record(l *Log) {
 	fmt.Fprintln(rl.w, l.String())
 }
 
-func (rl *RLog) err() (e *errors.Error) {
+func (rl *RLog) err() (e error) {
 	e = rl.e
 	return
 }

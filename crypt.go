@@ -5,24 +5,8 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/lamg/errors"
 	"io"
 	"strings"
-)
-
-const (
-	// ErrorParseJWT is the error when parsing a JWT
-	ErrorParseJWT = iota
-	// ErrorNotJWTUser is the error when a JWTUser type
-	// assertion fails
-	ErrorNotJWTUser
-	// ErrorNotValidJWT is the error when the JWT isn't valid
-	ErrorNotValidJWT
-	// ErrorParseRSAPrivateFromPEM is the error when calling
-	// jwt.ParseRSAPrivateKeyFromPEM returns an error
-	ErrorParseRSAPrivateFromPEM
-	// ErrorEncrypt is the error when Encrypt fails
-	ErrorEncrypt
 )
 
 // User is the type representing a logged user into the
@@ -53,7 +37,7 @@ func (u *User) Equal(v interface{}) (ok bool) {
 }
 
 // ToJSON encodes the instance to a JSON string
-func (u *User) ToJSON() (s string, e *errors.Error) {
+func (u *User) ToJSON() (s string, e error) {
 	sw := bytes.NewBufferString("")
 	e = Encode(sw, u)
 	if e == nil {
@@ -63,7 +47,7 @@ func (u *User) ToJSON() (s string, e *errors.Error) {
 }
 
 // NewUserFR parses a JSON User representation
-func NewUserFR(r io.Reader) (u *User, e *errors.Error) {
+func NewUserFR(r io.Reader) (u *User, e error) {
 	u = new(User)
 	e = Decode(r, u)
 	return
@@ -86,52 +70,33 @@ func NewJWTCrypt(p *rsa.PrivateKey) (j *JWTCrypt) {
 	return
 }
 
-func (j *JWTCrypt) encrypt(c *credentials) (s string, e *errors.Error) {
+func (j *JWTCrypt) encrypt(c *credentials) (s string, e error) {
 	bf := bytes.NewBufferString("")
 	e = Encode(bf, c)
-	var uc *JWTUser
 	if e == nil {
-		uc = &JWTUser{Data: bf.String()}
-	}
-	t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
-	var ec error
-	s, ec = t.SignedString(j.pKey)
-	if ec != nil {
-		e = &errors.Error{
-			Code: ErrorEncrypt,
-			Err:  ec,
-		}
+		uc := &JWTUser{Data: bf.String()}
+		t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
+		s, e = t.SignedString(j.pKey)
 	}
 	return
 }
 
 // checkUser checks if the signature is ok
-func (j *JWTCrypt) checkUser(s string) (c *credentials, e *errors.Error) {
-	t, ec := jwt.ParseWithClaims(s, &JWTUser{},
+func (j *JWTCrypt) checkUser(s string) (c *credentials, e error) {
+	t, e := jwt.ParseWithClaims(s, &JWTUser{},
 		func(x *jwt.Token) (a interface{}, d error) {
 			a, d = &j.pKey.PublicKey, nil
 			return
 		})
-	if ec == nil && !t.Valid {
-		e = &errors.Error{
-			Code: ErrorNotValidJWT,
-			Err:  fmt.Errorf("Invalid token in \"%s\"", s),
-		}
-	} else if ec != nil {
-		e = &errors.Error{
-			Code: ErrorParseJWT,
-			Err:  ec,
-		}
+	if e == nil && !t.Valid {
+		e = fmt.Errorf("Invalid token in \"%s\"", s)
 	}
 	var clm *JWTUser
 	if e == nil {
 		var ok bool
 		clm, ok = t.Claims.(*JWTUser)
 		if !ok {
-			e = &errors.Error{
-				Code: ErrorNotJWTUser,
-				Err:  fmt.Errorf("False JWTUser type assertion"),
-			}
+			e = fmt.Errorf("False JWTUser type assertion")
 		} else {
 			rd := strings.NewReader(clm.Data)
 			c = new(credentials)

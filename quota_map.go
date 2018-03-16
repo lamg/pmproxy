@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/lamg/errors"
 	"io"
 	"sync"
 )
@@ -21,10 +20,10 @@ type QuotaMap struct {
 // NewQMFromR creates a new QuotaMap from a serialized
 // JSON map[string]uint64
 func NewQMFromR(r io.Reader,
-	p *Persister) (qm *QuotaMap, e *errors.Error) {
+	p *Persister) (qm *QuotaMap, e error) {
 	dec, m := json.NewDecoder(r),
 		make(map[string]uint64)
-	ec := dec.Decode(&m)
+	e = dec.Decode(&m)
 	if e == nil {
 		qm = &QuotaMap{
 			mp:     new(sync.Map),
@@ -36,7 +35,6 @@ func NewQMFromR(r io.Reader,
 			qm.mp.Store(k, v)
 		}
 	}
-	e = errors.NewForwardErr(ec)
 	return
 }
 

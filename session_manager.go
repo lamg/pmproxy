@@ -3,8 +3,6 @@ package pmproxy
 import (
 	"fmt"
 	"sync"
-
-	"github.com/lamg/errors"
 )
 
 const (
@@ -57,7 +55,7 @@ type LogRs struct {
 }
 
 func (s *SMng) login(c *credentials,
-	addr string) (lr *LogRs, e *errors.Error) {
+	addr string) (lr *LogRs, e error) {
 	c.User = myLower(c.User)
 	lr = new(LogRs)
 	var u *User
@@ -83,7 +81,7 @@ func (s *SMng) login(c *credentials,
 	return
 }
 
-func (s *SMng) logout(ip, t string) (e *errors.Error) {
+func (s *SMng) logout(ip, t string) (e error) {
 	_, e = s.check(ip, t)
 	if e == nil {
 		s.sessions.Delete(ip)
@@ -91,24 +89,19 @@ func (s *SMng) logout(ip, t string) (e *errors.Error) {
 	return
 }
 
-func (s *SMng) check(ip, t string) (c *credentials,
-	e *errors.Error) {
+func (s *SMng) check(ip, t string) (c *credentials, e error) {
 	c, e = s.crt.checkUser(t)
+	var u *User
 	if e == nil {
-		u, ec := s.User(ip)
-		if ec != nil {
-			e = errors.NewForwardErr(ec)
-			e.Code = errorCheck
-		} else if u.UserName != c.User {
-			e = errors.NewForwardErr(
-				fmt.Errorf("User %s not logged", c.User))
-			e.Code = errorCheck
-		}
+		u, e = s.User(ip)
+	}
+	if e == nil && u.UserName != c.User {
+		e = fmt.Errorf("User %s not logged", c.User)
 	}
 	return
 }
 
-func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
+func (s *SMng) userInfo(ip, t string) (u *User, e error) {
 	var c *credentials
 	c, e = s.crt.checkUser(t)
 	var iv interface{}
@@ -116,34 +109,25 @@ func (s *SMng) userInfo(ip, t string) (u *User, e *errors.Error) {
 		var ok bool
 		iv, ok = s.sessions.Load(ip)
 		if !ok {
-			e = &errors.Error{
-				Code: errorCheck,
-				Err:  fmt.Errorf("Not logged from %s", ip),
-			}
+			e = fmt.Errorf("Not logged from %s", ip)
 		}
 	}
 	if e == nil {
 		var ok bool
 		u, ok = iv.(*User)
 		if !ok {
-			e = &errors.Error{
-				Code: ErrorDictDef,
-				Err: fmt.Errorf(
-					"The dictionary values must be of type *User"),
-			}
+			e = fmt.Errorf(
+				"The dictionary values must be of type *User")
 		}
 	}
 	if e == nil && u.UserName != c.User {
-		e = &errors.Error{
-			Code: ErrorOverwritten,
-			Err: fmt.Errorf("%s is not logged in %s",
-				u.UserName, ip),
-		}
+		e = fmt.Errorf("%s is not logged in %s",
+			u.UserName, ip)
 	}
 	return
 }
 
-func (s *SMng) exists(t, usr string) (e *errors.Error) {
+func (s *SMng) exists(t, usr string) (e error) {
 	var c *credentials
 	c, e = s.crt.checkUser(t)
 	if e == nil {

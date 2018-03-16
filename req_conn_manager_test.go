@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/lamg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +18,7 @@ func TestThrottle(t *testing.T) {
 
 func newRRConnMng(t *testing.T) (m *RRConnMng, c *Conf) {
 	bf := bytes.NewBufferString(conf)
-	var e *errors.Error
+	var e error
 	c, e = ParseConf(bf)
 	require.True(t, e == nil)
 	var qa *QAdm

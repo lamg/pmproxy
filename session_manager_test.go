@@ -1,7 +1,6 @@
 package pmproxy
 
 import (
-	"github.com/lamg/ldaputil"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -19,14 +18,12 @@ func TestSessionManager(t *testing.T) {
 	a, c := newDAuth(), NewJWTCrypt(pKey)
 	sm := NewSMng(a, c)
 	tss := []struct {
-		cr   *credentials
-		ip   string
-		ok   bool
-		code int
+		cr *credentials
+		ip string
+		ok bool
 	}{
-		{coco, cocoIP, true, 0},
-		{&credentials{"a", "b"}, pepeIP, false,
-			ldaputil.ErrorAuth},
+		{coco, cocoIP, true},
+		{&credentials{"a", "b"}, pepeIP, false},
 	}
 	for _, j := range tss {
 		lr, e := sm.login(j.cr, j.ip)
@@ -36,16 +33,14 @@ func TestSessionManager(t *testing.T) {
 			lc, e = sm.check(j.ip, lr.Scrt)
 			require.True(t, e == nil)
 			require.True(t, lc.User == j.cr.User)
-		} else {
-			require.True(t, e.Code == j.code)
 		}
 	}
 	lr0, _ := sm.login(coco, cocoIP)
 	lr1, _ := sm.login(coco, pepeIP)
 	_, e = sm.check(cocoIP, lr0.Scrt)
-	require.True(t, e.Code == errorCheck)
+	require.Error(t, e)
 	_, e = sm.check(pepeIP, lr1.Scrt)
-	require.True(t, e == nil)
+	require.NoError(t, e)
 }
 
 func newDAuth() (d *DAuth) {

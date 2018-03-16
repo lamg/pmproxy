@@ -9,7 +9,6 @@ import (
 	h "net/http"
 	"path"
 
-	"github.com/lamg/errors"
 	"github.com/rs/cors"
 )
 
@@ -80,7 +79,7 @@ func (p *LocalHn) proxyA(w h.ResponseWriter, r *h.Request) {
 
 func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 	addr, _, _ := net.SplitHostPort(r.RemoteAddr)
-	var e *errors.Error
+	var e error
 
 	if r.Method == h.MethodPost {
 		cr := new(credentials)
@@ -90,7 +89,7 @@ func (p *LocalHn) logXHF(w h.ResponseWriter, r *h.Request) {
 		if e == nil {
 			lr, e = p.qa.login(cr, addr)
 			if e != nil {
-				e.Err = fmt.Errorf("Login error: %s", e.Error())
+				e = fmt.Errorf("Login error: %s", e.Error())
 			}
 		}
 		if e == nil {
@@ -148,9 +147,7 @@ func (p *LocalHn) userStatusHF(w h.ResponseWriter, r *h.Request) {
 		_, e = p.qa.sm.userInfo(addr, s)
 		var bs []byte
 		if e == nil {
-			var ec error
-			bs, ec = ioutil.ReadAll(r.Body)
-			e = errors.NewForwardErr(ec)
+			bs, e = ioutil.ReadAll(r.Body)
 		}
 		var c *credentials
 		if e == nil {
@@ -217,49 +214,33 @@ func (p *LocalHn) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	p.hn.ServeHTTP(w, r)
 }
 
-func getScrt(h h.Header) (s string, e *errors.Error) {
+func getScrt(h h.Header) (s string, e error) {
 	s = h.Get(AuthHd)
 	if s == "" {
-		e = &errors.Error{
-			Code: ErrorGScrt,
-			Err:  fmt.Errorf("Malformed header"),
-		}
+		e = fmt.Errorf("Malformed header")
 	}
 	return
 }
 
 // Decode decodes an io.Reader with a JSON formatted object
-func Decode(r io.Reader, v interface{}) (e *errors.Error) {
+func Decode(r io.Reader, v interface{}) (e error) {
 	var bs []byte
-	var ec error
-	bs, ec = ioutil.ReadAll(r)
-	if ec == nil {
-		ec = json.Unmarshal(bs, v)
-	}
-	if ec != nil {
-		e = &errors.Error{
-			Code: ErrorDecode,
-			Err:  fmt.Errorf("%s at %s", ec.Error(), string(bs)),
-		}
+	bs, e = ioutil.ReadAll(r)
+	if e == nil {
+		e = json.Unmarshal(bs, v)
 	}
 	return
 }
 
 // Encode encodes an object in JSON notation into w
-func Encode(w io.Writer, v interface{}) (e *errors.Error) {
+func Encode(w io.Writer, v interface{}) (e error) {
 	cd := json.NewEncoder(w)
 	cd.SetIndent("	", "")
-	ec := cd.Encode(v)
-	if ec != nil {
-		e = &errors.Error{
-			Code: ErrorEncode,
-			Err:  ec,
-		}
-	}
+	e = cd.Encode(v)
 	return
 }
 
-func writeErr(w h.ResponseWriter, e *errors.Error) {
+func writeErr(w h.ResponseWriter, e error) {
 	if e != nil {
 		// The order of the following commands matter since
 		// httptest.ResponseRecorder ignores parameter sent
@@ -269,10 +250,7 @@ func writeErr(w h.ResponseWriter, e *errors.Error) {
 	}
 }
 
-func notSuppMeth(m string) (e *errors.Error) {
-	e = &errors.Error{
-		Code: ErrorNSMth,
-		Err:  fmt.Errorf("Not supported method %s", m),
-	}
+func notSuppMeth(m string) (e error) {
+	e = fmt.Errorf("Not supported method %s", m)
 	return
 }

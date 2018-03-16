@@ -6,7 +6,6 @@ import (
 
 	"github.com/lamg/clock"
 
-	"github.com/lamg/errors"
 	w "github.com/lamg/wfact"
 )
 
@@ -28,19 +27,18 @@ func NewPersister(wf w.WriterFct, dt time.Time,
 	return
 }
 
-func (p *Persister) persistNow(r io.Reader) (e *errors.Error) {
+func (p *Persister) persistNow(r io.Reader) (e error) {
 	p.wf.NextWriter()
 	e = p.wf.Err()
 	if e == nil {
-		_, ec := io.Copy(p.wf.Current(), r)
-		e = errors.NewForwardErr(ec)
+		_, e = io.Copy(p.wf.Current(), r)
 	}
 	return
 }
 
 // Persist persists the content of r as described previously
 func (p *Persister) Persist(r io.Reader) (b bool,
-	e *errors.Error) {
+	e error) {
 	t := newTime(p.dt, p.iv, p.c)
 	b = t != p.dt
 	if b {
