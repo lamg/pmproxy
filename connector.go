@@ -2,25 +2,109 @@ package pmproxy
 
 import (
 	"fmt"
+	"github.com/juju/ratelimit"
+	"github.com/lamg/clock"
+	gp "github.com/lamg/goproxy"
+	rs "github.com/lamg/rtimespan"
+	"io"
 	"net"
 	"time"
-
-	"github.com/lamg/clock"
-	"golang.org/x/tools/godoc/util"
 )
 
-type rConn struct {
-	cl clock.Clock
-	net.Conn
-	qt uint64
-	cs *uint64
-	lm *util.Throttle
+// connect returns a connection according with the specifications
+// in s
+func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
+	timeout time.Duration, cl clock.Clock) (c net.Conn, e error) {
+	if s.Proxy != "" {
+		c, e = proxyConn(p, s.Proxy, addr)
+	} else {
+		c, e = interfaceConn(s.Iface, addr, timeout)
+	}
+	if e == nil {
+		if s.Span != nil {
+			c = &rspanConn{
+				Conn: c,
+				cl:   cl,
+				s.Span,
+			}
+		}
+		if s.Rt != nil {
+			c = throttleConn(c, s.Rt)
+		}
+		c = &quotaConn{
+			Conn:  c,
+			Quota: s.Quota,
+			Cons:  s.Cons,
+			Cf:    s.Cf,
+		}
+	}
+	return
 }
 
-func newRConn(cl clock.Clock, s *ConSpec, addr string) (r *rConn,
-	e error) {
+type thrConn struct {
+	net.Conn
+	r io.Reader
+}
+
+func (c *thrConn) Read(bs []byte) (n int, e error) {
+	n, e = c.r.Read(bs)
+	return
+}
+
+func throttleConn(c net.Conn, r *Rate) (n net.Conn) {
+	bk := ratelimit.NewBucket(r.TimeLapse, r.Bytes)
+	n = &thrConn{
+		Conn: c,
+		r:    ratelimit.Reader(c, bk),
+	}
+	return
+}
+
+type quotaConn struct {
+	net.Conn
+	Cf    float32
+	Quota uint64
+	Cons  *uint64
+}
+
+func (c *quotaConn) Read(bs []byte) (n int, e error) {
+	if c.Cons < c.Quota && c.Cf >= 0 {
+		n, e = c.Read(bs)
+	} else {
+		e = DwnOverMsg(c.Quota)
+	}
+	if e == nil {
+		rn := uint64(float32(n) * c.Cf)
+		c.Cons = c.Cons + rn
+	}
+	return
+}
+
+type rspanConn struct {
+	net.Conn
+	cl clock.Clock
+	sp *rs.RSpan
+}
+
+func (c *rspanConn) Read(bs []byte) (n int, e error) {
+	nw := c.cl.Now()
+	if c.sp.ContainsTime(nw) {
+		n, e = c.Conn.Read(bs)
+	} else {
+		a, b := c.sp.CurrActIntv(nw)
+		e = TimeOverMsg(a, b)
+	}
+	return
+}
+
+type dialer interface {
+	dial(*net.TCPAddr, time.Duration, string) (net.Conn, error)
+}
+
+func interfaceConn(iface, addr string,
+	timeout time.Duration, d dialer) (c net.Conn, e error) {
 	var ief *net.Interface
-	ief, e = net.InterfaceByName(qc.Qt.Iface)
+	ief, e = net.InterfaceByName(iface)
 	var laddr []net.Addr
 	if e == nil {
 		laddr, e = ief.Addrs()
@@ -35,54 +119,21 @@ func newRConn(cl clock.Clock, s *ConSpec, addr string) (r *rConn,
 				i = i + 1
 			}
 		}
-		if i == len(addr) {
+		if i == len(laddr) {
 			e = fmt.Errorf("Not found IPv4 address")
 		}
+		// { found an IPv4 local address in laddr for dialing or error }
 	}
-	var cn net.Conn
 	if e == nil {
-		// TODO reemplazar el dialer por uno
-		// que sirva para hacer pruebas
 		tca := &net.TCPAddr{IP: la.IP}
-		d := &net.Dialer{
-			LocalAddr: tca,
-			Timeout:   10 * time.Second,
-		}
-		cn, e = d.Dial("tcp", addr)
-	}
-	// { set connection interface }
-	if e == nil {
-		r = &rConn{Conn: cn, qc: qc,
-			lm: util.NewThrottle(qc.Qt.Thr, time.Millisecond),
-		}
+		c, e = d.dial(tca, timeout, addr)
 	}
 	return
 }
 
-func (r *rConn) Read(p []byte) (n int, e error) {
-	r.lm.Throttle()
-	nw := r.cl.Now()
-	if r.qc.Cs.Dwn == r.qc.Qt.Dwn {
-		e = DwnOverMsg(r.qc.Qt.Dwn)
-	}
-	if e == nil && !r.qc.Qt.Span.ContainsTime(nw) {
-		a, b := r.qc.Qt.Span.CurrActIntv(nw)
-		e = TimeOverMsg(a, b)
-	}
-	if e == nil {
-		n, e = r.Conn.Read(p)
-	}
-	if e == nil {
-		r.qc.Cs.Dwn += uint64(n)
-	}
-	return
-}
-
-func (r *rConn) Close() (e error) {
-	if r.qc.Cs.Cns != 0 {
-		r.qc.Cs.Cns = r.qc.Cs.Cns - 1
-	}
-	e = r.Conn.Close()
+func proxyConn(p *gp.ProxyHttpServer,
+	proxy, addr string) (n net.Conn, e error) {
+	n, e = p.NewConnectDialToProxy(proxy)("tcp", addr)
 	return
 }
 

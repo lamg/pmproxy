@@ -64,7 +64,11 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
 - [ ] Marshal and Unmarshal correctly
+
+- [ ] general request processing server.go
 - [ ] Redefine the project according the types in res_det.go
-- [ ] delay_manager.go
-- [ ] persistence_graph.go
-- [ ] how much bandwith of a channel consumes a connection at given rate
+- [x] delay_manager.go
+- [ ] resource [de]serialization persistence_graph.go
+- [x] how much bandwith of a channel consumes a connection at given rate
+- [ ] connector.go, request through proxy must be managed by the proxy itself, upper limit of connections per host
+- [ ] configuration management

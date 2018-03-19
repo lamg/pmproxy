@@ -14,18 +14,23 @@ type GrpMtch struct {
 
 func (m *GrpMtch) Match(ip string) (b bool) {
 	usr, b := m.Um.Sm.Match(ip)
-	if b && m.Ld != nil {
-		mp, e := m.Ld.FullRecordAcc(usr)
-		var gs []string
-		if e == nil {
-			gs, e = m.Ld.MembershipCNs(mp)
-		}
-		if e == nil {
-			i := 0
-			for ; i != len(gs) && gs[i] != m.Grp; i++ {
+	var gs []string
+	if b {
+		if m.Ld != nil {
+			mp, e := m.Ld.FullRecordAcc(usr)
+			if e == nil {
+				gs, e = m.Ld.MembershipCNs(mp)
 			}
-			b = i != len(gs)
+		} else if m.Ug != nil {
+			gs, _ = m.Ug[usr]
 		}
+		b = gs != nil
+	}
+	if b {
+		i := 0
+		for ; i != len(gs) && gs[i] != m.Grp; i++ {
+		}
+		b = i != len(gs)
 	}
 	return
 }

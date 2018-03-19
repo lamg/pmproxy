@@ -5,15 +5,15 @@ import (
 	rt "github.com/lamg/rtimespan"
 	"net"
 	h "net/http"
-	"net/url"
 	"regexp"
 	"time"
 )
 
 type ConSpec struct {
-	Cf    int
+	Cf    float32
+	Span  *rt.RSpan
 	Iface string
-	Proxy *url.URL
+	Proxy string
 	Quota uint64
 	Cons  *uint64
 	Rt    *Rate
@@ -111,7 +111,7 @@ func contIP(r *net.IPNet, ip string) (b bool) {
 	return
 }
 
-func addRes(s0, s1 *ConSpec, q *QMng, c *CMng, d *DMng, ip string) {
+func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) {
 	s0.Cf = s1.Cf
 	if s1.Iface != "" {
 		s0.Iface = s1.Iface
@@ -120,7 +120,7 @@ func addRes(s0, s1 *ConSpec, q *QMng, c *CMng, d *DMng, ip string) {
 		s0.Proxy = s1.Proxy
 	}
 	if q != nil {
-		s0.Quota = q.Get(ip)
+		s0.Quota = s0.Quota + s1.Quota
 	}
 	if c != nil {
 		s0.Cons = c.Get(ip)
