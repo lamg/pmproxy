@@ -411,7 +411,9 @@ type tAuth struct {
 	usrPass map[string]string
 }
 
-func (a *tAuth) Authenticate(user, pass string) (e error) {
+func (a *tAuth) Authenticate(user, pass string) (usr string,
+	e error) {
+	usr = user
 	p, ok := a.usrPass[user]
 	if !ok {
 		e = fmt.Errorf("User %s doesn't exists", user)

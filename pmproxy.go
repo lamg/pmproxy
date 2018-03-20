@@ -1,44 +1,30 @@
 package pmproxy
 
 import (
-	h "net/http"
+	"github.com/lamg/clock"
+	gp "github.com/lamg/goproxy"
+	"net"
+	"time"
 )
 
 // PMProxy does some preprocessing before proxying
 type PMProxy struct {
-	CfD []*CfDet
-	IfD []*IfaceDet
-	PrD []*ProxyDet
-	ThD []*ThrDet
-	QtD []*QuotaDet
-	CsD []*ConsDet
+	// Resource managers
+	Rd      []Det
+	Cl      clock.Clock
+	d       Dialer
+	pr      *gp.ProxyHttpServer
+	timeout time.Duration
 }
 
-type MaybeResp interface {
-	Bool
-	h.Handler
-}
-
-// MaybeResp abstracts an h.Handler that may
-// respond to an *h.Request
-type mResp struct {
-	w h.ResponseWriter
-	r *h.Request
-	m MaybeResp
-}
-
-func (m *mResp) V() (y bool) {
-	m.m.ServeHTTP(m.w, m.r)
-	y = m.m.V()
-	return
-}
-
-// ServeProxy is the h.HandlerFunc for proxying requests
-func (p *PMProxy) ServeHTTP(w h.ResponseWriter,
-	r *h.Request) {
-	mr := make([]Bool, len(p.Pr))
-	for i, j := range p.Pr {
-		mr[i] = &mResp{w: w, r: r, m: j}
+// Dial is the entry point for connecting according the 
+// matching resources
+func (p *PMProxy) Dial(ntw, addr string,
+	ctx *gp.ProxyCtx) (c net.Conn, e error) {
+	s, nw := new(ConSpec), p.Cl.Now()
+	for i := 0; i != len(p.Rd); i++ {
+		p.Rd[i].Det(ctx.Req, nw, s)
 	}
-	BoundedLinearSearch(mr)
+	c, e = connect(addr, s, p.pr, p.timeout, p.Cl, p.d)
+	return
 }

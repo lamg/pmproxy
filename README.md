@@ -10,6 +10,12 @@ These parameters for processing a request, determined by the information it carr
 - The consumption that stores the downloaded data amount.
 - The connection delay.
 
+There are several important parts of this program:
+
+- Connection parameters assignation (pmproxy.go and the files implementing the types and procedures used there).
+	- (TODO be more specific here) connector.go
+- The interface for handling PMProxy.Rd so it can be serialized, deserialized and managed in runtime.
+
 ## PMProxy deployment
 
 PMProxy is deployed as a systemd service in this case. The following conditions must be true:
@@ -65,10 +71,14 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Automatic session closing
 - [ ] Marshal and Unmarshal correctly
 
-- [ ] general request processing server.go
+- [ ] general request processing pmproxy.go
 - [ ] Redefine the project according the types in res_det.go
 - [x] delay_manager.go
 - [ ] resource [de]serialization persistence_graph.go
 - [x] how much bandwith of a channel consumes a connection at given rate
-- [ ] connector.go, request through proxy must be managed by the proxy itself, upper limit of connections per host
+- [ ] connector.go, request through proxy must be managed by the proxy itself
 - [ ] configuration management
+- [x] limit the amount of connections per client
+- [ ] provide a list of URLs whose access doesn't add to user consumption
+- [ ] provide the amount of opened connections to the user. Implies getting at hand all CLMng, probably using the persistence graph. Which is another interface to what underlies in PMProxy.Rd
+- [x] priority of consumption coeficient

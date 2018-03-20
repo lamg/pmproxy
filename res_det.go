@@ -10,13 +10,23 @@ import (
 )
 
 type ConSpec struct {
-	Cf    float32
+	// Consumption coeficient
+	Cf float32
+	// Assigned coeficient (Cf) has priority
+	CfHPr bool
 	Span  *rt.RSpan
 	Iface string
 	Proxy string
 	Quota uint64
 	Cons  *uint64
 	Rt    *Rate
+	Cl    *CLMng
+}
+
+func (s *ConSpec) Valid() (b bool) {
+	b = s.Cf >= 0 && (s.Iface != "" || s.Proxy != "") &&
+		s.Cons != nil && s.Rt != nil
+	return
 }
 
 type Rate struct {
@@ -41,6 +51,7 @@ type ResDet struct {
 	Pr *ConSpec
 	Cs *CMng
 	Dm *DMng
+	Cl *CLMng
 }
 
 type rdJ struct {
@@ -112,7 +123,9 @@ func contIP(r *net.IPNet, ip string) (b bool) {
 }
 
 func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) {
-	s0.Cf = s1.Cf
+	if !s0.CfHPr {
+		s0.Cf = s1.Cf
+	}
 	if s1.Iface != "" {
 		s0.Iface = s1.Iface
 	}
@@ -127,6 +140,9 @@ func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) {
 	}
 	if d != nil {
 		s0.Rt = d.Get(ip)
+	}
+	if s1.Cl != nil {
+		s0.Cl = s1.Cl
 	}
 	return
 }

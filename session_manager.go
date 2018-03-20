@@ -12,6 +12,9 @@ import (
 
 // Auth authenticates users
 type Auth interface {
+	// Authenticate authenticates an user given its
+	// user name and password, returning the normalized
+	// user name and an error
 	Authenticate(string, string) (string, error)
 }
 

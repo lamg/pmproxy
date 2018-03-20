@@ -14,30 +14,52 @@ import (
 // connect returns a connection according with the specifications
 // in s
 func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
-	timeout time.Duration, cl clock.Clock) (c net.Conn, e error) {
-	if s.Proxy != "" {
-		c, e = proxyConn(p, s.Proxy, addr)
-	} else {
-		c, e = interfaceConn(s.Iface, addr, timeout)
+	timeout time.Duration, cl clock.Clock, d Dialer) (c net.Conn,
+	e error) {
+	if !s.Valid() {
+		e = fmt.Errorf("La conexión no puede completarse %v", s)
+	}
+	if e == nil {
+		if s.Proxy != "" {
+			c, e = proxyConn(p, s.Proxy, addr)
+		} else {
+			c, e = interfaceConn(s.Iface, addr, timeout, d)
+		}
 	}
 	if e == nil {
 		if s.Span != nil {
 			c = &rspanConn{
 				Conn: c,
 				cl:   cl,
-				s.Span,
+				sp:   s.Span,
 			}
 		}
 		if s.Rt != nil {
 			c = throttleConn(c, s.Rt)
 		}
+		if s.Cl != nil && s.Cl.AddConn(addr) {
+			c = &limitConn{
+				Conn: c,
+				l:    s.Cl,
+			}
+		}
 		c = &quotaConn{
 			Conn:  c,
 			Quota: s.Quota,
 			Cons:  s.Cons,
-			Cf:    s.Cf,
 		}
 	}
+	return
+}
+
+type limitConn struct {
+	net.Conn
+	l *CLMng
+}
+
+func (c *limitConn) Close() (e error) {
+	c.l.DecreaseAm(c.LocalAddr().String())
+	e = c.Close()
 	return
 }
 
@@ -62,13 +84,12 @@ func throttleConn(c net.Conn, r *Rate) (n net.Conn) {
 
 type quotaConn struct {
 	net.Conn
-	Cf    float32
 	Quota uint64
 	Cons  *uint64
 }
 
 func (c *quotaConn) Read(bs []byte) (n int, e error) {
-	if c.Cons < c.Quota && c.Cf >= 0 {
+	if c.Cons <= c.Quota {
 		n, e = c.Read(bs)
 	} else {
 		e = DwnOverMsg(c.Quota)
@@ -97,12 +118,12 @@ func (c *rspanConn) Read(bs []byte) (n int, e error) {
 	return
 }
 
-type dialer interface {
-	dial(*net.TCPAddr, time.Duration, string) (net.Conn, error)
+type Dialer interface {
+	Dial(*net.TCPAddr, time.Duration, string) (net.Conn, error)
 }
 
 func interfaceConn(iface, addr string,
-	timeout time.Duration, d dialer) (c net.Conn, e error) {
+	timeout time.Duration, d Dialer) (c net.Conn, e error) {
 	var ief *net.Interface
 	ief, e = net.InterfaceByName(iface)
 	var laddr []net.Addr
@@ -126,7 +147,7 @@ func interfaceConn(iface, addr string,
 	}
 	if e == nil {
 		tca := &net.TCPAddr{IP: la.IP}
-		c, e = d.dial(tca, timeout, addr)
+		c, e = d.Dial(tca, timeout, addr)
 	}
 	return
 }
