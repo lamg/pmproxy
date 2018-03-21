@@ -6,6 +6,7 @@ import (
 )
 
 type DMng struct {
+	Name      string
 	bandwidth *Rate
 	currConn  uint32
 	connR     *Rate

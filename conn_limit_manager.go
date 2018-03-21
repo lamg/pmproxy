@@ -5,6 +5,7 @@ import (
 )
 
 type CLMng struct {
+	Name string
 	// ip-connection amount map
 	am    *sync.Map
 	Limit uint32

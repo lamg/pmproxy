@@ -63,17 +63,26 @@ type rdJ struct {
 	Um   *UsrMtch  `json:"um"`
 
 	Pr *ConSpec `json:"pr"`
+	// consumption manager (CMng) reference
+	Cs string `json:"cs"`
+	// delay manager (DMng) reference
+	Dm string `json:"dm"`
+	// connection limit manager (CLMng) reference
+	Cl string `json:"cl"`
 }
 
 func (d *ResDet) MarshalJSON() (bs []byte, e error) {
 	j := &rdJ{
 		Unit: d.Unit,
 		Rs:   d.Rs,
-		Rg:   d.Rg,
-		Ur:   d.Ur,
+		Rg:   d.Rg.String(),
+		Ur:   d.Ur.String(),
 		Gm:   d.Gm,
 		Um:   d.Um,
 		Pr:   d.Pr,
+		Cs:   d.Cs.Name,
+		Dm:   d.Dm.Name,
+		Cl:   d.Cl.Name,
 	}
 	bs, e = json.Marshal(j)
 	return
@@ -95,13 +104,13 @@ func (d *ResDet) UnmarshalJSON(bs []byte) (e error) {
 
 func (d *ResDet) Det(r *h.Request, t time.Time,
 	f *ConSpec) (b bool) {
-	ip, _, _ = net.SplitHostPort(r.RemoteAddr)
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	// ip != ""
 	bs := []bool{
 		d.Rs != nil && d.Rs.ContainsTime(t),
 		d.Rg != nil && contIP(d.Rg, ip),
-		d.Ud != nil && d.Um.Match(ip),
-		d.Ur != nil && d.Ur.MatchString(r.URL.HostName()),
+		d.Um != nil && d.Um.Match(ip),
+		d.Ur != nil && d.Ur.MatchString(r.URL.Hostname()),
 		d.Gm != nil && d.Gm.Match(ip),
 	}
 	i := 0

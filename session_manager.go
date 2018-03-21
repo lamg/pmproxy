@@ -20,6 +20,7 @@ type Auth interface {
 
 // SMng handles opened sessions
 type SMng struct {
+	Name string
 	// ip - user name
 	su *sync.Map
 	// swapped sessions map ip-message

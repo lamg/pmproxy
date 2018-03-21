@@ -12,9 +12,11 @@ These parameters for processing a request, determined by the information it carr
 
 There are several important parts of this program:
 
-- Connection parameters assignation (pmproxy.go and the files implementing the types and procedures used there).
+- Incoming connection handling (pmproxy.go and the files implementing the types and procedures used there).
 	- (TODO be more specific here) connector.go
-- The interface for handling PMProxy.Rd so it can be serialized, deserialized and managed in runtime.
+	- Quota is separated from consumption manager, because is a static resource that can be asociated to a matcher. The administrator has to ensure of associate quota and consumption manager using the same predicate, if he wants them to be associated.
+- Connection handling configuration while running or booting.
+	- res_admin.go
 
 ## PMProxy deployment
 
@@ -82,3 +84,4 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] provide a list of URLs whose access doesn't add to user consumption
 - [ ] provide the amount of opened connections to the user. Implies getting at hand all CLMng, probably using the persistence graph. Which is another interface to what underlies in PMProxy.Rd
 - [x] priority of consumption coeficient
+- [ ] Add names to CMng, DMng, CLMng to be able to serialize ResDet struct, in res_det.go

@@ -6,12 +6,19 @@ import (
 )
 
 type CMng struct {
+	Name string
 	Cons *sync.Map
+}
+
+type StrVal struct {
+	Str string
+	Val uint64
 }
 
 // SrvCs is an h.HandleFunc for serving and modifying
 // consumptions
 func (c *CMng) SrvCs(w h.ResponseWriter, r *h.Request) {
+	var e error
 	if r.Method == h.MethodGet {
 		mp := make(map[string]uint64)
 		c.Cons.Range(func(k, v interface{}) (b bool) {
@@ -25,7 +32,7 @@ func (c *CMng) SrvCs(w h.ResponseWriter, r *h.Request) {
 		cs := new(StrVal)
 		e = Decode(r.Body, cs)
 		if e == nil {
-			v, ok := q.Cons.Load(cs.Str)
+			v, ok := c.Cons.Load(cs.Str)
 			if ok {
 				e = Encode(w, v)
 			}
@@ -36,9 +43,9 @@ func (c *CMng) SrvCs(w h.ResponseWriter, r *h.Request) {
 		e = Decode(r.Body, cs)
 		if e == nil {
 			if cs.Val == 0 {
-				q.Cons.Delete(cs.Str)
+				c.Cons.Delete(cs.Str)
 			} else {
-				q.Cons.Store(k, cs)
+				c.Cons.Store(cs.Str, cs.Val)
 			}
 		}
 	}
