@@ -407,22 +407,6 @@ func testJWTCrypt() (cr *JWTCrypt) {
 	return
 }
 
-type tAuth struct {
-	usrPass map[string]string
-}
-
-func (a *tAuth) Authenticate(user, pass string) (usr string,
-	e error) {
-	usr = user
-	p, ok := a.usrPass[user]
-	if !ok {
-		e = fmt.Errorf("User %s doesn't exists", user)
-	} else if p != pass {
-		e = fmt.Errorf("Incorrect password for %s", user)
-	}
-	return
-}
-
 var (
 	usrAuthU = []string{"coco", "pepe"}
 	usrAuthP = []string{"s", "s0"}

@@ -8,3 +8,6 @@ type ResAdm struct {
 	Dms map[string]*DMng
 	Cls map[string]*CLMng
 }
+
+// TODO implement JSON marshalers and unmarshaler for ever
+// ResAdm field

@@ -5,10 +5,10 @@ import (
 )
 
 type CLMng struct {
-	Name string
+	Name string `json:"name"`
 	// ip-connection amount map
 	am    *sync.Map
-	Limit uint32
+	Limit uint32 `json:"limit"`
 }
 
 func (m *CLMng) AddConn(addr string) (b bool) {

@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"errors"
 	"fmt"
+	ld "github.com/lamg/ldaputil"
 	"io"
 	"net"
 	h "net/http"
@@ -11,35 +12,46 @@ import (
 )
 
 // Auth authenticates users
-type Auth interface {
-	// Authenticate authenticates an user given its
-	// user name and password, returning the normalized
-	// user name and an error
-	Authenticate(string, string) (string, error)
+type Auth struct {
+	Ld *ld.Ldap
+	Um map[string]string
+}
+
+// Authenticate authenticates an user given its
+// user name and password, returning the normalized
+// user name and an error
+func (a *Auth) Athenticate(user, pass string) (usr string, e error) {
+	if a.Ld == nil {
+		p, ok := a.Um[user]
+		ok = ok && p == pass
+		if ok {
+			usr = user
+		} else {
+			e = fmt.Errorf("Contraseña incorrecta para %s", user)
+		}
+	} else {
+		// mylower probably should be in github.com/lamg/ldaputil
+		usr, e = a.Ld.AuthAndNorm(user, pass)
+	}
+	return
 }
 
 // SMng handles opened sessions
 type SMng struct {
-	Name string
+	Name string `json:"name"`
 	// ip - user name
 	su *sync.Map
 	// swapped sessions map ip-message
 	swS *sync.Map
 	// authenticator for users
-	usr Auth
+	Usr *Auth `json:"auth"`
 	cr  *JWTCrypt
-	adm *UsrMtch
+	Adm *UsrMtch `json:"adm"`
 }
 
 // NewSMng creates a new SMng
-func NewSMng(usr Auth, cr *JWTCrypt, adm *UsrMtch) (s *SMng) {
-	s = &SMng{
-		su:  new(sync.Map),
-		swS: new(sync.Map),
-		usr: usr,
-		cr:  cr,
-		adm: adm,
-	}
+func (s *SMng) InitSMng() {
+	s.su, s.swS, s.cr = new(sync.Map), new(sync.Map), NewJWTCrypt()
 	return
 }
 
@@ -120,11 +132,8 @@ func NotOpInSMsg(ip string) (e error) {
 	return
 }
 
-func (s *SMng) Match(ip string) (usr, b bool) {
-	v, b := s.su.Load(ip)
-	if b {
-		usr = v.(string)
-	}
+func (s *SMng) Match(ip string) (b bool) {
+	_, b = s.su.Load(ip)
 	return
 }
 

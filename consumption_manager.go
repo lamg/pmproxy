@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	h "net/http"
 	"sync"
 )
@@ -50,4 +51,35 @@ func (c *CMng) SrvCs(w h.ResponseWriter, r *h.Request) {
 		}
 	}
 	writeErr(w, e)
+}
+
+type cmng struct {
+	Name string            `json:"name"`
+	Cons map[string]uint64 `json:"cons"`
+}
+
+func (c *CMng) MarshalJSON() (bs []byte, e error) {
+	x := &cmng{
+		Name: c.Name,
+		Cons: make(map[string]uint64),
+	}
+	c.Cons.Range(func(k, v interface{}) (b bool) {
+		key, value, b := k.(string), v.(uint64), true
+		x.Cons[key] = value
+		return
+	})
+	bs, e = json.Marshal(x)
+	return
+}
+
+func (c *CMng) UnmarshalJSON(bs []byte) (e error) {
+	x := new(cmng)
+	e = json.Unmarshal(bs, x)
+	if e == nil {
+		c.Name, c.Cons = x.Name, new(sync.Map)
+		for k, v := range x.Cons {
+			c.Cons.Store(k, v)
+		}
+	}
+	return
 }

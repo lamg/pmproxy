@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
@@ -76,8 +77,13 @@ type JWTUser struct {
 }
 
 // NewJWTCrypt creates a new JWTCrypt
-func NewJWTCrypt(p *rsa.PrivateKey) (j *JWTCrypt) {
-	j = &JWTCrypt{pKey: p}
+func NewJWTCrypt() (j *JWTCrypt) {
+	j = new(JWTCrypt)
+	var e error
+	j.pKey, e = rsa.GenerateKey(rand.Reader, 512)
+	if e != nil {
+		panic(e.Error())
+	}
 	return
 }
 

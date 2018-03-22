@@ -6,16 +6,16 @@ import (
 )
 
 type DMng struct {
-	Name      string
-	bandwidth *Rate
-	currConn  uint32
+	Name      string `json:"name"`
+	Bandwidth *Rate  `json:"bandwidth"`
+	currConn  uint64
 	connR     *Rate
-	sm        *SMng
+	Sm        *SMng `json:"sm"`
 }
 
 func (d *DMng) NewConnRate() (r *Rate) {
 	d.currConn = d.currConn + 1
-	d.connR.Bytes = d.bandwidth.Bytes / d.currConn
+	d.connR.Bytes = d.Bandwidth.Bytes / d.currConn
 	r = &Rate{
 		Bytes:     d.connR.Bytes,
 		TimeLapse: d.connR.TimeLapse,
@@ -31,7 +31,7 @@ type dInfo struct {
 
 func (d *DMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	ip, _, e := net.SplitHostPort(r.RemoteAddr)
-	if e == nil && d.sm.Match(ip) {
+	if e == nil && d.Sm.Match(ip) {
 		if r.Method == h.MethodGet {
 			// sends info about bandwidth, current amount of connections
 			// and current connection rate
