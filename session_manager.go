@@ -30,7 +30,6 @@ func (a *Auth) Athenticate(user, pass string) (usr string, e error) {
 			e = fmt.Errorf("Contraseña incorrecta para %s", user)
 		}
 	} else {
-		// mylower probably should be in github.com/lamg/ldaputil
 		usr, e = a.Ld.AuthAndNorm(user, pass)
 	}
 	return
@@ -134,6 +133,11 @@ func NotOpInSMsg(ip string) (e error) {
 
 func (s *SMng) Match(ip string) (b bool) {
 	_, b = s.su.Load(ip)
+	return
+}
+
+func (s *SMng) MatchUsr(ip string) (user string, b bool) {
+	user, b = s.su.Load(ip)
 	return
 }
 

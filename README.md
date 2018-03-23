@@ -84,4 +84,7 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] provide a list of URLs whose access doesn't add to user consumption
 - [ ] provide the amount of opened connections to the user. Implies getting at hand all CLMng, probably using the persistence graph. Which is another interface to what underlies in PMProxy.Rd
 - [x] priority of consumption coeficient
-- [ ] Add names to CMng, DMng, CLMng to be able to serialize ResDet struct, in res_det.go
+- [ ] JSON marshalers and unmarshalers
+	- [x] SMng
+- [ ] Test PMProxy
+	- [ ] TestDial

@@ -25,7 +25,7 @@ func (d *DMng) NewConnRate() (r *Rate) {
 
 type dInfo struct {
 	Bandwidth *Rate  `json:"bandwidth"`
-	CurrConn  uint32 `json:"currConn"`
+	CurrConn  uint64 `json:"currConn"`
 	ConnR     *Rate  `json:"connR"`
 }
 
@@ -36,7 +36,7 @@ func (d *DMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 			// sends info about bandwidth, current amount of connections
 			// and current connection rate
 			inf := &dInfo{
-				Bandwidth: d.bandwidth,
+				Bandwidth: d.Bandwidth,
 				CurrConn:  d.currConn,
 				ConnR:     d.connR,
 			}
@@ -46,7 +46,7 @@ func (d *DMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 			bw := new(Rate)
 			e = Decode(r.Body, bw)
 			if e == nil {
-				d.bandwidth = bw
+				d.Bandwidth = bw
 			}
 		} else {
 			e = NotSuppMeth(r.Method)

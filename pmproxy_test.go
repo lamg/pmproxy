@@ -7,29 +7,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type tMR struct {
-	r   bool
-	msg string
-}
+func TestDial(t *testing.T) {
+	ts := []struct {
+		addr string
+		body string
+		err  bool
+	}{}
 
-func (m *tMR) ServeHTTP(w h.ResponseWriter, r *h.Request) {
-	w.Write([]byte(m.msg))
-	return
-}
-
-func (m *tMR) V() (y bool) {
-	y = m.r
-	return
-}
-
-func TestServeHTTP(t *testing.T) {
-	amsg := "test message"
-	prx := &PMProxy{
-		Pr: []MaybeResp{
-			&tMR{r: false, msg: ""},
-			&tMR{r: true, msg: amsg}},
-	}
-	w, r := reqres(t, h.MethodGet, "", "", "", "")
-	prx.ServeHTTP(w, r)
-	require.Equal(t, w.Body.String(), amsg)
 }

@@ -13,7 +13,7 @@ type GrpMtch struct {
 }
 
 func (m *GrpMtch) Match(ip string) (b bool) {
-	usr, b := m.Um.Sm.Match(ip)
+	usr, b := m.Um.Sm.MatchUsr(ip)
 	var gs []string
 	if b {
 		if m.Ld != nil {
@@ -36,13 +36,14 @@ func (m *GrpMtch) Match(ip string) (b bool) {
 }
 
 type UsrMtch struct {
-	Ul []string
-	Sm *SMng
+	// with Ul empty all users match if logged
+	Ul []string `json:"ul"`
+	Sm *SMng    `json:"sm"`
 }
 
 func (m *UsrMtch) Match(ip string) (b bool) {
-	usr, b := m.Sm.Match(ip)
-	if b {
+	usr, b := m.Sm.MatchUsr(ip)
+	if b && len(m.Ul) != 0 {
 		i := 0
 		for ; i != len(m.Ul) && m.Ul[i] != usr; i++ {
 		}
