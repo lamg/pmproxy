@@ -119,7 +119,7 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 	}
 	b = (i != len(bs)) == d.Unit
 	if b {
-		addRes(f, d.Pr, d.Qm, d.Cs, d.Dm, ip)
+		addRes(f, d.Pr, d.Cs, d.Dm, ip)
 	}
 	return
 }
@@ -138,12 +138,10 @@ func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) {
 	if s1.Iface != "" {
 		s0.Iface = s1.Iface
 	}
-	if s1.Proxy != nil {
+	if s1.Proxy != "" {
 		s0.Proxy = s1.Proxy
 	}
-	if q != nil {
-		s0.Quota = s0.Quota + s1.Quota
-	}
+	s0.Quota = s0.Quota + s1.Quota
 	if c != nil {
 		s0.Cons = c.Get(ip)
 	}

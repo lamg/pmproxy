@@ -49,7 +49,12 @@ type SMng struct {
 }
 
 // NewSMng creates a new SMng
-func (s *SMng) InitSMng() {
+func NewSMng(name string, usr *Auth, adm *UsrMtch) (s *SMng) {
+	s = SMng{
+		Name: name,
+		Usr:  usr,
+		Adm:  adm,
+	}
 	s.su, s.swS, s.cr = new(sync.Map), new(sync.Map), NewJWTCrypt()
 	return
 }

@@ -47,6 +47,7 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 			Conn:  c,
 			Quota: s.Quota,
 			Cons:  s.Cons,
+			Cf:    s.Cf,
 		}
 	}
 	return
@@ -74,7 +75,7 @@ func (c *thrConn) Read(bs []byte) (n int, e error) {
 }
 
 func throttleConn(c net.Conn, r *Rate) (n net.Conn) {
-	bk := ratelimit.NewBucket(r.TimeLapse, r.Bytes)
+	bk := ratelimit.NewBucket(r.TimeLapse, int64(r.Bytes))
 	n = &thrConn{
 		Conn: c,
 		r:    ratelimit.Reader(c, bk),
@@ -86,17 +87,18 @@ type quotaConn struct {
 	net.Conn
 	Quota uint64
 	Cons  *uint64
+	Cf    float32
 }
 
 func (c *quotaConn) Read(bs []byte) (n int, e error) {
-	if c.Cons <= c.Quota {
+	if *c.Cons <= c.Quota {
 		n, e = c.Read(bs)
 	} else {
 		e = DwnOverMsg(c.Quota)
 	}
 	if e == nil {
 		rn := uint64(float32(n) * c.Cf)
-		c.Cons = c.Cons + rn
+		*c.Cons = *c.Cons + rn
 	}
 	return
 }

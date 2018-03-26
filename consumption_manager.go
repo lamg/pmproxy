@@ -9,11 +9,27 @@ import (
 type CMng struct {
 	Name string
 	Cons *sync.Map
+	Sm   *SMng
 }
 
 type StrVal struct {
 	Str string
 	Val uint64
+}
+
+func (c *CMng) Get(ip string) (n *uint64, ok bool) {
+	usr, ok := c.Sm.MatchUsr(ip)
+	if ok {
+		v, okl := c.Cons.Load(ip)
+		if okl {
+			n = &(v.(uint64))
+		} else {
+			n = &0
+			c.Cons.Store(ip, n)
+		}
+	} else {
+
+	}
 }
 
 // SrvCs is an h.HandleFunc for serving and modifying

@@ -12,12 +12,24 @@ type PMProxy struct {
 	// Resource managers
 	Rd      []Det
 	Cl      clock.Clock
-	d       Dialer
+	Dl      Dialer
 	pr      *gp.ProxyHttpServer
-	timeout time.Duration
+	Timeout time.Duration
 }
 
-// Dial is the entry point for connecting according the 
+func NewPMProxy(rd []Det, cl clock.Clock, d Dialer,
+	t time.Duration) (p *PMProxy) {
+	p = &PMProxy{
+		Rd:      rd,
+		Cl:      cl,
+		Dl:      d,
+		pr:      gp.NewProxyHttpServer(),
+		Timeout: t,
+	}
+	return
+}
+
+// Dial is the entry point for connecting according the
 // matching resources
 func (p *PMProxy) Dial(ntw, addr string,
 	ctx *gp.ProxyCtx) (c net.Conn, e error) {
@@ -25,6 +37,6 @@ func (p *PMProxy) Dial(ntw, addr string,
 	for i := 0; i != len(p.Rd); i++ {
 		p.Rd[i].Det(ctx.Req, nw, s)
 	}
-	c, e = connect(addr, s, p.pr, p.timeout, p.Cl, p.d)
+	c, e = connect(addr, s, p.pr, p.Timeout, p.Cl, p.Dl)
 	return
 }

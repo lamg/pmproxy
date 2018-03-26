@@ -88,3 +88,4 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 	- [x] SMng
 - [ ] Test PMProxy
 	- [ ] TestDial
+		- [ ] Add SMng to CMng to be able to implement CMng.Get(ip)
