@@ -2,10 +2,12 @@ package pmproxy
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/jinzhu/now"
 	"github.com/lamg/clock"
 	gp "github.com/lamg/goproxy"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"net"
 	h "net/http"
 	"testing"
@@ -20,22 +22,22 @@ func TestDial(t *testing.T) {
 		},
 		loggedAddr: []string{"0.0.0.0", "0.0.0.1"},
 	}
-	ts, rd, dl := d.getTestStructs(), d.genDet(), d.genDialer()
-	cl := clock.TLClock{
-		Interval: time.Second,
-		Time:     now.MustParse("2018-01-01"),
+	ts, rd, dl := d.genTestStructs(), d.genDet(), d.genDialer()
+	cl := &clock.TClock{
+		Intv: time.Second,
+		Time: now.MustParse("2018-01-01"),
 	}
 	pm := NewPMProxy(rd, cl, dl, time.Second)
 	for i, j := range ts {
 		ctx := &gp.ProxyCtx{
 			Req: j.request,
 		}
-		c, e = pm.Dial("", j.request.URL.Host(), ctx)
+		c, e := pm.Dial("", j.request.URL.Hostname(), ctx)
 		require.True(t, (e == nil) == j.ok)
 		if e == nil {
 			s, e := ioutil.ReadAll(c)
 			require.NoError(t, e)
-			require.Equal(t, ts.content, s)
+			require.Equal(t, j.content, s)
 		}
 	}
 }
@@ -46,17 +48,18 @@ type testGen struct {
 }
 
 func (d *testGen) genTestStructs() (ts []testS) {
-	ts = make([]testS, len(d.addrContent))
+	ts, i := make([]testS, len(d.addrContent)), 0
 	for k, v := range d.addrContent {
 		req, e := h.NewRequest(h.MethodGet, "http://"+k, nil)
 		if e != nil {
 			panic(e.Error)
 		}
-		ts[i] = testS{
+		ts[i], i = testS{
 			request: req,
 			content: v,
 			ok:      true,
-		}
+		},
+			i+1
 	}
 	return
 }
@@ -67,8 +70,10 @@ func (d *testGen) genDet() (rd []Det) {
 		sm.login("user", j)
 	}
 	rd = []Det{
-		&UsrMtch{
-			Sm: sm,
+		&ResDet{
+			Um: &UsrMtch{
+				Sm: sm,
+			},
 		},
 	}
 	return
@@ -88,9 +93,9 @@ type mapDl struct {
 func (m *mapDl) Dial(l *net.TCPAddr, t time.Duration,
 	addr string) (c net.Conn, e error) {
 	s, ok := m.mc[addr]
-	ip, e := net.ParseIP(addr)
-	if ok && e == nil {
-		r := net.TCPAddr{
+	ip := net.ParseIP(addr)
+	if ok && ip != nil {
+		r := &net.TCPAddr{
 			IP: ip,
 		}
 		c = &bfConn{
@@ -116,6 +121,7 @@ func (b *bfConn) Close() (e error) {
 
 func (b *bfConn) LocalAddr() (r net.Addr) {
 	r = b.local
+	return
 }
 
 func (b *bfConn) RemoteAddr() (r net.Addr) {

@@ -32,6 +32,7 @@ func (s *ConSpec) Valid() (b bool) {
 type Rate struct {
 	Bytes     uint64
 	TimeLapse time.Duration
+	CurrConn  *uint64
 }
 
 type Det interface {
@@ -119,7 +120,7 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 	}
 	b = (i != len(bs)) == d.Unit
 	if b {
-		addRes(f, d.Pr, d.Cs, d.Dm, ip)
+		b = addRes(f, d.Pr, d.Cs, d.Dm, ip)
 	}
 	return
 }
@@ -131,7 +132,7 @@ func contIP(r *net.IPNet, ip string) (b bool) {
 	return
 }
 
-func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) {
+func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) (ok bool) {
 	if !s0.CfHPr {
 		s0.Cf = s1.Cf
 	}
@@ -143,10 +144,10 @@ func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) {
 	}
 	s0.Quota = s0.Quota + s1.Quota
 	if c != nil {
-		s0.Cons = c.Get(ip)
+		s0.Cons, ok = c.Get(ip)
 	}
 	if d != nil {
-		s0.Rt = d.Get(ip)
+		s0.Rt = d.NewConnRate()
 	}
 	if s1.Cl != nil {
 		s0.Cl = s1.Cl
@@ -164,7 +165,7 @@ type SqDet struct {
 func (d *SqDet) Det(r *h.Request, t time.Time,
 	c *ConSpec) (b bool) {
 	i := 0
-	for i != len(d.Ds) && (d.Ds[i].Det(r, t, c) == d.Unt) {
+	for i != len(d.Ds) && (d.Ds[i].Det(r, t, c) == d.Unit) {
 		i = i + 1
 	}
 	b = i != len(d.Ds)

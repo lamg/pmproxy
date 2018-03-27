@@ -19,6 +19,7 @@ func (d *DMng) NewConnRate() (r *Rate) {
 	r = &Rate{
 		Bytes:     d.connR.Bytes,
 		TimeLapse: d.connR.TimeLapse,
+		CurrConn:  &d.currConn,
 	}
 	return
 }

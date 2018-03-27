@@ -20,16 +20,17 @@ type StrVal struct {
 func (c *CMng) Get(ip string) (n *uint64, ok bool) {
 	usr, ok := c.Sm.MatchUsr(ip)
 	if ok {
-		v, okl := c.Cons.Load(ip)
+		v, okl := c.Cons.Load(usr)
 		if okl {
-			n = &(v.(uint64))
+			x := v.(uint64)
+			n = &x
 		} else {
-			n = &0
-			c.Cons.Store(ip, n)
+			x := uint64(0)
+			n = &x
+			c.Cons.Store(usr, x)
 		}
-	} else {
-
 	}
+	return
 }
 
 // SrvCs is an h.HandleFunc for serving and modifying

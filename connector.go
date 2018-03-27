@@ -65,6 +65,7 @@ func (c *limitConn) Close() (e error) {
 }
 
 type thrConn struct {
+	rt *Rate
 	net.Conn
 	r io.Reader
 }
@@ -74,11 +75,18 @@ func (c *thrConn) Read(bs []byte) (n int, e error) {
 	return
 }
 
+func (c *thrConn) Close() (e error) {
+	*c.rt.CurrConn = *c.rt.CurrConn - 1
+	e = c.Conn.Close()
+	return
+}
+
 func throttleConn(c net.Conn, r *Rate) (n net.Conn) {
 	bk := ratelimit.NewBucket(r.TimeLapse, int64(r.Bytes))
 	n = &thrConn{
 		Conn: c,
 		r:    ratelimit.Reader(c, bk),
+		rt:   r,
 	}
 	return
 }
