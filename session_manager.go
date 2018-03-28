@@ -187,6 +187,7 @@ func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
 		e = Decode(r.Body, ui)
 	}
 	if e == nil && r.Method == h.MethodPost {
+		// TODO check header
 		e = s.loginUser(ip, ui.User, ui.IP)
 	} else if e == nil && r.Method == h.MethodPut {
 		e = s.logoutUser(ip, ui.User, ui.IP)
