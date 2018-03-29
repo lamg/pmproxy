@@ -22,17 +22,18 @@ type tsLg struct {
 }
 
 func TestLogin(t *testing.T) {
-	logTestUsrs(t, usrAuthM)
+	ua := &Auth{Um: usrAuthM}
+	s = NewSMng("sm", ua, nil)
+	logTestUsrs(t, usrAuthM, 0)
 }
 
-func logTestUsrs(t *testing.T, um map[string]string) (s *SMng,
-	ts []tsLg, ips []string) {
+func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
+	st uint32) (ts []tsLg, ips []string) {
 	ips = make([]string, len(um))
-	for i := 0; i != len(um); i++ {
+	for i := st; i != uint32(len(um)); i++ {
 		ips[i] = fmt.Sprintf("0.0.0.%d", i)
 	}
-	ua := &Auth{Um: um}
-	s = NewSMng("sm", ua, nil)
+
 	ts = make([]tsLg, len(um))
 	i := 0
 	for k, v := range usrAuthM {
@@ -61,7 +62,7 @@ func logTestUsrs(t *testing.T, um map[string]string) (s *SMng,
 }
 
 func TestLogout(t *testing.T) {
-	s, ts, ips := logTestUsrs(t, usrAuthM)
+	s, ts, ips := logTestUsrs(t, usrAuthM, 0)
 	for i, j := range ts {
 		r, q := reqres(t, h.MethodDelete, "", "", j.header, j.ip)
 		s.SrvUserSession(r, q)
@@ -77,21 +78,28 @@ func TestNotSuppMeth(t *testing.T) {
 }
 
 func TestAdmGetSessions(t *testing.T) {
-	s, ts, ips := logTestUsrs(t, usrAuthM)
+	s, ts, ips := logTestUsrs(t, usrAuthM, 0)
+	adm, tsa, ipsa := logTestUsrs(t, admAuthM)
+	s.Adm = &UsrMtch{
+		Sm: adm,
+	}
+	for i, j := range tsa {
+		w, r := reqres(t, h.MethodGet, "", "", j.header, j.ip)
+		s.SrvUserSession(w, r)
+		require.Equal(t, h.StatusOK, w.Code, "At %d", i)
+		m := make(map[string]string)
+		e := Decode(w.Body, &m)
+		require.NoError(t, e, "At %d", i)
+		for k, v := range m {
+			usr, ok := s.MatchUsr(k)
+			require.True(t, ok)
+			require.Equal(t, usr, v)
+		}
+	}
 }
 
 func TestSwappedSessions(t *testing.T) {
-	ua, aa, cr, ur :=
-		&tAuth{usrAuthM},
-		&tAuth{admAuthM},
-		testJWTCrypt(),
-		new(tUsrRec)
-	s := NewSMng(ua, aa, cr, ur)
-	// { initialized SMng }
-	ta := makeTRq(usrAuthU, usrAuthP, 0, true)
-	testAuthH(t, s.SrvUserSession, ta)
-	tb := makeTRq(usrAuthU, usrAuthP, len(usrAuthM), true)
-	testAuthH(t, s.SrvUserSession, tb)
+	s := logTestUsrs(t, usrAuthM)
 	// { logged same users in ta but from different IPs.
 	//   This is done for testing the swapped session message
 	//   sent to users. That message is useful in case of an
