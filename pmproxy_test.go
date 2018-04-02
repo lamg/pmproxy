@@ -33,7 +33,7 @@ func TestDial(t *testing.T) {
 			Req: j.request,
 		}
 		c, e := pm.Dial("", j.request.URL.Hostname(), ctx)
-		require.True(t, (e == nil) == j.ok)
+		require.True(t, (e == nil) == j.ok, "At %d", i)
 		if e == nil {
 			s, e := ioutil.ReadAll(c)
 			require.NoError(t, e)
@@ -73,6 +73,10 @@ func (d *testGen) genDet() (rd []Det) {
 		&ResDet{
 			Um: &UsrMtch{
 				Sm: sm,
+			},
+			Pr: &ConSpec{
+				Cf: 0,
+				//TODO
 			},
 		},
 	}

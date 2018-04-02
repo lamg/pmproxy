@@ -61,6 +61,8 @@ func NewSMng(name string, usr *Auth, adm *UsrMtch) (s *SMng) {
 func (s *SMng) loginUser(admIP, user, ip string) (e error) {
 	if s.Adm.Match(admIP) {
 		s.login(user, ip)
+	} else {
+		e = fmt.Errorf("Not logged administrator at %s", admIP)
 	}
 	return
 }
@@ -164,7 +166,12 @@ func (s *SMng) SrvUserSession(w h.ResponseWriter,
 	} else if r.Method == h.MethodDelete {
 		e = s.srvLogout(ip, r.Header)
 	} else if r.Method == h.MethodGet {
-		e = s.srvSessions(r.Header, ip, w)
+		v, ok := s.swS.Load(ip)
+		if ok {
+			msg := v.(string)
+			w.Write([]byte(msg))
+		}
+		// send session status if swapped
 	} else {
 		e = NotSuppMeth(r.Method)
 	}
@@ -183,14 +190,18 @@ func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	ui := new(UsrIP)
 	var e error
-	if r.Body != nil {
+	if r.Method == h.MethodPost || r.Method == h.MethodPut {
 		e = Decode(r.Body, ui)
 	}
+	if e == nil {
+		_, e = s.Adm.Sm.cr.getUser(r.Header)
+	}
 	if e == nil && r.Method == h.MethodPost {
-		// TODO check header
 		e = s.loginUser(ip, ui.User, ui.IP)
 	} else if e == nil && r.Method == h.MethodPut {
 		e = s.logoutUser(ip, ui.User, ui.IP)
+	} else if e == nil && r.Method == h.MethodGet {
+		e = s.srvSessions(r.Header, ip, w)
 	} else if e == nil {
 		e = NotSuppMeth(r.Method)
 	}
@@ -229,10 +240,15 @@ func (s *SMng) srvLogout(ip string, a h.Header) (e error) {
 func (s *SMng) srvSessions(a h.Header, ip string, w io.Writer) (e error) {
 	usr, e := s.cr.getUser(a)
 	if e == nil {
-		nu, ok := s.Adm.Sm.MatchUsr(ip)
-		if !ok || usr != nu {
-			e = fmt.Errorf("Not logged %s", usr)
+		if s.Adm != nil {
+			nu, ok := s.Adm.Sm.MatchUsr(ip)
+			if !ok || usr != nu {
+				e = fmt.Errorf("Not logged %s", usr)
+			}
+		} else {
+			e = fmt.Errorf("No admin manager in %s", s.Name)
 		}
+
 	}
 	if e == nil {
 		mp := make(map[string]string)
