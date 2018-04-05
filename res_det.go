@@ -18,7 +18,7 @@ type ConSpec struct {
 	Iface string
 	Proxy string
 	Quota uint64
-	Cons  *uint64
+	Cons  *CMng
 	Rt    *Rate
 	Cl    *CLMng
 }

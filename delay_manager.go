@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"net"
 	h "net/http"
+	"time"
 )
 
 type DMng struct {
@@ -15,6 +16,11 @@ type DMng struct {
 
 func (d *DMng) NewConnRate() (r *Rate) {
 	d.currConn = d.currConn + 1
+	if d.connR == nil {
+		d.connR = &Rate{
+			TimeLapse: time.Millisecond,
+		}
+	}
 	d.connR.Bytes = d.Bandwidth.Bytes / d.currConn
 	r = &Rate{
 		Bytes:     d.connR.Bytes,

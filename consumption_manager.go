@@ -17,17 +17,37 @@ type StrVal struct {
 	Val uint64
 }
 
-func (c *CMng) Get(ip string) (n *uint64, ok bool) {
+type ConsAdd struct {
+	cons *sync.Map
+	user string
+	m    uint64
+	cf   float32
+}
+
+func (d *ConsAdd) CanGet(n, quota uint64,
+	cf float32) (b bool) {
+	v, ok := d.cons.Load(d.user)
+	var m uint64
+	if ok {
+		d.m, d.cf = v.(uint64), cf
+		m = d.m + uint64(float32(n)*cf)
+	}
+	b = m < quota
+}
+
+// Add depends on a previous call to CanGet
+func (d *ConsAdd) Add(n uint64) {
+	m := d.m + uint64(float32(n)*d.cf)
+	d.cons.Store(d.user, m)
+	return
+}
+
+func (c *CMng) Get(ip string) (d *ConsAdd, ok bool) {
 	usr, ok := c.Sm.MatchUsr(ip)
 	if ok {
-		v, okl := c.Cons.Load(usr)
-		if okl {
-			x := v.(uint64)
-			n = &x
-		} else {
-			x := uint64(0)
-			n = &x
-			c.Cons.Store(usr, x)
+		d = &ConsAdd{
+			cons: c.Cons,
+			user: usr,
 		}
 	}
 	return

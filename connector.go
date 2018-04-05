@@ -13,7 +13,7 @@ import (
 
 // connect returns a connection according with the specifications
 // in s
-func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
+func connect(ip, addr string, s *ConSpec, p *gp.ProxyHttpServer,
 	timeout time.Duration, cl clock.Clock, d Dialer) (c net.Conn,
 	e error) {
 	if !s.Valid() {
@@ -43,11 +43,16 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 				l:    s.Cl,
 			}
 		}
-		c = &quotaConn{
-			Conn:  c,
-			Quota: s.Quota,
-			Cons:  s.Cons,
-			Cf:    s.Cf,
+		cAdd, ok := s.Cons.Get(ip)
+		if ok {
+			c = &quotaConn{
+				Conn:  c,
+				Quota: s.Quota,
+				Cons:  cAdd,
+				Cf:    s.Cf,
+			}
+		} else {
+			e = fmt.Errorf("Cannot assign consumption adder %s", ip)
 		}
 	}
 	return
@@ -94,19 +99,18 @@ func throttleConn(c net.Conn, r *Rate) (n net.Conn) {
 type quotaConn struct {
 	net.Conn
 	Quota uint64
-	Cons  *uint64
+	Cons  *ConsAdd
 	Cf    float32
 }
 
 func (c *quotaConn) Read(bs []byte) (n int, e error) {
-	if *c.Cons <= c.Quota {
+	if c.Cons.CanGet(uint64(len(bs)), c.Quota, c.Cf) {
 		n, e = c.Read(bs)
 	} else {
-		e = DwnOverMsg(c.Quota)
+		e = DwnOverMsg(0) // FIXME meaningless parameter
 	}
 	if e == nil {
-		rn := uint64(float32(n) * c.Cf)
-		*c.Cons = *c.Cons + rn
+		c.Cons.Add(uint64(n))
 	}
 	return
 }

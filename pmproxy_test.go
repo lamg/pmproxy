@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	h "net/http"
+	"sync"
 	"testing"
 	"time"
 )
@@ -65,9 +66,22 @@ func (d *testGen) genTestStructs() (ts []testS) {
 }
 
 func (d *testGen) genDet() (rd []Det) {
-	sm := NewSMng("sm", nil, nil)
+	sm, cl := NewSMng("sm", nil, nil), &CLMng{Limit: 100, Name: "cl"}
+	dm := &DMng{
+		Bandwidth: &Rate{
+			Bytes:     1024,
+			TimeLapse: time.Millisecond,
+		},
+		Name: "dm",
+		Sm:   sm,
+	}
 	for _, j := range d.loggedAddr {
 		sm.login("user", j)
+	}
+	cm := &CMng{
+		Cons: new(sync.Map),
+		Name: "cm",
+		Sm:   sm,
 	}
 	rd = []Det{
 		&ResDet{
@@ -75,8 +89,12 @@ func (d *testGen) genDet() (rd []Det) {
 				Sm: sm,
 			},
 			Pr: &ConSpec{
-				Cf: 0,
-				//TODO
+				Cf:    0,
+				Cl:    cl,
+				Cons:  cm,
+				Iface: "eth0",
+				Quota: 1024,
+				Rt:    dm.NewConnRate(),
 			},
 		},
 	}
