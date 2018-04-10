@@ -11,6 +11,15 @@ type CLMng struct {
 	Limit uint32 `json:"limit"`
 }
 
+func NewCLMng(name string, limit uint32) (c *CLMng) {
+	c = &CLMng{
+		Name:  name,
+		Limit: limit,
+		am:    new(sync.Map),
+	}
+	return
+}
+
 func (m *CLMng) AddConn(addr string) (b bool) {
 	v, ok := m.am.Load(addr)
 	var n uint32

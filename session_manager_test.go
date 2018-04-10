@@ -29,13 +29,13 @@ func TestLogin(t *testing.T) {
 func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 	st uint32) (ts []tsLg, ips []string) {
 	ips = make([]string, len(um))
-	for i := st; i != uint32(len(um)); i++ {
-		ips[i] = fmt.Sprintf("0.0.0.%d", i)
+	for i := uint32(0); i != uint32(len(um)); i++ {
+		ips[i] = fmt.Sprintf("0.0.0.%d", st+i)
 	}
 
 	ts = make([]tsLg, len(um))
 	i := 0
-	for k, v := range usrAuthM {
+	for k, v := range um {
 		ts[i] = tsLg{
 			user: k,
 			pass: v,
@@ -46,8 +46,8 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 			ts[i].pass)
 		r, q := reqres(t, h.MethodPost, "", body, "", ts[i].ip)
 		s.SrvUserSession(r, q)
-		s.SrvUserSession(r, q)
-		require.Equal(t, r.Code, h.StatusOK)
+		require.Equal(t, r.Code, h.StatusOK, "At %s: %s", k,
+			r.Body.String())
 		// { logged }
 		usr, ok := s.MatchUsr(ts[i].ip)
 		require.True(t, ok)
@@ -74,10 +74,6 @@ func TestLogout(t *testing.T) {
 	}
 }
 
-func TestNotSuppMeth(t *testing.T) {
-	// TODO
-}
-
 func TestAdmGetSessions(t *testing.T) {
 	aa := &Auth{Um: admAuthM}
 	sa := NewSMng("adm", aa, nil)
@@ -90,7 +86,8 @@ func TestAdmGetSessions(t *testing.T) {
 	for i, j := range ts {
 		w, r := reqres(t, h.MethodGet, "", "", j.header, j.ip)
 		s.SrvAdmMngS(w, r)
-		require.Equal(t, h.StatusOK, w.Code, "At %d", i)
+		require.Equal(t, h.StatusOK, w.Code, "At %d: %s", i,
+			w.Body.String())
 		m := make(map[string]string)
 		e := Decode(w.Body, &m)
 		require.NoError(t, e, "At %d", i)
@@ -132,7 +129,7 @@ func TestSrvAdmMngS(t *testing.T) {
 	ts, _ := logTestUsrs(t, sa, admAuthM, uint32(len(usrAuthM)))
 
 	ua := &Auth{Um: usrAuthM}
-	s := NewSMng("sm", ua, nil)
+	s := NewSMng("sm", ua, &UsrMtch{Sm: sa})
 	// { initialized SMng }
 	for i, j := range ts {
 		n := 0
@@ -145,7 +142,7 @@ func TestSrvAdmMngS(t *testing.T) {
 				i, k, w.Body.String())
 			// logged in
 			w, r = reqres(t, h.MethodPut, "", body, j.header, j.ip)
-			s.SrvUserSession(w, r)
+			s.SrvAdmMngS(w, r)
 			require.Equal(t, h.StatusOK, w.Code, "At %d,%d %s",
 				i, k, w.Body.String())
 			logged := s.Match(ip)

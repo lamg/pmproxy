@@ -9,7 +9,6 @@ import (
 type CMng struct {
 	Name string
 	Cons *sync.Map
-	Sm   *SMng
 }
 
 type StrVal struct {
@@ -33,6 +32,7 @@ func (d *ConsAdd) CanGet(n, quota uint64,
 		m = d.m + uint64(float32(n)*cf)
 	}
 	b = m < quota
+	return
 }
 
 // Add depends on a previous call to CanGet
@@ -42,13 +42,10 @@ func (d *ConsAdd) Add(n uint64) {
 	return
 }
 
-func (c *CMng) Get(ip string) (d *ConsAdd, ok bool) {
-	usr, ok := c.Sm.MatchUsr(ip)
-	if ok {
-		d = &ConsAdd{
-			cons: c.Cons,
-			user: usr,
-		}
+func (c *CMng) Get(user string) (d *ConsAdd) {
+	d = &ConsAdd{
+		cons: c.Cons,
+		user: user,
 	}
 	return
 }

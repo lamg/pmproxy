@@ -190,7 +190,11 @@ func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	ui := new(UsrIP)
 	var e error
-	if r.Method == h.MethodPost || r.Method == h.MethodPut {
+	if s.Adm == nil {
+		e = fmt.Errorf("No administrator interface available")
+	}
+	if e == nil && (r.Method == h.MethodPost ||
+		r.Method == h.MethodPut) {
 		e = Decode(r.Body, ui)
 	}
 	if e == nil {
@@ -238,17 +242,17 @@ func (s *SMng) srvLogout(ip string, a h.Header) (e error) {
 }
 
 func (s *SMng) srvSessions(a h.Header, ip string, w io.Writer) (e error) {
-	usr, e := s.cr.getUser(a)
-	if e == nil {
-		if s.Adm != nil {
+	if s.Adm != nil {
+		var usr string
+		usr, e = s.Adm.Sm.cr.getUser(a)
+		if e == nil {
 			nu, ok := s.Adm.Sm.MatchUsr(ip)
 			if !ok || usr != nu {
 				e = fmt.Errorf("Not logged %s", usr)
 			}
-		} else {
-			e = fmt.Errorf("No admin manager in %s", s.Name)
 		}
-
+	} else {
+		e = fmt.Errorf("No admin manager in %s", s.Name)
 	}
 	if e == nil {
 		mp := make(map[string]string)

@@ -18,7 +18,7 @@ type ConSpec struct {
 	Iface string
 	Proxy string
 	Quota uint64
-	Cons  *CMng
+	Cons  *ConsAdd
 	Rt    *Rate
 	Cl    *CLMng
 }
@@ -120,7 +120,17 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 	}
 	b = (i != len(bs)) == d.Unit
 	if b {
-		b = addRes(f, d.Pr, d.Cs, d.Dm, ip)
+		// ConsAdd right place to be initialized
+		var ca *ConsAdd
+		if d.Cs != nil && d.Um != nil {
+
+			user, ok := d.Um.Sm.MatchUsr(ip)
+			// MatchUsr error
+			if ok {
+				ca = d.Cs.Get(user)
+			}
+		}
+		b = addRes(f, d.Pr, ca, d.Dm)
 	}
 	return
 }
@@ -132,7 +142,7 @@ func contIP(r *net.IPNet, ip string) (b bool) {
 	return
 }
 
-func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) (ok bool) {
+func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) (ok bool) {
 	if !s0.CfHPr {
 		s0.Cf = s1.Cf
 	}
@@ -144,7 +154,7 @@ func addRes(s0, s1 *ConSpec, c *CMng, d *DMng, ip string) (ok bool) {
 	}
 	s0.Quota = s0.Quota + s1.Quota
 	if c != nil {
-		s0.Cons, ok = c.Get(ip)
+		s0.Cons = c
 	}
 	if d != nil {
 		s0.Rt = d.NewConnRate()

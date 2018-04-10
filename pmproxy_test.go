@@ -28,7 +28,8 @@ func TestDial(t *testing.T) {
 		Intv: time.Second,
 		Time: now.MustParse("2018-01-01"),
 	}
-	pm := NewPMProxy(rd, cl, dl, time.Second)
+
+	pm := NewPMProxy(rd, cl, dl, time.Second) //root
 	for i, j := range ts {
 		ctx := &gp.ProxyCtx{
 			Req: j.request,
@@ -38,7 +39,8 @@ func TestDial(t *testing.T) {
 		if e == nil {
 			s, e := ioutil.ReadAll(c)
 			require.NoError(t, e)
-			require.Equal(t, j.content, s)
+
+			require.Equal(t, j.content, string(s)) //root
 		}
 	}
 }
@@ -55,6 +57,7 @@ func (d *testGen) genTestStructs() (ts []testS) {
 		if e != nil {
 			panic(e.Error)
 		}
+		req.RemoteAddr = d.loggedAddr[i] + ":4432"
 		ts[i], i = testS{
 			request: req,
 			content: v,
@@ -66,7 +69,7 @@ func (d *testGen) genTestStructs() (ts []testS) {
 }
 
 func (d *testGen) genDet() (rd []Det) {
-	sm, cl := NewSMng("sm", nil, nil), &CLMng{Limit: 100, Name: "cl"}
+	sm, cl := NewSMng("sm", nil, nil), NewCLMng("cl", 100)
 	dm := &DMng{
 		Bandwidth: &Rate{
 			Bytes:     1024,
@@ -75,29 +78,37 @@ func (d *testGen) genDet() (rd []Det) {
 		Name: "dm",
 		Sm:   sm,
 	}
-	for _, j := range d.loggedAddr {
-		sm.login("user", j)
+	for i, j := range d.loggedAddr {
+		usr := fmt.Sprintf("user%d", i)
+		sm.login(usr, j)
 	}
 	cm := &CMng{
 		Cons: new(sync.Map),
 		Name: "cm",
-		Sm:   sm,
+	}
+	ifs, e := net.Interfaces()
+	if e != nil || len(ifs) == 0 {
+		panic("Not found interfaces for runnig test")
 	}
 	rd = []Det{
 		&ResDet{
 			Um: &UsrMtch{
 				Sm: sm,
 			},
+			Unit: true,
+			Cs:   cm,
+			Dm:   dm,
 			Pr: &ConSpec{
 				Cf:    0,
 				Cl:    cl,
-				Cons:  cm,
-				Iface: "eth0",
+				Iface: ifs[0].Name,
 				Quota: 1024,
 				Rt:    dm.NewConnRate(),
 			},
 		},
 	}
+	// currently rd just let the connection pass through
+	// for logged users
 	return
 }
 
