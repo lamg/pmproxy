@@ -102,6 +102,8 @@ func TestAdmGetSessions(t *testing.T) {
 func TestSwappedSessions(t *testing.T) {
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, nil)
+	// TODO checkout if the following is wrong because
+	// dictionary walk order isn't deterministic
 	_, ipa := logTestUsrs(t, s, usrAuthM, 0)
 	_, ipb := logTestUsrs(t, s, usrAuthM, uint32(len(usrAuthM)))
 	// { logged same users in ta but from different IPs.
