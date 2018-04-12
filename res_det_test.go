@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"github.com/jinzhu/now"
 	"github.com/stretchr/testify/require"
 	"net"
 	h "net/http"
@@ -10,25 +11,54 @@ import (
 )
 
 func TestDet(t *testing.T) {
-	_, rg, e := net.ParseCIDR("10.1.1.0/24")
-	require.NoError(t, e)
-	sd := &SqDet{
-		Unit: true,
-		Ds: []Det{
-			&ResDet{
-				Rg: rg,
-			},
-			&ResDet{
-				Ur: regexp.MustCompile("facebook.com"),
-				Pr: &ConSpec{
-					Cf: 0,
+	// TODO test determinators deeply
+	now.TimeFormats = append(now.TimeFormats, time.RFC3339)
+	ts := []struct {
+		ip  string
+		url string
+		tm  string
+		dt  Det
+		ok  bool
+		c   *ConSpec
+	}{
+		{
+			ip:  "10.1.1.24",
+			url: "https://facebook.com",
+			tm:  "2018-04-12T00:00:00-04:00",
+			dt: &SqDet{
+				Unit: true,
+				Ds: []Det{
+					&ResDet{
+						Unit: true,
+						Rg:   parseRange(t, "10.1.1.0/24"),
+						// there's no need to specify Cf here
+					},
+					&ResDet{
+						Unit: true,
+						Ur:   regexp.MustCompile("facebook.com"),
+						Pr: &ConSpec{
+							Cf: 1,
+						},
+					},
 				},
 			},
+			ok: true,
+			c:  &ConSpec{Cf: 1},
 		},
 	}
-	_, q := reqres(t, h.MethodGet, "https://facebook.com", "", "",
-		"10.1.1.34")
-	c := new(ConSpec)
-	sd.Det(q, time.Now(), c)
-	require.Equal(t, float32(0), c.Cf)
+
+	for i, j := range ts {
+		_, q := reqres(t, h.MethodGet, j.url, "", "", j.ip)
+		c, m := new(ConSpec), now.MustParse(j.tm)
+		ok := j.dt.Det(q, m, c)
+		require.Equal(t, j.ok, ok, "At %d", i)
+		require.Equal(t, j.c, c, "At %d", i)
+	}
+}
+
+func parseRange(t *testing.T, cidr string) (n *net.IPNet) {
+	var e error
+	_, n, e = net.ParseCIDR(cidr)
+	require.NoError(t, e)
+	return
 }

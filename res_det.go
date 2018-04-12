@@ -130,7 +130,7 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 				ca = d.Cs.Get(user)
 			}
 		}
-		b = addRes(f, d.Pr, ca, d.Dm)
+		addRes(f, d.Pr, ca, d.Dm)
 	}
 	return
 }
@@ -142,27 +142,28 @@ func contIP(r *net.IPNet, ip string) (b bool) {
 	return
 }
 
-func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) (ok bool) {
-	if !s0.CfHPr {
-		s0.Cf = s1.Cf
+func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) {
+	if s1 != nil {
+		if !s0.CfHPr {
+			s0.Cf = s1.Cf
+		}
+		if s1.Iface != "" {
+			s0.Iface = s1.Iface
+		}
+		if s1.Proxy != "" {
+			s0.Proxy = s1.Proxy
+		}
+		s0.Quota = s0.Quota + s1.Quota
+		if c != nil {
+			s0.Cons = c
+		}
+		if d != nil {
+			s0.Rt = d.NewConnRate()
+		}
+		if s1.Cl != nil {
+			s0.Cl = s1.Cl
+		}
 	}
-	if s1.Iface != "" {
-		s0.Iface = s1.Iface
-	}
-	if s1.Proxy != "" {
-		s0.Proxy = s1.Proxy
-	}
-	s0.Quota = s0.Quota + s1.Quota
-	if c != nil {
-		s0.Cons = c
-	}
-	if d != nil {
-		s0.Rt = d.NewConnRate()
-	}
-	if s1.Cl != nil {
-		s0.Cl = s1.Cl
-	}
-	return
 }
 
 type SqDet struct {
@@ -178,6 +179,6 @@ func (d *SqDet) Det(r *h.Request, t time.Time,
 	for i != len(d.Ds) && (d.Ds[i].Det(r, t, c) == d.Unit) {
 		i = i + 1
 	}
-	b = i != len(d.Ds)
+	b = (i == len(d.Ds)) == d.Unit
 	return
 }
