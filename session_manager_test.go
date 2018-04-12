@@ -60,6 +60,21 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 	return
 }
 
+func logTsLg(t *testing.T, s *SMng, ts []tsLg) {
+	for i, j := range ts {
+		body := fmt.Sprintf(`{"user":"%s","pass":"%s"}`, ts[i].user,
+			ts[i].pass)
+		r, q := reqres(t, h.MethodPost, "", body, "", ts[i].ip)
+		s.SrvUserSession(r, q)
+		require.Equal(t, r.Code, h.StatusOK, "At %s: %s", j.user,
+			r.Body.String())
+		// { logged }
+		usr, ok := s.MatchUsr(ts[i].ip)
+		require.True(t, ok)
+		require.Equal(t, ts[i].user, usr)
+	}
+}
+
 func TestLogout(t *testing.T) {
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, nil)
@@ -102,10 +117,13 @@ func TestAdmGetSessions(t *testing.T) {
 func TestSwappedSessions(t *testing.T) {
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, nil)
-	// TODO checkout if the following is wrong because
-	// dictionary walk order isn't deterministic
-	_, ipa := logTestUsrs(t, s, usrAuthM, 0)
-	_, ipb := logTestUsrs(t, s, usrAuthM, uint32(len(usrAuthM)))
+	ts, ipa := logTestUsrs(t, s, usrAuthM, 0)
+	ipb := make([]string, len(ipa))
+	for i := 0; i != len(ts); i++ {
+		ts[i].ip = fmt.Sprintf("0.0.0.%d", i+len(ipa))
+		ipb[i] = ts[i].ip
+	}
+	logTsLg(t, s, ts)
 	// { logged same users in ta but from different IPs.
 	//   This is done for testing the swapped session message
 	//   sent to users. That message is useful in case of an
