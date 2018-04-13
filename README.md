@@ -71,22 +71,20 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
-- [ ] Marshal and Unmarshal correctly
+- [ ] Custom proxy library and correct elazarl's goproxy runtime panic, which still causes the current PMProxy production version crashes.
 
-- [ ] general request processing pmproxy.go
-- [ ] Redefine the project according the types in res_det.go
-- [x] delay_manager.go
-- [ ] resource [de]serialization persistence_graph.go
-- [x] how much bandwith of a channel consumes a connection at given rate
-- [ ] connector.go, request through proxy must be managed by the proxy itself
-- [ ] configuration management
-- [x] limit the amount of connections per client
+- [ ] configuration and state management (state.go)
 - [ ] provide a list of URLs whose access doesn't add to user consumption
-- [ ] provide the amount of opened connections to the user. Implies getting at hand all CLMng, probably using the persistence graph. Which is another interface to what underlies in PMProxy.Rd
-- [x] priority of consumption coeficient
 - [ ] JSON marshalers and unmarshalers
 	- [x] SMng
-- [ ] Test PMProxy
-	- [ ] TestDial
-		- [ ] Add SMng to CMng to be able to implement CMng.Get(ip)
-		- [ ] fix session_manager_test.go
+- [x] Test PMProxy
+- [ ] res_det_test.go
+	- [ ] MarshalJSON and UnmarshalJSON
+- [ ] Test CLMng
+- [ ] Full test coverage of connect in connector.go
+- [ ] consumption_manager_test.go
+- [ ] Test ServeHTTP in delay_manager.go
+- [ ] Test GrpMtch.Match in matchers.go
+- [ ] Test error messages in session_manager.go
+	- [ ] Test checkUser in session_manager.go
+- [ ] Test coverage also leaves out some code in util.go
