@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"bytes"
-	"crypto/rsa"
 	h "net/http"
 	"testing"
 	"time"
@@ -19,14 +18,10 @@ func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e error) {
 	bf = bytes.NewBufferString(accR)
 	var l []AccExcp
 	l, e = ReadAccExcp(bf)
-	var pKey *rsa.PrivateKey
-	if e == nil {
-		pKey, e = parseKey()
-	}
 
 	var sm *SMng
 	if e == nil {
-		da, cry := newDAuth(), NewJWTCrypt(pKey)
+		da, cry := newDAuth(), NewJWTCrypt()
 		sm = NewSMng(da, cry)
 	}
 	var gq *QuotaMap

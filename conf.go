@@ -1,7 +1,6 @@
 package pmproxy
 
 import (
-	"crypto/rsa"
 	"io"
 	h "net/http"
 	"net/url"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/lamg/clock"
 
-	"github.com/dgrijalva/jwt-go"
 	fs "github.com/lamg/filesystem"
 	"github.com/lamg/wfact"
 )
@@ -149,14 +147,6 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		f.Close()
 	}
 
-	var bs []byte
-	if e == nil {
-		bs, e = fsm.ReadFile(c.KeyFl)
-	}
-	var pkey *rsa.PrivateKey
-	if e == nil {
-		pkey, e = jwt.ParseRSAPrivateKeyFromPEM(bs)
-	}
 	if e == nil {
 		f, e = fsm.Open(c.AccExcp)
 	}
@@ -177,7 +167,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 		lga, e = url.Parse(c.LoginAddr)
 	}
 	if e == nil {
-		cry := NewJWTCrypt(pkey)
+		cry := NewJWTCrypt()
 		sm := NewSMng(udb, cry)
 		dt := wfact.NewDateArchiver(c.LogBName, fsm)
 		rl, qa := NewRLog(dt, sm), NewQAdm(sm, gq, uc, accExc, cl)

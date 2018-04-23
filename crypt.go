@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"io"
+	"math/rand"
 	"strings"
+	"time"
 )
 
 // User is the type representing a logged user into the
@@ -65,8 +67,12 @@ type JWTUser struct {
 }
 
 // NewJWTCrypt creates a new JWTCrypt
-func NewJWTCrypt(p *rsa.PrivateKey) (j *JWTCrypt) {
-	j = &JWTCrypt{pKey: p}
+func NewJWTCrypt() (j *JWTCrypt) {
+	x, e := rsa.GenerateKey(rand.New(rand.NewSource(43)), 1024)
+	if e != nil {
+		panic(e.Error())
+	}
+	j = &JWTCrypt{pKey: x}
 	return
 }
 
@@ -75,6 +81,7 @@ func (j *JWTCrypt) encrypt(c *credentials) (s string, e error) {
 	e = Encode(bf, c)
 	if e == nil {
 		uc := &JWTUser{Data: bf.String()}
+		uc.ExpiresAt = time.Now().Add(time.Hour).Unix()
 		t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
 		s, e = t.SignedString(j.pKey)
 	}

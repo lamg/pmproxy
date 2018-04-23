@@ -13,9 +13,7 @@ var (
 )
 
 func TestSessionManager(t *testing.T) {
-	pKey, e := parseKey()
-	require.True(t, e == nil)
-	a, c := newDAuth(), NewJWTCrypt(pKey)
+	a, c := newDAuth(), NewJWTCrypt()
 	sm := NewSMng(a, c)
 	tss := []struct {
 		cr *credentials
@@ -37,7 +35,7 @@ func TestSessionManager(t *testing.T) {
 	}
 	lr0, _ := sm.login(coco, cocoIP)
 	lr1, _ := sm.login(coco, pepeIP)
-	_, e = sm.check(cocoIP, lr0.Scrt)
+	_, e := sm.check(cocoIP, lr0.Scrt)
 	require.Error(t, e)
 	_, e = sm.check(pepeIP, lr1.Scrt)
 	require.NoError(t, e)
