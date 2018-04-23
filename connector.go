@@ -17,7 +17,7 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 	timeout time.Duration, cl clock.Clock, d Dialer) (c net.Conn,
 	e error) {
 	if !s.Valid() {
-		e = fmt.Errorf("La conexión no puede completarse %v", s)
+		e = InvCSpecErr(s)
 	}
 	if e == nil {
 		if s.Proxy != "" {
@@ -103,7 +103,7 @@ func (c *quotaConn) Read(bs []byte) (n int, e error) {
 	if c.Cons.CanGet(uint64(len(bs)), c.Quota, c.Cf) {
 		n, e = c.Conn.Read(bs)
 	} else {
-		e = DwnOverMsg(0) // FIXME meaningless parameter
+		e = DwnOverMsg() // FIXME meaningless parameter
 	}
 	if e == nil {
 		c.Cons.Add(uint64(n))
@@ -151,13 +151,40 @@ func interfaceConn(iface, addr string,
 			}
 		}
 		if i == len(laddr) {
-			e = fmt.Errorf("Not found IPv4 address")
+			e = NotIPv4Err()
 		}
 		// { found an IPv4 local address in laddr for dialing or error }
 	}
 	if e == nil {
 		tca := &net.TCPAddr{IP: la.IP}
 		c, e = d.Dial(tca, timeout, addr)
+	}
+	return
+}
+
+type IfaceProv interface {
+	InterfaceByName(string) (*net.Interface., error)
+}
+
+type OSIfProv struct {
+}
+
+func (p *OSIfProv) InterfaceByName(name string) (n *net.Interface,
+	e error) {
+	n, e = net.InterfaceByName(name)
+	return
+}
+
+type MIfaceProv struct {
+	Mp map[string]*net.Interface
+}
+
+func (p *MIfaceProv) InterfaceByName(name string) (n *net.Interface,
+e error){
+	m, ok := p.Mp[name]
+	if !ok {
+		e = fmt.Errorf("Not found interface %s", name)// TODO make equal
+		// to net.InterfaceByName error
 	}
 	return
 }
@@ -169,8 +196,8 @@ func proxyConn(p *gp.ProxyHttpServer,
 }
 
 // DwnOverMsg quota over message
-func DwnOverMsg(m uint64) (e error) {
-	e = fmt.Errorf("Quota %d over", m)
+func DwnOverMsg() (e error) {
+	e = fmt.Errorf("Quota over")
 	return
 }
 
@@ -178,5 +205,15 @@ func DwnOverMsg(m uint64) (e error) {
 func TimeOverMsg(a, b time.Time) (e error) {
 	e = fmt.Errorf("%s → %s", a.Format(time.RFC3339),
 		b.Format(time.RFC3339))
+	return
+}
+
+func InvCSpecErr(s *ConSpec) (e error) {
+	e = fmt.Errorf("La conexión no puede completarse %v", s)
+	return
+}
+
+func NotIPv4Err() (e error) {
+	e = fmt.Errorf("Not found IPv4 address")
 	return
 }
