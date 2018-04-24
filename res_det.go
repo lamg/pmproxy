@@ -21,10 +21,11 @@ type ConSpec struct {
 	Cons  *ConsAdd
 	Rt    *Rate
 	Cl    *CLMng
+	Test  bool
 }
 
 func (s *ConSpec) Valid() (b bool) {
-	b = s.Cf >= 0 && (s.Iface != "" || s.Proxy != "") &&
+	b = s.Cf >= 0 && (s.Iface != "" || s.Proxy != "" || s.Test) &&
 		s.Cons != nil && s.Rt != nil
 	return
 }
@@ -127,7 +128,7 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 			user, ok := d.Um.Sm.MatchUsr(ip)
 			// MatchUsr error
 			if ok {
-				ca = d.Cs.Get(user)
+				ca = d.Cs.Adder(user)
 			}
 		}
 		addRes(f, d.Pr, ca, d.Dm)

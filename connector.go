@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/juju/ratelimit"
 	"github.com/lamg/clock"
@@ -22,8 +23,12 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 	if e == nil {
 		if s.Proxy != "" {
 			c, e = proxyConn(p, s.Proxy, addr)
-		} else {
+		} else if s.Iface != "" {
 			c, e = interfaceConn(s.Iface, addr, timeout, d)
+		} else if s.Test {
+			c = &bfConn{
+				Buffer: bytes.NewBufferString(""),
+			}
 		}
 	}
 	if e == nil {
@@ -103,7 +108,7 @@ func (c *quotaConn) Read(bs []byte) (n int, e error) {
 	if c.Cons.CanGet(uint64(len(bs)), c.Quota, c.Cf) {
 		n, e = c.Conn.Read(bs)
 	} else {
-		e = DwnOverMsg() // FIXME meaningless parameter
+		e = DwnOverMsg()
 	}
 	if e == nil {
 		c.Cons.Add(uint64(n))
@@ -163,7 +168,7 @@ func interfaceConn(iface, addr string,
 }
 
 type IfaceProv interface {
-	InterfaceByName(string) (*net.Interface., error)
+	InterfaceByName(string) (*net.Interface, error)
 }
 
 type OSIfProv struct {
@@ -180,10 +185,11 @@ type MIfaceProv struct {
 }
 
 func (p *MIfaceProv) InterfaceByName(name string) (n *net.Interface,
-e error){
-	m, ok := p.Mp[name]
+	e error) {
+	var ok bool
+	n, ok = p.Mp[name]
 	if !ok {
-		e = fmt.Errorf("Not found interface %s", name)// TODO make equal
+		e = fmt.Errorf("Not found interface %s", name) // TODO make equal
 		// to net.InterfaceByName error
 	}
 	return

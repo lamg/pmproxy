@@ -11,6 +11,14 @@ type CMng struct {
 	Cons *sync.Map
 }
 
+func NewCMng(name string) (c *CMng) {
+	c = &CMng{
+		Name: name,
+		Cons: new(sync.Map),
+	}
+	return
+}
+
 type StrVal struct {
 	Str string
 	Val uint64
@@ -42,7 +50,7 @@ func (d *ConsAdd) Add(n uint64) {
 	return
 }
 
-func (c *CMng) Get(user string) (d *ConsAdd) {
+func (c *CMng) Adder(user string) (d *ConsAdd) {
 	d = &ConsAdd{
 		cons: c.Cons,
 		user: user,

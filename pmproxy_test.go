@@ -137,8 +137,13 @@ func (m *mapDl) Dial(l *net.TCPAddr, t time.Duration,
 			remote: r,
 		}
 	} else {
-		e = fmt.Errorf("Not found key %s", addr)
+		e = notFoundAddr(addr)
 	}
+	return
+}
+
+func notFoundAddr(addr string) (e error) {
+	e = fmt.Errorf("Not found address %s", addr)
 	return
 }
 
