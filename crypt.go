@@ -8,7 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"strings"
-	"time"
+	//"time"
 )
 
 // User is the type representing a logged user into the
@@ -81,7 +81,7 @@ func (j *JWTCrypt) encrypt(c *credentials) (s string, e error) {
 	e = Encode(bf, c)
 	if e == nil {
 		uc := &JWTUser{Data: bf.String()}
-		uc.ExpiresAt = time.Now().Add(time.Hour).Unix()
+		//uc.ExpiresAt = time.Now().Add(time.Hour).Unix()
 		t := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
 		s, e = t.SignedString(j.pKey)
 	}
