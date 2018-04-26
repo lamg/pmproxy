@@ -2,6 +2,8 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/gorilla/mux"
 	h "net/http"
 	"sync"
 )
@@ -58,38 +60,45 @@ func (c *CMng) Adder(user string) (d *ConsAdd) {
 	return
 }
 
-// SrvCs is an h.HandleFunc for serving and modifying
-// consumptions
-func (c *CMng) SrvCs(w h.ResponseWriter, r *h.Request) {
-	var e error
-	if r.Method == h.MethodGet {
-		mp := make(map[string]uint64)
-		c.Cons.Range(func(k, v interface{}) (b bool) {
-			mp[k.(string)] = v.(uint64)
-			b = true
-			return
-		})
-		e = Encode(w, &mp)
-	} else if r.Method == h.MethodPost {
-		// load value
-		cs := new(StrVal)
-		e = Decode(r.Body, cs)
-		if e == nil {
-			v, ok := c.Cons.Load(cs.Str)
-			if ok {
-				e = Encode(w, v)
-			}
-		}
-	} else if e == nil && r.Method == h.MethodPut {
-		// store or delete value
-		cs := new(StrVal)
-		e = Decode(r.Body, cs)
-		if e == nil {
-			if cs.Val == 0 {
-				c.Cons.Delete(cs.Str)
-			} else {
-				c.Cons.Store(cs.Str, cs.Val)
-			}
+func (c *CMng) ServeCons(w h.ResponseWriter, r *h.Request) {
+	// r.Method = h.MethodGet
+	mp := make(map[string]uint64)
+	c.Cons.Range(func(k, v interface{}) (b bool) {
+		mp[k.(string)] = v.(uint64)
+		b = true
+		return
+	})
+	e := Encode(w, &mp)
+	writeErr(w, e)
+}
+
+const (
+	UserVar = "user"
+)
+
+func (c *CMng) ServeUserCons(w h.ResponseWriter, r *h.Request) {
+	// r.Method = h.MethodGet
+	vrs := mux.Vars(r)
+	usr := vrs[UserVar]
+	// got user name from url
+	v, ok := c.Cons.Load(usr)
+	if ok {
+		_, e := fmt.Fprintf(w, "%d", v)
+		writeErr(w, e)
+	}
+}
+
+func (c *CMng) ServeModUsrCons(w h.ResponseWriter, r *h.Request) {
+	// r.Method == h.MethodPut
+	vrs, v := mux.Vars(r), uint64(0)
+	usr := vrs[UserVar]
+	// got user name from url
+	_, e := fmt.Fscanf(r.Body, "%d", &v)
+	if e == nil {
+		if v == 0 {
+			c.Cons.Delete(usr)
+		} else {
+			c.Cons.Store(usr, v)
 		}
 	}
 	writeErr(w, e)
