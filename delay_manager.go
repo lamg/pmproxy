@@ -36,27 +36,31 @@ type dInfo struct {
 	ConnR     *Rate  `json:"connR"`
 }
 
-func (d *DMng) ServeHTTP(w h.ResponseWriter, r *h.Request) {
+func (d *DMng) ServeInfo(w h.ResponseWriter, r *h.Request) {
+	// sends info about bandwidth, current amount of connections
+	// and current connection rate
+	// r.Method = h.MethodGet
 	ip, _, e := net.SplitHostPort(r.RemoteAddr)
-	if e == nil && d.Sm.Match(ip) {
-		if r.Method == h.MethodGet {
-			// sends info about bandwidth, current amount of connections
-			// and current connection rate
-			inf := &dInfo{
-				Bandwidth: d.Bandwidth,
-				CurrConn:  d.currConn,
-				ConnR:     d.connR,
-			}
-			e = Encode(w, inf)
-		} else if r.Method == h.MethodPut {
-			// sets bandwidth
-			bw := new(Rate)
-			e = Decode(r.Body, bw)
-			if e == nil {
-				d.Bandwidth = bw
-			}
-		} else {
-			e = NotSuppMeth(r.Method)
+	if d.Sm.Match(ip) {
+		inf := &dInfo{
+			Bandwidth: d.Bandwidth,
+			CurrConn:  d.currConn,
+			ConnR:     d.connR,
+		}
+		e = Encode(w, inf)
+	}
+	writeErr(w, e)
+}
+
+func (d *DMng) ServeSetBW(w h.ResponseWriter, r *h.Request) {
+	// sets bandwidth
+	// r.Method = h.MethodPut
+	ip, _, e := net.SplitHostPort(r.RemoteAddr)
+	if d.Sm.Match(ip) {
+		bw := new(Rate)
+		e = Decode(r.Body, bw)
+		if e == nil {
+			d.Bandwidth = bw
 		}
 	}
 	writeErr(w, e)
