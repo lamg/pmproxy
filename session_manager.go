@@ -25,11 +25,16 @@ func (a *Auth) Authenticate(user, pass string) (usr string, e error) {
 		if ok {
 			usr = user
 		} else {
-			e = fmt.Errorf("Contraseña incorrecta para %s", user)
+			e = WrongPassErr(user)
 		}
 	} else {
 		usr, e = a.Ld.AuthAndNorm(user, pass)
 	}
+	return
+}
+
+func WrongPassErr(user string) (e error) {
+	e = fmt.Errorf("Contraseña incorrecta para %s", user)
 	return
 }
 

@@ -24,6 +24,9 @@ func TestLogin(t *testing.T) {
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, nil)
 	logTestUsrs(t, s, usrAuthM, 0)
+	wusr := "bla"
+	_, e := ua.Authenticate(wusr, "co")
+	require.Equal(t, WrongPassErr(wusr), e)
 }
 
 func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
