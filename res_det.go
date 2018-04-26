@@ -73,17 +73,33 @@ type rdJ struct {
 }
 
 func (d *ResDet) MarshalJSON() (bs []byte, e error) {
+	rg, ur, cs, dm, cl := "", "", "", "", ""
+	if d.Rg != nil {
+		rg = d.Rg.String()
+	}
+	if d.Ur != nil {
+		ur = d.Ur.String()
+	}
+	if d.Cs != nil {
+		cs = d.Cs.Name
+	}
+	if d.Dm != nil {
+		dm = d.Dm.Name
+	}
+	if d.Cl != nil {
+		cl = d.Cl.Name
+	}
 	j := &rdJ{
 		Unit: d.Unit,
 		Rs:   d.Rs,
-		Rg:   d.Rg.String(),
-		Ur:   d.Ur.String(),
+		Rg:   rg,
+		Ur:   ur,
 		Gm:   d.Gm,
 		Um:   d.Um,
 		Pr:   d.Pr,
-		Cs:   d.Cs.Name,
-		Dm:   d.Dm.Name,
-		Cl:   d.Cl.Name,
+		Cs:   cs,
+		Dm:   dm,
+		Cl:   cl,
 	}
 	bs, e = json.Marshal(j)
 	return
@@ -95,10 +111,23 @@ func (d *ResDet) UnmarshalJSON(bs []byte) (e error) {
 	if e == nil {
 		d.Unit, d.Rs, d.Gm, d.Um, d.Pr = v.Unit, v.Rs, v.Gm, v.Um,
 			v.Pr
-		_, d.Rg, e = net.ParseCIDR(v.Rg)
+		if v.Rg != "" {
+			_, d.Rg, e = net.ParseCIDR(v.Rg)
+		}
 	}
-	if e == nil {
+	if e == nil && v.Ur != "" {
 		d.Ur, e = regexp.Compile(v.Ur)
+	}
+	if v.Cl != "" {
+		d.Cl = NewCLMng(v.Cl, 0)
+	}
+	if v.Cs != "" {
+		d.Cs = NewCMng(v.Cs)
+	}
+	if v.Dm != "" {
+		d.Dm = &DMng{
+			Name: v.Dm,
+		}
 	}
 	return
 }

@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"github.com/jinzhu/now"
 	rs "github.com/lamg/rtimespan"
 	"github.com/stretchr/testify/require"
@@ -129,5 +130,32 @@ func parseRange(t *testing.T, cidr string) (n *net.IPNet) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	//TODO
+	rs := []*ResDet{
+		&ResDet{
+			Unit: true,
+			Rg:   parseRange(t, "10.1.1.0/24"),
+			// there's no need to specify Cf here
+			Pr: &ConSpec{
+				Cf: 3,
+			},
+			Dm: &DMng{
+				Name: "dm",
+			},
+			Cs: NewCMng("cs"),
+		},
+		&ResDet{
+			Unit: true,
+			Ur:   regexp.MustCompile("facebook.com"),
+			Pr: &ConSpec{
+				Cf:    1,
+				Proxy: "http://proxy.cu:8080",
+			},
+			Cl: NewCLMng("cl", 0),
+		},
+	}
+	bs, e := json.Marshal(rs)
+	require.NoError(t, e)
+	rd := make([]*ResDet, 0)
+	json.Unmarshal(bs, &rd)
+	require.Equal(t, rs, rd)
 }
