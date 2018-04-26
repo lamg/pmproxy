@@ -19,31 +19,20 @@ type ConSpec struct {
 	Proxy string
 	Quota uint64
 	Cons  *ConsAdd
-	Rt    *Rate
+	Dm    *DMng
 	Cl    *CLMng
 	Test  bool
 }
 
 func (s *ConSpec) Valid() (b bool) {
 	b = s.Cf >= 0 && (s.Iface != "" || s.Proxy != "" || s.Test) &&
-		s.Cons != nil && s.Rt != nil
+		s.Cons != nil && s.Dm != nil
 	return
 }
 
 type Rate struct {
 	Bytes     uint64
 	TimeLapse time.Duration
-	CurrConn  *uint64
-}
-
-func NewRate(bytes uint64, lapse time.Duration) (r *Rate) {
-	r = &Rate{
-		Bytes:     bytes,
-		TimeLapse: lapse,
-	}
-	n := uint64(0)
-	r.CurrConn = &n
-	return
 }
 
 type Det interface {
@@ -169,7 +158,7 @@ func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) {
 			s0.Cons = c
 		}
 		if d != nil {
-			s0.Rt = d.NewConnRate()
+			s0.Dm = s1.Dm
 		}
 		if s1.Cl != nil {
 			s0.Cl = s1.Cl

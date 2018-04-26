@@ -104,7 +104,7 @@ func (d *testGen) genDet() (rd []Det) {
 				Cl:    cl,
 				Iface: ifs[0].Name,
 				Quota: 1024,
-				Rt:    dm.NewConnRate(),
+				Dm:    dm,
 			},
 		},
 	}

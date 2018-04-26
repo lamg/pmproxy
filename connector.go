@@ -42,8 +42,8 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 				sp:   s.Span,
 			}
 		}
-		if s.Rt != nil {
-			c = throttleConn(c, s.Rt)
+		if s.Dm != nil {
+			c = throttleConn(c, s.Dm)
 		}
 		if s.Cl != nil && s.Cl.AddConn(c.LocalAddr().String()) {
 			c = &limitConn{
@@ -74,7 +74,7 @@ func (c *limitConn) Close() (e error) {
 }
 
 type thrConn struct {
-	rt *Rate
+	dm *DMng
 	net.Conn
 	r io.Reader
 }
@@ -85,17 +85,18 @@ func (c *thrConn) Read(bs []byte) (n int, e error) {
 }
 
 func (c *thrConn) Close() (e error) {
-	*c.rt.CurrConn = *c.rt.CurrConn - 1
+	c.dm.DecConn()
 	e = c.Conn.Close()
 	return
 }
 
-func throttleConn(c net.Conn, r *Rate) (n net.Conn) {
+func throttleConn(c net.Conn, dm *DMng) (n net.Conn) {
+	r := dm.IncConn()
 	bk := ratelimit.NewBucket(r.TimeLapse, int64(r.Bytes))
 	n = &thrConn{
 		Conn: c,
 		r:    ratelimit.Reader(c, bk),
-		rt:   r,
+		dm:   dm,
 	}
 	return
 }

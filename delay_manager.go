@@ -14,18 +14,31 @@ type DMng struct {
 	Sm        *SMng `json:"sm"`
 }
 
-func (d *DMng) NewConnRate() (r *Rate) {
+func (d *DMng) IncConn() (r *Rate) {
 	d.currConn = d.currConn + 1
+	r = d.updateRate()
+	return
+}
+
+func (d *DMng) DecConn() {
+	d.currConn = d.currConn - 1
+	d.updateRate()
+}
+
+func (d *DMng) updateRate() (r *Rate) {
 	if d.connR == nil {
 		d.connR = &Rate{
 			TimeLapse: time.Millisecond,
 		}
 	}
-	d.connR.Bytes = d.Bandwidth.Bytes / d.currConn
+	if d.currConn == 0 {
+		d.connR.Bytes = d.Bandwidth.Bytes
+	} else {
+		d.connR.Bytes = d.Bandwidth.Bytes / d.currConn
+	}
 	r = &Rate{
 		Bytes:     d.connR.Bytes,
 		TimeLapse: d.connR.TimeLapse,
-		CurrConn:  &d.currConn,
 	}
 	return
 }

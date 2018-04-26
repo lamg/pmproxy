@@ -19,7 +19,14 @@ func TestConnect(t *testing.T) {
 	if e != nil || len(ifs) == 0 {
 		panic("Not found interfaces for runnig test")
 	}
-	cm := NewCMng("cm")
+	cm, dm := NewCMng("cm"),
+		&DMng{
+			Name: "dm",
+			Bandwidth: &Rate{
+				Bytes:     1024,
+				TimeLapse: time.Millisecond,
+			},
+		}
 	clm, ca := NewCLMng("clm", 100), cm.Adder("coco")
 	ts := []tConn{
 		{
@@ -36,7 +43,7 @@ func TestConnect(t *testing.T) {
 				Cons:  ca,
 				Proxy: "http://proxy.net",
 				Quota: 1024,
-				Rt:    NewRate(8, time.Millisecond),
+				Dm:    dm,
 				Span:  nil,
 			},
 			err: &net.OpError{
@@ -54,7 +61,7 @@ func TestConnect(t *testing.T) {
 				Cl:    clm,
 				Cons:  cm.Adder("pepe"),
 				Quota: 2048,
-				Rt:    NewRate(16, time.Millisecond),
+				Dm:    dm,
 				Span: &rs.RSpan{
 					AllTime: true,
 				},
@@ -68,7 +75,7 @@ func TestConnect(t *testing.T) {
 				Cl:    clm,
 				Cons:  cm.Adder("kiko"),
 				Quota: 4096,
-				Rt:    NewRate(32, time.Millisecond),
+				Dm:    dm,
 				Span: &rs.RSpan{
 					Start:  actSpanStart,
 					Active: time.Hour,
@@ -87,7 +94,7 @@ func TestConnect(t *testing.T) {
 				Cl:    clm,
 				Cons:  cm.Adder("kiko"),
 				Quota: 0,
-				Rt:    NewRate(32, time.Millisecond),
+				Dm:    dm,
 				Span: &rs.RSpan{
 					Start:  actSpanStart,
 					Active: time.Hour,
@@ -106,7 +113,7 @@ func TestConnect(t *testing.T) {
 				Cons:  cm.Adder("cuco"),
 				Iface: "eth0",
 				Quota: 8192,
-				Rt:    NewRate(32, time.Millisecond),
+				Dm:    dm,
 			},
 			err: NotIPErr(),
 		},
@@ -118,7 +125,7 @@ func TestConnect(t *testing.T) {
 				Cons:  cm.Adder("pepa"),
 				Iface: "lo",
 				Quota: 1,
-				Rt:    NewRate(1, time.Millisecond),
+				Dm:    dm,
 			},
 			err: NotFoundIface("lo"),
 		},
