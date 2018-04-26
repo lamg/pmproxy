@@ -15,16 +15,18 @@ type PMProxy struct {
 	Dl      Dialer
 	pr      *gp.ProxyHttpServer
 	Timeout time.Duration
+	Ifp     IfaceProv
 }
 
 func NewPMProxy(rd []Det, cl clock.Clock, d Dialer,
-	t time.Duration) (p *PMProxy) {
+	t time.Duration, ifp IfaceProv) (p *PMProxy) {
 	p = &PMProxy{
 		Rd:      rd,
 		Cl:      cl,
 		Dl:      d,
 		pr:      gp.NewProxyHttpServer(),
 		Timeout: t,
+		Ifp:     ifp,
 	}
 	return
 }
@@ -37,6 +39,7 @@ func (p *PMProxy) Dial(ntw, addr string,
 	for i := 0; i != len(p.Rd); i++ {
 		p.Rd[i].Det(ctx.Req, nw, s)
 	}
-	c, e = connect(addr, s, p.pr, p.Timeout, p.Cl, p.Dl)
+	c, e = connect(addr, s, p.pr, p.Timeout, p.Cl, p.Dl,
+		p.Ifp)
 	return
 }

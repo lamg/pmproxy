@@ -15,8 +15,8 @@ import (
 // connect returns a connection according with the specifications
 // in s
 func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
-	timeout time.Duration, cl clock.Clock, d Dialer) (c net.Conn,
-	e error) {
+	timeout time.Duration, cl clock.Clock, d Dialer,
+	ifp IfaceProv) (c net.Conn, e error) {
 	if !s.Valid() {
 		e = InvCSpecErr(s)
 	}
@@ -24,10 +24,13 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 		if s.Proxy != "" {
 			c, e = proxyConn(p, s.Proxy, addr)
 		} else if s.Iface != "" {
-			c, e = interfaceConn(s.Iface, addr, timeout, d)
+			c, e = interfaceConn(s.Iface, addr, timeout, d, ifp)
 		} else if s.Test {
 			c = &bfConn{
 				Buffer: bytes.NewBufferString(""),
+				local: &net.TCPAddr{
+					IP: []byte{10, 1, 1, 1},
+				},
 			}
 		}
 	}
@@ -42,7 +45,7 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 		if s.Rt != nil {
 			c = throttleConn(c, s.Rt)
 		}
-		if s.Cl != nil && s.Cl.AddConn(addr) {
+		if s.Cl != nil && s.Cl.AddConn(c.LocalAddr().String()) {
 			c = &limitConn{
 				Conn: c,
 				l:    s.Cl,
@@ -66,7 +69,7 @@ type limitConn struct {
 
 func (c *limitConn) Close() (e error) {
 	c.l.DecreaseAm(c.LocalAddr().String())
-	e = c.Close()
+	e = c.Conn.Close()
 	return
 }
 
@@ -137,28 +140,22 @@ type Dialer interface {
 	Dial(*net.TCPAddr, time.Duration, string) (net.Conn, error)
 }
 
-func interfaceConn(iface, addr string,
-	timeout time.Duration, d Dialer) (c net.Conn, e error) {
+func interfaceConn(iface, addr string, timeout time.Duration,
+	d Dialer, ifp IfaceProv) (c net.Conn, e error) {
 	var ief *net.Interface
-	ief, e = net.InterfaceByName(iface)
+	ief, e = ifp.InterfaceByName(iface)
 	var laddr []net.Addr
 	if e == nil {
 		laddr, e = ief.Addrs()
 	}
 	var la *net.IPNet
 	if e == nil {
-		ok, i := false, 0
-		for !ok && i != len(laddr) {
-			la = laddr[i].(*net.IPNet)
-			ok = la.IP.To4() != nil
-			if !ok {
-				i = i + 1
-			}
+		if len(laddr) != 0 {
+			la = laddr[0].(*net.IPNet)
+		} else {
+			e = NotIPErr()
 		}
-		if i == len(laddr) {
-			e = NotIPv4Err()
-		}
-		// { found an IPv4 local address in laddr for dialing or error }
+		// { found an IP local address in laddr for dialing or error }
 	}
 	if e == nil {
 		tca := &net.TCPAddr{IP: la.IP}
@@ -189,9 +186,14 @@ func (p *MIfaceProv) InterfaceByName(name string) (n *net.Interface,
 	var ok bool
 	n, ok = p.Mp[name]
 	if !ok {
-		e = fmt.Errorf("Not found interface %s", name) // TODO make equal
-		// to net.InterfaceByName error
+		e = NotFoundIface(name)
 	}
+	return
+}
+
+func NotFoundIface(name string) (e error) {
+	e = fmt.Errorf("Not found interface %s", name) // TODO make equal
+	// to net.InterfaceByName error
 	return
 }
 
@@ -219,7 +221,7 @@ func InvCSpecErr(s *ConSpec) (e error) {
 	return
 }
 
-func NotIPv4Err() (e error) {
-	e = fmt.Errorf("Not found IPv4 address")
+func NotIPErr() (e error) {
+	e = fmt.Errorf("Not found local IP address")
 	return
 }

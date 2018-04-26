@@ -36,6 +36,16 @@ type Rate struct {
 	CurrConn  *uint64
 }
 
+func NewRate(bytes uint64, lapse time.Duration) (r *Rate) {
+	r = &Rate{
+		Bytes:     bytes,
+		TimeLapse: lapse,
+	}
+	n := uint64(0)
+	r.CurrConn = &n
+	return
+}
+
 type Det interface {
 	Det(*h.Request, time.Time, *ConSpec) bool
 }

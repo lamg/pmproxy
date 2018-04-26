@@ -36,11 +36,8 @@ func TestConnect(t *testing.T) {
 				Cons:  ca,
 				Proxy: "http://proxy.net",
 				Quota: 1024,
-				Rt: &Rate{
-					Bytes:     8,
-					TimeLapse: time.Millisecond,
-				},
-				Span: nil,
+				Rt:    NewRate(8, time.Millisecond),
+				Span:  nil,
 			},
 			err: &net.OpError{
 				Op:     "dial",
@@ -57,10 +54,7 @@ func TestConnect(t *testing.T) {
 				Cl:    clm,
 				Cons:  cm.Adder("pepe"),
 				Quota: 2048,
-				Rt: &Rate{
-					Bytes:     16,
-					TimeLapse: time.Millisecond,
-				},
+				Rt:    NewRate(16, time.Millisecond),
 				Span: &rs.RSpan{
 					AllTime: true,
 				},
@@ -74,10 +68,7 @@ func TestConnect(t *testing.T) {
 				Cl:    clm,
 				Cons:  cm.Adder("kiko"),
 				Quota: 4096,
-				Rt: &Rate{
-					Bytes:     32,
-					TimeLapse: time.Millisecond,
-				},
+				Rt:    NewRate(32, time.Millisecond),
 				Span: &rs.RSpan{
 					Start:  actSpanStart,
 					Active: time.Hour,
@@ -89,17 +80,64 @@ func TestConnect(t *testing.T) {
 			errRd: TimeOverMsg(clockDate.Add(24*time.Hour),
 				clockDate.Add(25*time.Hour)),
 		},
+		{
+			addr: "jeje.org",
+			spec: &ConSpec{
+				Cf:    1,
+				Cl:    clm,
+				Cons:  cm.Adder("kiko"),
+				Quota: 0,
+				Rt:    NewRate(32, time.Millisecond),
+				Span: &rs.RSpan{
+					Start:  actSpanStart,
+					Active: time.Hour,
+					Total:  24 * time.Hour,
+					Times:  1,
+				},
+				Test: true,
+			},
+			errRd: DwnOverMsg(),
+		},
+		{
+			addr: "jiji.com",
+			spec: &ConSpec{
+				Cf:    1,
+				Cl:    clm,
+				Cons:  cm.Adder("cuco"),
+				Iface: "eth0",
+				Quota: 8192,
+				Rt:    NewRate(32, time.Millisecond),
+			},
+			err: NotIPErr(),
+		},
+		{
+			addr: "jojo.net",
+			spec: &ConSpec{
+				Cf:    1,
+				Cl:    clm,
+				Cons:  cm.Adder("pepa"),
+				Iface: "lo",
+				Quota: 1,
+				Rt:    NewRate(1, time.Millisecond),
+			},
+			err: NotFoundIface("lo"),
+		},
 	}
 
-	cl, dl, p := &clock.TClock{
+	cl, dl, p, ifp := &clock.TClock{
 		Time: clockDate,
 		Intv: time.Minute,
 	},
 		connDialer(ts),
-		goproxy.NewProxyHttpServer()
+		goproxy.NewProxyHttpServer(),
+		&MIfaceProv{
+			Mp: map[string]*net.Interface{
+				"eth0": &net.Interface{Name: "eth0"},
+			},
+		}
 
 	for i, j := range ts {
-		c, e := connect(j.addr, j.spec, p, time.Second, cl, dl)
+		c, e := connect(j.addr, j.spec, p, time.Second, cl, dl, ifp)
 		ope, ok := e.(*net.OpError)
 		if ok {
 			ope.Err = nil
@@ -111,6 +149,10 @@ func TestConnect(t *testing.T) {
 			bs, e = ioutil.ReadAll(c)
 			require.Equal(t, j.errRd, e)
 			require.Equal(t, j.content, string(bs), "At %d", i)
+			n := clm.GetAmount(c.LocalAddr().String())
+			c.Close()
+			m := clm.GetAmount(c.LocalAddr().String())
+			require.Equal(t, m+1, n)
 		}
 	}
 }

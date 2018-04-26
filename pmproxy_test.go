@@ -24,12 +24,13 @@ func TestDial(t *testing.T) {
 		loggedAddr: []string{"0.0.0.0", "0.0.0.1"},
 	}
 	ts, rd, dl := d.genTestStructs(), d.genDet(), d.genDialer()
-	cl := &clock.TClock{
+	cl, ifp := &clock.TClock{
 		Intv: time.Second,
 		Time: now.MustParse("2018-01-01"),
-	}
+	},
+		new(OSIfProv)
 
-	pm := NewPMProxy(rd, cl, dl, time.Second) //root
+	pm := NewPMProxy(rd, cl, dl, time.Second, ifp) //root
 	for i, j := range ts {
 		ctx := &gp.ProxyCtx{
 			Req: j.request,
