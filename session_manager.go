@@ -67,32 +67,36 @@ func (s *SMng) loginUser(admIP, user, ip string) (e error) {
 	if s.Adm.Match(admIP) {
 		s.login(user, ip)
 	} else {
-		e = fmt.Errorf("Not logged administrator at %s", admIP)
+		e = NotAdmin(admIP)
 	}
 	return
 }
 
+func NotAdmin(ip string) (e error) {
+	e = fmt.Errorf("Not logged administrator at %s", ip)
+	return
+}
+
 func (s *SMng) login(user, ip string) {
-	var prevIP string
+	prevIP := make([]string, 0)
 	s.su.Range(func(k, v interface{}) (y bool) {
 		usr := v.(string)
-		y = usr != user
-		if !y {
-			prevIP = k.(string)
+		if usr == user {
+			prevIP = append(prevIP, k.(string))
 		}
+		y = true
 		return
 	})
 	// { prevIP is the IP different from ip, which has a
 	//   session opened by the same user trying to open
 	//   this session. prevIP = "" if that session doesn't
 	//   exists }
-	if prevIP != "" {
-		s.swS.Store(prevIP, ClsByMsg(ip))
-		s.swS.Store(ip, RcvFrMsg(prevIP))
+	for _, j := range prevIP {
+		s.swS.Store(j, ClsByMsg(ip))
+		s.swS.Store(ip, RcvFrMsg(j))
 		// { prevIP and ip prepared for receiving
-		//   a notification  }
-		s.su.Delete(prevIP)
-		// { session in prevIP closed for user }
+		//   a notification }
+		s.su.Delete(j)
 	}
 	s.su.Store(ip, user)
 }
@@ -135,12 +139,6 @@ func NotOpBySMsg(user, ip string) (e error) {
 	return
 }
 
-// NotOpInSMsg is the not opened in session message
-func NotOpInSMsg(ip string) (e error) {
-	e = fmt.Errorf("No hay sesión abierta en %s", ip)
-	return
-}
-
 func (s *SMng) Match(ip string) (b bool) {
 	_, b = s.su.Load(ip)
 	return
@@ -177,8 +175,6 @@ func (s *SMng) SrvUserSession(w h.ResponseWriter,
 			w.Write([]byte(msg))
 		}
 		// send session status if swapped
-	} else {
-		e = NotSuppMeth(r.Method)
 	}
 	writeErr(w, e)
 }
@@ -192,18 +188,17 @@ type UsrIP struct {
 // SrvAdmMngS serves the functionality of closing or opening
 // sessions for administrators
 func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	ip, _, e := net.SplitHostPort(r.RemoteAddr)
 	ui := new(UsrIP)
-	var e error
-	if s.Adm == nil {
-		e = fmt.Errorf("No administrator interface available")
+	if e == nil && s.Adm == nil {
+		e = NotAdmHandler()
 	}
 	if e == nil && (r.Method == h.MethodPost ||
 		r.Method == h.MethodPut) {
 		e = Decode(r.Body, ui)
 	}
 	if e == nil {
-		_, e = s.Adm.Sm.cr.getUser(r.Header)
+		_, e = s.Adm.Sm.cr.user(r.Header)
 	}
 	if e == nil && r.Method == h.MethodPost {
 		e = s.loginUser(ip, ui.User, ui.IP)
@@ -211,10 +206,13 @@ func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
 		e = s.logoutUser(ip, ui.User, ui.IP)
 	} else if e == nil && r.Method == h.MethodGet {
 		e = s.srvSessions(r.Header, ip, w)
-	} else if e == nil {
-		e = NotSuppMeth(r.Method)
 	}
 	writeErr(w, e)
+}
+
+func NotAdmHandler() (e error) {
+	e = fmt.Errorf("No administrator interface available")
+	return
 }
 
 func (s *SMng) srvLogin(a *Auth, ip string, r io.Reader,
@@ -238,7 +236,7 @@ func (s *SMng) srvLogin(a *Auth, ip string, r io.Reader,
 
 func (s *SMng) srvLogout(ip string, a h.Header) (e error) {
 	var usr string
-	usr, e = s.cr.getUser(a)
+	usr, e = s.cr.user(a)
 	if e == nil {
 		e = s.logout(usr, ip)
 	}
@@ -247,17 +245,11 @@ func (s *SMng) srvLogout(ip string, a h.Header) (e error) {
 }
 
 func (s *SMng) srvSessions(a h.Header, ip string, w io.Writer) (e error) {
-	if s.Adm != nil {
-		var usr string
-		usr, e = s.Adm.Sm.cr.getUser(a)
-		if e == nil {
-			nu, ok := s.Adm.Sm.MatchUsr(ip)
-			if !ok || usr != nu {
-				e = fmt.Errorf("Not logged %s", usr)
-			}
-		}
-	} else {
-		e = fmt.Errorf("No admin manager in %s", s.Name)
+	// s.Adm ≠ nil
+	var usr string
+	usr, e = s.Adm.Sm.cr.user(a)
+	if e == nil {
+		e = checkUser(s.Adm.Sm.su, usr, ip)
 	}
 	if e == nil {
 		mp := make(map[string]string)

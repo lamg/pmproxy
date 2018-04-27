@@ -26,17 +26,6 @@ const (
 	Security breach. Private key compromised`
 )
 
-func IndexOutOfRange() (e error) {
-	e = fmt.Errorf("Index out of range")
-	return
-}
-
-// NotSuppMeth is the not supported method message
-func NotSuppMeth(m string) (e error) {
-	e = fmt.Errorf("Not supported method %s", m)
-	return
-}
-
 func writeErr(w h.ResponseWriter, e error) {
 	if e != nil {
 		// The order of the following commands matter since
@@ -119,13 +108,18 @@ func (j *JWTCrypt) checkUser(s string) (u string, e error) {
 	return
 }
 
-func (j *JWTCrypt) getUser(a h.Header) (u string, e error) {
+func (j *JWTCrypt) user(a h.Header) (u string, e error) {
 	s := a.Get(AuthHd)
 	if s == "" {
-		e = fmt.Errorf(MalformedHd)
+		e = HeaderErr()
 	}
 	if e == nil {
 		u, e = j.checkUser(s)
 	}
+	return
+}
+
+func HeaderErr() (e error) {
+	e = fmt.Errorf(MalformedHd)
 	return
 }

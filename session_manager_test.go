@@ -21,12 +21,25 @@ type tsLg struct {
 }
 
 func TestLogin(t *testing.T) {
-	ua := &Auth{Um: usrAuthM}
-	s := NewSMng("sm", ua, nil)
+	aa := &Auth{Um: admAuthM}
+	sa := NewSMng("adm", aa, nil)
+	ua, am := &Auth{Um: usrAuthM}, &UsrMtch{
+		Sm: sa,
+	}
+	s := NewSMng("sm", ua, am)
 	logTestUsrs(t, s, usrAuthM, 0)
+
+	// particular cases for improving test coverage
 	wusr := "bla"
 	_, e := ua.Authenticate(wusr, "co")
 	require.Equal(t, WrongPassErr(wusr), e)
+
+	admIP := "0.0.0.1"
+	e = s.loginUser(admIP, "eui", "0.0.0.2")
+	require.Equal(t, NotAdmin(admIP), e)
+
+	e = checkUser(s.su, wusr, admIP)
+	require.Equal(t, NotOpBySMsg(wusr, admIP), e)
 }
 
 func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
@@ -90,6 +103,15 @@ func TestLogout(t *testing.T) {
 		require.False(t, ok, "At %d", i)
 		// { checked is logged out }
 	}
+
+	usr, ip := "coco", "0.0.0.0"
+	e := s.logout(usr, ip)
+	require.Equal(t, NotOpBySMsg(usr, ip), e)
+
+	w, r := reqres(t, h.MethodPut, "path", "body", "hd", "0.0.0.0")
+	s.SrvAdmMngS(w, r)
+	require.Equal(t, h.StatusBadRequest, w.Code)
+	require.Equal(t, w.Body.String(), NotAdmHandler().Error())
 }
 
 func TestAdmGetSessions(t *testing.T) {
