@@ -16,7 +16,7 @@ There are several important parts of this program:
 	- (TODO be more specific here) connector.go
 	- Quota is separated from consumption manager, because is a static resource that can be asociated to a matcher. The administrator has to ensure of associate quota and consumption manager using the same predicate, if he wants them to be associated.
 - Connection handling configuration while running or booting.
-	- res_admin.go
+	- det_manager.go
 
 ## PMProxy deployment
 
@@ -65,7 +65,6 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 
 ## Tasks
 
-- [x] Flexible restrictions and access to resources specifications
 - [x] Replace redirection with a page informing the error and a link to the login page when needed.
 - [ ] English grammar
 - [ ] Slow operations not in GUI's main thread
@@ -73,18 +72,6 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Automatic session closing
 - [ ] Custom proxy library and correct elazarl's goproxy runtime panic, which still causes the current PMProxy production version crashes.
 
-- [ ] configuration and state management (state.go)
+- [ ] configuration and resource determinators management (det_manager.go)
 - [ ] provide a list of URLs whose access doesn't add to user consumption
-- [ ] JSON marshalers and unmarshalers
-	- [x] SMng
-- [x] Test PMProxy
-- [ ] res_det_test.go
-	- [ ] MarshalJSON and UnmarshalJSON
-- [ ] Test CLMng
-- [ ] Full test coverage of connect in connector.go
-- [ ] consumption_manager_test.go
-- [ ] Test ServeHTTP in delay_manager.go
-- [ ] Test GrpMtch.Match in matchers.go
-- [ ] Test error messages in session_manager.go
-	- [ ] Test checkUser in session_manager.go
-- [ ] Test coverage also leaves out some code in util.go
+- [ ] expose management interface
