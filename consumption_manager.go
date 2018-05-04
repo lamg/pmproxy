@@ -60,6 +60,10 @@ func (c *CMng) Adder(user string) (d *ConsAdd) {
 	return
 }
 
+func (c *CMng) PrefixHandler() (p *PrefixHandler) {
+	return
+}
+
 func (c *CMng) ServeCons(w h.ResponseWriter, r *h.Request) {
 	// r.Method = h.MethodGet
 	mp := make(map[string]uint64)

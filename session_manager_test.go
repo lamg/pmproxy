@@ -48,6 +48,7 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 	for i := uint32(0); i != uint32(len(um)); i++ {
 		ips[i] = fmt.Sprintf("0.0.0.%d", st+i)
 	}
+	hnd := s.SessionHandler().Hnd
 
 	ts = make([]tsLg, len(um))
 	i := 0
@@ -60,8 +61,8 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 		}
 		body := fmt.Sprintf(`{"user":"%s","pass":"%s"}`, ts[i].user,
 			ts[i].pass)
-		r, q := reqres(t, h.MethodPost, "", body, "", ts[i].ip)
-		s.SrvUserSession(r, q)
+		r, q := reqres(t, h.MethodPost, "/", body, "", ts[i].ip)
+		hnd.ServeHTTP(r, q)
 		require.Equal(t, r.Code, h.StatusOK, "At %s: %s", k,
 			r.Body.String())
 		// { logged }
@@ -77,11 +78,12 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 }
 
 func logTsLg(t *testing.T, s *SMng, ts []tsLg) {
+	hnd := s.SessionHandler().Hnd
 	for i, j := range ts {
 		body := fmt.Sprintf(`{"user":"%s","pass":"%s"}`, ts[i].user,
 			ts[i].pass)
-		r, q := reqres(t, h.MethodPost, "", body, "", ts[i].ip)
-		s.SrvUserSession(r, q)
+		r, q := reqres(t, h.MethodPost, "/", body, "", ts[i].ip)
+		hnd.ServeHTTP(r, q)
 		require.Equal(t, r.Code, h.StatusOK, "At %s: %s", j.user,
 			r.Body.String())
 		// { logged }
@@ -94,10 +96,11 @@ func logTsLg(t *testing.T, s *SMng, ts []tsLg) {
 func TestLogout(t *testing.T) {
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, nil)
+	hnd := s.SessionHandler().Hnd
 	ts, _ := logTestUsrs(t, s, usrAuthM, 0)
 	for i, j := range ts {
-		r, q := reqres(t, h.MethodDelete, "", "", j.header, j.ip)
-		s.SrvUserSession(r, q)
+		r, q := reqres(t, h.MethodDelete, "/", "", j.header, j.ip)
+		hnd.ServeHTTP(r, q)
 		// { logged out }
 		_, ok := s.MatchUsr(j.ip)
 		require.False(t, ok, "At %d", i)
@@ -108,10 +111,15 @@ func TestLogout(t *testing.T) {
 	e := s.logout(usr, ip)
 	require.Equal(t, NotOpBySMsg(usr, ip), e)
 
-	w, r := reqres(t, h.MethodPut, "path", "body", "hd", "0.0.0.0")
-	s.SrvAdmMngS(w, r)
-	require.Equal(t, h.StatusBadRequest, w.Code)
-	require.Equal(t, w.Body.String(), NotAdmHandler().Error())
+	for i, j := range []string{h.MethodPost, h.MethodPut, h.MethodGet} {
+		w, r := reqres(t, j, "/", "body", "hd", "0.0.0.0")
+		admHnd := s.AdminHandler().Hnd
+		admHnd.ServeHTTP(w, r)
+		require.Equal(t, h.StatusBadRequest, w.Code)
+		require.Equal(t, w.Body.String(), NotAdmHandler().Error(),
+			"At %d", i)
+	}
+
 }
 
 func TestAdmGetSessions(t *testing.T) {
@@ -121,11 +129,12 @@ func TestAdmGetSessions(t *testing.T) {
 
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, &UsrMtch{Sm: sa})
+	admHnd := s.AdminHandler().Hnd
 	logTestUsrs(t, s, usrAuthM, 0)
 
 	for i, j := range ts {
-		w, r := reqres(t, h.MethodGet, "", "", j.header, j.ip)
-		s.SrvAdmMngS(w, r)
+		w, r := reqres(t, h.MethodGet, "/", "", j.header, j.ip)
+		admHnd.ServeHTTP(w, r)
 		require.Equal(t, h.StatusOK, w.Code, "At %d: %s", i,
 			w.Body.String())
 		m := make(map[string]string)
@@ -149,19 +158,20 @@ func TestSwappedSessions(t *testing.T) {
 		ipb[i] = ts[i].ip
 	}
 	logTsLg(t, s, ts)
+	hnd := s.SessionHandler().Hnd
 	// { logged same users in ta but from different IPs.
 	//   This is done for testing the swapped session message
 	//   sent to users. That message is useful in case of an
 	//   account being stealed. }
 	// { len(ta) = len(tb) }
 	for i := 0; i != len(ipa); i++ {
-		w, r := reqres(t, h.MethodGet, "", "", "", ipa[i])
-		s.SrvUserSession(w, r)
+		w, r := reqres(t, h.MethodGet, "/", "", "", ipa[i])
+		hnd.ServeHTTP(w, r)
 		require.Equal(t, ClsByMsg(ipb[i]), w.Body.String(),
 			"At %d", i)
 		// { closed by message received }
-		w, r = reqres(t, h.MethodGet, "", "", "", ipb[i])
-		s.SrvUserSession(w, r)
+		w, r = reqres(t, h.MethodGet, "/", "", "", ipb[i])
+		hnd.ServeHTTP(w, r)
 		require.Equal(t, RcvFrMsg(ipa[i]), w.Body.String(),
 			"At %d", i)
 		// { recovered from message received }
@@ -175,23 +185,25 @@ func TestSrvAdmMngS(t *testing.T) {
 
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, &UsrMtch{Sm: sa})
+	admHnd := s.AdminHandler().Hnd
 	// { initialized SMng }
 	for i, j := range ts {
 		n := 0
 		for k, _ := range usrAuthM {
 			ip := fmt.Sprintf("0.0.0.%d", n)
 			body := fmt.Sprintf(`{"user":"%s","ip":"%s"}`, k, ip)
-			w, r := reqres(t, h.MethodPost, "", body, j.header, j.ip)
-			s.SrvAdmMngS(w, r)
+			w, r := reqres(t, h.MethodPost, "/", body, j.header, j.ip)
+			admHnd.ServeHTTP(w, r)
 			require.Equal(t, h.StatusOK, w.Code, "At %d,%d %s",
 				i, k, w.Body.String())
 			// logged in
-			w, r = reqres(t, h.MethodPut, "", body, j.header, j.ip)
-			s.SrvAdmMngS(w, r)
+			w, r = reqres(t, h.MethodPut, "/", body, j.header, j.ip)
+			admHnd.ServeHTTP(w, r)
 			require.Equal(t, h.StatusOK, w.Code, "At %d,%d %s",
 				i, k, w.Body.String())
 			logged := s.Match(ip)
 			require.False(t, logged, "n = %d", n)
+			// logged out
 			n = n + 1
 		}
 	}

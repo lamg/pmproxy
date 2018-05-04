@@ -156,9 +156,9 @@ func TestConnect(t *testing.T) {
 			bs, e = ioutil.ReadAll(c)
 			require.Equal(t, j.errRd, e)
 			require.Equal(t, j.content, string(bs), "At %d", i)
-			n := clm.GetAmount(c.LocalAddr().String())
+			n := clm.Amount(c.LocalAddr().String())
 			c.Close()
-			m := clm.GetAmount(c.LocalAddr().String())
+			m := clm.Amount(c.LocalAddr().String())
 			require.Equal(t, m+1, n)
 		}
 	}

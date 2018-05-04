@@ -49,6 +49,10 @@ type dInfo struct {
 	ConnR     *Rate  `json:"connR"`
 }
 
+func (d *DMng) PrefixHandler() (p *PrefixHandler) {
+	return
+}
+
 func (d *DMng) ServeInfo(w h.ResponseWriter, r *h.Request) {
 	// sends info about bandwidth, current amount of connections
 	// and current connection rate

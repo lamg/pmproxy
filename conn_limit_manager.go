@@ -1,6 +1,9 @@
 package pmproxy
 
 import (
+	"fmt"
+	"github.com/gorilla/mux"
+	h "net/http"
 	"sync"
 )
 
@@ -17,6 +20,17 @@ func NewCLMng(name string, limit uint32) (c *CLMng) {
 		Limit: limit,
 		am:    new(sync.Map),
 	}
+	return
+}
+
+func (m *CLMng) PrefixHandler() (p *PrefixHandler) {
+	p = &PrefixHandler{
+		Prefix: "connection_limit",
+	}
+	rt := mux.NewRouter()
+	rt.Methods(h.MethodPut).HandlerFunc(m.ChangeLimit)
+	rt.Methods(h.MethodGet).HandlerFunc(m.ServeLimit)
+	p.Hnd = rt
 	return
 }
 
@@ -43,8 +57,20 @@ func (m *CLMng) DecreaseAm(addr string) {
 	}
 }
 
-func (m *CLMng) GetAmount(addr string) (n uint32) {
+func (m *CLMng) Amount(addr string) (n uint32) {
 	v, _ := m.am.Load(addr)
 	n = v.(uint32)
 	return
+}
+
+func (m *CLMng) ChangeLimit(w h.ResponseWriter, r *h.Request) {
+	nl := uint32(0)
+	_, e := fmt.Fscanf(r.Body, "%d", &nl)
+	if e == nil {
+		m.Limit = nl
+	}
+}
+
+func (m *CLMng) ServeLimit(w h.ResponseWriter, r *h.Request) {
+	fmt.Fprintf(w, "%d", m.Limit)
 }

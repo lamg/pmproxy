@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	ld "github.com/lamg/ldaputil"
 	"io"
 	"net"
@@ -158,17 +159,36 @@ type UsrCrd struct {
 	Pass string `json:"pass"`
 }
 
+func (s *SMng) SessionHandler() (p *PrefixHandler) {
+	p = &PrefixHandler{
+		Prefix: "session_manager",
+	}
+	rt := mux.NewRouter()
+	rt.Methods(h.MethodGet).HandlerFunc(s.SrvUserStatus)
+	rt.Methods(h.MethodPost).HandlerFunc(s.ServeLogin)
+	rt.Methods(h.MethodDelete).HandlerFunc(s.ServeLogout)
+	p.Hnd = rt
+	return
+}
+
+func (s *SMng) AdminHandler() (p *PrefixHandler) {
+	p = &PrefixHandler{
+		Prefix: "admin_session",
+	}
+	rt := mux.NewRouter()
+	rt.Methods(h.MethodPost).HandlerFunc(s.SrvAdmLoginUsr)
+	rt.Methods(h.MethodPut).HandlerFunc(s.SrvAdmLogoutUsr)
+	rt.Methods(h.MethodGet).HandlerFunc(s.SrvAdmSessions)
+	p.Hnd = rt
+	return
+}
+
 // SrvUserSession is an h.Handler used for opening and
 // closing regular users's sessions
-func (s *SMng) SrvUserSession(w h.ResponseWriter,
+func (s *SMng) SrvUserStatus(w h.ResponseWriter,
 	r *h.Request) {
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	var e error
-	if r.Method == h.MethodPost {
-		e = s.srvLogin(s.Usr, ip, r.Body, w)
-	} else if r.Method == h.MethodDelete {
-		e = s.srvLogout(ip, r.Header)
-	} else if r.Method == h.MethodGet {
+	ip, _, e := net.SplitHostPort(r.RemoteAddr)
+	if e == nil {
 		v, ok := s.swS.Load(ip)
 		if ok {
 			msg := v.(string)
@@ -179,32 +199,76 @@ func (s *SMng) SrvUserSession(w h.ResponseWriter,
 	writeErr(w, e)
 }
 
+func (s *SMng) ServeLogin(w h.ResponseWriter, r *h.Request) {
+	ip, _, e := net.SplitHostPort(r.RemoteAddr)
+	if e == nil {
+		e = s.srvLogin(s.Usr, ip, r.Body, w)
+	}
+	writeErr(w, e)
+}
+
+func (s *SMng) ServeLogout(w h.ResponseWriter, r *h.Request) {
+	ip, _, e := net.SplitHostPort(r.RemoteAddr)
+	if e == nil {
+		e = s.srvLogout(ip, r.Header)
+	}
+	writeErr(w, e)
+}
+
 // UsrIP user name - ip pair
 type UsrIP struct {
 	User string `json:"user"`
 	IP   string `json:"ip"`
 }
 
-// SrvAdmMngS serves the functionality of closing or opening
-// sessions for administrators
-func (s *SMng) SrvAdmMngS(w h.ResponseWriter, r *h.Request) {
-	ip, _, e := net.SplitHostPort(r.RemoteAddr)
-	ui := new(UsrIP)
-	if e == nil && s.Adm == nil {
+func (s *SMng) SrvAdmLoginUsr(w h.ResponseWriter, r *h.Request) {
+	var e error
+	if s.Adm == nil {
 		e = NotAdmHandler()
 	}
-	if e == nil && (r.Method == h.MethodPost ||
-		r.Method == h.MethodPut) {
+	var ip string
+	if e == nil {
+		ip, _, e = net.SplitHostPort(r.RemoteAddr)
+	}
+	ui := new(UsrIP)
+	if e == nil {
 		e = Decode(r.Body, ui)
 	}
 	if e == nil {
-		_, e = s.Adm.Sm.cr.user(r.Header)
-	}
-	if e == nil && r.Method == h.MethodPost {
 		e = s.loginUser(ip, ui.User, ui.IP)
-	} else if e == nil && r.Method == h.MethodPut {
+	}
+	writeErr(w, e)
+}
+
+func (s *SMng) SrvAdmLogoutUsr(w h.ResponseWriter, r *h.Request) {
+	var e error
+	if s.Adm == nil {
+		e = NotAdmHandler()
+	}
+	var ip string
+	if e == nil {
+		ip, _, e = net.SplitHostPort(r.RemoteAddr)
+	}
+	ui := new(UsrIP)
+	if e == nil {
+		e = Decode(r.Body, ui)
+	}
+	if e == nil {
 		e = s.logoutUser(ip, ui.User, ui.IP)
-	} else if e == nil && r.Method == h.MethodGet {
+	}
+	writeErr(w, e)
+}
+
+func (s *SMng) SrvAdmSessions(w h.ResponseWriter, r *h.Request) {
+	var e error
+	if s.Adm == nil {
+		e = NotAdmHandler()
+	}
+	var ip string
+	if e == nil {
+		ip, _, e = net.SplitHostPort(r.RemoteAddr)
+	}
+	if e == nil {
 		e = s.srvSessions(r.Header, ip, w)
 	}
 	writeErr(w, e)

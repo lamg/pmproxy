@@ -1,7 +1,9 @@
 package pmproxy
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/require"
+	h "net/http"
 	"testing"
 )
 
@@ -12,7 +14,7 @@ func TestCLMng(t *testing.T) {
 	for i := uint32(0); i != 2*lim; i++ {
 		ok := cl.AddConn(ip)
 		require.Equal(t, ok, i <= lim, "At %d", i)
-		n := cl.GetAmount(ip)
+		n := cl.Amount(ip)
 		if ok {
 			require.Equal(t, i, n)
 		} else {
@@ -20,6 +22,21 @@ func TestCLMng(t *testing.T) {
 		}
 	}
 	cl.DecreaseAm(ip)
-	n := cl.GetAmount(ip)
+	n := cl.Amount(ip)
 	require.Equal(t, lim-1, n)
+}
+
+func TestCLMngHandler(t *testing.T) {
+	lim := uint32(100)
+	cl := NewCLMng("test", lim)
+	p := cl.PrefixHandler()
+	w, r := reqres(t, h.MethodGet, "/", "", "", "0.0.0.0")
+	p.Hnd.ServeHTTP(w, r)
+	lims := fmt.Sprintf("%d", cl.Limit)
+	require.Equal(t, lims, w.Body.String())
+	nlim := uint32(99)
+	nlims := fmt.Sprintf("%d", nlim)
+	w, r = reqres(t, h.MethodPut, "/", nlims, "", "0.0.0.0")
+	p.Hnd.ServeHTTP(w, r)
+	require.Equal(t, nlim, cl.Limit)
 }
