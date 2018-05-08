@@ -29,14 +29,14 @@ func TestCLMng(t *testing.T) {
 func TestCLMngHandler(t *testing.T) {
 	lim := uint32(100)
 	cl := NewCLMng("test", lim)
-	p := cl.PrefixHandler()
-	w, r := reqres(t, h.MethodGet, "/", "", "", "0.0.0.0")
+	p, path := cl.PrefixHandler(), "/"+cl.Name
+	w, r := reqres(t, h.MethodGet, path, "", "", "0.0.0.0")
 	p.Hnd.ServeHTTP(w, r)
 	lims := fmt.Sprintf("%d", cl.Limit)
 	require.Equal(t, lims, w.Body.String())
 	nlim := uint32(99)
 	nlims := fmt.Sprintf("%d", nlim)
-	w, r = reqres(t, h.MethodPut, "/", nlims, "", "0.0.0.0")
+	w, r = reqres(t, h.MethodPut, path, nlims, "", "0.0.0.0")
 	p.Hnd.ServeHTTP(w, r)
 	require.Equal(t, nlim, cl.Limit)
 }

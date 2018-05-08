@@ -60,7 +60,19 @@ func (c *CMng) Adder(user string) (d *ConsAdd) {
 	return
 }
 
+const (
+	userPath = "/{user}"
+)
+
 func (c *CMng) PrefixHandler() (p *PrefixHandler) {
+	p = &PrefixHandler{
+		Prefix: "consumption_manager",
+	}
+	rt, path := mux.NewRouter(), "/"+c.Name
+	rt.HandleFunc(path, c.ServeCons).Methods(h.MethodGet)
+	rt.HandleFunc(path+userPath, c.ServeUserCons).Methods(h.MethodGet)
+	rt.HandleFunc(path+userPath, c.ServeModUsrCons).Methods(h.MethodPut)
+	p.Hnd = rt
 	return
 }
 

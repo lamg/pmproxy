@@ -17,8 +17,9 @@ func TestServeCons(t *testing.T) {
 	for k, v := range omp {
 		cm.Cons.Store(k, v)
 	}
-	w, r := reqres(t, h.MethodGet, "", "", "", "0.0.0.0")
-	cm.ServeCons(w, r)
+	hnd := cm.PrefixHandler().Hnd
+	w, r := reqres(t, h.MethodGet, "/"+cm.Name, "", "", "0.0.0.0")
+	hnd.ServeHTTP(w, r)
 	require.Equal(t, h.StatusOK, w.Code)
 	mp := make(map[string]uint64)
 	e := Decode(w.Body, &mp)

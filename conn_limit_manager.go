@@ -27,9 +27,9 @@ func (m *CLMng) PrefixHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
 		Prefix: "connection_limit",
 	}
-	rt := mux.NewRouter()
-	rt.Methods(h.MethodPut).HandlerFunc(m.ChangeLimit)
-	rt.Methods(h.MethodGet).HandlerFunc(m.ServeLimit)
+	rt, path := mux.NewRouter(), "/"+m.Name
+	rt.HandleFunc(path, m.ChangeLimit).Methods(h.MethodPut)
+	rt.HandleFunc(path, m.ServeLimit).Methods(h.MethodGet)
 	p.Hnd = rt
 	return
 }

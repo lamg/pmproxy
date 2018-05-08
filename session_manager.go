@@ -163,22 +163,22 @@ func (s *SMng) SessionHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
 		Prefix: "session_manager",
 	}
-	rt := mux.NewRouter()
-	rt.Methods(h.MethodGet).HandlerFunc(s.SrvUserStatus)
-	rt.Methods(h.MethodPost).HandlerFunc(s.ServeLogin)
-	rt.Methods(h.MethodDelete).HandlerFunc(s.ServeLogout)
+	rt, path := mux.NewRouter(), "/"+s.Name
+	rt.HandleFunc(path, s.SrvUserStatus).Methods(h.MethodGet)
+	rt.HandleFunc(path, s.ServeLogin).Methods(h.MethodPost)
+	rt.HandleFunc(path, s.ServeLogout).Methods(h.MethodDelete)
 	p.Hnd = rt
 	return
 }
 
 func (s *SMng) AdminHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
-		Prefix: "admin_session",
+		Prefix: "session_admin_manager",
 	}
-	rt := mux.NewRouter()
-	rt.Methods(h.MethodPost).HandlerFunc(s.SrvAdmLoginUsr)
-	rt.Methods(h.MethodPut).HandlerFunc(s.SrvAdmLogoutUsr)
-	rt.Methods(h.MethodGet).HandlerFunc(s.SrvAdmSessions)
+	rt, path := mux.NewRouter(), "/"+s.Name
+	rt.HandleFunc(path, s.SrvAdmLoginUsr).Methods(h.MethodPost)
+	rt.HandleFunc(path, s.SrvAdmLogoutUsr).Methods(h.MethodPut)
+	rt.HandleFunc(path, s.SrvAdmSessions).Methods(h.MethodGet)
 	p.Hnd = rt
 	return
 }

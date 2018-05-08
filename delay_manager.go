@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"github.com/gorilla/mux"
 	"net"
 	h "net/http"
 	"time"
@@ -50,6 +51,13 @@ type dInfo struct {
 }
 
 func (d *DMng) PrefixHandler() (p *PrefixHandler) {
+	p = &PrefixHandler{
+		Prefix: "delay_manager",
+	}
+	rt, path := mux.NewRouter(), "/"+d.Name
+	rt.HandleFunc(path, d.ServeInfo).Methods(h.MethodGet)
+	rt.HandleFunc(path, d.ServeSetBW).Methods(h.MethodPut)
+	p.Hnd = rt
 	return
 }
 
