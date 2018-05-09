@@ -12,8 +12,8 @@ import (
 
 // Auth authenticates users
 type Auth struct {
-	Ld *ld.Ldap
-	Um map[string]string
+	Ld *ld.Ldap          `json:"ld"`
+	Um map[string]string `json:"um"`
 }
 
 // Authenticate authenticates an user given its
