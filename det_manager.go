@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"io"
 	"io/ioutil"
 	h "net/http"
 )
@@ -52,7 +51,9 @@ func detIndexBFS(s *SqDet, n uint32) (d *SqDet) {
 		i = i + 1
 	}
 	if len(ds) != 0 {
-		d, _ = ds[0].(*SqDet)
+		var ok bool
+		d, ok = ds[0].(*SqDet)
+		println(ok)
 	}
 	return
 }
@@ -66,31 +67,34 @@ func reqIndex(r *h.Request) (i uint32) {
 	return
 }
 
-func (d *DetMng) SrvAddDet(w h.ResponseWriter, r *h.Request) {
+func (d *DetMng) SrvAddResDet(w h.ResponseWriter, r *h.Request) {
 	i := reqIndex(r)
-	d.addDet(r.Body, i)
-}
-
-func (d *DetMng) addDet(r io.ReadCloser, i uint32) (ok bool) {
-	var det Det
-	bs, e := ioutil.ReadAll(r)
+	bs, e := ioutil.ReadAll(r.Body)
 	rd := new(ResDet)
 	if e == nil {
 		e = json.Unmarshal(bs, rd)
 	}
-	s := new(SqDet)
-	if e == nil {
-		det = rd
+	rt := detIndexBFS(d.MainDet, i)
+	if rt != nil {
+		rt.Ds = append(rt.Ds, rd)
 	} else {
-		e = json.Unmarshal(bs, s)
-		if e == nil {
-			det = s
-		}
+		// error
+	}
+}
+
+func (d *DetMng) SrvAddSqDet(w h.ResponseWriter, r *h.Request) {
+	i := reqIndex(r)
+	bs, e := ioutil.ReadAll(r.Body)
+	rd := new(ResDet)
+	if e == nil {
+		e = json.Unmarshal(bs, rd)
 	}
 	rt := detIndexBFS(d.MainDet, i)
-	ok = rt != nil
-	if ok {
-		rt.Ds = append(rt.Ds, det)
+	if rt != nil {
+		fmt.Printf("rt: %v\n", rt)
+		rt.Ds = append(rt.Ds, rd)
+		fmt.Printf("rt: %v\n", rt.Ds[0])
+	} else {
+		// error
 	}
-	return
 }

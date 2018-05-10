@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
 	h "net/http"
@@ -50,12 +51,19 @@ func TestSrvDet(t *testing.T) {
 	for i, j := range ts {
 		bs, e := json.Marshal(j.dt)
 		require.NoError(t, e)
-		w, r := reqres(t, h.MethodPost, "/", string(bs), "", "0.0.0.0")
-		d.SrvAddDet(w, r)
+		indS := fmt.Sprintf("/index/%d", j.ind)
+		w, r := reqres(t, h.MethodPost, indS, string(bs), "", "0.0.0.0")
+		_, ok := j.dt.(*SqDet)
+		if ok {
+			d.SrvAddSqDet(w, r)
+		} else {
+			d.SrvAddResDet(w, r)
+		}
 		require.Equal(t, h.StatusOK, w.Code, "At %d", i)
 		dtbs, e := detIndexBFSBytes(d.MainDet, j.ind)
 		require.NoError(t, e)
-		require.Equal(t, bs, dtbs, "At %d", i)
+		t.Logf("%v", d.MainDet.Ds[0])
+		require.Equal(t, string(bs), string(dtbs), "At %d", i)
 	}
 }
 
