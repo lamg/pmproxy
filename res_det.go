@@ -198,16 +198,37 @@ func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) {
 type SqDet struct {
 	// when unit is true Det returns for all Ds Det is true
 	// when unit is false Det returns exists Det true in Ds
-	Unit bool  `json:"unit"`
-	Ds   []Det `json:"ds"`
+	Unit bool      `json:"unit"`
+	RDs  []*ResDet `json:"rds"`
+	SDs  []*SqDet  `json:"sds"`
 }
 
 func (d *SqDet) Det(r *h.Request, t time.Time,
 	c *ConSpec) (b bool) {
+	if d.RDs != nil {
+		b = blsResDet(d.RDs, d.Unit, r, t, c)
+	} else {
+		b = blsSqDet(d.SDs, d.Unit, r, t, c)
+	}
+	return
+}
+
+func blsResDet(rs []*ResDet, unit bool, r *h.Request, t time.Time,
+	c *ConSpec) (b bool) {
 	i := 0
-	for i != len(d.Ds) && (d.Ds[i].Det(r, t, c) == d.Unit) {
+	for i != len(rs) && (rs[i].Det(r, t, c) == unit) {
 		i = i + 1
 	}
-	b = (i == len(d.Ds)) == d.Unit
+	b = (i == len(rs)) == unit
+	return
+}
+
+func blsSqDet(ss []*SqDet, unit bool, r *h.Request, t time.Time,
+	c *ConSpec) (b bool) {
+	i := 0
+	for i != len(ss) && (ss[i].Det(r, t, c) == unit) {
+		i = i + 1
+	}
+	b = (i == len(ss)) == unit
 	return
 }

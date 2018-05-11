@@ -24,7 +24,7 @@ func TestSeqDetTrue(t *testing.T) {
 	now.TimeFormats = append(now.TimeFormats, time.RFC3339)
 	sq := &SqDet{
 		Unit: true,
-		Ds: []Det{
+		RDs: []*ResDet{
 			&ResDet{
 				Unit: true,
 				Rg:   parseRange(t, "10.1.1.0/24"),
@@ -71,7 +71,7 @@ func TestSeqDetTrue(t *testing.T) {
 func TestSeqDetFalse(t *testing.T) {
 	sq := &SqDet{
 		Unit: false,
-		Ds: []Det{
+		RDs: []*ResDet{
 			&ResDet{
 				Unit: true,
 				Rg:   parseRange(t, "10.1.1.0/24"),

@@ -28,7 +28,7 @@ func TestSrvDet(t *testing.T) {
 		{
 			dt: &SqDet{
 				Unit: false,
-				Ds: []Det{
+				RDs: []*ResDet{
 					&ResDet{
 						Unit: true,
 						Cs:   NewCMng("cm"),
@@ -60,25 +60,13 @@ func TestSrvDet(t *testing.T) {
 			d.SrvAddResDet(w, r)
 		}
 		require.Equal(t, h.StatusOK, w.Code, "At %d", i)
-		dtbs, e := detIndexBFSBytes(d.MainDet, j.ind)
-		require.NoError(t, e)
-		t.Logf("%v", d.MainDet.Ds[0])
-		require.Equal(t, string(bs), string(dtbs), "At %d", i)
-	}
-}
-
-func detIndexBFSBytes(s *SqDet, n uint32) (bs []byte, e error) {
-	ds, i := []Det{s}, uint32(0)
-	for i != n && len(ds) != 0 {
-		v := ds[0]
-		h, ok := v.(*SqDet)
+		sq := detIndexBFS(d.MainDet, j.ind)
+		var dbs []byte
 		if ok {
-			ds = append(ds[1:], h.Ds...)
+			dbs, e = json.Marshal(sq.SDs[len(sq.SDs)-1])
+		} else {
+			dbs, e = json.Marshal(sq.RDs[len(sq.RDs)-1])
 		}
-		i = i + 1
+		require.Equal(t, bs, dbs, "At %d", i)
 	}
-	if len(ds) != 0 {
-		bs, e = json.Marshal(ds[0])
-	}
-	return
 }

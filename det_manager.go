@@ -41,19 +41,14 @@ func (d *DetMng) SrvDet(w h.ResponseWriter, r *h.Request) {
 }
 
 func detIndexBFS(s *SqDet, n uint32) (d *SqDet) {
-	ds, i := []Det{s}, uint32(0)
+	ds, i := []*SqDet{s}, uint32(0)
 	for i != n && len(ds) != 0 {
 		v := ds[0]
-		h, ok := v.(*SqDet)
-		if ok {
-			ds = append(ds[1:], h.Ds...)
-		}
+		ds = append(ds[1:], v.SDs...)
 		i = i + 1
 	}
 	if len(ds) != 0 {
-		var ok bool
-		d, ok = ds[0].(*SqDet)
-		println(ok)
+		d = ds[0]
 	}
 	return
 }
@@ -76,25 +71,27 @@ func (d *DetMng) SrvAddResDet(w h.ResponseWriter, r *h.Request) {
 	}
 	rt := detIndexBFS(d.MainDet, i)
 	if rt != nil {
-		rt.Ds = append(rt.Ds, rd)
+		rt.RDs = append(rt.RDs, rd)
 	} else {
 		// error
 	}
+	writeErr(w, e)
 }
 
 func (d *DetMng) SrvAddSqDet(w h.ResponseWriter, r *h.Request) {
 	i := reqIndex(r)
 	bs, e := ioutil.ReadAll(r.Body)
-	rd := new(ResDet)
+	rd := new(SqDet)
 	if e == nil {
 		e = json.Unmarshal(bs, rd)
 	}
-	rt := detIndexBFS(d.MainDet, i)
-	if rt != nil {
-		fmt.Printf("rt: %v\n", rt)
-		rt.Ds = append(rt.Ds, rd)
-		fmt.Printf("rt: %v\n", rt.Ds[0])
-	} else {
-		// error
+	if e == nil {
+		rt := detIndexBFS(d.MainDet, i)
+		if rt != nil {
+			rt.SDs = append(rt.SDs, rd)
+		} else {
+			// error
+		}
 	}
+	writeErr(w, e)
 }
