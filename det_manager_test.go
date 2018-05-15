@@ -51,9 +51,12 @@ func TestSrvDet(t *testing.T) {
 	for i, j := range ts {
 		bs, e := json.Marshal(j.dt)
 		require.NoError(t, e)
-		indS := fmt.Sprintf("/index/%d", j.ind)
-		w, r := reqres(t, h.MethodPost, indS, string(bs), "", "0.0.0.0")
 		_, ok := j.dt.(*SqDet)
+		w, r := reqres(t, h.MethodPost, "/"+Index, string(bs), "",
+			"0.0.0.0")
+		r = mux.SetURLVars(r, map[string]string{
+			Index: fmt.Sprint(j.ind),
+		})
 		if ok {
 			d.SrvAddSqDet(w, r)
 		} else {
@@ -67,6 +70,7 @@ func TestSrvDet(t *testing.T) {
 		} else {
 			dbs, e = json.Marshal(sq.RDs[len(sq.RDs)-1])
 		}
-		require.Equal(t, bs, dbs, "At %d", i)
+		require.NoError(t, e)
+		require.Equal(t, string(bs), string(dbs), "At %d", i)
 	}
 }

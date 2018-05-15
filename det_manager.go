@@ -69,11 +69,13 @@ func (d *DetMng) SrvAddResDet(w h.ResponseWriter, r *h.Request) {
 	if e == nil {
 		e = json.Unmarshal(bs, rd)
 	}
-	rt := detIndexBFS(d.MainDet, i)
-	if rt != nil {
-		rt.RDs = append(rt.RDs, rd)
-	} else {
-		// error
+	if e == nil {
+		rt := detIndexBFS(d.MainDet, i)
+		if rt != nil {
+			rt.RDs = append(rt.RDs, rd)
+		} else {
+			e = NoDetFound()
+		}
 	}
 	writeErr(w, e)
 }
@@ -90,8 +92,13 @@ func (d *DetMng) SrvAddSqDet(w h.ResponseWriter, r *h.Request) {
 		if rt != nil {
 			rt.SDs = append(rt.SDs, rd)
 		} else {
-			// error
+			e = NoDetFound()
 		}
 	}
 	writeErr(w, e)
+}
+
+func NoDetFound() (e error) {
+	e = fmt.Errorf("No Det found using detIndexBFS")
+	return
 }
