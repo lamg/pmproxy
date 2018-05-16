@@ -35,7 +35,16 @@ func (d *DetMng) SrvDet(w h.ResponseWriter, r *h.Request) {
 	dt := detIndexBFS(d.MainDet, i)
 	var e error
 	if dt != nil {
-		e = Encode(w, dt)
+		v := &SqDet{
+			RDs:  dt.RDs,
+			Unit: dt.Unit,
+			// the subtree isn't sent
+		}
+		var bs []byte
+		bs, e = json.Marshal(v)
+		if e == nil {
+			w.Write(bs)
+		}
 	}
 	writeErr(w, e)
 }

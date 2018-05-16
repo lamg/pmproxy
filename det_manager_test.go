@@ -47,6 +47,20 @@ func TestSrvDet(t *testing.T) {
 			ind: 1,
 			add: true,
 		},
+		{
+			dt: &SqDet{
+				RDs: []*ResDet{
+					&ResDet{
+						Unit: true,
+						Dm: &DMng{
+							Name: "dm",
+						},
+					},
+				},
+			},
+			ind: 1,
+			add: true,
+		},
 	}
 	for i, j := range ts {
 		bs, e := json.Marshal(j.dt)
@@ -73,4 +87,16 @@ func TestSrvDet(t *testing.T) {
 		require.NoError(t, e)
 		require.Equal(t, string(bs), string(dbs), "At %d", i)
 	}
+
+	// DetMng.SrvDet test
+	w, r := reqres(t, h.MethodGet, "/"+Index, "", "", "")
+	r = mux.SetURLVars(r, map[string]string{
+		Index: "2",
+	})
+	d.SrvDet(w, r)
+	require.Equal(t, h.StatusOK, w.Code)
+	bs, e := json.Marshal(ts[2].dt)
+	require.NoError(t, e)
+	require.Equal(t, string(bs), w.Body.String())
+
 }
