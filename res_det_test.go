@@ -69,23 +69,29 @@ func TestSeqDetTrue(t *testing.T) {
 }
 
 func TestSeqDetFalse(t *testing.T) {
+	now.TimeFormats = append(now.TimeFormats, time.RFC3339)
 	sq := &SqDet{
 		Unit: false,
-		RDs: []*ResDet{
-			&ResDet{
-				Unit: true,
-				Rg:   parseRange(t, "10.1.1.0/24"),
-				// there's no need to specify Cf here
-				Pr: &ConSpec{
-					Cf: 3,
-				},
-			},
-			&ResDet{
-				Unit: true,
-				Ur:   regexp.MustCompile("facebook.com"),
-				Pr: &ConSpec{
-					Cf:    1,
-					Proxy: "http://proxy.cu:8080",
+		SDs: []*SqDet{
+			&SqDet{
+				Unit: false,
+				RDs: []*ResDet{
+					&ResDet{
+						Unit: true,
+						Rg:   parseRange(t, "10.1.1.0/24"),
+						// there's no need to specify Cf here
+						Pr: &ConSpec{
+							Cf: 3,
+						},
+					},
+					&ResDet{
+						Unit: true,
+						Ur:   regexp.MustCompile("^facebook\\.com$"),
+						Pr: &ConSpec{
+							Cf:    1,
+							Proxy: "http://proxy.cu:8080",
+						},
+					},
 				},
 			},
 		},
@@ -103,7 +109,7 @@ func TestSeqDetFalse(t *testing.T) {
 		},
 		{
 			ip:  "10.1.1.24",
-			url: "https://facebook.com",
+			url: "https://google.com",
 			tm:  "2018-04-12T00:00:00-04:00",
 			ok:  true,
 			c:   &ConSpec{Cf: 3},
