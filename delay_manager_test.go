@@ -53,10 +53,11 @@ func TestServeSetBW(t *testing.T) {
 	}
 	bs, e := json.Marshal(nbw)
 	require.NoError(t, e)
-	w, r := reqres(t, h.MethodPut, "", string(bs), "", loggedAddr)
-	dm.ServeSetBW(w, r)
-	w0, r0 := reqres(t, h.MethodGet, "", "", "", loggedAddr)
-	dm.ServeInfo(w0, r0)
+	w, r := reqres(t, h.MethodPut, "/"+dm.Name, string(bs), "", loggedAddr)
+	hnd := dm.PrefixHandler().Hnd
+	hnd.ServeHTTP(w, r)
+	w0, r0 := reqres(t, h.MethodGet, "/"+dm.Name, "", "", loggedAddr)
+	hnd.ServeHTTP(w0, r0)
 	require.Equal(t, h.StatusOK, w.Code)
 	di := new(dInfo)
 	e = Decode(w0.Body, di)

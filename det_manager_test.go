@@ -10,7 +10,6 @@ import (
 )
 
 func TestSrvDet(t *testing.T) {
-	// create
 	d := &DetMng{
 		MainDet: &SqDet{
 			Unit: false,
@@ -24,6 +23,7 @@ func TestSrvDet(t *testing.T) {
 		dt  Det
 		ind uint32
 		add bool
+		err bool
 	}{
 		{
 			dt: &SqDet{
@@ -61,6 +61,31 @@ func TestSrvDet(t *testing.T) {
 			ind: 1,
 			add: true,
 		},
+		{
+			dt: &SqDet{
+				RDs: []*ResDet{
+					&ResDet{
+						Unit: true,
+						Dm: &DMng{
+							Name: "dm",
+						},
+					},
+				},
+			},
+			ind: 18,
+			add: true,
+			err: true,
+		},
+		{
+			dt: &ResDet{
+				Um: &UsrMtch{
+					Sm: NewSMng("sm", ua, nil),
+				},
+			},
+			ind: 18,
+			add: true,
+			err: true,
+		},
 	}
 	for i, j := range ts {
 		bs, e := json.Marshal(j.dt)
@@ -76,27 +101,56 @@ func TestSrvDet(t *testing.T) {
 		} else {
 			d.SrvAddResDet(w, r)
 		}
-		require.Equal(t, h.StatusOK, w.Code, "At %d", i)
-		sq := detIndexBFS(d.MainDet, j.ind)
-		var dbs []byte
-		if ok {
-			dbs, e = json.Marshal(sq.SDs[len(sq.SDs)-1])
+		if !j.err {
+			require.Equal(t, h.StatusOK, w.Code, "At %d", i)
+			sq := detIndexBFS(d.MainDet, j.ind)
+			var dbs []byte
+			if ok {
+				dbs, e = json.Marshal(sq.SDs[len(sq.SDs)-1])
+			} else {
+				dbs, e = json.Marshal(sq.RDs[len(sq.RDs)-1])
+			}
+			require.NoError(t, e)
+			require.Equal(t, string(bs), string(dbs), "At %d", i)
 		} else {
-			dbs, e = json.Marshal(sq.RDs[len(sq.RDs)-1])
+			require.Equal(t, h.StatusBadRequest, w.Code, "At %d", i)
+			require.Equal(t, NoDetFound().Error(), w.Body.String(),
+				"At %d", i)
 		}
-		require.NoError(t, e)
-		require.Equal(t, string(bs), string(dbs), "At %d", i)
 	}
 
 	// DetMng.SrvDet test
-	w, r := reqres(t, h.MethodGet, "/"+Index, "", "", "")
-	r = mux.SetURLVars(r, map[string]string{
-		Index: "2",
-	})
-	d.SrvDet(w, r)
-	require.Equal(t, h.StatusOK, w.Code)
-	bs, e := json.Marshal(ts[2].dt)
-	require.NoError(t, e)
-	require.Equal(t, string(bs), w.Body.String())
+	tsd := []struct {
+		index string
+		err   bool
+	}{
+		{
+			index: "2",
+		},
+		{
+			index: "18",
+			err:   true,
+		},
+	}
+	for i, j := range tsd {
+		w, r := reqres(t, h.MethodGet, "/"+Index, "", "", "")
+		r = mux.SetURLVars(r, map[string]string{
+			Index: j.index,
+		})
+		d.SrvDet(w, r)
+		if !j.err {
+			require.Equal(t, h.StatusOK, w.Code)
+			bs, e := json.Marshal(ts[2].dt)
+			require.NoError(t, e)
+			require.Equal(t, string(bs), w.Body.String())
+		} else {
+			require.Equal(t, h.StatusBadRequest, w.Code, "At %d", i)
+			require.Equal(t, NoDetFound().Error(), w.Body.String(),
+				"At %d", i)
+		}
+	}
+}
+
+func TestDetMngAdd(t *testing.T) {
 
 }

@@ -45,6 +45,8 @@ func (d *DetMng) SrvDet(w h.ResponseWriter, r *h.Request) {
 		if e == nil {
 			w.Write(bs)
 		}
+	} else {
+		e = NoDetFound()
 	}
 	writeErr(w, e)
 }

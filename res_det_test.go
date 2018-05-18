@@ -74,6 +74,14 @@ func TestSeqDetFalse(t *testing.T) {
 		Unit: false,
 		SDs: []*SqDet{
 			&SqDet{
+				RDs: []*ResDet{
+					&ResDet{
+						Unit: true,
+						Ur:   regexp.MustCompile("^nomatch\\.com$"),
+					},
+				},
+			},
+			&SqDet{
 				Unit: false,
 				RDs: []*ResDet{
 					&ResDet{
