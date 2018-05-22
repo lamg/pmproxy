@@ -103,10 +103,11 @@ func TestSrvDet(t *testing.T) {
 		}
 		if !j.err {
 			require.Equal(t, h.StatusOK, w.Code, "At %d", i)
-			sq := detIndexBFS(d.MainDet, j.ind)
+			sq := detIndexPreorder(d.MainDet, j.ind)
 			var dbs []byte
 			if ok {
-				dbs, e = json.Marshal(sq.SDs[len(sq.SDs)-1])
+				v := toJSqDet(sq.SDs[len(sq.SDs)-1])
+				dbs, e = json.Marshal(v)
 			} else {
 				dbs, e = json.Marshal(sq.RDs[len(sq.RDs)-1])
 			}
@@ -142,7 +143,7 @@ func TestSrvDet(t *testing.T) {
 			require.Equal(t, h.StatusOK, w.Code)
 			bs, e := json.Marshal(ts[2].dt)
 			require.NoError(t, e)
-			require.Equal(t, string(bs), w.Body.String())
+			require.Equal(t, string(bs), w.Body.String(), "At %d", i)
 		} else {
 			require.Equal(t, h.StatusBadRequest, w.Code, "At %d", i)
 			require.Equal(t, NoDetFound().Error(), w.Body.String(),
