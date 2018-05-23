@@ -3,9 +3,10 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	h "net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type DetMng struct {
@@ -77,7 +78,6 @@ func detIndexPreorder(s *SqDet, n uint32) (d *SqDet) {
 		i = i + 1
 	}
 	if i != n {
-		println("ok")
 		d = nil
 	}
 	return

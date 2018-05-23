@@ -3,13 +3,14 @@ package pmproxy
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net"
+	"time"
+
 	"github.com/juju/ratelimit"
 	"github.com/lamg/clock"
 	gp "github.com/lamg/goproxy"
 	rs "github.com/lamg/rtimespan"
-	"io"
-	"net"
-	"time"
 )
 
 // connect returns a connection according with the specifications
@@ -59,6 +60,39 @@ func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
 			Cf:    s.Cf,
 		}
 	}
+	return
+}
+
+type bfConn struct {
+	local  *net.TCPAddr
+	remote *net.TCPAddr
+	*bytes.Buffer
+}
+
+func (b *bfConn) Close() (e error) {
+	return
+}
+
+func (b *bfConn) LocalAddr() (r net.Addr) {
+	r = b.local
+	return
+}
+
+func (b *bfConn) RemoteAddr() (r net.Addr) {
+	r = b.remote
+	return
+}
+
+func (b *bfConn) SetDeadline(t time.Time) (e error) {
+
+	return
+}
+
+func (b *bfConn) SetReadDeadline(t time.Time) (e error) {
+	return
+}
+
+func (b *bfConn) SetWriteDeadline(t time.Time) (e error) {
 	return
 }
 

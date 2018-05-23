@@ -3,10 +3,11 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/require"
 	h "net/http"
 	"testing"
+
+	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSrvDet(t *testing.T) {
@@ -88,9 +89,10 @@ func TestSrvDet(t *testing.T) {
 		},
 	}
 	for i, j := range ts {
+		sq0, ok := j.dt.(*SqDet)
 		bs, e := json.Marshal(j.dt)
 		require.NoError(t, e)
-		_, ok := j.dt.(*SqDet)
+
 		w, r := reqres(t, h.MethodPost, "/"+Index, string(bs), "",
 			"0.0.0.0")
 		r = mux.SetURLVars(r, map[string]string{
@@ -104,15 +106,15 @@ func TestSrvDet(t *testing.T) {
 		if !j.err {
 			require.Equal(t, h.StatusOK, w.Code, "At %d", i)
 			sq := detIndexPreorder(d.MainDet, j.ind)
-			var dbs []byte
 			if ok {
-				v := toJSqDet(sq.SDs[len(sq.SDs)-1])
-				dbs, e = json.Marshal(v)
+				v0, v1 := toJSqDet(sq0), toJSqDet(sq.SDs[len(sq.SDs)-1])
+				require.Equal(t, v0, v1, "At %d", i)
 			} else {
+				var dbs []byte
 				dbs, e = json.Marshal(sq.RDs[len(sq.RDs)-1])
+				require.NoError(t, e)
+				require.Equal(t, string(bs), string(dbs), "At %d", i)
 			}
-			require.NoError(t, e)
-			require.Equal(t, string(bs), string(dbs), "At %d", i)
 		} else {
 			require.Equal(t, h.StatusBadRequest, w.Code, "At %d", i)
 			require.Equal(t, NoDetFound().Error(), w.Body.String(),
@@ -141,7 +143,10 @@ func TestSrvDet(t *testing.T) {
 		d.SrvDet(w, r)
 		if !j.err {
 			require.Equal(t, h.StatusOK, w.Code)
-			bs, e := json.Marshal(ts[2].dt)
+			sq, ok := ts[2].dt.(*SqDet)
+			require.True(t, ok)
+			v := toJSqDet(sq)
+			bs, e := json.Marshal(v)
 			require.NoError(t, e)
 			require.Equal(t, string(bs), w.Body.String(), "At %d", i)
 		} else {

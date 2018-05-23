@@ -3,16 +3,17 @@ package pmproxy
 import (
 	"bytes"
 	"fmt"
-	"github.com/jinzhu/now"
-	"github.com/lamg/clock"
-	gp "github.com/lamg/goproxy"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net"
 	h "net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jinzhu/now"
+	"github.com/lamg/clock"
+	gp "github.com/lamg/goproxy"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDial(t *testing.T) {
@@ -145,39 +146,6 @@ func (m *mapDl) Dial(l *net.TCPAddr, t time.Duration,
 
 func notFoundAddr(addr string) (e error) {
 	e = fmt.Errorf("Not found address %s", addr)
-	return
-}
-
-type bfConn struct {
-	local  *net.TCPAddr
-	remote *net.TCPAddr
-	*bytes.Buffer
-}
-
-func (b *bfConn) Close() (e error) {
-	return
-}
-
-func (b *bfConn) LocalAddr() (r net.Addr) {
-	r = b.local
-	return
-}
-
-func (b *bfConn) RemoteAddr() (r net.Addr) {
-	r = b.remote
-	return
-}
-
-func (b *bfConn) SetDeadline(t time.Time) (e error) {
-
-	return
-}
-
-func (b *bfConn) SetReadDeadline(t time.Time) (e error) {
-	return
-}
-
-func (b *bfConn) SetWriteDeadline(t time.Time) (e error) {
 	return
 }
 
