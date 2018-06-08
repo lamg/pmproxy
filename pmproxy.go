@@ -2,8 +2,9 @@ package pmproxy
 
 import (
 	"github.com/lamg/clock"
-	gp "github.com/lamg/goproxy"
+	gp "github.com/lamg/proxy"
 	"net"
+	h "net/http"
 	"time"
 )
 
@@ -13,33 +14,34 @@ type PMProxy struct {
 	Rd      []Det
 	Cl      clock.Clock
 	Dl      Dialer
-	pr      *gp.ProxyHttpServer
+	pr      *gp.Proxy
 	Timeout time.Duration
 	Ifp     IfaceProv
 }
 
-func NewPMProxy(rd []Det, cl clock.Clock, d Dialer,
+func NewPMProxy(rd []Det, cl clock.Clock, d *h.Transport,
 	t time.Duration, ifp IfaceProv) (p *PMProxy) {
+	proxy := gp.Proxy{
+		Tr: d,
+	}
 	p = &PMProxy{
 		Rd:      rd,
 		Cl:      cl,
 		Dl:      d,
-		pr:      gp.NewProxyHttpServer(),
+		pr:      proxy,
 		Timeout: t,
 		Ifp:     ifp,
 	}
 	return
 }
 
-// Dial is the entry point for connecting according the
-// matching resources
-func (p *PMProxy) Dial(ntw, addr string,
-	ctx *gp.ProxyCtx) (c net.Conn, e error) {
+func (p *PMProxy) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	s, nw := new(ConSpec), p.Cl.Now()
 	for i := 0; i != len(p.Rd); i++ {
-		p.Rd[i].Det(ctx.Req, nw, s)
+		p.Rd[i].Det(r, nw, s)
 	}
+	// get a configured transport according s?
+
 	c, e = connect(addr, s, p.pr, p.Timeout, p.Cl, p.Dl,
 		p.Ifp)
-	return
 }

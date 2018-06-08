@@ -9,13 +9,13 @@ import (
 
 	"github.com/juju/ratelimit"
 	"github.com/lamg/clock"
-	gp "github.com/lamg/goproxy"
+	gp "github.com/lamg/proxy"
 	rs "github.com/lamg/rtimespan"
 )
 
 // connect returns a connection according with the specifications
 // in s
-func connect(addr string, s *ConSpec, p *gp.ProxyHttpServer,
+func connect(addr string, s *ConSpec, p *gp.Proxy,
 	timeout time.Duration, cl clock.Clock, d Dialer,
 	ifp IfaceProv) (c net.Conn, e error) {
 	if !s.Valid() {
