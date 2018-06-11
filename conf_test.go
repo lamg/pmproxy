@@ -41,7 +41,7 @@ func TestConfPMProxy(t *testing.T) {
 }
 
 func TestIPRanges(t *testing.T) {
-	f := ip.New("192.168.1.1/28")
+	f := ip.New("192.168.1.1/28", "10.2.24.0/21")
 	hf := func(w h.ResponseWriter, r *h.Request) {
 	}
 	s := &ipFilter{f.FilterHTTP(&ipFilter{hf})}
@@ -53,6 +53,8 @@ func TestIPRanges(t *testing.T) {
 	}{
 		{"192.168.2.1:8000", 403},
 		{"192.168.1.1:8000", 200},
+		{"10.2.29.5:8000", 200},
+		{"10.2.32.12:8000", 403},
 	}
 	for _, j := range al {
 		rq.RemoteAddr = j.ip
@@ -119,10 +121,10 @@ var conf = `
 }
 `
 var accR = `[
-	{"hostRE":"google.com.cu","start":null,"end":null,"consCfc":0},
-	{"hostRE":"14ymedio.com","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
- {"hostRE":"facebook.com","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5},
-	{"hostRE":"detectportal.firefox.com","start":null,"end":null,"consCfc":0}
+	{"hostRE":"google\\.com\\.cu$","start":null,"end":null,"consCfc":0},
+	{"hostRE":"14ymedio\\.com$","start":"1959-01-01T00:00:00-00:00","end":"2030-01-01T00:00:00-00:00","consCfc":1},
+ {"hostRE":"facebook\\.com$","daily":true,"start":"2006-01-02T08:00:00-00:00","end":"2006-01-02T14:00:00-00:00","consCfc":1.5},
+	{"hostRE":"detectportal\\.firefox\\.com$","start":null,"end":null,"consCfc":0}
  ]`
 
 var cons = `{

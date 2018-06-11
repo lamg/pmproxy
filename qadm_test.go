@@ -20,21 +20,21 @@ func TestLoadAccStr(t *testing.T) {
 	require.True(t, e == nil)
 	tss := []AccExcp{
 		{
-			rg.MustCompile("google.com.cu"),
+			rg.MustCompile("google\\.com\\.cu$"),
 			false,
 			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 			0,
 		},
 		{
-			rg.MustCompile("14ymedio.com"),
+			rg.MustCompile("14ymedio\\.com$"),
 			false,
 			time.Date(1959, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 			1,
 		},
 		{
-			rg.MustCompile("facebook.com"),
+			rg.MustCompile("facebook\\.com$"),
 			true,
 			time.Date(2006, 1, 2, 8, 0, 0, 0, time.UTC),
 			time.Date(2006, 1, 2, 14, 0, 0, 0, time.UTC),
