@@ -15,14 +15,12 @@ import (
 )
 
 func main() {
-	var dir, accFl, excp string
+	var dir, accFl string
 	flag.StringVar(&accFl, "a", "", "access exceptions file")
 	flag.StringVar(&dir, "d", "", "blacklist directory")
-	flag.StringVar(&excp, "e", "", "exceptions")
 	flag.Parse()
 
-	excs := strings.Split(excp, ",")
-	ds, e := blackDir(dir, excs)
+	ds, e := blackDir(dir)
 	if e == nil && len(ds) != 0 {
 		e = copyAppend(accFl, ds)
 	}
@@ -31,16 +29,12 @@ func main() {
 	}
 }
 
-func blackDir(dir string, excp []string) (ds []string, e error) {
+func blackDir(dir string) (ds []string, e error) {
 	var fs []os.FileInfo
 	fs, e = ioutil.ReadDir(dir)
 	if e == nil {
 		for i := 0; i != len(fs); i++ {
-			c := false
-			for j := 0; !c && j != len(excp); j++ {
-				c = excp[j] == fs[i].Name()
-			}
-			if fs[i].IsDir() && !c {
+			if fs[i].IsDir() {
 				ds = append(ds, path.Join(dir, fs[i].Name(), "domains"))
 			}
 		}
