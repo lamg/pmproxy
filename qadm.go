@@ -34,6 +34,19 @@ type AccExcp struct {
 	ConsCfc float32 `json:"consCfc"`
 }
 
+// MarshalJSON is the Marshaller interface implementation
+func (a AccExcp) MarshalJSON() (bs []byte, e error) {
+	b := JAccExcp{
+		ConsCfc: a.ConsCfc,
+		Daily:   a.Daily,
+		End:     a.End,
+		HostRE:  a.HostR.String(),
+		Start:   a.Start,
+	}
+	bs, e = json.Marshal(&b)
+	return
+}
+
 // QAdm is the administrator of quotas, also restricts
 // downloads according an []AccExcp and handles users's
 // sessions through an *SMng

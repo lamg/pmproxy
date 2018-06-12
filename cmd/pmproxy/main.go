@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"log"
 	"net/http"
@@ -39,6 +40,8 @@ func main() {
 			IdleTimeout:  0,
 			Addr:         c.UISrvAddr,
 			Handler:      lh,
+			TLSNextProto: make(map[string]func(*h.Server, *tls.Conn,
+				h.Handler)),
 		}
 		go webUI.ListenAndServeTLS(c.CertFl, c.KeyFl)
 		proxy := &http.Server{
@@ -47,6 +50,9 @@ func main() {
 			IdleTimeout:  0,
 			Addr:         c.ProxySrvAddr,
 			Handler:      pm,
+			// Disable HTTP/2.
+			TLSNextProto: make(map[string]func(*h.Server, *tls.Conn,
+				h.Handler)),
 		}
 
 		e = proxy.ListenAndServe()
