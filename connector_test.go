@@ -1,15 +1,16 @@
 package pmproxy
 
 import (
+	"io/ioutil"
+	"net"
+	"testing"
+	"time"
+
 	"github.com/jinzhu/now"
 	"github.com/lamg/clock"
 	"github.com/lamg/goproxy"
 	rs "github.com/lamg/rtimespan"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"net"
-	"testing"
-	"time"
 )
 
 func TestConnect(t *testing.T) {
@@ -181,4 +182,19 @@ func connDialer(ts []tConn) (l Dialer) {
 		mc: mp,
 	}
 	return
+}
+
+func TestDialContext(t *testing.T) {
+	clockDate := now.MustParse("2006-04-04")
+	n := &Connector{
+		Cl: &clock.TClock{
+			Time: clockDate,
+			Intv: time.Minute,
+		},
+		Ifp: &MIfaceProv{
+			Mp: map[string]*net.Interface{
+				"eth0": &net.Interface{Name: "eth0"},
+			},
+		},
+	}
 }

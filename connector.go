@@ -2,9 +2,12 @@ package pmproxy
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
+	h "net/http"
+	"net/url"
 	"time"
 
 	"github.com/juju/ratelimit"
@@ -13,19 +16,54 @@ import (
 	rs "github.com/lamg/rtimespan"
 )
 
+// Connector provides DialContext for processing requests according
+// rules defined, and using an *h.Transport
+type Connector struct {
+	Cl      clock.Clock
+	Timeout time.Duration
+	Ifp     IfaceProv
+	Rd      []Det
+}
+
+// DialContext dials using as parameters fields in Connector,
+// and *h.Request returned by ctx.Value(proxy.RequestKey)
+func (n *Connector) DialContext(ctx context.Context, nt,
+	addr string) (c net.Conn,
+	e error) {
+	r := ctx.Value(gp.ReqKey).(*h.Request)
+	s := n.det(r)
+	c, e = n.connect(r.Host, s)
+	return
+}
+
+// Proxy returns the proxy URL for making a connection, according
+// defined rules
+func (n *Connector) Proxy(r *h.Request) (u *url.URL, e error) {
+	s := n.det(r)
+	if s.Proxy != "" {
+		u, e = url.Parse(s.Proxy)
+	}
+	return
+}
+
+func (n *Connector) det(r *h.Request) (s *ConSpec) {
+	s, nw := new(ConSpec), n.Cl.Now()
+	for i := 0; i != len(n.Rd); i++ {
+		n.Rd[i].Det(r, nw, s)
+	}
+	return
+}
+
 // connect returns a connection according with the specifications
 // in s
-func connect(addr string, s *ConSpec, p *gp.Proxy,
-	timeout time.Duration, cl clock.Clock, d Dialer,
-	ifp IfaceProv) (c net.Conn, e error) {
+func (n *Connector) connect(addr string, s *ConSpec) (c net.Conn,
+	e error) {
 	if !s.Valid() {
 		e = InvCSpecErr(s)
 	}
 	if e == nil {
-		if s.Proxy != "" {
-			c, e = proxyConn(p, s.Proxy, addr)
-		} else if s.Iface != "" {
-			c, e = interfaceConn(s.Iface, addr, timeout, d, ifp)
+		if s.Iface != "" {
+			c, e = n.interfaceConn(s.Iface, addr)
 		} else if s.Test {
 			c = &bfConn{
 				Buffer: bytes.NewBufferString(""),
@@ -39,7 +77,7 @@ func connect(addr string, s *ConSpec, p *gp.Proxy,
 		if s.Span != nil {
 			c = &rspanConn{
 				Conn: c,
-				cl:   cl,
+				cl:   n.Cl,
 				sp:   s.Span,
 			}
 		}
@@ -171,14 +209,10 @@ func (c *rspanConn) Read(bs []byte) (n int, e error) {
 	return
 }
 
-type Dialer interface {
-	Dial(*net.TCPAddr, time.Duration, string) (net.Conn, error)
-}
-
-func interfaceConn(iface, addr string, timeout time.Duration,
-	d Dialer, ifp IfaceProv) (c net.Conn, e error) {
+func (n *Connector) interfaceConn(iface, addr string) (c net.Conn,
+	e error) {
 	var ief *net.Interface
-	ief, e = ifp.InterfaceByName(iface)
+	ief, e = n.Ifp.InterfaceByName(iface)
 	var laddr []net.Addr
 	if e == nil {
 		laddr, e = ief.Addrs()
@@ -194,28 +228,39 @@ func interfaceConn(iface, addr string, timeout time.Duration,
 	}
 	if e == nil {
 		tca := &net.TCPAddr{IP: la.IP}
-		c, e = d.Dial(tca, timeout, addr)
+		d := &net.Dialer{
+			LocalAddr: tca,
+		}
+		c, e = d.Dial("tcp", addr)
 	}
 	return
 }
 
+// IfaceProv is made for easing testing while getting network
+// interfaces by name
 type IfaceProv interface {
 	InterfaceByName(string) (*net.Interface, error)
 }
 
+// OSIfProv is the IfaceProv implementation using net.InterfaceByName
 type OSIfProv struct {
 }
 
+// InterfaceByName returns the network interface associated with
+// the supplied name
 func (p *OSIfProv) InterfaceByName(name string) (n *net.Interface,
 	e error) {
 	n, e = net.InterfaceByName(name)
 	return
 }
 
+// MIfaceProv is made for testing
 type MIfaceProv struct {
 	Mp map[string]*net.Interface
 }
 
+// InterfaceByName returns the network interface associated with
+// the supplied name
 func (p *MIfaceProv) InterfaceByName(name string) (n *net.Interface,
 	e error) {
 	var ok bool
@@ -226,15 +271,10 @@ func (p *MIfaceProv) InterfaceByName(name string) (n *net.Interface,
 	return
 }
 
+// NotFoundIface error
 func NotFoundIface(name string) (e error) {
 	e = fmt.Errorf("Not found interface %s", name) // TODO make equal
 	// to net.InterfaceByName error
-	return
-}
-
-func proxyConn(p *gp.ProxyHttpServer,
-	proxy, addr string) (n net.Conn, e error) {
-	n, e = p.NewConnectDialToProxy(proxy)("tcp", addr)
 	return
 }
 
