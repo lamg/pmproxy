@@ -21,7 +21,7 @@ import (
 type Connector struct {
 	Cl      clock.Clock
 	Timeout time.Duration
-	Ifp     IfaceProv
+	Dl      Dialer
 	Rd      []Det
 }
 
@@ -59,19 +59,10 @@ func (n *Connector) det(r *h.Request) (s *ConSpec) {
 func (n *Connector) connect(addr string, s *ConSpec) (c net.Conn,
 	e error) {
 	if !s.Valid() {
-		e = InvCSpecErr(s)
+		e = InvCSpec(s)
 	}
 	if e == nil {
-		if s.Iface != "" {
-			c, e = n.interfaceConn(s.Iface, addr)
-		} else if s.Test {
-			c = &bfConn{
-				Buffer: bytes.NewBufferString(""),
-				local: &net.TCPAddr{
-					IP: []byte{10, 1, 1, 1},
-				},
-			}
-		}
+		c, e = n.Dl.Dial(s.Iface, addr)
 	}
 	if e == nil {
 		if s.Span != nil {
@@ -98,6 +89,107 @@ func (n *Connector) connect(addr string, s *ConSpec) (c net.Conn,
 			Cf:    s.Cf,
 		}
 	}
+	return
+}
+
+// Dialer is made for alternating between test dialer and os dialer
+type Dialer interface {
+	Dial(iface, addr string) (net.Conn, error)
+}
+
+// OSDialer is the Dialer implementation
+type OSDialer struct {
+}
+
+// Dial is the Dialer.Dial implementation
+func (p *OSDialer) Dial(iface, addr string) (c net.Conn, e error) {
+	var ief *net.Interface
+	ief, e = net.InterfaceByName(iface)
+	var laddr []net.Addr
+	if e == nil {
+		laddr, e = ief.Addrs()
+	}
+	var la *net.IPNet
+	if e == nil {
+		if len(laddr) != 0 {
+			la = laddr[0].(*net.IPNet)
+		} else {
+			e = NotLocalIP()
+		}
+		// { found an IP local address in laddr for dialing or error }
+	}
+	if e == nil {
+		tca := &net.TCPAddr{IP: la.IP}
+		d := &net.Dialer{
+			LocalAddr: tca,
+		}
+		c, e = d.Dial("tcp", addr)
+	}
+	return
+}
+
+// TestDialer is made for testing
+type TestDialer struct {
+	Mp map[string]map[string]string
+}
+
+// Dial is the Dialer.Dial implementation
+func (p *TestDialer) Dial(iface, addr string) (c net.Conn, e error) {
+	n, ok := p.Mp[iface]
+	if !ok {
+		e = NotFoundIface(iface)
+	}
+	var content string
+	if e == nil {
+		content, ok = n[addr]
+		if !ok {
+			e = NotFoundAddr(addr)
+		}
+	}
+	if e == nil {
+		c = &bfConn{
+			Buffer: bytes.NewBufferString(content),
+			// careful with nil pointers here
+		}
+	}
+	return
+}
+
+// NotFoundAddr is the not found address error
+func NotFoundAddr(addr string) (e error) {
+	e = fmt.Errorf("Not found address %s", addr)
+	return
+}
+
+// NotFoundIface error
+func NotFoundIface(name string) (e error) {
+	e = fmt.Errorf("Not found interface %s", name) // TODO make equal
+	// to net.InterfaceByName error
+	return
+}
+
+// DwnOverMsg quota over message
+func DwnOverMsg() (e error) {
+	e = fmt.Errorf("Quota over")
+	return
+}
+
+// TimeOverMsg time span over message
+func TimeOverMsg(a, b time.Time) (e error) {
+	e = fmt.Errorf("%s → %s", a.Format(time.RFC3339),
+		b.Format(time.RFC3339))
+	return
+}
+
+// InvCSpec is the invalid connection specification error
+func InvCSpec(s *ConSpec) (e error) {
+	e = fmt.Errorf("La conexión no puede completarse %v", s)
+	return
+}
+
+// NotLocalIP is not found local IP address error
+func NotLocalIP() (e error) {
+	e = fmt.Errorf("Not found local IP address")
 	return
 }
 
@@ -206,97 +298,5 @@ func (c *rspanConn) Read(bs []byte) (n int, e error) {
 		a, b := c.sp.CurrActIntv(nw)
 		e = TimeOverMsg(a, b)
 	}
-	return
-}
-
-func (n *Connector) interfaceConn(iface, addr string) (c net.Conn,
-	e error) {
-	var ief *net.Interface
-	ief, e = n.Ifp.InterfaceByName(iface)
-	var laddr []net.Addr
-	if e == nil {
-		laddr, e = ief.Addrs()
-	}
-	var la *net.IPNet
-	if e == nil {
-		if len(laddr) != 0 {
-			la = laddr[0].(*net.IPNet)
-		} else {
-			e = NotIPErr()
-		}
-		// { found an IP local address in laddr for dialing or error }
-	}
-	if e == nil {
-		tca := &net.TCPAddr{IP: la.IP}
-		d := &net.Dialer{
-			LocalAddr: tca,
-		}
-		c, e = d.Dial("tcp", addr)
-	}
-	return
-}
-
-// IfaceProv is made for easing testing while getting network
-// interfaces by name
-type IfaceProv interface {
-	InterfaceByName(string) (*net.Interface, error)
-}
-
-// OSIfProv is the IfaceProv implementation using net.InterfaceByName
-type OSIfProv struct {
-}
-
-// InterfaceByName returns the network interface associated with
-// the supplied name
-func (p *OSIfProv) InterfaceByName(name string) (n *net.Interface,
-	e error) {
-	n, e = net.InterfaceByName(name)
-	return
-}
-
-// MIfaceProv is made for testing
-type MIfaceProv struct {
-	Mp map[string]*net.Interface
-}
-
-// InterfaceByName returns the network interface associated with
-// the supplied name
-func (p *MIfaceProv) InterfaceByName(name string) (n *net.Interface,
-	e error) {
-	var ok bool
-	n, ok = p.Mp[name]
-	if !ok {
-		e = NotFoundIface(name)
-	}
-	return
-}
-
-// NotFoundIface error
-func NotFoundIface(name string) (e error) {
-	e = fmt.Errorf("Not found interface %s", name) // TODO make equal
-	// to net.InterfaceByName error
-	return
-}
-
-// DwnOverMsg quota over message
-func DwnOverMsg() (e error) {
-	e = fmt.Errorf("Quota over")
-	return
-}
-
-// TimeOverMsg time span over message
-func TimeOverMsg(a, b time.Time) (e error) {
-	e = fmt.Errorf("%s → %s", a.Format(time.RFC3339),
-		b.Format(time.RFC3339))
-	return
-}
-
-func InvCSpecErr(s *ConSpec) (e error) {
-	e = fmt.Errorf("La conexión no puede completarse %v", s)
-	return
-}
-
-func NotIPErr() (e error) {
-	e = fmt.Errorf("Not found local IP address")
 	return
 }

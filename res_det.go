@@ -2,13 +2,15 @@ package pmproxy
 
 import (
 	"encoding/json"
-	rt "github.com/lamg/rtimespan"
 	"net"
 	h "net/http"
 	"regexp"
 	"time"
+
+	rt "github.com/lamg/rtimespan"
 )
 
+// ConSpec contains the information for making a connection
 type ConSpec struct {
 	// Consumption coeficient
 	Cf float32
@@ -21,11 +23,11 @@ type ConSpec struct {
 	Cons  *ConsAdd
 	Dm    *DMng
 	Cl    *CLMng
-	Test  bool
 }
 
+// Valid returns whether the connection specification is valid
 func (s *ConSpec) Valid() (b bool) {
-	b = s.Cf >= 0 && (s.Iface != "" || s.Proxy != "" || s.Test) &&
+	b = s.Cf >= 0 && (s.Iface != "" || s.Proxy != "") &&
 		s.Cons != nil && s.Dm != nil
 	return
 }
@@ -184,7 +186,7 @@ func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) {
 		}
 		s0.Quota = s0.Quota + s1.Quota
 		if c != nil {
-			s0.Cons = c
+			s0.Cons = s1.Cons
 		}
 		if d != nil {
 			s0.Dm = s1.Dm

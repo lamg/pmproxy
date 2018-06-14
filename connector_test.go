@@ -1,24 +1,49 @@
 package pmproxy
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
+	h "net/http"
+	"net/url"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/jinzhu/now"
 	"github.com/lamg/clock"
-	"github.com/lamg/goproxy"
+	"github.com/lamg/proxy"
 	rs "github.com/lamg/rtimespan"
 	"github.com/stretchr/testify/require"
 )
 
+type tConn struct {
+	addr    string
+	spec    *ConSpec
+	err     error
+	errRd   error
+	content string
+}
+
 func TestConnect(t *testing.T) {
 	clockDate, actSpanStart := now.MustParse("2006-04-04"),
 		now.MustParse("2018-04-04")
-	ifs, e := net.Interfaces()
-	if e != nil || len(ifs) == 0 {
-		panic("Not found interfaces for runnig test")
+	n := &Connector{
+		Cl: &clock.TClock{
+			Time: clockDate,
+			Intv: time.Minute,
+		},
+		Dl: &TestDialer{
+			Mp: map[string]map[string]string{
+				"eth0": map[string]string{
+					"google.com": "GOOGLE",
+					"jiji.com":   "",
+					"juju.org":   "",
+					"jaja.org":   "",
+					"jeje.org":   "",
+				},
+			},
+		},
 	}
 	cm, dm := NewCMng("cm"),
 		&DMng{
@@ -28,32 +53,13 @@ func TestConnect(t *testing.T) {
 				TimeLapse: time.Millisecond,
 			},
 		}
-	clm, ca := NewCLMng("clm", 100), cm.Adder("coco")
+	clm := NewCLMng("clm", 100)
 	ts := []tConn{
 		{
 			addr:    "google.com",
 			spec:    new(ConSpec),
-			err:     InvCSpecErr(new(ConSpec)),
+			err:     InvCSpec(new(ConSpec)),
 			content: "GOOGLE",
-		},
-		{
-			addr: "facebook.com",
-			spec: &ConSpec{
-				Cf:    1,
-				Cl:    clm,
-				Cons:  ca,
-				Proxy: "http://proxy.net",
-				Quota: 1024,
-				Dm:    dm,
-				Span:  nil,
-			},
-			err: &net.OpError{
-				Op:     "dial",
-				Net:    "tcp",
-				Source: nil,
-				Addr:   nil,
-				Err:    nil,
-			},
 		},
 		{
 			addr: "juju.org",
@@ -61,12 +67,12 @@ func TestConnect(t *testing.T) {
 				Cf:    1,
 				Cl:    clm,
 				Cons:  cm.Adder("pepe"),
+				Iface: "eth0",
 				Quota: 2048,
 				Dm:    dm,
 				Span: &rs.RSpan{
 					AllTime: true,
 				},
-				Test: true,
 			},
 		},
 		{
@@ -75,6 +81,7 @@ func TestConnect(t *testing.T) {
 				Cf:    1,
 				Cl:    clm,
 				Cons:  cm.Adder("kiko"),
+				Iface: "eth0",
 				Quota: 4096,
 				Dm:    dm,
 				Span: &rs.RSpan{
@@ -83,7 +90,6 @@ func TestConnect(t *testing.T) {
 					Total:  24 * time.Hour,
 					Times:  1,
 				},
-				Test: true,
 			},
 			errRd: TimeOverMsg(clockDate.Add(24*time.Hour),
 				clockDate.Add(25*time.Hour)),
@@ -94,6 +100,7 @@ func TestConnect(t *testing.T) {
 				Cf:    1,
 				Cl:    clm,
 				Cons:  cm.Adder("kiko"),
+				Iface: "eth0",
 				Quota: 0,
 				Dm:    dm,
 				Span: &rs.RSpan{
@@ -102,12 +109,11 @@ func TestConnect(t *testing.T) {
 					Total:  24 * time.Hour,
 					Times:  1,
 				},
-				Test: true,
 			},
 			errRd: DwnOverMsg(),
 		},
 		{
-			addr: "jiji.com",
+			addr: "koko.com",
 			spec: &ConSpec{
 				Cf:    1,
 				Cl:    clm,
@@ -116,7 +122,7 @@ func TestConnect(t *testing.T) {
 				Quota: 8192,
 				Dm:    dm,
 			},
-			err: NotIPErr(),
+			err: NotFoundAddr("koko.com"),
 		},
 		{
 			addr: "jojo.net",
@@ -132,20 +138,8 @@ func TestConnect(t *testing.T) {
 		},
 	}
 
-	cl, dl, p, ifp := &clock.TClock{
-		Time: clockDate,
-		Intv: time.Minute,
-	},
-		connDialer(ts),
-		goproxy.NewProxyHttpServer(),
-		&MIfaceProv{
-			Mp: map[string]*net.Interface{
-				"eth0": &net.Interface{Name: "eth0"},
-			},
-		}
-
 	for i, j := range ts {
-		c, e := connect(j.addr, j.spec, p, time.Second, cl, dl, ifp)
+		c, e := n.connect(j.addr, j.spec)
 		ope, ok := e.(*net.OpError)
 		if ok {
 			ope.Err = nil
@@ -157,44 +151,103 @@ func TestConnect(t *testing.T) {
 			bs, e = ioutil.ReadAll(c)
 			require.Equal(t, j.errRd, e)
 			require.Equal(t, j.content, string(bs), "At %d", i)
+			// connection content is ok
+
 			n := clm.Amount(c.LocalAddr().String())
 			c.Close()
 			m := clm.Amount(c.LocalAddr().String())
 			require.Equal(t, m+1, n)
+			// connection limit manager works
 		}
 	}
 }
 
-type tConn struct {
-	addr    string
-	spec    *ConSpec
-	err     error
-	errRd   error
-	content string
-}
-
-func connDialer(ts []tConn) (l Dialer) {
-	mp := make(map[string]string)
-	for _, j := range ts {
-		mp[j.addr] = j.content
+func TestProxy(t *testing.T) {
+	n := &Connector{
+		Rd: []Det{
+			&ResDet{
+				Ur: regexp.MustCompile("bla\\.com"),
+				Pr: &ConSpec{
+					Proxy: "http://proxy.org",
+				},
+			},
+		},
+		Cl: &clock.TClock{
+			Time: now.MustParse("2006-04-01"),
+			Intv: time.Minute,
+		},
 	}
-	l = &mapDl{
-		mc: mp,
+	ts := []string{
+		"bla.com",
 	}
-	return
+	for i, j := range ts {
+		r, e := h.NewRequest(h.MethodGet, j, nil)
+		require.NoError(t, e, "At %d", i)
+		var u *url.URL
+		u, e = n.Proxy(r)
+		require.NoError(t, e, "At %d", i)
+		require.NotNil(t, u, "At %d", i)
+	}
 }
 
 func TestDialContext(t *testing.T) {
-	clockDate := now.MustParse("2006-04-04")
-	n := &Connector{
-		Cl: &clock.TClock{
-			Time: clockDate,
-			Intv: time.Minute,
-		},
-		Ifp: &MIfaceProv{
-			Mp: map[string]*net.Interface{
-				"eth0": &net.Interface{Name: "eth0"},
+	cm, dm, sm := NewCMng("cm"),
+		&DMng{
+			Name: "dm",
+			Bandwidth: &Rate{
+				Bytes:     1024,
+				TimeLapse: time.Millisecond,
 			},
 		},
+		NewSMng("sm", nil, nil)
+	keke, kekeIP := "keke", "0.0.0.0"
+	sm.login(keke, kekeIP)
+	n := &Connector{
+		Rd: []Det{
+			&ResDet{
+				Ur: regexp.MustCompile("bla\\.com"),
+				Pr: &ConSpec{
+					Cf:    1,
+					Iface: "eth0",
+					Quota: 4096,
+					Dm:    dm,
+					Cons:  cm.Adder("keke"),
+				},
+				Cs: cm,
+				Um: &UsrMtch{
+					Sm: sm,
+				},
+			},
+		},
+		Cl: &clock.TClock{
+			Time: now.MustParse("2006-04-01"),
+			Intv: time.Minute,
+		},
+		Dl: &TestDialer{
+			Mp: map[string]map[string]string{
+				"eth0": map[string]string{
+					"bla.com": "BLABLA",
+				},
+			},
+		},
+	}
+	ts := []tConn{
+		{
+			addr:    "bla.com",
+			content: "BLABLA",
+		},
+	}
+	for i, j := range ts {
+		r, e := h.NewRequest(h.MethodGet, j.addr, nil)
+		require.NoError(t, e, "At %d", i)
+		r.RemoteAddr = kekeIP + ":3433"
+		ctx := context.WithValue(context.Background(), proxy.ReqKey, r)
+		var c net.Conn
+		c, e = n.DialContext(ctx, "tcp", j.addr)
+		require.NoError(t, e, "At %d", i)
+		var bs []byte
+		bs, e = ioutil.ReadAll(c)
+		require.NoError(t, e, "At %d", i)
+		require.Equal(t, j.content, bs)
 	}
 }
