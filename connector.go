@@ -32,7 +32,7 @@ func (n *Connector) DialContext(ctx context.Context, nt,
 	e error) {
 	r := ctx.Value(gp.ReqKey).(*h.Request)
 	s := n.det(r)
-	c, e = n.connect(r.Host, s)
+	c, e = n.connect(addr, s)
 	return
 }
 

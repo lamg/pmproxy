@@ -205,14 +205,15 @@ func TestDialContext(t *testing.T) {
 	n := &Connector{
 		Rd: []Det{
 			&ResDet{
-				Ur: regexp.MustCompile("bla\\.com"),
+				Unit: true,
+				Ur:   regexp.MustCompile("bla\\.com"),
 				Pr: &ConSpec{
 					Cf:    1,
 					Iface: "eth0",
 					Quota: 4096,
-					Dm:    dm,
 					Cons:  cm.Adder("keke"),
 				},
+				Dm: dm,
 				Cs: cm,
 				Um: &UsrMtch{
 					Sm: sm,
@@ -248,6 +249,6 @@ func TestDialContext(t *testing.T) {
 		var bs []byte
 		bs, e = ioutil.ReadAll(c)
 		require.NoError(t, e, "At %d", i)
-		require.Equal(t, j.content, bs)
+		require.Equal(t, j.content, string(bs))
 	}
 }

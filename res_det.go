@@ -189,7 +189,7 @@ func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) {
 			s0.Cons = s1.Cons
 		}
 		if d != nil {
-			s0.Dm = s1.Dm
+			s0.Dm = d
 		}
 		if s1.Cl != nil {
 			s0.Cl = s1.Cl
