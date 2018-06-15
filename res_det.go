@@ -32,15 +32,20 @@ func (s *ConSpec) Valid() (b bool) {
 	return
 }
 
+// Rate is the connection rate representation
 type Rate struct {
 	Bytes     uint64
 	TimeLapse time.Duration
 }
 
+// Det is a predicate for matching requests, which is useful
+// for associating them with resources. It's implemented by
+// ResDet and SqDet
 type Det interface {
 	Det(*h.Request, time.Time, *ConSpec) bool
 }
 
+// ResDet is the basic resource determinator
 type ResDet struct {
 	// when unit is true Det returns the match of a predicate
 	// when unit is false Det returns the match of no predicate
@@ -52,6 +57,7 @@ type ResDet struct {
 	Um   *UsrMtch
 	// partial connection specification
 	Pr *ConSpec
+	// why not using repeat Pr.Dm and Dm, Pr.Cl and Dl
 	Cs *CMng
 	Dm *DMng
 	Cl *CLMng
@@ -74,6 +80,7 @@ type rdJ struct {
 	Cl string `json:"cl"`
 }
 
+// MarshalJSON is the json.Marshaler implementation
 func (d *ResDet) MarshalJSON() (bs []byte, e error) {
 	rg, ur, cs, dm, cl := "", "", "", "", ""
 	if d.Rg != nil {
@@ -107,6 +114,7 @@ func (d *ResDet) MarshalJSON() (bs []byte, e error) {
 	return
 }
 
+// UnmarshalJSON is the json.Unmarshaler implementation
 func (d *ResDet) UnmarshalJSON(bs []byte) (e error) {
 	v := new(rdJ)
 	e = json.Unmarshal(bs, v)
@@ -134,6 +142,7 @@ func (d *ResDet) UnmarshalJSON(bs []byte) (e error) {
 	return
 }
 
+// Det is the Det implementation
 func (d *ResDet) Det(r *h.Request, t time.Time,
 	f *ConSpec) (b bool) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
@@ -197,6 +206,9 @@ func addRes(s0, s1 *ConSpec, c *ConsAdd, d *DMng) {
 	}
 }
 
+// SqDet implements Det evalues a sequence of determinators.
+// When SqDet.Unit is true it performs a for all, and when
+// is false it performs an exists evaluation.
 type SqDet struct {
 	// when unit is true Det returns for all Ds Det is true
 	// when unit is false Det returns exists Det true in Ds
@@ -205,6 +217,7 @@ type SqDet struct {
 	SDs  []*SqDet  `json:"sds"`
 }
 
+// Det is the Det implementation
 func (d *SqDet) Det(r *h.Request, t time.Time,
 	c *ConSpec) (b bool) {
 	if d.RDs != nil {
