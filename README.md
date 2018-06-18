@@ -70,10 +70,12 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
-- [ ] Custom proxy library and correct elazarl's goproxy runtime panic, which still causes the current PMProxy production version crashes.
 
 - [ ] configuration and resource determinators management (det_manager.go)
 - [ ] provide a list of URLs whose access doesn't add to user consumption
 - [x] expose management interface
 	- [ ] PMProxy.Rd with type `*SqDet` instead of `[]Det`
 	- [x] TestSrvDet
+- [ ] write configuration automatically to disk
+- [x] reset consumptions
+- [ ] create command

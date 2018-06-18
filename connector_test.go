@@ -7,6 +7,7 @@ import (
 	h "net/http"
 	"net/url"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,22 @@ import (
 	rs "github.com/lamg/rtimespan"
 	"github.com/stretchr/testify/require"
 )
+
+func testCMng() (cm *CMng) {
+	clockDate := now.MustParse("2006-04-04")
+	cl := &clock.TClock{
+		Time: clockDate,
+		Intv: time.Minute,
+	}
+	cm = &CMng{
+		Name:       "cm",
+		Cl:         cl,
+		ResetCycle: time.Hour,
+		LastReset:  clockDate,
+		Cons:       new(sync.Map),
+	}
+	return
+}
 
 type tConn struct {
 	addr    string
@@ -28,11 +45,12 @@ type tConn struct {
 func TestConnect(t *testing.T) {
 	clockDate, actSpanStart := now.MustParse("2006-04-04"),
 		now.MustParse("2018-04-04")
+	cl := &clock.TClock{
+		Time: clockDate,
+		Intv: time.Minute,
+	}
 	n := &Connector{
-		Cl: &clock.TClock{
-			Time: clockDate,
-			Intv: time.Minute,
-		},
+		Cl: cl,
 		Dl: &TestDialer{
 			Mp: map[string]map[string]string{
 				"eth0": map[string]string{
@@ -45,7 +63,7 @@ func TestConnect(t *testing.T) {
 			},
 		},
 	}
-	cm, dm := NewCMng("cm"),
+	cm, dm := testCMng(),
 		&DMng{
 			Name: "dm",
 			Bandwidth: &Rate{
@@ -191,7 +209,7 @@ func TestProxy(t *testing.T) {
 }
 
 func TestDialContext(t *testing.T) {
-	cm, dm, sm := NewCMng("cm"),
+	cm, dm, sm := testCMng(),
 		&DMng{
 			Name: "dm",
 			Bandwidth: &Rate{

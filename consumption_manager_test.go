@@ -2,10 +2,16 @@ package pmproxy
 
 import (
 	"fmt"
+	h "net/http"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/jinzhu/now"
+	"github.com/lamg/clock"
+
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
-	h "net/http"
-	"testing"
 )
 
 func TestServeCons(t *testing.T) {
@@ -93,4 +99,27 @@ func TestMarshal(t *testing.T) {
 		c = true
 		return
 	})
+}
+
+func TestResetCons(t *testing.T) {
+	initialDate := now.MustParse("2006-04-05")
+	cl := &clock.TClock{
+		Intv: time.Minute,
+		Time: initialDate,
+	}
+	cm := &CMng{
+		Cl:         cl,
+		Cons:       new(sync.Map),
+		LastReset:  initialDate,
+		Name:       "cm",
+		ResetCycle: time.Hour,
+	}
+	kiko := "kiko"
+	adr := cm.Adder(kiko)
+	for i := 0; i != 61; i++ {
+		adr.Add(10)
+		v, _ := adr.cons.Cons.Load(kiko)
+		n := v.(uint64)
+		require.Equal(t, i == 60 || i == 0, n == 10, "At %d", i)
+	}
 }
