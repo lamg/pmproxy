@@ -4,6 +4,7 @@ import (
 	ld "github.com/lamg/ldaputil"
 )
 
+// GrpMtch matches user groups
 type GrpMtch struct {
 	Grp string
 	Um  *UsrMtch
@@ -12,6 +13,8 @@ type GrpMtch struct {
 	Ug map[string][]string
 }
 
+// Match gets the groups associated to user logged in
+// at ip, and check if it is equal to m.Grp
 func (m *GrpMtch) Match(ip string) (b bool) {
 	usr, b := m.Um.Sm.MatchUsr(ip)
 	var gs []string
@@ -35,14 +38,18 @@ func (m *GrpMtch) Match(ip string) (b bool) {
 	return
 }
 
+// UsrMtch matches users
 type UsrMtch struct {
 	// with Ul empty all users match if logged
 	Ul []string `json:"ul"`
 	Sm *SMng    `json:"sm"`
 }
 
+// Match gets the user logged in at ip checks if is
+// in the matching user list
 func (m *UsrMtch) Match(ip string) (b bool) {
-	usr, b := m.Sm.MatchUsr(ip)
+	var usr string
+	usr, b = m.Sm.MatchUsr(ip)
 	if b && len(m.Ul) != 0 {
 		i := 0
 		for ; i != len(m.Ul) && m.Ul[i] != usr; i++ {

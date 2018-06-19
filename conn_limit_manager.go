@@ -2,11 +2,14 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
 	h "net/http"
 	"sync"
+
+	"github.com/gorilla/mux"
 )
 
+// CLMng is the connection limit manager. It limits the number of
+// connections made from one IP address.
 type CLMng struct {
 	Name string `json:"name"`
 	// ip-connection amount map
@@ -14,6 +17,7 @@ type CLMng struct {
 	Limit uint32 `json:"limit"`
 }
 
+// NewCLMng returns a new CLMng
 func NewCLMng(name string, limit uint32) (c *CLMng) {
 	c = &CLMng{
 		Name:  name,
@@ -23,6 +27,7 @@ func NewCLMng(name string, limit uint32) (c *CLMng) {
 	return
 }
 
+// PrefixHandler returns an h.Handler for interacting with CLMng
 func (m *CLMng) PrefixHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
 		Prefix: "connection_limit",
@@ -34,6 +39,7 @@ func (m *CLMng) PrefixHandler() (p *PrefixHandler) {
 	return
 }
 
+// AddConn increases the connection amount from addr
 func (m *CLMng) AddConn(addr string) (b bool) {
 	v, ok := m.am.Load(addr)
 	var n uint32
@@ -48,6 +54,7 @@ func (m *CLMng) AddConn(addr string) (b bool) {
 	return
 }
 
+// DecreaseAm decreases the connection amount from addr
 func (m *CLMng) DecreaseAm(addr string) {
 	v, ok := m.am.Load(addr)
 	if ok {
@@ -57,12 +64,15 @@ func (m *CLMng) DecreaseAm(addr string) {
 	}
 }
 
+// Amount returns the connection amount from addr
 func (m *CLMng) Amount(addr string) (n uint32) {
 	v, _ := m.am.Load(addr)
 	n = v.(uint32)
 	return
 }
 
+// ChangeLimit is an h.Handler for changing the maximum amount of
+// connections from one IP address
 func (m *CLMng) ChangeLimit(w h.ResponseWriter, r *h.Request) {
 	nl := uint32(0)
 	_, e := fmt.Fscanf(r.Body, "%d", &nl)
@@ -71,6 +81,8 @@ func (m *CLMng) ChangeLimit(w h.ResponseWriter, r *h.Request) {
 	}
 }
 
+// ServeLimit is an h.Handler that shows the current maximum connection
+// amount
 func (m *CLMng) ServeLimit(w h.ResponseWriter, r *h.Request) {
 	fmt.Fprintf(w, "%d", m.Limit)
 }

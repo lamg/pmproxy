@@ -99,6 +99,7 @@ type Dialer interface {
 
 // OSDialer is the Dialer implementation
 type OSDialer struct {
+	Timeout time.Duration
 }
 
 // Dial is the Dialer.Dial implementation
@@ -122,6 +123,7 @@ func (p *OSDialer) Dial(iface, addr string) (c net.Conn, e error) {
 		tca := &net.TCPAddr{IP: la.IP}
 		d := &net.Dialer{
 			LocalAddr: tca,
+			Timeout:   p.Timeout,
 		}
 		c, e = d.Dial("tcp", addr)
 	}

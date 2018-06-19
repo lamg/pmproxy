@@ -73,9 +73,8 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 
 - [ ] configuration and resource determinators management (det_manager.go)
 - [ ] provide a list of URLs whose access doesn't add to user consumption
-- [x] expose management interface
-	- [ ] PMProxy.Rd with type `*SqDet` instead of `[]Det`
-	- [x] TestSrvDet
-- [ ] write configuration automatically to disk
-- [x] reset consumptions
+- [ ] expose management interface
+	- [ ] proper `Det` representation in StateMng
+- [ ] load,write state automatically to disk
 - [ ] create command
+- [ ] logs
