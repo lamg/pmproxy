@@ -48,7 +48,7 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 	for i := uint32(0); i != uint32(len(um)); i++ {
 		ips[i] = fmt.Sprintf("0.0.0.%d", st+i)
 	}
-	hnd, path := s.SessionHandler().Hnd, "/"+s.Name
+	hnd, path := s.PrefixHandler().Hnd, "/"+s.Name
 
 	ts = make([]tsLg, len(um))
 	i := 0
@@ -78,7 +78,7 @@ func logTestUsrs(t *testing.T, s *SMng, um map[string]string,
 }
 
 func logTsLg(t *testing.T, s *SMng, ts []tsLg) {
-	hnd, path := s.SessionHandler().Hnd, "/"+s.Name
+	hnd, path := s.PrefixHandler().Hnd, "/"+s.Name
 	for i, j := range ts {
 		body := fmt.Sprintf(`{"user":"%s","pass":"%s"}`, ts[i].user,
 			ts[i].pass)
@@ -96,7 +96,7 @@ func logTsLg(t *testing.T, s *SMng, ts []tsLg) {
 func TestLogout(t *testing.T) {
 	ua := &Auth{Um: usrAuthM}
 	s := NewSMng("sm", ua, nil)
-	hnd, path := s.SessionHandler().Hnd, "/"+s.Name
+	hnd, path := s.PrefixHandler().Hnd, "/"+s.Name
 	ts, _ := logTestUsrs(t, s, usrAuthM, 0)
 	for i, j := range ts {
 		r, q := reqres(t, h.MethodDelete, path, "", j.header, j.ip)
@@ -157,7 +157,7 @@ func TestSwappedSessions(t *testing.T) {
 		ipb[i] = ts[i].ip
 	}
 	logTsLg(t, s, ts)
-	hnd, path := s.SessionHandler().Hnd, "/"+s.Name
+	hnd, path := s.PrefixHandler().Hnd, "/"+s.Name
 	// { logged same users in ta but from different IPs.
 	//   This is done for testing the swapped session message
 	//   sent to users. That message is useful in case of an

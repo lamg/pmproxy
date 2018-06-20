@@ -2,12 +2,13 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	ld "github.com/lamg/ldaputil"
 	"io"
 	"net"
 	h "net/http"
 	"sync"
+
+	"github.com/gorilla/mux"
+	ld "github.com/lamg/ldaputil"
 )
 
 // Auth authenticates users
@@ -34,6 +35,7 @@ func (a *Auth) Authenticate(user, pass string) (usr string, e error) {
 	return
 }
 
+// WrongPassErr is the wrong password error
 func WrongPassErr(user string) (e error) {
 	e = fmt.Errorf("Contraseña incorrecta para %s", user)
 	return
@@ -73,6 +75,8 @@ func (s *SMng) loginUser(admIP, user, ip string) (e error) {
 	return
 }
 
+// NotAdmin is the error returned when there isn't an administrator
+// logged from ip
 func NotAdmin(ip string) (e error) {
 	e = fmt.Errorf("Not logged administrator at %s", ip)
 	return
@@ -140,11 +144,14 @@ func NotOpBySMsg(user, ip string) (e error) {
 	return
 }
 
+// Match returns whether there is an opened session from ip
 func (s *SMng) Match(ip string) (b bool) {
 	_, b = s.su.Load(ip)
 	return
 }
 
+// MatchUsr returns the user logged from ip
+// b equivales to "there is an user logged from ip"
 func (s *SMng) MatchUsr(ip string) (user string, b bool) {
 	v, b := s.su.Load(ip)
 	if b {
@@ -159,7 +166,9 @@ type UsrCrd struct {
 	Pass string `json:"pass"`
 }
 
-func (s *SMng) SessionHandler() (p *PrefixHandler) {
+// PrefixHandler returns an h.Handler for interacting with SMng
+// via HTTP
+func (s *SMng) PrefixHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
 		Prefix: "session_manager",
 	}
@@ -171,6 +180,8 @@ func (s *SMng) SessionHandler() (p *PrefixHandler) {
 	return
 }
 
+// AdminHandler returns an h.Handler for interacting with SMng's
+// administration interface via HTTP
 func (s *SMng) AdminHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
 		Prefix: "session_admin_manager",

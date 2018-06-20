@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	h "net/http"
@@ -28,12 +29,17 @@ type StateMng struct {
 	ProxyReadTimeout  time.Duration
 	ProxyWriteTimeout time.Duration
 
-	// delay manager
-	// consumption manager
+	// delay managers
+	Dms map[string]*DMng
+	// consumption managers
+	Cms map[string]*CMng
 	// session manager
+	Sms map[string]*SMng
 	// connection limit manager
-	// general resource determinator
+	CLms map[string]*CLMng
 
+	// general resource determinator
+	MainDet *SqDet
 }
 
 // FileRepr is the type used for decoding and encoding a StateMng
@@ -50,6 +56,13 @@ type FileRepr struct {
 	ProxyReadTimeout  string `yaml:"proxyReadTimeout"`
 	ProxyWriteTimeout string `yaml:"proxyWriteTimeout"`
 
+	// delay, consumption, session, connection limit managers files
+	DelayMsFile   string `yaml:"delayMsFile"`
+	ConsMsFile    string `yaml:"consMsFile"`
+	SessionMsFile string `yaml:"sessionMsFile"`
+	ConnLimMsFile string `yaml:"connLimMsFile"`
+
+	// main resource determinator file
 	ResDetFile string `yaml:"resDetFile"`
 }
 
@@ -72,20 +85,46 @@ func NewStateMng(file string) (s *StateMng, e error) {
 		e = yaml.Unmarshal(bs, fr)
 	}
 	if e == nil {
-		s.WebAddr = fr.WebAddr
-		s.ProxyAddr = fr.ProxyAddr
-		s.CertFile = fr.CertFile
-		s.KeyFile = fr.KeyFile
-		s.WebReadTimeout, e = time.ParseDuration(fr.WebReadTimeout)
+		s.WebAddr, s.ProxyAddr, s.CertFile, s.KeyFile =
+			fr.WebAddr,
+			fr.ProxyAddr,
+			fr.CertFile,
+			fr.KeyFile
 	}
-	if e == nil {
-		s.WebWriteTimeout, e = time.ParseDuration(fr.WebWriteTimeout)
+	strTms, tms := []string{
+		fr.WebReadTimeout,
+		fr.WebWriteTimeout,
+		fr.ProxyReadTimeout,
+		fr.ProxyWriteTimeout,
+	}, []*time.Duration{
+		&s.WebReadTimeout,
+		&s.WebWriteTimeout,
+		&s.ProxyReadTimeout,
+		&s.ProxyWriteTimeout,
 	}
-	if e == nil {
-		s.ProxyReadTimeout, e = time.ParseDuration(fr.ProxyReadTimeout)
+	for i := 0; e == nil && i != len(strTms); i++ {
+		*tms[i], e = time.ParseDuration(strTms[i])
 	}
+	s.Dms, s.Cms, s.CLms, s.MainDet =
+		make(map[string]*DMng),
+		make(map[string]*CMng),
+		make(map[string]*CLMng),
+		new(SqDet)
+	files, vs := []string{fr.DelayMsFile, fr.ConsMsFile, fr.SessionMsFile,
+		fr.ConnLimMsFile, fr.ResDetFile,
+	},
+		[]interface{}{s.Dms, s.Cms, s.Sms, s.CLms, s.MainDet}
+	for i := 0; e == nil && i != len(files); i++ {
+		e = decode(files[i], vs[i])
+	}
+	return
+}
+
+func decode(file string, v interface{}) (e error) {
+	var bs []byte
+	bs, e = ioutil.ReadFile(file)
 	if e == nil {
-		s.ProxyWriteTimeout, e = time.ParseDuration(fr.ProxyWriteTimeout)
+		e = json.Unmarshal(bs, v)
 	}
 	return
 }
@@ -94,11 +133,32 @@ func NewStateMng(file string) (s *StateMng, e error) {
 func (s *StateMng) WebInterface() (hn h.Handler) {
 	router := mux.NewRouter()
 	// TODO
+	for _, v := range s.Dms {
+		ph := v.PrefixHandler()
+		router.Handle(ph.Prefix, ph.Hnd)
+	}
+	for _, v := range s.Cms {
+		ph := v.PrefixHandler()
+		router.Handle(ph.Prefix, ph.Hnd)
+	}
+	for _, v := range s.CLms {
+		ph := v.PrefixHandler()
+		router.Handle(ph.Prefix, ph.Hnd)
+	}
+	for _, v := range s.Sms {
+		ph := v.PrefixHandler()
+		router.Handle(ph.Prefix, ph.Hnd)
+		ah := v.AdminHandler()
+		router.Handle(ah.Prefix, ah.Hnd)
+	}
 	hn = router
 	return
 }
 
+// ResourceDeterminators creates the determinators for use
+// within Connector
 func (s *StateMng) ResourceDeterminators() (d []Det) {
 	// TODO
+	d = []Det{s.MainDet}
 	return
 }

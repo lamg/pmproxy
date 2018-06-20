@@ -1,12 +1,15 @@
 package pmproxy
 
 import (
-	"github.com/gorilla/mux"
 	"net"
 	h "net/http"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
+// DMng is a connection delay manager. It's used for distributing
+// an equal share of bandwidth across al connections.
 type DMng struct {
 	Name      string `json:"name"`
 	Bandwidth *Rate  `json:"bandwidth"`
@@ -15,12 +18,16 @@ type DMng struct {
 	Sm        *SMng `json:"sm"`
 }
 
+// IncConn is used for adjusting the connection rate when a connection
+// is opened.
 func (d *DMng) IncConn() (r *Rate) {
 	d.currConn = d.currConn + 1
 	r = d.updateRate()
 	return
 }
 
+// DecConn is used for adjusting the connection rate when a connection
+// is closed.
 func (d *DMng) DecConn() {
 	d.currConn = d.currConn - 1
 	d.updateRate()
@@ -50,6 +57,8 @@ type dInfo struct {
 	ConnR     *Rate  `json:"connR"`
 }
 
+// PrefixHandler is used for serving the API endpoints related to
+// delay manager
 func (d *DMng) PrefixHandler() (p *PrefixHandler) {
 	p = &PrefixHandler{
 		Prefix: "delay_manager",
@@ -61,6 +70,8 @@ func (d *DMng) PrefixHandler() (p *PrefixHandler) {
 	return
 }
 
+// ServeInfo is an h.Handler for serving information about
+// delay manager status
 func (d *DMng) ServeInfo(w h.ResponseWriter, r *h.Request) {
 	// sends info about bandwidth, current amount of connections
 	// and current connection rate
@@ -77,6 +88,8 @@ func (d *DMng) ServeInfo(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
+// ServeSetBW is an h.Handler for changing the bandwidth available
+// for delay manager
 func (d *DMng) ServeSetBW(w h.ResponseWriter, r *h.Request) {
 	// sets bandwidth
 	// r.Method = h.MethodPut
