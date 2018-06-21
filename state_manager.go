@@ -2,20 +2,20 @@ package pmproxy
 
 import (
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	h "net/http"
-	"os"
 	"time"
 
 	"github.com/gorilla/mux"
 
+	fs "github.com/lamg/filesystem"
 	"gopkg.in/yaml.v2"
 )
 
 // StateMng loads and writes the proxy state automatically to disk
 type StateMng struct {
 	File string
+	FSys fs.FileSystem
 
 	// web interface fields
 	WebAddr         string
@@ -68,17 +68,13 @@ type FileRepr struct {
 
 // NewStateMng creates a StateMng instance using information
 // in file
-func NewStateMng(file string) (s *StateMng, e error) {
+func NewStateMng(file string, stm fs.FileSystem) (s *StateMng, e error) {
 	s = &StateMng{
 		File: file,
+		FSys: stm,
 	}
-	var fl io.ReadCloser
-	fl, e = os.Open(file)
 	var bs []byte
-	if e == nil {
-		bs, e = ioutil.ReadAll(fl)
-		fl.Close()
-	}
+	bs, e = stm.ReadFile(file)
 	var fr *FileRepr
 	if e == nil {
 		fr = new(FileRepr)
