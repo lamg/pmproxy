@@ -17,6 +17,9 @@ func TestStateMng(t *testing.T) {
 	s, e := NewStateMng("conf.yaml", stm)
 	require.NoError(t, e)
 	require.Equal(t, s.WebAddr, ":443")
+
+	hn := s.WebInterface()
+	require.NotNil(t, hn)
 }
 
 var stateFile = `
@@ -29,6 +32,12 @@ proxyAddr: ":8080"
 proxyReadTimeout: 5s
 proxyWriteTimeout: 10s
 
+delayMsFile: delay_managers.json
+consMsFile: consumption_managers.json
+sessionMsFile: session_managers.json
+connLimMsFile: connection_limit_managers.json
+
+resDetFile: resource_determinators.json
 `
 
 var keyFile = `

@@ -111,7 +111,7 @@ func NewStateMng(file string, stm fs.FileSystem) (s *StateMng, e error) {
 	},
 		[]interface{}{s.Dms, s.Cms, s.Sms, s.CLms, s.MainDet}
 	for i := 0; e == nil && i != len(files); i++ {
-		e = decode(files[i], vs[i])
+		decode(files[i], vs[i])
 	}
 	return
 }
@@ -128,7 +128,6 @@ func decode(file string, v interface{}) (e error) {
 // WebInterface returns the h.Handler used to serve the web interface
 func (s *StateMng) WebInterface() (hn h.Handler) {
 	router := mux.NewRouter()
-	// TODO
 	for _, v := range s.Dms {
 		ph := v.PrefixHandler()
 		router.Handle(ph.Prefix, ph.Hnd)
@@ -157,4 +156,9 @@ func (s *StateMng) ResourceDeterminators() (d []Det) {
 	// TODO
 	d = []Det{s.MainDet}
 	return
+}
+
+// PersistState updates the content of state files
+func (s *StateMng) PersistState() {
+	//TODO
 }
