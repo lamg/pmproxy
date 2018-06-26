@@ -38,6 +38,16 @@ func (m *GrpMtch) Match(ip string) (b bool) {
 	return
 }
 
+func (m *GrpMtch) MarshalJSON() (bs []byte, e error) {
+	// TODO
+	return
+}
+
+func (m *GrpMtch) UnmarshalJSON(bs []byte) (e error) {
+	// TODO
+	return
+}
+
 // UsrMtch matches users
 type UsrMtch struct {
 	// with Ul empty all users match if logged
@@ -56,5 +66,13 @@ func (m *UsrMtch) Match(ip string) (b bool) {
 		}
 		b = i != len(m.Ul)
 	}
+	return
+}
+
+func (m *UsrMtch) MarshalJSON() (bs []byte, e error) {
+	return
+}
+
+func (m *UsrCrd) UnmarshalJSON(bs []byte) (e error) {
 	return
 }

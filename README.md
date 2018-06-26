@@ -71,10 +71,11 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
 
-- [ ] configuration and resource determinators management (det_manager.go)
 - [ ] provide a list of URLs whose access doesn't add to user consumption
 - [ ] expose management interface
 	- [ ] proper `Det` representation in StateMng
 - [ ] load,write state automatically to disk
+	- [ ] GrpMtch, UsrMtch json marshalers
 - [ ] create command
 - [ ] logs
+- [x] managers in StateMng (Dms, Cms, Sms, CLms) to MainDet

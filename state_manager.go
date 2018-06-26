@@ -15,6 +15,7 @@ import (
 // StateMng loads and writes the proxy state automatically to disk
 type StateMng struct {
 	File string
+	FlR  *FileRepr
 	FSys fs.FileSystem
 
 	// web interface fields
@@ -29,6 +30,8 @@ type StateMng struct {
 	ProxyReadTimeout  time.Duration
 	ProxyWriteTimeout time.Duration
 
+	// following maps have the managers referenced in
+	// MainDet children
 	// delay managers
 	Dms map[string]*DMng
 	// consumption managers
@@ -81,7 +84,8 @@ func NewStateMng(file string, stm fs.FileSystem) (s *StateMng, e error) {
 		e = yaml.Unmarshal(bs, fr)
 	}
 	if e == nil {
-		s.WebAddr, s.ProxyAddr, s.CertFile, s.KeyFile =
+		s.FlR, s.WebAddr, s.ProxyAddr, s.CertFile, s.KeyFile =
+			fr,
 			fr.WebAddr,
 			fr.ProxyAddr,
 			fr.CertFile,
@@ -113,7 +117,56 @@ func NewStateMng(file string, stm fs.FileSystem) (s *StateMng, e error) {
 	for i := 0; e == nil && i != len(files); i++ {
 		decode(files[i], vs[i])
 	}
+	if e == nil {
+		s.initManagers()
+	}
 	return
+}
+
+func (s *StateMng) initManagers() {
+	// s.MainDet tree is walked using rs as stack
+	rs := []*SqDet{s.MainDet}
+	for len(rs) != 0 {
+		curr := rs[len(rs)-1]
+		for _, j := range curr.RDs {
+			s.initResDet(j)
+		}
+		rs = rs[:len(rs)-1]
+		rs = append(rs, curr.SDs...)
+	}
+}
+
+func (s *StateMng) initResDet(j *ResDet) {
+	if j.Cl != nil {
+		cl, ok := s.CLms[j.Cl.Name]
+		if ok {
+			j.Cl = cl
+		}
+	}
+	if j.Cs != nil {
+		cs, ok := s.Cms[j.Cs.Name]
+		if ok {
+			j.Cs = cs
+		}
+	}
+	if j.Dm != nil {
+		dm, ok := s.Dms[j.Dm.Name]
+		if ok {
+			j.Dm = dm
+		}
+	}
+	if j.Gm.Um.Sm != nil {
+		sm, ok := s.Sms[j.Gm.Um.Sm.Name]
+		if ok {
+			j.Gm.Um.Sm = sm
+		}
+	}
+	if j.Um.Sm != nil {
+		sm, ok := s.Sms[j.Um.Sm.Name]
+		if ok {
+			j.Um.Sm = sm
+		}
+	}
 }
 
 func decode(file string, v interface{}) (e error) {
@@ -161,4 +214,32 @@ func (s *StateMng) ResourceDeterminators() (d []Det) {
 // PersistState updates the content of state files
 func (s *StateMng) PersistState() {
 	//TODO
+	fr := &FileRepr{
+		WebAddr:           s.WebAddr,
+		WebReadTimeout:    s.WebReadTimeout.String(),
+		WebWriteTimeout:   s.WebWriteTimeout.String(),
+		CertFile:          s.CertFile,
+		KeyFile:           s.KeyFile,
+		ProxyAddr:         s.ProxyAddr,
+		ProxyReadTimeout:  s.ProxyWriteTimeout.String(),
+		ProxyWriteTimeout: s.ProxyWriteTimeout.String(),
+		DelayMsFile:       s.FlR.DelayMsFile,
+		ConsMsFile:        s.FlR.ConsMsFile,
+		SessionMsFile:     s.FlR.SessionMsFile,
+		ConnLimMsFile:     s.FlR.ConnLimMsFile,
+		ResDetFile:        s.FlR.ResDetFile,
+	}
+	s.FlR = fr
+	bs, e := yaml.Marshal(s.FlR)
+	var fl fs.File
+	if e == nil {
+		fl, e = s.FSys.Create(s.File)
+	}
+	if e == nil {
+		_, e = fl.Write(bs)
+	}
+	if e == nil {
+
+	}
+	// TODO
 }

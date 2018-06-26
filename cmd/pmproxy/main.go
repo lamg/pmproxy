@@ -8,6 +8,7 @@ import (
 
 	"github.com/lamg/clock"
 
+	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
 	"github.com/lamg/proxy"
 )
@@ -17,7 +18,7 @@ func main() {
 	flag.StringVar(&stateFl, "c", "", "State file")
 	flag.Parse()
 	ce := make(chan error)
-	state, e := pmproxy.NewStateMng(stateFl)
+	state, e := pmproxy.NewStateMng(stateFl, new(fs.OSFS))
 	// load state
 	// configure web interface
 	cnt := &pmproxy.Connector{
