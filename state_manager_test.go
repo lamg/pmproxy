@@ -1,18 +1,30 @@
 package pmproxy
 
 import (
+	"os"
 	"testing"
 
-	fs "github.com/lamg/filesystem"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
 func TestStateMng(t *testing.T) {
-	stm := fs.NewBufferFS()
-	stm.Bfs = map[string]*fs.BFile{
-		"conf.yaml": fs.NewBFile(stateFile),
-		"key.pem":   fs.NewBFile(keyFile),
-		"cert.pem":  fs.NewBFile(certFile),
+	stm := afero.NewMemMapFs()
+	afr := &afero.Afero{
+		Fs: stm,
+	}
+	fls := []struct {
+		name    string
+		content string
+	}{
+		{"conf.yaml", stateFile},
+		{"key.pem", keyFile},
+		{"cert.pem", certFile},
+	}
+	// TODO write files to stm
+	for i, j := range fls {
+		e := afr.WriteFile(j.name, []byte(j.content), os.ModePerm)
+		require.NoError(t, e, "At %d", i)
 	}
 	s, e := NewStateMng("conf.yaml", stm)
 	require.NoError(t, e)

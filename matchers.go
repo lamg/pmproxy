@@ -1,16 +1,18 @@
 package pmproxy
 
 import (
+	"encoding/json"
+
 	ld "github.com/lamg/ldaputil"
 )
 
 // GrpMtch matches user groups
 type GrpMtch struct {
-	Grp string
-	Um  *UsrMtch
-	Ld  *ld.Ldap
+	Grp string   `json:"grp"`
+	Um  *UsrMtch `json:"um"`
+	Ld  *ld.Ldap `json:"ld"`
 	// Ug is an alternative to Ld
-	Ug map[string][]string
+	Ug map[string][]string `json:"ug"`
 }
 
 // Match gets the groups associated to user logged in
@@ -38,11 +40,13 @@ func (m *GrpMtch) Match(ip string) (b bool) {
 	return
 }
 
+// MarshalJSON is the json.Marshaler implementation
 func (m *GrpMtch) MarshalJSON() (bs []byte, e error) {
 	// TODO
 	return
 }
 
+// UnmarshalJSON is the json.Unmarshaler implementation
 func (m *GrpMtch) UnmarshalJSON(bs []byte) (e error) {
 	// TODO
 	return
@@ -69,10 +73,30 @@ func (m *UsrMtch) Match(ip string) (b bool) {
 	return
 }
 
+type usrMtchJ struct {
+	Ul []string `json:"ul"`
+	Sm string   `json:"sm"`
+}
+
+// MarshalJSON is the json.Marshaler implementation
 func (m *UsrMtch) MarshalJSON() (bs []byte, e error) {
+	j := &usrMtchJ{
+		Ul: m.Ul,
+		Sm: m.Sm.Name,
+	}
+	bs, e = json.Marshal(j)
 	return
 }
 
-func (m *UsrCrd) UnmarshalJSON(bs []byte) (e error) {
+// UnmarshalJSON is the json.Unmarshaler implementation
+func (m *UsrMtch) UnmarshalJSON(bs []byte) (e error) {
+	j := new(usrMtchJ)
+	e = json.Unmarshal(bs, j)
+	if e == nil {
+		m.Ul = j.Ul
+		m.Sm = &SMng{
+			Name: j.Sm,
+		}
+	}
 	return
 }

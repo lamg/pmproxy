@@ -75,7 +75,7 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] expose management interface
 	- [ ] proper `Det` representation in StateMng
 - [ ] load,write state automatically to disk
-	- [ ] GrpMtch, UsrMtch json marshalers
+	- [x] GrpMtch, UsrMtch json marshalers
 - [ ] create command
 - [ ] logs
 - [x] managers in StateMng (Dms, Cms, Sms, CLms) to MainDet

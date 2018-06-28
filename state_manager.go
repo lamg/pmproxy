@@ -2,13 +2,14 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	h "net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/spf13/afero"
 
-	fs "github.com/lamg/filesystem"
 	"gopkg.in/yaml.v2"
 )
 
@@ -16,7 +17,7 @@ import (
 type StateMng struct {
 	File string
 	FlR  *FileRepr
-	FSys fs.FileSystem
+	FSys afero.Fs
 
 	// web interface fields
 	WebAddr         string
@@ -71,13 +72,13 @@ type FileRepr struct {
 
 // NewStateMng creates a StateMng instance using information
 // in file
-func NewStateMng(file string, stm fs.FileSystem) (s *StateMng, e error) {
+func NewStateMng(file string, stm afero.Fs) (s *StateMng, e error) {
 	s = &StateMng{
 		File: file,
 		FSys: stm,
 	}
 	var bs []byte
-	bs, e = stm.ReadFile(file)
+	bs, e = afero.ReadFile(stm, file)
 	var fr *FileRepr
 	if e == nil {
 		fr = new(FileRepr)
@@ -214,7 +215,7 @@ func (s *StateMng) ResourceDeterminators() (d []Det) {
 // PersistState updates the content of state files
 func (s *StateMng) PersistState() {
 	//TODO
-	fr := &FileRepr{
+	s.FlR = &FileRepr{
 		WebAddr:           s.WebAddr,
 		WebReadTimeout:    s.WebReadTimeout.String(),
 		WebWriteTimeout:   s.WebWriteTimeout.String(),
@@ -223,23 +224,42 @@ func (s *StateMng) PersistState() {
 		ProxyAddr:         s.ProxyAddr,
 		ProxyReadTimeout:  s.ProxyWriteTimeout.String(),
 		ProxyWriteTimeout: s.ProxyWriteTimeout.String(),
-		DelayMsFile:       s.FlR.DelayMsFile,
-		ConsMsFile:        s.FlR.ConsMsFile,
-		SessionMsFile:     s.FlR.SessionMsFile,
-		ConnLimMsFile:     s.FlR.ConnLimMsFile,
-		ResDetFile:        s.FlR.ResDetFile,
-	}
-	s.FlR = fr
-	bs, e := yaml.Marshal(s.FlR)
-	var fl fs.File
-	if e == nil {
-		fl, e = s.FSys.Create(s.File)
-	}
-	if e == nil {
-		_, e = fl.Write(bs)
-	}
-	if e == nil {
 
+		DelayMsFile:   s.FlR.DelayMsFile,
+		ConsMsFile:    s.FlR.ConsMsFile,
+		SessionMsFile: s.FlR.SessionMsFile,
+		ConnLimMsFile: s.FlR.ConnLimMsFile,
+		ResDetFile:    s.FlR.ResDetFile,
 	}
-	// TODO
+	fls, vs := []string{
+		s.File,
+		s.FlR.DelayMsFile,
+		s.FlR.ConsMsFile,
+		s.FlR.ConnLimMsFile,
+		s.FlR.ResDetFile,
+	}, []interface{}{
+		s.FlR,
+		s.Dms,
+		s.Cms,
+		s.CLms,
+		s.MainDet,
+	}
+	var e error
+	for i := 0; e == nil && i != len(fls); i++ {
+		var fl io.WriteCloser
+		fl, e = prep(fls[i], s.FSys)
+		if e == nil {
+			enc := yaml.NewEncoder(fl)
+			e = enc.Encode(vs[i])
+			fl.Close()
+		}
+	}
+}
+
+func prep(file string, fsys afero.Fs) (w io.WriteCloser, e error) {
+	e = fsys.Rename(file+"~", file)
+	if e == nil {
+		w, e = fsys.Create(file)
+	}
+	return
 }
