@@ -2,14 +2,15 @@ package pmproxy
 
 import (
 	"encoding/json"
-	"github.com/jinzhu/now"
-	rs "github.com/lamg/rtimespan"
-	"github.com/stretchr/testify/require"
 	"net"
 	h "net/http"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/jinzhu/now"
+	rs "github.com/lamg/rtimespan"
+	"github.com/stretchr/testify/require"
 )
 
 type testReq struct {
@@ -171,5 +172,22 @@ func TestMarshalJSON(t *testing.T) {
 	require.NoError(t, e)
 	rd := make([]*ResDet, 0)
 	json.Unmarshal(bs, &rd)
-	require.Equal(t, rs, rd)
+	for i, j := range rs {
+		require.Equal(t, j.Unit, rd[i].Unit, "At %d")
+		if j.Rg != nil {
+			require.Equal(t, j.Rg.String(), rd[i].Rg.String(), "At %d")
+		}
+		if j.Dm != nil {
+			require.Equal(t, j.Dm.Name, rd[i].Dm.Name, "At %d")
+		}
+		if j.Cs != nil {
+			require.Equal(t, j.Cs.Name, rd[i].Cs.Name, "At %d")
+		}
+		if j.Ur != nil {
+			require.Equal(t, j.Ur.String(), rd[i].Ur.String(), "At %d")
+		}
+		if j.Cl != nil {
+			require.Equal(t, j.Cl.Name, rd[i].Cl.Name, "At %d")
+		}
+	}
 }

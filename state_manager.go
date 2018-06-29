@@ -207,14 +207,12 @@ func (s *StateMng) WebInterface() (hn h.Handler) {
 // ResourceDeterminators creates the determinators for use
 // within Connector
 func (s *StateMng) ResourceDeterminators() (d []Det) {
-	// TODO
 	d = []Det{s.MainDet}
 	return
 }
 
 // PersistState updates the content of state files
 func (s *StateMng) PersistState() {
-	//TODO
 	s.FlR = &FileRepr{
 		WebAddr:           s.WebAddr,
 		WebReadTimeout:    s.WebReadTimeout.String(),

@@ -194,7 +194,7 @@ func (s *SMng) AdminHandler() (p *PrefixHandler) {
 	return
 }
 
-// SrvUserSession is an h.Handler used for opening and
+// SrvUserStatus is an h.Handler used for opening and
 // closing regular users's sessions
 func (s *SMng) SrvUserStatus(w h.ResponseWriter,
 	r *h.Request) {
@@ -210,6 +210,7 @@ func (s *SMng) SrvUserStatus(w h.ResponseWriter,
 	writeErr(w, e)
 }
 
+// ServeLogin handles login requests
 func (s *SMng) ServeLogin(w h.ResponseWriter, r *h.Request) {
 	ip, _, e := net.SplitHostPort(r.RemoteAddr)
 	if e == nil {
@@ -218,6 +219,7 @@ func (s *SMng) ServeLogin(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
+// ServeLogout handles logout requests
 func (s *SMng) ServeLogout(w h.ResponseWriter, r *h.Request) {
 	ip, _, e := net.SplitHostPort(r.RemoteAddr)
 	if e == nil {
@@ -232,6 +234,8 @@ type UsrIP struct {
 	IP   string `json:"ip"`
 }
 
+// SrvAdmLoginUsr handles administrator's requests for log in an
+// user
 func (s *SMng) SrvAdmLoginUsr(w h.ResponseWriter, r *h.Request) {
 	var e error
 	if s.Adm == nil {
@@ -251,6 +255,8 @@ func (s *SMng) SrvAdmLoginUsr(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
+// SrvAdmLogoutUsr handles administrator's requests for log out an
+// user
 func (s *SMng) SrvAdmLogoutUsr(w h.ResponseWriter, r *h.Request) {
 	var e error
 	if s.Adm == nil {
@@ -270,6 +276,8 @@ func (s *SMng) SrvAdmLogoutUsr(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
+// SrvAdmSessions returns a map with all opened sessions to an
+// administrator
 func (s *SMng) SrvAdmSessions(w h.ResponseWriter, r *h.Request) {
 	var e error
 	if s.Adm == nil {
@@ -285,6 +293,8 @@ func (s *SMng) SrvAdmSessions(w h.ResponseWriter, r *h.Request) {
 	writeErr(w, e)
 }
 
+// NotAdmHandler is the error returned when there is no administrator
+// UsrMtch available (s.Adm == nil)
 func NotAdmHandler() (e error) {
 	e = fmt.Errorf("No administrator interface available")
 	return

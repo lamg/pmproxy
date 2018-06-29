@@ -20,6 +20,50 @@ type CMng struct {
 	Cl         clock.Clock
 }
 
+type yCMng struct {
+	Name       string
+	Cons       map[string]uint64
+	ResetCycle time.Duration
+	LastReset  time.Time
+}
+
+// MarshalYAML is the yaml.Marshaler implementation
+func (c *CMng) MarshalYAML() (v interface{}, e error) {
+	// TODO
+	yc := yCMng{
+		Name:       c.Name,
+		Cons:       make(map[string]uint64),
+		ResetCycle: c.ResetCycle,
+		LastReset:  c.LastReset,
+	}
+	c.Cons.Range(func(key, value interface{}) (ok bool) {
+		yc.Cons[key.(string)] = value.(uint64)
+		ok = true
+		return
+	})
+	v = yc
+	return
+}
+
+// UnmarshalYAML is the yaml.Unmarshaler implementation
+func (c *CMng) UnmarshalYAML(umf func(interface{}) error) (e error) {
+	yc := new(yCMng)
+	e = umf(yc)
+	if e == nil {
+		c.Name = yc.Name
+		c.LastReset = yc.LastReset
+		c.ResetCycle = yc.ResetCycle
+		c.Cl = new(clock.OSClock)
+		if c.Cons == nil {
+			c.Cons = new(sync.Map)
+		}
+		for k, v := range yc.Cons {
+			c.Cons.Store(k, v)
+		}
+	}
+	return
+}
+
 // NewCMng returns a new instance of CMng
 func NewCMng(name string) (c *CMng) {
 	c = &CMng{

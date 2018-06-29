@@ -7,8 +7,8 @@ import (
 	h "net/http"
 
 	"github.com/lamg/clock"
+	"github.com/spf13/afero"
 
-	fs "github.com/lamg/filesystem"
 	"github.com/lamg/pmproxy"
 	"github.com/lamg/proxy"
 )
@@ -18,7 +18,7 @@ func main() {
 	flag.StringVar(&stateFl, "c", "", "State file")
 	flag.Parse()
 	ce := make(chan error)
-	state, e := pmproxy.NewStateMng(stateFl, new(fs.OSFS))
+	state, e := pmproxy.NewStateMng(stateFl, afero.NewOsFs())
 	// load state
 	// configure web interface
 	cnt := &pmproxy.Connector{

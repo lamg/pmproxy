@@ -3,9 +3,11 @@ package pmproxy
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestStateMng(t *testing.T) {
@@ -20,6 +22,7 @@ func TestStateMng(t *testing.T) {
 		{"conf.yaml", stateFile},
 		{"key.pem", keyFile},
 		{"cert.pem", certFile},
+		{"delay_managers.yaml", delayMsFile},
 	}
 	// TODO write files to stm
 	for i, j := range fls {
@@ -34,6 +37,29 @@ func TestStateMng(t *testing.T) {
 	require.NotNil(t, hn)
 }
 
+func TestMarshalYAML(t *testing.T) {
+	dm := &DMng{
+		Bandwidth: &Rate{
+			Bytes:     1024,
+			TimeLapse: time.Millisecond,
+		},
+		Name: "dm",
+		Sm: &SMng{
+			Name: "sm",
+		},
+	}
+
+	bs, e := yaml.Marshal(dm)
+	require.NoError(t, e)
+	dmr := new(DMng)
+	e = yaml.Unmarshal(bs, dmr)
+	require.NoError(t, e)
+	require.Equal(t, dm.Name, dmr.Name)
+	require.Equal(t, dm.Bandwidth.Bytes, dmr.Bandwidth.Bytes)
+	require.Equal(t, dm.Bandwidth.TimeLapse, dmr.Bandwidth.TimeLapse)
+	require.Equal(t, dm.Sm.Name, dmr.Sm.Name)
+}
+
 var stateFile = `
 webAddr: ":443"
 webReadTimeout: 5s
@@ -44,12 +70,30 @@ proxyAddr: ":8080"
 proxyReadTimeout: 5s
 proxyWriteTimeout: 10s
 
-delayMsFile: delay_managers.json
+delayMsFile: delay_managers.yaml
 consMsFile: consumption_managers.json
 sessionMsFile: session_managers.json
 connLimMsFile: connection_limit_managers.json
 
 resDetFile: resource_determinators.json
+`
+
+var delayMsFile = `
+dm:
+	name: dm
+	bandWidth:
+		bytes: 1024
+		timeLapse: 1ms
+	sm:
+		name: sm
+`
+
+var consMsFile = `
+cs:
+	name: cs
+	cons:
+		fulano: 128
+		mengano: 256
 `
 
 var keyFile = `

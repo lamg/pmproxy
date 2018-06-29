@@ -12,11 +12,10 @@ These parameters for processing a request, determined by the information it carr
 
 There are several important parts of this program:
 
-- Incoming connection handling (pmproxy.go and the files implementing the types and procedures used there).
-	- (TODO be more specific here) connector.go
+- Incoming connection handling (connector.go and the files implementing the types and procedures used there).
 	- Quota is separated from consumption manager, because is a static resource that can be asociated to a matcher. The administrator has to ensure of associate quota and consumption manager using the same predicate, if he wants them to be associated.
 - Connection handling configuration while running or booting.
-	- det_manager.go
+	- state_manager.go loads and persists the state of the program
 
 ## PMProxy deployment
 
@@ -75,7 +74,11 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] expose management interface
 	- [ ] proper `Det` representation in StateMng
 - [ ] load,write state automatically to disk
-	- [x] GrpMtch, UsrMtch json marshalers
+	- [ ] yaml marshal and unmarshal
+		-	[ ] DelayMsFile
+		- [ ] ConsMsFile 
+		- [ ] SessionMsFile
+		- [ ] ConnLimMsFile
 - [ ] create command
 - [ ] logs
 - [x] managers in StateMng (Dms, Cms, Sms, CLms) to MainDet
