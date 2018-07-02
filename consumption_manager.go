@@ -29,7 +29,6 @@ type yCMng struct {
 
 // MarshalYAML is the yaml.Marshaler implementation
 func (c *CMng) MarshalYAML() (v interface{}, e error) {
-	// TODO
 	yc := yCMng{
 		Name:       c.Name,
 		Cons:       make(map[string]uint64),

@@ -2,9 +2,14 @@ package pmproxy
 
 import (
 	"os"
+	"reflect"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/jinzhu/now"
+	"github.com/lamg/clock"
+	ld "github.com/lamg/ldaputil"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
@@ -48,16 +53,54 @@ func TestMarshalYAML(t *testing.T) {
 			Name: "sm",
 		},
 	}
-
-	bs, e := yaml.Marshal(dm)
-	require.NoError(t, e)
-	dmr := new(DMng)
-	e = yaml.Unmarshal(bs, dmr)
-	require.NoError(t, e)
-	require.Equal(t, dm.Name, dmr.Name)
-	require.Equal(t, dm.Bandwidth.Bytes, dmr.Bandwidth.Bytes)
-	require.Equal(t, dm.Bandwidth.TimeLapse, dmr.Bandwidth.TimeLapse)
-	require.Equal(t, dm.Sm.Name, dmr.Sm.Name)
+	um := &UsrMtch{
+		Ul: make([]string, 0),
+		Sm: &SMng{
+			Name: "sm",
+			Usr: &Auth{
+				Um: make(map[string]string),
+				Ld: ld.NewLdapWithAcc("ad.com", "@ad.com", "dc=ad,dc=com",
+					"coco", "pepe"),
+			},
+		},
+	}
+	symp := new(sync.Map)
+	symp.Store("coco", uint64(64))
+	symp.Store("pepe", uint64(128))
+	cm := &CMng{
+		Cons:       symp,
+		Name:       "cm",
+		ResetCycle: 168 * time.Hour,
+		LastReset:  now.MustParse("2006-01-01"),
+		Cl:         new(clock.OSClock),
+	}
+	clm := &CLMng{
+		Limit: 1024,
+		Name:  "clm",
+	}
+	ts := []interface{}{dm, um, cm, clm}
+	for i, j := range ts {
+		bs, e := yaml.Marshal(j)
+		require.NoError(t, e)
+		tp := reflect.TypeOf(j).Elem()
+		jr := reflect.New(tp).Interface()
+		e = yaml.Unmarshal(bs, jr)
+		nc, ok := j.(*CMng)
+		if ok {
+			jc := jr.(*CMng)
+			nc.Cons.Range(func(key, value interface{}) (ok0 bool) {
+				var v interface{}
+				v, ok0 = jc.Cons.Load(key)
+				require.Equal(t, value, v)
+				return
+			})
+			require.Equal(t, nc.Name, jc.Name)
+			require.Equal(t, nc.ResetCycle, jc.ResetCycle)
+			require.Equal(t, nc.LastReset, jc.LastReset)
+		} else {
+			require.Equal(t, j, jr, "At %d", i)
+		}
+	}
 }
 
 var stateFile = `

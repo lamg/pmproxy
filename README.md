@@ -74,11 +74,11 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] expose management interface
 	- [ ] proper `Det` representation in StateMng
 - [ ] load,write state automatically to disk
-	- [ ] yaml marshal and unmarshal
-		-	[ ] DelayMsFile
-		- [ ] ConsMsFile 
-		- [ ] SessionMsFile
-		- [ ] ConnLimMsFile
+	- [x] yaml marshal and unmarshal
+		-	[x] DelayMsFile
+		- [x] ConsMsFile 
+		- [x] SessionMsFile
+		- [x] ConnLimMsFile
 - [ ] create command
 - [ ] logs
 - [x] managers in StateMng (Dms, Cms, Sms, CLms) to MainDet
