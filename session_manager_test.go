@@ -188,7 +188,7 @@ func TestSrvAdmMngS(t *testing.T) {
 	// { initialized SMng }
 	for i, j := range ts {
 		n := 0
-		for k, _ := range usrAuthM {
+		for k := range usrAuthM {
 			ip := fmt.Sprintf("0.0.0.%d", n)
 			body := fmt.Sprintf(`{"user":"%s","ip":"%s"}`, k, ip)
 			w, r := reqres(t, h.MethodPost, path, body, j.header, j.ip)

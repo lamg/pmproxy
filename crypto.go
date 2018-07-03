@@ -119,6 +119,7 @@ func (j *JWTCrypt) user(a h.Header) (u string, e error) {
 	return
 }
 
+// HeaderErr is the malformed header error
 func HeaderErr() (e error) {
 	e = fmt.Errorf(MalformedHd)
 	return

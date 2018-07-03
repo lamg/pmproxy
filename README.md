@@ -69,16 +69,11 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
 - [ ] Automatic session closing
-
 - [ ] provide a list of URLs whose access doesn't add to user consumption
-- [ ] expose management interface
-	- [ ] proper `Det` representation in StateMng
-- [ ] load,write state automatically to disk
-	- [x] yaml marshal and unmarshal
-		-	[x] DelayMsFile
-		- [x] ConsMsFile 
-		- [x] SessionMsFile
-		- [x] ConnLimMsFile
-- [ ] create command
+
+- [ ] management of managers in StateMng (Dms, Cms, Sms, CLms)
+	- [ ] SrvAddManager
+	- [ ] SrvDelManager
+- [ ] write state automatically to disk
+- [ ] create administration command
 - [ ] logs
-- [x] managers in StateMng (Dms, Cms, Sms, CLms) to MainDet

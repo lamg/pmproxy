@@ -22,7 +22,7 @@ type Connector struct {
 	Cl      clock.Clock
 	Timeout time.Duration
 	Dl      Dialer
-	Rd      []Det
+	Rd      *SqDet
 }
 
 // DialContext dials using as parameters fields in Connector,
@@ -48,9 +48,7 @@ func (n *Connector) Proxy(r *h.Request) (u *url.URL, e error) {
 
 func (n *Connector) det(r *h.Request) (s *ConSpec) {
 	s, nw := new(ConSpec), n.Cl.Now()
-	for i := 0; i != len(n.Rd); i++ {
-		n.Rd[i].Det(r, nw, s)
-	}
+	n.Rd.Det(r, nw, s)
 	return
 }
 

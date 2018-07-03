@@ -28,18 +28,34 @@ func TestStateMng(t *testing.T) {
 		{"key.pem", keyFile},
 		{"cert.pem", certFile},
 		{"delay_managers.yaml", delayMsFile},
+		{"consumption_managers.yaml", consMsFile},
 	}
-	// TODO write files to stm
 	for i, j := range fls {
 		e := afr.WriteFile(j.name, []byte(j.content), os.ModePerm)
 		require.NoError(t, e, "At %d", i)
+		fi, e := stm.Stat(j.name)
+		require.NoError(t, e)
+		require.Equal(t, j.name, fi.Name())
 	}
 	s, e := NewStateMng("conf.yaml", stm)
+	require.NoError(t, e)
+	// When the file doesn't exists but apperas in configuration
+	// file, it is created. That is the case of
+	// resource_determinators.yaml
+	_, e = stm.Stat("resource_determinators.yaml")
 	require.NoError(t, e)
 	require.Equal(t, s.WebAddr, ":443")
 
 	hn := s.WebInterface()
 	require.NotNil(t, hn)
+
+	cs, ok := s.Cms["cs"]
+	require.True(t, ok)
+	require.Equal(t, "cs", cs.Name)
+
+	dm, ok := s.Dms["dm"]
+	require.True(t, ok)
+	require.Equal(t, "dm", dm.Name)
 }
 
 func TestMarshalYAML(t *testing.T) {
@@ -114,29 +130,30 @@ proxyReadTimeout: 5s
 proxyWriteTimeout: 10s
 
 delayMsFile: delay_managers.yaml
-consMsFile: consumption_managers.json
-sessionMsFile: session_managers.json
-connLimMsFile: connection_limit_managers.json
-
-resDetFile: resource_determinators.json
+consMsFile: consumption_managers.yaml
+sessionMsFile: session_managers.yaml
+connLimMsFile: connection_limit_managers.yaml
+resDetFile: resource_determinators.yaml
 `
 
 var delayMsFile = `
 dm:
-	name: dm
-	bandWidth:
-		bytes: 1024
-		timeLapse: 1ms
-	sm:
-		name: sm
+  name: dm
+  bandwidth:
+    bytes: 1024
+    timelapse: 1ms
+  sm:
+    name: sm
 `
 
 var consMsFile = `
 cs:
-	name: cs
-	cons:
-		fulano: 128
-		mengano: 256
+  name: cs
+  cons:
+    fulano: 128
+    mengano: 256
+  resetcycle: 168h0m0s
+  lastreset: 2006-01-01T00:00:00-04:00
 `
 
 var keyFile = `

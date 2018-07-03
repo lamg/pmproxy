@@ -182,11 +182,13 @@ func TestConnect(t *testing.T) {
 
 func TestProxy(t *testing.T) {
 	n := &Connector{
-		Rd: []Det{
-			&ResDet{
-				Ur: regexp.MustCompile("bla\\.com"),
-				Pr: &ConSpec{
-					Proxy: "http://proxy.org",
+		Rd: &SqDet{
+			RDs: []*ResDet{
+				&ResDet{
+					Ur: regexp.MustCompile("bla\\.com"),
+					Pr: &ConSpec{
+						Proxy: "http://proxy.org",
+					},
 				},
 			},
 		},
@@ -221,20 +223,22 @@ func TestDialContext(t *testing.T) {
 	keke, kekeIP := "keke", "0.0.0.0"
 	sm.login(keke, kekeIP)
 	n := &Connector{
-		Rd: []Det{
-			&ResDet{
-				Unit: true,
-				Ur:   regexp.MustCompile("bla\\.com"),
-				Pr: &ConSpec{
-					Cf:    1,
-					Iface: "eth0",
-					Quota: 4096,
-					Cons:  cm.Adder("keke"),
-				},
-				Dm: dm,
-				Cs: cm,
-				Um: &UsrMtch{
-					Sm: sm,
+		Rd: &SqDet{
+			RDs: []*ResDet{
+				&ResDet{
+					Unit: true,
+					Ur:   regexp.MustCompile("bla\\.com"),
+					Pr: &ConSpec{
+						Cf:    1,
+						Iface: "eth0",
+						Quota: 4096,
+						Cons:  cm.Adder("keke"),
+					},
+					Dm: dm,
+					Cs: cm,
+					Um: &UsrMtch{
+						Sm: sm,
+					},
 				},
 			},
 		},

@@ -1,13 +1,14 @@
 package pmproxy
 
 import (
-	"encoding/json"
+	"fmt"
 	"io"
-	"io/ioutil"
 	h "net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/lamg/clock"
 	"github.com/spf13/afero"
 
 	"gopkg.in/yaml.v2"
@@ -116,7 +117,17 @@ func NewStateMng(file string, stm afero.Fs) (s *StateMng, e error) {
 	},
 		[]interface{}{s.Dms, s.Cms, s.Sms, s.CLms, s.MainDet}
 	for i := 0; e == nil && i != len(files); i++ {
-		decode(files[i], vs[i])
+		e = decodeYAML(files[i], vs[i], stm)
+		if e != nil {
+			_, ok := e.(*os.PathError)
+			if ok {
+				var fl afero.File
+				fl, e = stm.Create(files[i])
+				if e == nil {
+					fl.Close()
+				}
+			}
+		}
 	}
 	if e == nil {
 		s.initManagers()
@@ -170,11 +181,14 @@ func (s *StateMng) initResDet(j *ResDet) {
 	}
 }
 
-func decode(file string, v interface{}) (e error) {
+func decodeYAML(file string, v interface{}, stm afero.Fs) (e error) {
 	var bs []byte
-	bs, e = ioutil.ReadFile(file)
+	bs, e = afero.ReadFile(stm, file)
 	if e == nil {
-		e = json.Unmarshal(bs, v)
+		e = yaml.Unmarshal(bs, v)
+		if e != nil {
+			e = fmt.Errorf("%s: %s", file, e.Error())
+		}
 	}
 	return
 }
@@ -204,11 +218,52 @@ func (s *StateMng) WebInterface() (hn h.Handler) {
 	return
 }
 
-// ResourceDeterminators creates the determinators for use
-// within Connector
-func (s *StateMng) ResourceDeterminators() (d []Det) {
-	d = []Det{s.MainDet}
+// Connector returns a connector with the current configuration
+func (s *StateMng) Connector() (c *Connector) {
+	c = &Connector{
+		Cl: new(clock.OSClock),
+		Dl: new(OSDialer),
+		Rd: s.MainDet,
+	}
 	return
+}
+
+const (
+	// MngType is the URL variable to send the manager
+	// type to be added by SrvAddManager
+	MngType = "type"
+	// CMngType is the URL variable to send the manager
+	// type to be added by SrvAddManager
+	CMngType = "cmng"
+	// DMngType is the URL variable to send the manager
+	// type to be added by SrvAddManager
+	DMngType = "dmng"
+	// CLMngType is the URL variable to send the manager
+	// type to be added by SrvAddManager
+	CLMngType = "clmng"
+)
+
+// SrvAddManager adds a manager
+func (s *StateMng) SrvAddManager(w h.ResponseWriter, r *h.Request) {
+	// TODO
+	di := mux.Vars(r)
+	tpe, ok := di[MngType]
+	var e error
+	if ok {
+		switch tpe {
+		case CMngType:
+		case DMngType:
+		case CLMngType:
+		default:
+			e = fmt.Errorf("Unrecognized manager type %s", tpe)
+		}
+	}
+	writeErr(w, e)
+}
+
+// SrvDelManager deletes a manager
+func (s *StateMng) SrvDelManager(w h.ResponseWriter, r *h.Request) {
+	// TODO
 }
 
 // PersistState updates the content of state files

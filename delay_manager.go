@@ -11,11 +11,11 @@ import (
 // DMng is a connection delay manager. It's used for distributing
 // an equal share of bandwidth across al connections.
 type DMng struct {
-	Name      string `json:"name" yaml:"name"`
-	Bandwidth *Rate  `json:"bandwidth" yaml:"bandWidth"`
+	Name      string `json:"name"`
+	Bandwidth *Rate  `json:"bandwidth"`
 	currConn  uint64
 	connR     *Rate
-	Sm        *SMng `json:"sm" yaml:"sm"`
+	Sm        *SMng `json:"sm"`
 }
 
 // IncConn is used for adjusting the connection rate when a connection
