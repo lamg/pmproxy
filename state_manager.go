@@ -1,8 +1,10 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	h "net/http"
 	"os"
 	"time"
@@ -130,53 +132,63 @@ func NewStateMng(file string, stm afero.Fs) (s *StateMng, e error) {
 		}
 	}
 	if e == nil {
-		s.initManagers()
+		s.updateManagers()
 	}
 	return
 }
 
-func (s *StateMng) initManagers() {
+func (s *StateMng) updateManagers() {
 	// s.MainDet tree is walked using rs as stack
 	rs := []*SqDet{s.MainDet}
 	for len(rs) != 0 {
 		curr := rs[len(rs)-1]
 		for _, j := range curr.RDs {
-			s.initResDet(j)
+			s.updateResDet(j)
 		}
 		rs = rs[:len(rs)-1]
 		rs = append(rs, curr.SDs...)
 	}
 }
 
-func (s *StateMng) initResDet(j *ResDet) {
+func (s *StateMng) updateResDet(j *ResDet) {
 	if j.Cl != nil {
 		cl, ok := s.CLms[j.Cl.Name]
 		if ok {
 			j.Cl = cl
+		} else {
+			j.Cl = nil
 		}
 	}
 	if j.Cs != nil {
 		cs, ok := s.Cms[j.Cs.Name]
 		if ok {
 			j.Cs = cs
+		} else {
+			j.Cs = nil
 		}
 	}
 	if j.Dm != nil {
 		dm, ok := s.Dms[j.Dm.Name]
 		if ok {
 			j.Dm = dm
+		} else {
+			j.Dm = nil
 		}
 	}
 	if j.Gm.Um.Sm != nil {
 		sm, ok := s.Sms[j.Gm.Um.Sm.Name]
 		if ok {
 			j.Gm.Um.Sm = sm
+		} else {
+			j.Gm.Um.Sm = nil
 		}
 	}
 	if j.Um.Sm != nil {
 		sm, ok := s.Sms[j.Um.Sm.Name]
 		if ok {
 			j.Um.Sm = sm
+		} else {
+			j.Um.Sm = nil
 		}
 	}
 }
@@ -191,6 +203,13 @@ func decodeYAML(file string, v interface{}, stm afero.Fs) (e error) {
 		}
 	}
 	return
+}
+
+// PrefixHandler is an h.Handler with the last part of the path
+// where it should be served
+type PrefixHandler struct {
+	Prefix string
+	Hnd    h.Handler
 }
 
 // WebInterface returns the h.Handler used to serve the web interface
@@ -245,25 +264,172 @@ const (
 
 // SrvAddManager adds a manager
 func (s *StateMng) SrvAddManager(w h.ResponseWriter, r *h.Request) {
-	// TODO
 	di := mux.Vars(r)
 	tpe, ok := di[MngType]
 	var e error
 	if ok {
+		dc := json.NewDecoder(r.Body)
 		switch tpe {
 		case CMngType:
+			cm := new(CMng)
+			e = dc.Decode(cm)
+			if e == nil {
+				s.Cms[cm.Name] = cm
+			}
 		case DMngType:
+			dm := new(DMng)
+			e = dc.Decode(dm)
+			if e == nil {
+				s.Dms[dm.Name] = dm
+			}
 		case CLMngType:
+			clm := new(CLMng)
+			e = dc.Decode(clm)
+			if e == nil {
+				s.CLms[clm.Name] = clm
+			}
 		default:
 			e = fmt.Errorf("Unrecognized manager type %s", tpe)
+		}
+	}
+	if e == nil {
+		s.updateManagers()
+	}
+	writeErr(w, e)
+}
+
+const (
+	// MngName is the URL variable for sending the manager name
+	// to be deleted
+	MngName = "manager_name"
+)
+
+// SrvDelManager deletes a manager
+func (s *StateMng) SrvDelManager(w h.ResponseWriter, r *h.Request) {
+	// TODO
+	di := mux.Vars(r)
+	name, ok := di[MngName]
+	if ok {
+		delete(s.Cms, name)
+		delete(s.CLms, name)
+		delete(s.Dms, name)
+		delete(s.Sms, name)
+		s.updateManagers()
+	}
+}
+
+const (
+	// Index is the variable name for sending indexes in URLs
+	Index = "index"
+)
+
+// JSqDet is a JSON representable version of SqDet
+type JSqDet struct {
+	// Unit: true for "for all", false for "exists"
+	Unit bool `json:"unit"`
+	// RDs resource determinators
+	RDs []*ResDet `json:"rDs"`
+	// ChL: children's length
+	ChL uint32 `json:"chL"`
+}
+
+func toJSqDet(s *SqDet) (q *JSqDet) {
+	q = &JSqDet{
+		RDs:  s.RDs,
+		Unit: s.Unit,
+		ChL:  uint32(len(s.SDs)),
+	}
+	// the amount of children subtrees if not leaf
+	// since the tree is walked in preorder the children's indexes
+	// is predictible knowing the parent's index
+	return
+}
+
+// SrvDeterminator serves a determinator identified by the index
+// sent in URL (default is 0)
+func (s *StateMng) SrvDeterminator(w h.ResponseWriter, r *h.Request) {
+	i := reqIndex(r)
+	dt := detIndexPreorder(s.MainDet, i)
+	var e error
+	if dt != nil {
+		v := toJSqDet(dt)
+		var bs []byte
+		bs, e = json.Marshal(v)
+		if e == nil {
+			w.Write(bs)
+		}
+	} else {
+		e = NoDetFound()
+	}
+	writeErr(w, e)
+}
+
+// SrvAddResDet adds a ResDet
+func (s *StateMng) SrvAddResDet(w h.ResponseWriter, r *h.Request) {
+	i := reqIndex(r)
+	bs, e := ioutil.ReadAll(r.Body)
+	rd := new(ResDet)
+	if e == nil {
+		e = json.Unmarshal(bs, rd)
+	}
+	if e == nil {
+		rt := detIndexPreorder(s.MainDet, i)
+		if rt != nil {
+			rt.RDs = append(rt.RDs, rd)
+		} else {
+			e = NoDetFound()
 		}
 	}
 	writeErr(w, e)
 }
 
-// SrvDelManager deletes a manager
-func (s *StateMng) SrvDelManager(w h.ResponseWriter, r *h.Request) {
-	// TODO
+// SrvAddSqDet adds a SqDet
+func (s *StateMng) SrvAddSqDet(w h.ResponseWriter, r *h.Request) {
+	i := reqIndex(r)
+	bs, e := ioutil.ReadAll(r.Body)
+	rd := new(SqDet)
+	if e == nil {
+		e = json.Unmarshal(bs, rd)
+	}
+	if e == nil {
+		rt := detIndexPreorder(s.MainDet, i)
+		if rt != nil {
+			rt.SDs = append(rt.SDs, rd)
+		} else {
+			e = NoDetFound()
+		}
+	}
+	writeErr(w, e)
+}
+
+func detIndexPreorder(s *SqDet, n uint32) (d *SqDet) {
+	ds, i := []*SqDet{s}, uint32(0)
+	d = ds[0]
+	for i != n && len(ds) != 0 {
+		d = ds[len(ds)-1]
+		ds = append(ds[:len(ds)-1], d.SDs...)
+		i = i + 1
+	}
+	if i != n {
+		d = nil
+	}
+	return
+}
+
+func reqIndex(r *h.Request) (i uint32) {
+	di := mux.Vars(r)
+	ind, ok := di[Index]
+	if ok {
+		fmt.Sscan(ind, &i)
+	}
+	return
+}
+
+// NoDetFound is the no determinator found error, sent by
+// SrvDeterminator
+func NoDetFound() (e error) {
+	e = fmt.Errorf("No Det found using detIndexPreorder")
+	return
 }
 
 // PersistState updates the content of state files
