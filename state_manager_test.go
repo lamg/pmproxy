@@ -359,5 +359,24 @@ func TestSrvDet(t *testing.T) {
 }
 
 func TestDetMngAdd(t *testing.T) {
-
+	//TODO
+	stm := afero.NewMemMapFs()
+	s, e := NewStateMng("conf.yaml", stm)
+	require.NoError(t, e)
+	ts := []struct {
+		tpe string
+		val interface{}
+		err bool
+	}{
+		{tpe: CMngType, val: &CMng{Name: "cm"}, err: false},
+	}
+	for i, j := range ts {
+		bs, e := json.Marshal(j.val)
+		require.NoError(t, e)
+		body := string(bs)
+		w, r := reqres(t, h.MethodPost, "", body, "", "0.0.0.0")
+		mux.SetURLVars(r, map[string]string{MngType: j.tpe})
+		s.SrvAddManager(w, r)
+		require.Equal(t, j.err, w.Code == h.StatusOK, "At %d", i)
+	}
 }

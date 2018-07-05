@@ -95,16 +95,20 @@ func NewStateMng(file string, stm afero.Fs) (s *StateMng, e error) {
 			fr.CertFile,
 			fr.KeyFile
 	}
-	strTms, tms := []string{
-		fr.WebReadTimeout,
-		fr.WebWriteTimeout,
-		fr.ProxyReadTimeout,
-		fr.ProxyWriteTimeout,
-	}, []*time.Duration{
-		&s.WebReadTimeout,
-		&s.WebWriteTimeout,
-		&s.ProxyReadTimeout,
-		&s.ProxyWriteTimeout,
+	var strTms []string
+	var tms []*time.Duration
+	if e == nil {
+		strTms, tms = []string{
+			fr.WebReadTimeout,
+			fr.WebWriteTimeout,
+			fr.ProxyReadTimeout,
+			fr.ProxyWriteTimeout,
+		}, []*time.Duration{
+			&s.WebReadTimeout,
+			&s.WebWriteTimeout,
+			&s.ProxyReadTimeout,
+			&s.ProxyWriteTimeout,
+		}
 	}
 	for i := 0; e == nil && i != len(strTms); i++ {
 		*tms[i], e = time.ParseDuration(strTms[i])
@@ -114,10 +118,14 @@ func NewStateMng(file string, stm afero.Fs) (s *StateMng, e error) {
 		make(map[string]*CMng),
 		make(map[string]*CLMng),
 		new(SqDet)
-	files, vs := []string{fr.DelayMsFile, fr.ConsMsFile, fr.SessionMsFile,
-		fr.ConnLimMsFile, fr.ResDetFile,
-	},
-		[]interface{}{s.Dms, s.Cms, s.Sms, s.CLms, s.MainDet}
+	var files []string
+	var vs []interface{}
+	if e == nil {
+		files, vs = []string{fr.DelayMsFile, fr.ConsMsFile, fr.SessionMsFile,
+			fr.ConnLimMsFile, fr.ResDetFile,
+		},
+			[]interface{}{s.Dms, s.Cms, s.Sms, s.CLms, s.MainDet}
+	}
 	for i := 0; e == nil && i != len(files); i++ {
 		e = decodeYAML(files[i], vs[i], stm)
 		if e != nil {
@@ -289,13 +297,20 @@ func (s *StateMng) SrvAddManager(w h.ResponseWriter, r *h.Request) {
 				s.CLms[clm.Name] = clm
 			}
 		default:
-			e = fmt.Errorf("Unrecognized manager type %s", tpe)
+			e = UnrecTpe(tpe)
 		}
 	}
 	if e == nil {
 		s.updateManagers()
 	}
 	writeErr(w, e)
+}
+
+// UnrecTpe is the unrecognized manager type error, sent when trying
+// to add a manager to StateMng
+func UnrecTpe(tpe string) (e error) {
+	e = fmt.Errorf("Unrecognized manager type %s", tpe)
+	return
 }
 
 const (
