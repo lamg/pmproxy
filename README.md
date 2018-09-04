@@ -78,3 +78,5 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] write state automatically to disk
 - [ ] create administration command
 - [ ] logs
+
+- [ ] pmclient
