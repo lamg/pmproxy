@@ -359,8 +359,8 @@ func TestSrvDet(t *testing.T) {
 }
 
 func TestDetMngAdd(t *testing.T) {
-	//TODO
-	stm := afero.NewMemMapFs()
+	stm := &afero.Afero{Fs: afero.NewMemMapFs()}
+	stm.WriteFile("conf.yaml", []byte(stateFile), os.ModePerm)
 	s, e := NewStateMng("conf.yaml", stm)
 	require.NoError(t, e)
 	ts := []struct {
@@ -368,15 +368,99 @@ func TestDetMngAdd(t *testing.T) {
 		val interface{}
 		err bool
 	}{
-		{tpe: CMngType, val: &CMng{Name: "cm"}, err: false},
+		{
+			tpe: CMngType,
+			val: &CMng{Name: "cm", Cons: new(sync.Map)},
+			err: false,
+		},
+		{
+			tpe: DMngType,
+			val: &DMng{Name: "dm"},
+		},
+		{
+			tpe: CLMngType,
+			val: &CLMng{Name: "clm"},
+		},
 	}
 	for i, j := range ts {
 		bs, e := json.Marshal(j.val)
 		require.NoError(t, e)
 		body := string(bs)
 		w, r := reqres(t, h.MethodPost, "", body, "", "0.0.0.0")
-		mux.SetURLVars(r, map[string]string{MngType: j.tpe})
+		r = mux.SetURLVars(r, map[string]string{MngType: j.tpe})
 		s.SrvAddManager(w, r)
-		require.Equal(t, j.err, w.Code == h.StatusOK, "At %d", i)
+		require.Equal(t, j.err, w.Code != h.StatusOK, "At %d", i)
+		// comprobar que fue añadido
+		var name0, name1 string
+		if j.tpe == CMngType {
+			name0 = j.val.(*CMng).Name
+			cm, ok := s.Cms[name0]
+			require.True(t, ok)
+			name1 = cm.Name
+		} else if j.tpe == DMngType {
+			name0 = j.val.(*DMng).Name
+			dm, ok := s.Dms[name0]
+			require.True(t, ok)
+			name1 = dm.Name
+		} else if j.tpe == CLMngType {
+			name0 = j.val.(*CLMng).Name
+			clm, ok := s.CLms[name0]
+			require.True(t, ok)
+			name1 = clm.Name
+		}
+		require.Equal(t, name0, name1)
+	}
+}
+
+func TestDelManager(t *testing.T) {
+	stm := &afero.Afero{Fs: afero.NewMemMapFs()}
+	stm.WriteFile("conf.yaml", []byte(stateFile), os.ModePerm)
+	s, e := NewStateMng("conf.yaml", stm)
+	require.NoError(t, e)
+	ts := []struct {
+		name string
+		tpe  string
+		err  bool
+	}{
+		{
+			name: "dm",
+			tpe:  DMngType,
+			err:  false,
+		},
+	}
+	// add managers to s for being deleted in the test
+	for _, j := range ts {
+		if j.tpe == CLMngType {
+
+		} else if j.tpe == DMngType {
+
+		} else if j.tpe == CLMngType {
+
+		} else if j.tpe == SMngType {
+
+		}
+	}
+
+	for i, j := range ts {
+		w, r := reqres(t, h.MethodDelete, "", "", "", "0.0.0.0")
+		r = mux.SetURLVars(r, map[string]string{
+			MngName: j.name,
+			MngType: j.tpe,
+		})
+		// preparation for calling s.SrvDelManager()
+		s.SrvDelManager(w, r)
+		// checking s.SrvDelManager() worked as intended
+		require.Equal(t, j.err, w.Code != h.StatusOK, "At %d", i)
+		var ok bool
+		if j.tpe == CMngType {
+			_, ok = s.Cms[j.name]
+		} else if j.tpe == DMngType {
+			_, ok = s.Dms[j.name]
+		} else if j.tpe == CLMngType {
+			_, ok = s.CLms[j.name]
+		} else if j.tpe == SMngType {
+			_, ok = s.Sms[j.name]
+		}
+		require.False(t, ok)
 	}
 }

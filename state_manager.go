@@ -268,6 +268,9 @@ const (
 	// CLMngType is the URL variable to send the manager
 	// type to be added by SrvAddManager
 	CLMngType = "clmng"
+	// SMngType is the URL variable to send the manager
+	// type to be added by SrvAddManager
+	SMngType = "smng"
 )
 
 // SrvAddManager adds a manager
@@ -299,6 +302,8 @@ func (s *StateMng) SrvAddManager(w h.ResponseWriter, r *h.Request) {
 		default:
 			e = UnrecTpe(tpe)
 		}
+	} else {
+		e = NoTypeInfo()
 	}
 	if e == nil {
 		s.updateManagers()
@@ -310,6 +315,13 @@ func (s *StateMng) SrvAddManager(w h.ResponseWriter, r *h.Request) {
 // to add a manager to StateMng
 func UnrecTpe(tpe string) (e error) {
 	e = fmt.Errorf("Unrecognized manager type %s", tpe)
+	return
+}
+
+// NoTypeInfo is the error signaled when no type information
+// was sent to StateMng.SrvAddManager
+func NoTypeInfo() (e error) {
+	e = fmt.Errorf("No type information sent for manager")
 	return
 }
 

@@ -72,8 +72,9 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] provide a list of URLs whose access doesn't add to user consumption
 
 - [ ] management of managers in StateMng (Dms, Cms, Sms, CLms)
-	- [ ] SrvAddManager
-	- [ ] SrvDelManager
+  - [x] SrvAddManager
+  - [ ] SrvDelManager
+    - [ ] TestDelManager
 - [ ] write state automatically to disk
 - [ ] create administration command
 - [ ] logs
