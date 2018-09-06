@@ -358,30 +358,41 @@ func TestSrvDet(t *testing.T) {
 	}
 }
 
-func TestDetMngAdd(t *testing.T) {
+func TestDetMngAddDel(t *testing.T) {
 	stm := &afero.Afero{Fs: afero.NewMemMapFs()}
 	stm.WriteFile("conf.yaml", []byte(stateFile), os.ModePerm)
 	s, e := NewStateMng("conf.yaml", stm)
 	require.NoError(t, e)
-	ts := []struct {
-		tpe string
-		val interface{}
-		err bool
-	}{
+	ts := []addDelTest{
 		{
 			tpe: CMngType,
+			name: "cm",
 			val: &CMng{Name: "cm", Cons: new(sync.Map)},
 			err: false,
 		},
 		{
 			tpe: DMngType,
+			name: "dm",
 			val: &DMng{Name: "dm"},
 		},
 		{
 			tpe: CLMngType,
+			name: "clm",
 			val: &CLMng{Name: "clm"},
 		},
 	}
+	testAddManagers(t, ts, s)
+	testDelManagers(t, ts, s)
+}
+
+type addDelTest struct {
+	tpe string
+	name string
+	val interface{}
+	err bool
+}
+
+func testAddManagers(t *testing.T, ts []addDelTest, s *StateMng){
 	for i, j := range ts {
 		bs, e := json.Marshal(j.val)
 		require.NoError(t, e)
@@ -412,35 +423,7 @@ func TestDetMngAdd(t *testing.T) {
 	}
 }
 
-func TestDelManager(t *testing.T) {
-	stm := &afero.Afero{Fs: afero.NewMemMapFs()}
-	stm.WriteFile("conf.yaml", []byte(stateFile), os.ModePerm)
-	s, e := NewStateMng("conf.yaml", stm)
-	require.NoError(t, e)
-	ts := []struct {
-		name string
-		tpe  string
-		err  bool
-	}{
-		{
-			name: "dm",
-			tpe:  DMngType,
-			err:  false,
-		},
-	}
-	// add managers to s for being deleted in the test
-	for _, j := range ts {
-		if j.tpe == CLMngType {
-
-		} else if j.tpe == DMngType {
-
-		} else if j.tpe == CLMngType {
-
-		} else if j.tpe == SMngType {
-
-		}
-	}
-
+func testDelManagers(t *testing.T, ts []addDelTest, s *StateMng){
 	for i, j := range ts {
 		w, r := reqres(t, h.MethodDelete, "", "", "", "0.0.0.0")
 		r = mux.SetURLVars(r, map[string]string{
