@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	h "net/http"
 	"net/url"
@@ -19,20 +20,39 @@ import (
 // Connector provides DialContext for processing requests according
 // rules defined, and using an *h.Transport
 type Connector struct {
+	Lg      *log.Logger
 	Cl      clock.Clock
 	Timeout time.Duration
+	Tr      *h.Transport
 	Dl      Dialer
 	Rd      *SqDet
 }
 
 // DialContext dials using as parameters fields in Connector,
-// and *h.Request returned by ctx.Value(proxy.RequestKey)
+// and *h.Request returned by ctx.Value(proxy.ReqKey)
 func (n *Connector) DialContext(ctx context.Context, nt,
 	addr string) (c net.Conn,
 	e error) {
 	r := ctx.Value(gp.ReqKey).(*h.Request)
 	s := n.det(r)
 	c, e = n.connect(addr, s)
+	if e == nil && n.Lg != nil {
+		writeLog(n.Lg, r, nil, s.User, n.Cl.Now())
+	}
+	return
+}
+
+// RoundTrip logs a request and response processed returned
+// by the underlying RoundTripper
+func (n *Connector) RoundTrip(r *h.Request) (p *h.Response,
+	e error) {
+	p, e = n.Tr.RoundTrip(r)
+	// assign resources
+	if e == nil {
+		s := n.det(r)
+		writeLog(n.Lg, r, p, s.User, n.Cl.Now())
+		// log
+	}
 	return
 }
 

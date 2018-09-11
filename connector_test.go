@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net"
 	h "net/http"
@@ -211,6 +212,43 @@ func TestProxy(t *testing.T) {
 }
 
 func TestDialContext(t *testing.T) {
+	n, _ := testConnector()
+	ts := []tConn{
+		{
+			addr:    "bla.com",
+			content: "BLABLA",
+		},
+	}
+	for i, j := range ts {
+		r, e := h.NewRequest(h.MethodGet, j.addr, nil)
+		require.NoError(t, e, "At %d", i)
+		r.RemoteAddr = "0.0.0.0" + ":3433"
+		ctx := context.WithValue(context.Background(), proxy.ReqKey, r)
+		var c net.Conn
+		c, e = n.DialContext(ctx, "tcp", j.addr)
+		require.NoError(t, e, "At %d", i)
+		var bs []byte
+		bs, e = ioutil.ReadAll(c)
+		require.NoError(t, e, "At %d", i)
+		require.Equal(t, j.content, string(bs))
+	}
+}
+
+func TestLogging(t *testing.T) {
+	chk := &checker{
+		inputs:  []string{},
+		current: 0,
+	}
+	n, ts := testConnector()
+	for i, j := range ts {
+		_, e := n.DialContext(j.ctx, "tcp", j.addr)
+		require.NoError(t, e, "At %d", i)
+		// comprobar que el log escribió la línea correcta
+		require.NoError(t, chk.err, "At %d", i)
+	}
+}
+
+func testConnector() (n *Connector, ts []tConn0) {
 	cm, dm, sm := testCMng(),
 		&DMng{
 			Name: "dm",
@@ -222,7 +260,7 @@ func TestDialContext(t *testing.T) {
 		NewSMng("sm", nil, nil)
 	keke, kekeIP := "keke", "0.0.0.0"
 	sm.login(keke, kekeIP)
-	n := &Connector{
+	n = &Connector{
 		Rd: &SqDet{
 			RDs: []*ResDet{
 				&ResDet{
@@ -254,23 +292,46 @@ func TestDialContext(t *testing.T) {
 			},
 		},
 	}
-	ts := []tConn{
-		{
-			addr:    "bla.com",
-			content: "BLABLA",
-		},
+	return
+}
+
+func newTConns(hosts, remotes []string) (ts []tConn0, e error) {
+	// len(hosts) = len(remotes) = len(ts)
+	ts = make([]tConn0, len(hosts))
+	for i := 0; e == nil && i != len(hosts); i++ {
+		var r *h.Request
+		r, e = h.NewRequest(h.MethodGet, hosts[i], nil)
+		ts[i] = tConn0{
+			ctx: context.WithValue(context.Background(), proxy.ReqKey,
+				r),
+			addr: remotes[i],
+		}
 	}
-	for i, j := range ts {
-		r, e := h.NewRequest(h.MethodGet, j.addr, nil)
-		require.NoError(t, e, "At %d", i)
-		r.RemoteAddr = kekeIP + ":3433"
-		ctx := context.WithValue(context.Background(), proxy.ReqKey, r)
-		var c net.Conn
-		c, e = n.DialContext(ctx, "tcp", j.addr)
-		require.NoError(t, e, "At %d", i)
-		var bs []byte
-		bs, e = ioutil.ReadAll(c)
-		require.NoError(t, e, "At %d", i)
-		require.Equal(t, j.content, string(bs))
+	return
+}
+
+type tConn0 struct {
+	ctx  context.Context
+	addr string
+}
+
+type checker struct {
+	inputs  []string
+	current uint32
+	err     error
+}
+
+func (c *checker) Write(bs []byte) (n int, e error) {
+	s := string(bs)
+	if c.current < uint32(len(c.inputs)) {
+		t := c.inputs[c.current]
+		if t != s {
+			e = fmt.Errorf("%s != %s", s, t)
+		}
+	} else {
+		e = fmt.Errorf("All %d checked", len(c.inputs))
 	}
+	c.current = c.current + 1
+	c.err = e
+	return
 }

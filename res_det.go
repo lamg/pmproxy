@@ -23,6 +23,7 @@ type ConSpec struct {
 	Cons  *ConsAdd
 	Dm    *DMng
 	Cl    *CLMng
+	User  string
 }
 
 // Valid returns whether the connection specification is valid
@@ -167,6 +168,7 @@ func (d *ResDet) Det(r *h.Request, t time.Time,
 			user, ok := d.Um.Sm.MatchUsr(ip)
 			// MatchUsr error
 			if ok {
+				f.User = user
 				ca = d.Cs.Adder(user)
 			}
 		}
