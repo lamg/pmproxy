@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	h "net/http"
 	"net/url"
@@ -212,7 +213,8 @@ func TestProxy(t *testing.T) {
 }
 
 func TestDialContext(t *testing.T) {
-	n, _ := testConnector()
+	n, _, e := testConnector(nil)
+	require.NoError(t, e)
 	ts := []tConn{
 		{
 			addr:    "bla.com",
@@ -236,19 +238,21 @@ func TestDialContext(t *testing.T) {
 
 func TestLogging(t *testing.T) {
 	chk := &checker{
-		inputs:  []string{},
+		inputs:  []string{"1143864060.000 5000000 0.0.0.0 TCP_MISS/200 0 GET bla.com keke DIRECT/- -\n"},
 		current: 0,
 	}
-	n, ts := testConnector()
+	lg := log.New(chk, "", 0)
+	n, ts, e := testConnector(lg)
+	require.NoError(t, e)
 	for i, j := range ts {
-		_, e := n.DialContext(j.ctx, "tcp", j.addr)
+		_, e = n.DialContext(j.ctx, "tcp", j.addr)
 		require.NoError(t, e, "At %d", i)
 		// comprobar que el log escribió la línea correcta
 		require.NoError(t, chk.err, "At %d", i)
 	}
 }
 
-func testConnector() (n *Connector, ts []tConn0) {
+func testConnector(lg *log.Logger) (n *Connector, ts []tConn0, e error) {
 	cm, dm, sm := testCMng(),
 		&DMng{
 			Name: "dm",
@@ -261,6 +265,7 @@ func testConnector() (n *Connector, ts []tConn0) {
 	keke, kekeIP := "keke", "0.0.0.0"
 	sm.login(keke, kekeIP)
 	n = &Connector{
+		Lg: lg,
 		Rd: &SqDet{
 			RDs: []*ResDet{
 				&ResDet{
@@ -292,6 +297,7 @@ func testConnector() (n *Connector, ts []tConn0) {
 			},
 		},
 	}
+	ts, e = newTConns([]string{"bla.com"}, []string{"0.0.0.0"})
 	return
 }
 
@@ -301,10 +307,11 @@ func newTConns(hosts, remotes []string) (ts []tConn0, e error) {
 	for i := 0; e == nil && i != len(hosts); i++ {
 		var r *h.Request
 		r, e = h.NewRequest(h.MethodGet, hosts[i], nil)
+		r.RemoteAddr = remotes[i] + ":3234"
 		ts[i] = tConn0{
 			ctx: context.WithValue(context.Background(), proxy.ReqKey,
 				r),
-			addr: remotes[i],
+			addr: hosts[i],
 		}
 	}
 	return
