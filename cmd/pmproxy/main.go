@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	h "net/http"
+	"time"
 
 	"github.com/lamg/clock"
 	"github.com/spf13/afero"
@@ -61,6 +62,12 @@ func main() {
 		ce <- e
 	}()
 	// launch proxy
+	go func() {
+		c5 := time.Tick(5 * time.Minute)
+		for _, ok := <-c5; ok; {
+			state.PersistState()
+		}
+	}()
 	for e == nil {
 		e = <-ce
 	}

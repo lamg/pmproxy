@@ -73,8 +73,4 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 
 - [ ] write state automatically to disk
 - [ ] create administration command
-- [x] logs
-  - [x] gather values for calling writeLog (using context package in github.com/lamg/proxy)
-	- [ ] return `ts` in `testConnector` with proper value
-
 - [ ] pmclient

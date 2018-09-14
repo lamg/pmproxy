@@ -236,7 +236,7 @@ func TestDialContext(t *testing.T) {
 	}
 }
 
-func TestLogging(t *testing.T) {
+func TestLoggingDial(t *testing.T) {
 	chk := &checker{
 		inputs:  []string{"1143864060.000 5000000 0.0.0.0 TCP_MISS/200 0 GET bla.com keke DIRECT/- -\n"},
 		current: 0,
@@ -247,7 +247,6 @@ func TestLogging(t *testing.T) {
 	for i, j := range ts {
 		_, e = n.DialContext(j.ctx, "tcp", j.addr)
 		require.NoError(t, e, "At %d", i)
-		// comprobar que el log escribió la línea correcta
 		require.NoError(t, chk.err, "At %d", i)
 	}
 }

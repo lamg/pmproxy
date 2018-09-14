@@ -47,7 +47,6 @@ func (n *Connector) DialContext(ctx context.Context, nt,
 func (n *Connector) RoundTrip(r *h.Request) (p *h.Response,
 	e error) {
 	p, e = n.Tr.RoundTrip(r)
-	// assign resources
 	if e == nil {
 		s := n.det(r)
 		writeLog(n.Lg, r, p, s.User, n.Cl.Now())

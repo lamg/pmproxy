@@ -207,6 +207,13 @@ func decodeYAML(file string, v interface{}, stm afero.Fs) (e error) {
 	if e == nil {
 		e = yaml.Unmarshal(bs, v)
 		if e != nil {
+			// try to load old version
+			bs, e = afero.ReadFile(stm, file+"~")
+		}
+		if e == nil {
+			e = yaml.Unmarshal(bs, v)
+		}
+		if e != nil {
 			e = fmt.Errorf("%s: %s", file, e.Error())
 		}
 	}
@@ -333,7 +340,7 @@ const (
 
 // SrvDelManager deletes a manager
 func (s *StateMng) SrvDelManager(w h.ResponseWriter, r *h.Request) {
-	// TODO
+	// maybe not the best method for deleting
 	di := mux.Vars(r)
 	name, ok := di[MngName]
 	if ok {
