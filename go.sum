@@ -18,6 +18,10 @@ github.com/lamg/proxy v0.0.0-20180612214101-411f975d828d h1:Q2Jes8vu0OELqTkQZ0aZ
 github.com/lamg/proxy v0.0.0-20180612214101-411f975d828d/go.mod h1:GKqUwR6N6EGve3+Z9SRz9d5Clnggis6UO+U2hVeuGJM=
 github.com/lamg/proxy v1.0.0 h1:UpiNi9UoFaFWtL67vnqmNjd9l8xFszgtJhABBzN1FRc=
 github.com/lamg/proxy v1.0.0/go.mod h1:GKqUwR6N6EGve3+Z9SRz9d5Clnggis6UO+U2hVeuGJM=
+github.com/lamg/proxy v1.0.1 h1:7jwh/h1fwen+1mNWVfjDGnJI6hQibOs16oyARxzPTuE=
+github.com/lamg/proxy v1.0.1/go.mod h1:GKqUwR6N6EGve3+Z9SRz9d5Clnggis6UO+U2hVeuGJM=
+github.com/lamg/proxy v1.0.2 h1:qsLf6MzBMoqZkaX0Hc4vvHKNv8mi16YRDdSuVaw3/yA=
+github.com/lamg/proxy v1.0.2/go.mod h1:yJS9SSmOS6ZvE2AETH8ZefrxQiaVnmPH/bS5sWUW4Xk=
 github.com/lamg/rtimespan v0.0.0-20180424213650-d080e6b03f95 h1:fer9Yd+KTDzI91c8umIb902Ss0TJMkFSShvkQIsRyPc=
 github.com/lamg/rtimespan v0.0.0-20180424213650-d080e6b03f95/go.mod h1:CpJ+EaiAy6pO6Nzu1pi2hDUK3Q9bLeDPKLcHNpiNMKY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

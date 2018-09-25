@@ -27,6 +27,7 @@ func main() {
 		Dl: &pmproxy.OSDialer{
 			Timeout: state.ProxyReadTimeout,
 		},
+		Tr: h.DefaultTransport,
 		Rd: state.MainDet,
 	}
 	tr := &h.Transport{

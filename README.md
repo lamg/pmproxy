@@ -71,6 +71,7 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] Automatic session closing
 - [ ] provide a list of URLs whose access doesn't add to user consumption
 
-- [ ] write state automatically to disk
+- [x] write state automatically to disk
+- [ ] deploy
 - [ ] create administration command
 - [ ] pmclient
