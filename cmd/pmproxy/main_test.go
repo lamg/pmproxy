@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDial(t *testing.T) {
+func TestMain(t *testing.T) {
 	go run("conf.yaml")
 	time.Sleep(500 * time.Millisecond)
 	tr := &h.Transport{
@@ -22,7 +22,8 @@ func TestDial(t *testing.T) {
 	cl := &h.Client{
 		Transport: tr,
 	}
-	r, e := cl.Get("http://bla.com")
+	r, e := cl.Get("http://intranet.upr.edu.cu")
+	// TODO fails because resource_determinators.yaml is empty
 	require.NoError(t, e)
 	var bs []byte
 	bs, e = ioutil.ReadAll(r.Body)
