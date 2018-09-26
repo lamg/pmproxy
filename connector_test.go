@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	h "net/http"
+	"net/http/httptest"
 	"net/url"
 	"regexp"
 	"sync"
@@ -234,6 +235,33 @@ func TestDialContext(t *testing.T) {
 		require.NoError(t, e, "At %d", i)
 		require.Equal(t, j.content, string(bs))
 	}
+}
+
+func TestProxyDialContext(t *testing.T) {
+	dc := &dCnt{t: t, host: "bla.com"}
+	tr := &h.Transport{
+		DialContext: dc.dialContextTest,
+	}
+	p := &proxy.Proxy{
+		Tr: tr,
+	}
+	r := httptest.NewRequest(h.MethodConnect, dc.host, nil)
+	w := httptest.NewRecorder()
+	p.ServeHTTP(w, r)
+}
+
+// dCnt is a dummy connector for testing
+type dCnt struct {
+	t    *testing.T
+	host string
+}
+
+func (d *dCnt) dialContextTest(ctx context.Context, nt,
+	host string) (c net.Conn, e error) {
+	r, ok := ctx.Value(proxy.ReqKey).(*h.Request)
+	require.True(d.t, ok)
+	require.Equal(d.t, d.host, r.Host)
+	return
 }
 
 func TestLoggingDial(t *testing.T) {
