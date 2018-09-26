@@ -18,6 +18,10 @@ func main() {
 	var stateFl string
 	flag.StringVar(&stateFl, "c", "", "State file")
 	flag.Parse()
+	run(stateFl)
+}
+
+func run(stateFl string) {
 	ce := make(chan error)
 	state, e := pmproxy.NewStateMng(stateFl, afero.NewOsFs())
 	// load state
