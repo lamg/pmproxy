@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/juju/ratelimit"
 	"github.com/lamg/clock"
-	gp "github.com/lamg/proxy"
 	rs "github.com/lamg/rtimespan"
 )
 
@@ -28,19 +26,12 @@ type Connector struct {
 	Rd      *SqDet
 }
 
-// DialContext dials using as parameters fields in Connector,
-// and *h.Request returned by ctx.Value(proxy.ReqKey)
-func (n *Connector) DialContext(ctx context.Context, nt,
-	addr string) (c net.Conn, e error) {
-	r, ok := ctx.Value(gp.ReqKey).(*h.Request)
-	if ok {
-		s := n.det(r)
-		c, e = n.connect(addr, s)
-		if e == nil && n.Lg != nil {
-			writeLog(n.Lg, r, nil, s.User, n.Cl.Now())
-		}
-	} else {
-		e = NoCtxRequest()
+// Dial dials using fields in Connector and r as parameters
+func (n *Connector) Dial(r *h.Request) (c net.Conn, e error) {
+	s := n.det(r)
+	c, e = n.connect(r.Host, s)
+	if e == nil && n.Lg != nil {
+		writeLog(n.Lg, r, nil, s.User, n.Cl.Now())
 	}
 	return
 }
@@ -212,13 +203,6 @@ func InvCSpec(s *ConSpec) (e error) {
 // NotLocalIP is not found local IP address error
 func NotLocalIP() (e error) {
 	e = fmt.Errorf("Not found local IP address")
-	return
-}
-
-// NoCtxRequest is the error returned when there is
-// no *http.Request in context sent to DialContext
-func NoCtxRequest() (e error) {
-	e = fmt.Errorf("No request in context")
 	return
 }
 

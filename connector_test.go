@@ -1,7 +1,6 @@
 package pmproxy
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -213,22 +212,20 @@ func TestProxy(t *testing.T) {
 	}
 }
 
-func TestDialContext(t *testing.T) {
+func TestDial(t *testing.T) {
 	n, _, e := testConnector(nil)
 	require.NoError(t, e)
 	ts := []tConn{
 		{
-			addr:    "bla.com",
+			addr:    "http://bla.com",
 			content: "BLABLA",
 		},
 	}
 	for i, j := range ts {
-		r, e := h.NewRequest(h.MethodGet, j.addr, nil)
-		require.NoError(t, e, "At %d", i)
+		r := httptest.NewRequest(h.MethodGet, j.addr, nil)
 		r.RemoteAddr = "0.0.0.0" + ":3433"
-		ctx := context.WithValue(context.Background(), proxy.ReqKey, r)
 		var c net.Conn
-		c, e = n.DialContext(ctx, "tcp", j.addr)
+		c, e = n.Dial(r)
 		require.NoError(t, e, "At %d", i)
 		var bs []byte
 		bs, e = ioutil.ReadAll(c)
@@ -239,11 +236,8 @@ func TestDialContext(t *testing.T) {
 
 func TestProxyDialContext(t *testing.T) {
 	dc := &dCnt{t: t, host: "bla.com"}
-	tr := &h.Transport{
-		DialContext: dc.dialContextTest,
-	}
 	p := &proxy.Proxy{
-		Tr: tr,
+		Dial: dc.dial,
 	}
 	r := httptest.NewRequest(h.MethodConnect, dc.host, nil)
 	w := httptest.NewRecorder()
@@ -256,24 +250,21 @@ type dCnt struct {
 	host string
 }
 
-func (d *dCnt) dialContextTest(ctx context.Context, nt,
-	host string) (c net.Conn, e error) {
-	r, ok := ctx.Value(proxy.ReqKey).(*h.Request)
-	require.True(d.t, ok)
+func (d *dCnt) dial(r *h.Request) (c net.Conn, e error) {
 	require.Equal(d.t, d.host, r.Host)
 	return
 }
 
 func TestLoggingDial(t *testing.T) {
 	chk := &checker{
-		inputs:  []string{"1143864060.000 5000000 0.0.0.0 TCP_MISS/200 0 GET bla.com keke DIRECT/- -\n"},
+		inputs:  []string{"1143864060.000 5000000 0.0.0.0 TCP_MISS/200 0 GET http://bla.com keke DIRECT/- -\n"},
 		current: 0,
 	}
 	lg := log.New(chk, "", 0)
 	n, ts, e := testConnector(lg)
 	require.NoError(t, e)
 	for i, j := range ts {
-		_, e = n.DialContext(j.ctx, "tcp", j.addr)
+		_, e = n.Dial(j.r)
 		require.NoError(t, e, "At %d", i)
 		require.NoError(t, chk.err, "At %d", i)
 	}
@@ -324,7 +315,7 @@ func testConnector(lg *log.Logger) (n *Connector, ts []tConn0, e error) {
 			},
 		},
 	}
-	ts, e = newTConns([]string{"bla.com"}, []string{"0.0.0.0"})
+	ts, e = newTConns([]string{"http://bla.com"}, []string{"0.0.0.0"})
 	return
 }
 
@@ -333,11 +324,10 @@ func newTConns(hosts, remotes []string) (ts []tConn0, e error) {
 	ts = make([]tConn0, len(hosts))
 	for i := 0; e == nil && i != len(hosts); i++ {
 		var r *h.Request
-		r, e = h.NewRequest(h.MethodGet, hosts[i], nil)
+		r = httptest.NewRequest(h.MethodGet, hosts[i], nil)
 		r.RemoteAddr = remotes[i] + ":3234"
 		ts[i] = tConn0{
-			ctx: context.WithValue(context.Background(), proxy.ReqKey,
-				r),
+			r:    r,
 			addr: hosts[i],
 		}
 	}
@@ -345,7 +335,7 @@ func newTConns(hosts, remotes []string) (ts []tConn0, e error) {
 }
 
 type tConn0 struct {
-	ctx  context.Context
+	r    *h.Request
 	addr string
 }
 

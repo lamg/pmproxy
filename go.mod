@@ -8,7 +8,7 @@ require (
 	github.com/juju/ratelimit v1.0.1
 	github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68
 	github.com/lamg/ldaputil v0.0.0-20180322212749-08f7df8156d3
-	github.com/lamg/proxy v1.0.2
+	github.com/lamg/proxy v1.1.0
 	github.com/lamg/rtimespan v0.0.0-20180424213650-d080e6b03f95
 	github.com/spf13/afero v1.1.1
 	github.com/stretchr/testify v1.2.2

@@ -34,11 +34,10 @@ func run(stateFl string) {
 		Tr: h.DefaultTransport,
 		Rd: state.MainDet,
 	}
-	tr := &h.Transport{
-		DialContext: cnt.DialContext,
-		Proxy:       cnt.Proxy,
+	proxy := &proxy.Proxy{
+		Rt:   cnt,
+		Dial: cnt.Dial,
 	}
-	proxy := &proxy.Proxy{Tr: tr}
 	// configure proxy
 	web := state.WebInterface()
 	srvWeb := &h.Server{

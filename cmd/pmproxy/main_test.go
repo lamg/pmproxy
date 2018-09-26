@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDialContext(t *testing.T) {
+func TestDial(t *testing.T) {
 	go run("conf.yaml")
 	time.Sleep(500 * time.Millisecond)
 	tr := &h.Transport{
