@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/lamg/pmproxy.svg?branch=master)](https://travis-ci.com/lamg/pmproxy)
+
 # PMProxy
 
 PMProxy wraps an HTTP proxy with procedures that process an HTTP/HTTPS request according information it carries like IP that made it, requested URL, user authenticated by an Active Directory in that IP, time it is made, downloaded amount of bytes made by the authenticated user, and rules involving that information.
