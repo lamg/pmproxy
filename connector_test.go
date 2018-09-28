@@ -271,6 +271,7 @@ func TestLoggingDial(t *testing.T) {
 }
 
 func testConnector(lg *log.Logger) (n *Connector, ts []tConn0, e error) {
+	now.TimeFormats = append(now.TimeFormats, time.RFC3339)
 	cm, dm, sm := testCMng(),
 		&DMng{
 			Name: "dm",
@@ -304,7 +305,7 @@ func testConnector(lg *log.Logger) (n *Connector, ts []tConn0, e error) {
 			},
 		},
 		Cl: &clock.TClock{
-			Time: now.MustParse("2006-04-01"),
+			Time: now.MustParse("2006-04-01T00:00:00Z"),
 			Intv: time.Minute,
 		},
 		Dl: &TestDialer{
