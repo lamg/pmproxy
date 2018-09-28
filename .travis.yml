@@ -1,3 +1,7 @@
+env:
+  - CODECOV_TOKEN="d9c14660-237a-49e5-88c7-ff01f9e6d631"
+  - env GO111MODULE=on go test
+
 language: go
 
 go:
