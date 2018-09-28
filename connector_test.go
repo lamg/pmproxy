@@ -257,7 +257,7 @@ func (d *dCnt) dial(r *h.Request) (c net.Conn, e error) {
 
 func TestLoggingDial(t *testing.T) {
 	chk := &checker{
-		inputs:  []string{"1143864060.000 5000000 0.0.0.0 TCP_MISS/200 0 GET http://bla.com keke DIRECT/- -\n"},
+		inputs:  []string{"1143849660.000 5000000 0.0.0.0 TCP_MISS/200 0 GET http://bla.com keke DIRECT/- -\n"},
 		current: 0,
 	}
 	lg := log.New(chk, "", 0)
@@ -271,7 +271,8 @@ func TestLoggingDial(t *testing.T) {
 }
 
 func testConnector(lg *log.Logger) (n *Connector, ts []tConn0, e error) {
-	now.TimeFormats = append(now.TimeFormats, time.RFC3339)
+	var testTime time.Time
+	testTime, e = time.Parse(time.RFC3339, "2006-04-01T00:00:00Z")
 	cm, dm, sm := testCMng(),
 		&DMng{
 			Name: "dm",
@@ -305,7 +306,7 @@ func testConnector(lg *log.Logger) (n *Connector, ts []tConn0, e error) {
 			},
 		},
 		Cl: &clock.TClock{
-			Time: now.MustParse("2006-04-01T00:00:00Z"),
+			Time: testTime,
 			Intv: time.Minute,
 		},
 		Dl: &TestDialer{
