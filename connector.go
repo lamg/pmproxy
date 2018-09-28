@@ -43,8 +43,9 @@ func (n *Connector) RoundTrip(r *h.Request) (p *h.Response,
 	p, e = n.Tr.RoundTrip(r)
 	if e == nil {
 		s := n.det(r)
-		writeLog(n.Lg, r, p, s.User, n.Cl.Now())
-		// log
+		if n.Lg != nil {
+			writeLog(n.Lg, r, p, s.User, n.Cl.Now())
+		}
 	}
 	return
 }

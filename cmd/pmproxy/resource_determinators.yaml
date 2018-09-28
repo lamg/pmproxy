@@ -1,0 +1,10 @@
+# This file contains a YAML serialized SqDet struct
+Unit: true
+Rds:
+  Unit: true
+  Rg: 127.0.0.0/32
+  Pr:
+    Cf: 0
+    Iface: eth0
+    Quota: 104857600
+    
