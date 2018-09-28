@@ -1,5 +1,4 @@
 env:
-  - CODECOV_TOKEN="d9c14660-237a-49e5-88c7-ff01f9e6d631"
   - GO111MODULE=on
 
 language: go
