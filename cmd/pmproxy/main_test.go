@@ -25,7 +25,7 @@ func TestMain(t *testing.T) {
 	// Replace for a site you have access without using proxy
 	// site must show an HTML5 page
 	r, e := cl.Get("http://intranet.upr.edu.cu")
-	// TODO fails because resource_determinators.yaml is empty
+	// this fails when resource_determinators.yaml is empty
 	require.NoError(t, e)
 	var bs []byte
 	bs, e = ioutil.ReadAll(r.Body)
