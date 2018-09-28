@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	h "net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,13 +25,15 @@ func TestMain(t *testing.T) {
 	}
 	// Replace for a site you have access without using proxy
 	// site must show an HTML5 page
-	r, e := cl.Get("http://intranet.upr.edu.cu")
+	r, e := cl.Get("http://google.com")
 	// this fails when resource_determinators.yaml is empty
 	require.NoError(t, e)
 	var bs []byte
 	bs, e = ioutil.ReadAll(r.Body)
 	require.NoError(t, e)
-	sbs, pageContentPref := string(bs), "<!DOCTYPE html>"
+	sbs, pageContentPref := strings.ToLower(string(bs)),
+		"<!doctype html>"
+	println(sbs)
 	require.True(t, len(sbs) > len(pageContentPref))
 	require.Equal(t, pageContentPref, sbs[:len(pageContentPref)])
 }
