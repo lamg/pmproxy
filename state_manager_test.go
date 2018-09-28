@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/now"
 	"github.com/lamg/clock"
 	ld "github.com/lamg/ldaputil"
 	"github.com/spf13/afero"
@@ -87,11 +86,13 @@ func TestMarshalYAML(t *testing.T) {
 	symp := new(sync.Map)
 	symp.Store("coco", uint64(64))
 	symp.Store("pepe", uint64(128))
+	testTime, e := time.Parse(time.RFC3339, "2006-04-01T00:00:00Z")
+	require.NoError(t, e)
 	cm := &CMng{
 		Cons:       symp,
 		Name:       "cm",
 		ResetCycle: 168 * time.Hour,
-		LastReset:  now.MustParse("2006-01-01"),
+		LastReset:  testTime,
 		Cl:         new(clock.OSClock),
 	}
 	clm := &CLMng{
