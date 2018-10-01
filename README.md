@@ -19,6 +19,30 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 - The factor determining how fast the quota is reached, which is a float that is multiplied by the amount of downloaded bytes (consumption).
 - The connection delay.
 
+## Installation
+
+Go 1.11 is required since is the first with module support, and the project has some specific dependencies managed with it.
+
+```sh
+git clone https://github.com/lamg/pmproxy
+cd pmproxy/cmd/pmproxy && go install
+cd
+```
+
+## Usage
+
+The following will start the server using example configuration files.
+
+```sh
+mkdir pmproxy-dir
+cd pmproxy/cmd/pmproxy/
+cp *.yaml *.pem ../../../pmproxy-dir
+cd ../../../pmproxy-dir
+pmproxy -c conf.yaml
+```
+
+Now configure your web browser (or another client) to use localhost:8081 as HTTP proxy server, and request any page visible in your network.
+
 ## Tasks
 
 - [x] Replace redirection with a page informing the error and a link to the login page when needed.
