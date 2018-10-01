@@ -26,7 +26,7 @@ Go 1.11 is required since is the first with module support, and the project has 
 ```sh
 git clone https://github.com/lamg/pmproxy
 cd pmproxy/cmd/pmproxy && go install
-cd
+cd ../../..
 ```
 
 ## Usage
