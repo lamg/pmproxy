@@ -1,6 +1,6 @@
 # PMProxy
 
-[![Build Status](https://travis-ci.com/lamg/pmproxy.svg?branch=master)](https://travis-ci.com/lamg/pmproxy) [![Coverage Status](https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master)](https://coveralls.io/github/lamg/pmproxy?branch=master)
+[![Build Status](https://travis-ci.com/lamg/pmproxy.svg?branch=master)](https://travis-ci.com/lamg/pmproxy) [![Coverage Status](https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master)](https://coveralls.io/github/lamg/pmproxy?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/lamg/pmproxy)](https://goreportcard.com/report/github.com/lamg/pmproxy)
 
 PMProxy wraps an HTTP proxy with procedures that process an HTTP/HTTPS request according information it carries like IP that made it, requested URL, user authenticated by an Active Directory in that IP, time it is made, downloaded amount of bytes made by the authenticated user, and rules involving that information.
 
