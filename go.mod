@@ -4,6 +4,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-ldap/ldap v2.5.1+incompatible // indirect
 	github.com/gorilla/mux v1.6.2
+	github.com/gotk3/gotk3 v0.0.0-20181009192800-ac5a14d9e3ee
 	github.com/jinzhu/now v0.0.0-20180511015916-ed742868f2ae
 	github.com/juju/ratelimit v1.0.1
 	github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68

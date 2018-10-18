@@ -366,20 +366,20 @@ func TestDetMngAddDel(t *testing.T) {
 	require.NoError(t, e)
 	ts := []addDelTest{
 		{
-			tpe: CMngType,
+			tpe:  CMngType,
 			name: "cm",
-			val: &CMng{Name: "cm", Cons: new(sync.Map)},
-			err: false,
+			val:  &CMng{Name: "cm", Cons: new(sync.Map)},
+			err:  false,
 		},
 		{
-			tpe: DMngType,
+			tpe:  DMngType,
 			name: "dm",
-			val: &DMng{Name: "dm"},
+			val:  &DMng{Name: "dm"},
 		},
 		{
-			tpe: CLMngType,
+			tpe:  CLMngType,
 			name: "clm",
-			val: &CLMng{Name: "clm"},
+			val:  &CLMng{Name: "clm"},
 		},
 	}
 	testAddManagers(t, ts, s)
@@ -387,13 +387,13 @@ func TestDetMngAddDel(t *testing.T) {
 }
 
 type addDelTest struct {
-	tpe string
+	tpe  string
 	name string
-	val interface{}
-	err bool
+	val  interface{}
+	err  bool
 }
 
-func testAddManagers(t *testing.T, ts []addDelTest, s *StateMng){
+func testAddManagers(t *testing.T, ts []addDelTest, s *StateMng) {
 	for i, j := range ts {
 		bs, e := json.Marshal(j.val)
 		require.NoError(t, e)
@@ -424,7 +424,7 @@ func testAddManagers(t *testing.T, ts []addDelTest, s *StateMng){
 	}
 }
 
-func testDelManagers(t *testing.T, ts []addDelTest, s *StateMng){
+func testDelManagers(t *testing.T, ts []addDelTest, s *StateMng) {
 	for i, j := range ts {
 		w, r := reqres(t, h.MethodDelete, "", "", "", "0.0.0.0")
 		r = mux.SetURLVars(r, map[string]string{
@@ -447,4 +447,28 @@ func testDelManagers(t *testing.T, ts []addDelTest, s *StateMng){
 		}
 		require.False(t, ok)
 	}
+}
+
+func TestSrvDelDet(t *testing.T) {
+	s := &StateMng{
+		MainDet: &SqDet{
+			Unit: false,
+			SDs: []*SqDet{
+				&SqDet{
+					RDs: []*ResDet{
+						&ResDet{
+						Unit: true,
+						Cs:   NewCMng("cm"),
+						},
+					},
+				},
+			},
+		},
+	}
+	w, r := reqres(t, h.MethodDelete, "/"+Index, "", "", "0.0.0.0")
+	r = mux.SetURLVars(r, map[string]string{
+		Index: fmt.Sprint(1),
+	})
+	s.SrvDelDet(w, r)
+	require.Equal(t, 0, len(s.MainDet.SDs))
 }

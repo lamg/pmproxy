@@ -227,6 +227,13 @@ type PrefixHandler struct {
 	Hnd    h.Handler
 }
 
+const (
+	ManagerPath = "/managers"
+	SqDetPath   = "/sqdet"
+	ResDetPath  = "/resdet"
+	DelDetPath  = "/delete_res"
+)
+
 // WebInterface returns the h.Handler used to serve the web interface
 func (s *StateMng) WebInterface() (hn h.Handler) {
 	router := mux.NewRouter()
@@ -248,6 +255,12 @@ func (s *StateMng) WebInterface() (hn h.Handler) {
 		ah := v.AdminHandler()
 		router.Handle(ah.Prefix, ah.Hnd)
 	}
+	// TODO
+	router.HandleFunc(ManagerPath, s.SrvAddManager)
+	router.HandleFunc(ManagerPath, s.SrvDelManager)
+	router.HandleFunc(ResDetPath, s.SrvAddResDet)
+	router.HandleFunc(SqDetPath, s.SrvAddSqDet)
+	router.HandleFunc(DelDetPath, s.SrvDelDet)
 	hn = router
 	return
 }
@@ -434,6 +447,27 @@ func (s *StateMng) SrvAddSqDet(w h.ResponseWriter, r *h.Request) {
 		}
 	}
 	writeErr(w, e)
+}
+
+// SrvDelDet deletes a determinator
+func (s *StateMng) SrvDelDet(w h.ResponseWriter, r *h.Request) {
+	i := reqIndex(r)
+	delDetPreorder(s.MainDet, i)
+	// TODO
+}
+
+func delDetPreorder(s *SqDet, n uint32) {
+	ds, i := []*SqDet{s}, uint32(0)
+	for i != n && len(ds) != 0 {
+		d := ds[len(ds)-1]
+		diff := uint32(len(d.SDs)) + i - n
+		if diff >= 0 {
+			d.SDs = append(d.SDs[:diff], d.SDs[diff+1:]...)
+			i = n
+		} else {
+			i = i + 1
+		}
+	}
 }
 
 func detIndexPreorder(s *SqDet, n uint32) (d *SqDet) {

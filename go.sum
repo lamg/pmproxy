@@ -6,6 +6,8 @@ github.com/go-ldap/ldap v2.5.1+incompatible h1:Opaoft5zMW8IU/VRULB0eGMBQ9P5buRvC
 github.com/go-ldap/ldap v2.5.1+incompatible/go.mod h1:qfd9rJvER9Q0/D/Sqn1DfHRoBp40uXYvFoEVrNEPqRc=
 github.com/gorilla/mux v1.6.2 h1:Pgr17XVTNXAk3q/r4CpKzC5xBM/qW1uVLV+IhRZpIIk=
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
+github.com/gotk3/gotk3 v0.0.0-20181009192800-ac5a14d9e3ee h1:HYcoHcy+2YPznQwdGjly5GCVzQadCvstSnct8/UTvfY=
+github.com/gotk3/gotk3 v0.0.0-20181009192800-ac5a14d9e3ee/go.mod h1:Eew3QBwAOBTrfFFDmsDE5wZWbcagBL1NUslj1GhRveo=
 github.com/jinzhu/now v0.0.0-20180511015916-ed742868f2ae h1:8bBMcboXYVuo0WYH+rPe5mB8obO89a993hdTZ3phTjc=
 github.com/jinzhu/now v0.0.0-20180511015916-ed742868f2ae/go.mod h1:oHTiXerJ20+SfYcrdlBO7rzZRJWGwSTQ0iUY2jI6Gfc=
 github.com/juju/ratelimit v1.0.1 h1:+7AIFJVQ0EQgq/K9+0Krm7m530Du7tIz0METWzN0RgY=
