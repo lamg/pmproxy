@@ -1,29 +1,30 @@
 package main
 
 import (
-	"log"
-	"os"
-
-	"github.com/gotk3/gotk3/glib"
-	"github.com/gotk3/gotk3/gtk"
+	"github.com/rivo/tview"
 )
 
 func main() {
-	ap, e := gtk.ApplicationNew("com.github.lamg.pmuser-gtk",
-		glib.APPLICATION_FLAGS_NONE)
-	if e == nil {
-		ap.Connect("activate", activate)
-		glib.SetApplicationName("PMProxy manager")
-		r := ap.Run(os.Args)
-		os.Exit(r)
-	} else {
-		log.Fatal(e.Error())
+	initUI()
+}
+
+func initUI() {
+	grid := tview.NewGrid()
+	grid.SetRows(0, 0)
+	grid.SetColumns(0, 0)
+	grid.AddItem(box("Hola"), 0, 0, 1, 1, 2, 2, false)
+	grid.AddItem(box("Mundo"), 0, 1, 1, 1, 2, 2, false)
+	grid.AddItem(box("2"), 1, 0, 1, 1, 2, 2, false)
+	grid.AddItem(box("3"), 1, 1, 1, 1, 2, 2, true)
+	e := tview.NewApplication().SetRoot(grid, true).Run()
+	if e != nil {
+		panic(e)
 	}
 }
 
-func activate(a *gtk.Application) {
-	e := initW(a)
-	if e != nil {
-		log.Print(e.Error())
-	}
+func box(caption string) (p *tview.TextView) {
+	p = tview.NewTextView()
+	p.SetTextAlign(tview.AlignCenter)
+	p.SetText(caption)
+	return
 }
