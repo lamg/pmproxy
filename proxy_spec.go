@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"io"
 	h "net/http"
 	"time"
 
@@ -18,7 +19,7 @@ type ProxyCtl struct {
 
 // Admin is the resource specificator administrator
 type Admin interface {
-	Exec(*AdmCmd) error
+	Exec(*AdmCmd) (string, error)
 }
 
 // ProxySpec is a proxy server that process the request
@@ -36,9 +37,13 @@ type RSpec interface {
 // Spec is a resource specification
 type Spec struct {
 	Iface     string
+	ProxyURL  string
 	Bandwidth *Rate
 	Span      *rt.RSpan
 	Cr        ConsR
+}
+
+type Rate struct {
 }
 
 // ConsR is an interface for restricting the amount of
@@ -64,14 +69,25 @@ func (p *ProxyCtl) Proxy(w h.ResponseWriter, r *h.Request) {
 func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
 	cmd := new(AdmCmd)
 	e := Decode(r.Body, cmd)
+	var res string
 	if e == nil {
-		e = p.adm.Exec(cmd)
+		res, e = p.adm.Exec(cmd)
+	}
+	if e == nil {
+		_, e = w.Write([]byte(res))
 	}
 	if e != nil {
 		h.Error(w, e.Error(), h.StatusBadRequest)
 	}
 }
 
+func Decode(rd io.Reader, v interface{}) (e error) {
+	return
+}
+
 // AdmCmd is an administration command
 type AdmCmd struct {
+	Manager string   `json:"mng"`
+	Cmd     string   `json:"cmd"`
+	Args    []string `json:"args"`
 }

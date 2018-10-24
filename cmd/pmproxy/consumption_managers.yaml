@@ -1,7 +1,0 @@
-cs:
-  name: cs
-  cons:
-    fulano: 128
-    mengano: 256
-  resetcycle: 168h0m0s
-  lastreset: 2006-01-01T00:00:00-04:00

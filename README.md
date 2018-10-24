@@ -45,14 +45,13 @@ Now configure your web browser (or another client) to use localhost:8081 as HTTP
 
 ## Tasks
 
-- [x] Replace redirection with a page informing the error and a link to the login page when needed.
-- [ ] English grammar
-- [ ] Slow operations not in GUI's main thread
-- [ ] Add html template and parse it in NewPMProxy
-- [ ] Automatic session closing
-- [ ] provide a list of URLs whose access doesn't add to user consumption
-
-- [x] write state automatically to disk
-- [ ] deploy
-- [ ] create administration command
-- [ ] pmclient
+- [ ] simpler design based in proxy_spec.go's definitions.
+  - [ ] Implement `Admin` interface (admin.go)
+    - [ ] Implement managers
+      - [ ] session (session.go)
+      - [ ] connection limit
+      - [ ] delay
+      - [ ] quota consumption
+      - [ ] rules
+  - [x] Implement `RSpec` interface (rspec.go)
+    - [ ] implement `IPMatcher` (session.go)

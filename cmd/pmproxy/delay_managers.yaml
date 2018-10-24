@@ -1,7 +1,0 @@
-dm:
-  name: dm
-  bandwidth:
-    bytes: 1024
-    timelapse: 1ms
-  sm:
-    name: sm
