@@ -48,10 +48,10 @@ Now configure your web browser (or another client) to use localhost:8081 as HTTP
 - [ ] simpler design based in proxy_spec.go's definitions.
   - [ ] Implement `Admin` interface (admin.go)
     - [ ] Implement managers
-      - [ ] session (session.go)
+      - [x] session (session.go)
       - [ ] connection limit
       - [ ] delay
       - [ ] quota consumption
       - [ ] rules
   - [x] Implement `RSpec` interface (rspec.go)
-    - [ ] implement `IPMatcher` (session.go)
+    - [x] implement `IPMatcher` (session.go)

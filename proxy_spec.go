@@ -1,7 +1,7 @@
 package pmproxy
 
 import (
-	"io"
+	"net"
 	h "net/http"
 	"time"
 
@@ -67,10 +67,16 @@ func (p *ProxyCtl) Proxy(w h.ResponseWriter, r *h.Request) {
 // Admin is the handler that implements the administration
 // interface to be served by an HTTP server
 func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
-	cmd := new(AdmCmd)
-	e := Decode(r.Body, cmd)
+	ip, _, e := net.SplitHostPort(r.RemoteAddr)
+	var cmd *AdmCmd
+	if e == nil {
+		cmd = new(AdmCmd)
+		e = Decode(r.Body, cmd)
+	}
 	var res string
 	if e == nil {
+		r.Body.Close()
+		cmd.Args = append(cmd.Args, ip)
 		res, e = p.adm.Exec(cmd)
 	}
 	if e == nil {
@@ -79,10 +85,6 @@ func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
 	if e != nil {
 		h.Error(w, e.Error(), h.StatusBadRequest)
 	}
-}
-
-func Decode(rd io.Reader, v interface{}) (e error) {
-	return
 }
 
 // AdmCmd is an administration command

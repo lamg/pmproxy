@@ -15,12 +15,11 @@ type simpleRSpec struct {
 }
 
 type Rule struct {
-	Unit  bool
-	Span  *rt.RSpan
-	Range *net.IPNet
-	URLM  *regexp.Regexp
-	IPM   IPMatcher
-	Spec  *Spec
+	Unit bool
+	Span *rt.RSpan
+	URLM *regexp.Regexp
+	IPM  IPMatcher
+	Spec *Spec
 }
 
 type IPMatcher interface {
@@ -30,12 +29,10 @@ type IPMatcher interface {
 func (s *simpleRSpec) Spec(t time.Time,
 	r *h.Request) (n *Spec, e error) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	pip := net.ParseIP(ip)
 	for _, j := range s.rules {
 		b, k := true, 0
 		for b && k != len(j) {
 			b = j[k].Unit == ((j[k].IPM == nil || j[k].IPM.Match(ip)) &&
-				(j[k].Range == nil || j[k].Range.Contains(pip)) &&
 				(j[k].Span == nil || j[k].Span.ContainsTime(t)) &&
 				(j[k].URLM == nil || j[k].URLM.MatchString(r.RequestURI)))
 			k = k + 1
