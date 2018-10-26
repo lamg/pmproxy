@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/lamg/clock"
-	rt "github.com/lamg/rtimespan"
 )
 
 // ProxyCtl has the handlers for the HTTP servers
@@ -36,11 +35,9 @@ type RSpec interface {
 
 // Spec is a resource specification
 type Spec struct {
-	Iface     string
-	ProxyURL  string
-	Bandwidth *Rate
-	Span      *rt.RSpan
-	Cr        ConsR
+	Iface    string
+	ProxyURL string
+	Cr       []ConsR
 }
 
 type Rate struct {
@@ -49,8 +46,9 @@ type Rate struct {
 // ConsR is an interface for restricting the amount of
 // bytes a connection can consume
 type ConsR interface {
-	Can(int) bool
-	UpdateCons(int)
+	Can(string, int) bool
+	UpdateCons(string, int)
+	Close(string)
 }
 
 // Proxy is the handler to be used by the HTTP proxy server

@@ -6,8 +6,6 @@ import (
 	h "net/http"
 	"regexp"
 	"time"
-
-	rt "github.com/lamg/rtimespan"
 )
 
 type simpleRSpec struct {
@@ -16,7 +14,6 @@ type simpleRSpec struct {
 
 type Rule struct {
 	Unit bool
-	Span *rt.RSpan
 	URLM *regexp.Regexp
 	IPM  IPMatcher
 	Spec *Spec
@@ -33,7 +30,6 @@ func (s *simpleRSpec) Spec(t time.Time,
 		b, k := true, 0
 		for b && k != len(j) {
 			b = j[k].Unit == ((j[k].IPM == nil || j[k].IPM.Match(ip)) &&
-				(j[k].Span == nil || j[k].Span.ContainsTime(t)) &&
 				(j[k].URLM == nil || j[k].URLM.MatchString(r.RequestURI)))
 			k = k + 1
 		}
@@ -42,11 +38,8 @@ func (s *simpleRSpec) Spec(t time.Time,
 			n = new(Spec)
 			// add Spec to n
 			sn := j[k].Spec
-			if sn.Bandwidth != nil {
-				n.Bandwidth = sn.Bandwidth
-			}
 			if sn.Cr != nil {
-				n.Cr = sn.Cr
+				n.Cr = append(n.Cr, sn.Cr...)
 			}
 			if sn.Iface != "" {
 				n.Iface = sn.Iface
@@ -54,13 +47,9 @@ func (s *simpleRSpec) Spec(t time.Time,
 			if sn.ProxyURL != "" {
 				n.ProxyURL = sn.ProxyURL
 			}
-			if j[k].Span != nil {
-				n.Span = j[k].Span
-			}
 		}
 	}
-	if n.Bandwidth == nil || n.Cr == nil ||
-		((n.Iface == "") == (n.ProxyURL == "")) {
+	if len(n.Cr) == 0 || ((n.Iface == "") == (n.ProxyURL == "")) {
 		e = InvalidSpec()
 	}
 	return

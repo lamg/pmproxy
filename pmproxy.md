@@ -24,8 +24,6 @@ admin = admin_http_server http_request → (rules | state) spec.
   - clock.Clock
   - RSpec
     - Spec
-      - Rate
-      - rt.RSpan
       - ConsR
   - ProxySpec
     - Spec
@@ -52,9 +50,18 @@ admin = admin_http_server http_request → (rules | state) spec.
   - SessionMng
   - rangeIPM
   - groupIPM
+  - userIPM
+
+- IPUser
+  - SessionMng
 
 - Authenticator
+  - Ldap (github.com/lamg/ldaputil)
 
 - ProxySpec
 
 - ConsR
+  - time range consumption limitel
+  - bandwidth consumption limiter
+  - downloaded data consumption limiter
+  - connection amount consumption limiter

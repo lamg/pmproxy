@@ -14,7 +14,7 @@ type SessionMng struct {
 }
 
 type Authenticator interface {
-	Authenticate(string, string) error
+	AuthAndNorm(string, string) (string, error)
 }
 
 func (s *SessionMng) Exec(cmd *AdmCmd) (r string, e error) {
@@ -43,19 +43,20 @@ func NoCmdWithName(cmd string) (e error) {
 
 func (s *SessionMng) open(args []string) (r string, e error) {
 	// args[0] = user name, args[1] = password, args[2] = ip
+	var user string
 	if len(args) == 3 {
-		e = s.auth.Authenticate(args[0], args[1])
+		user, e = s.auth.AuthAndNorm(args[0], args[1])
 	} else {
 		e = MalformedArgs()
 	}
 	if e == nil {
-		r, e = s.crypt.Encrypt(args[0])
+		r, e = s.crypt.Encrypt(user)
 	}
 	if e == nil {
 		// close session opened by same user
 		var oldIP string
 		s.sessions.Range(func(k, v interface{}) (ok bool) {
-			ok = v.(string) != args[0]
+			ok = v.(string) != user
 			if !ok {
 				oldIP = k.(string)
 			}
@@ -65,7 +66,7 @@ func (s *SessionMng) open(args []string) (r string, e error) {
 			s.sessions.Delete(oldIP)
 		}
 		// add to dictionary
-		s.sessions.Store(args[0], args[1])
+		s.sessions.Store(args[2], user)
 	}
 	return
 }
@@ -107,5 +108,15 @@ func (s *SessionMng) show(args []string) (r string, e error) {
 	if e == nil {
 		r = string(bs)
 	}
+	return
+}
+
+type IPUser interface {
+	User(string) string
+}
+
+func (s *SessionMng) User(ip string) (user string) {
+	u, _ := s.sessions.Load(ip)
+	user = u.(string)
 	return
 }
