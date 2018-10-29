@@ -61,7 +61,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - ProxySpec
 
 - ConsR
-  - time range consumption limitel
-  - bandwidth consumption limiter
-  - downloaded data consumption limiter
-  - connection amount consumption limiter
+  - trCons (time_range_cons.go)
+  - bwCons (bandwidth_cons.go)
+  - dwnCons (download_cons.go)
+  - connCons (conn_amount_cons.go)
