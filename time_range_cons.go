@@ -11,6 +11,12 @@ type trCons struct {
 	span  *rt.RSpan
 }
 
+func (t *trCons) Open(ip string) (ok bool) {
+	tm := t.clock.Now()
+	ok = t.span.ContainsTime(tm)
+	return
+}
+
 func (t *trCons) Can(ip string, n int) (ok bool) {
 	tm := t.clock.Now()
 	ok = t.span.ContainsTime(tm)

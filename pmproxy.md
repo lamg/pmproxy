@@ -45,12 +45,13 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 - Admin
   - SessionMng
+  - simpleRSpec (TODO)
 
 - IPMatcher
-  - SessionMng
-  - rangeIPM
-  - groupIPM
-  - userIPM
+  - SessionMng (session.go)
+  - rangeIPM (range_ipm.go)
+  - groupIPM (group_ipm.go)
+  - userIPM (user_ipm.go)
 
 - IPUser
   - SessionMng
@@ -58,10 +59,11 @@ admin = admin_http_server http_request → (rules | state) spec.
 - Authenticator
   - Ldap (github.com/lamg/ldaputil)
 
-- ProxySpec
+- ProxySpec (TODO)
 
 - ConsR
   - trCons (time_range_cons.go)
   - bwCons (bandwidth_cons.go)
   - dwnCons (download_cons.go)
   - connCons (conn_amount_cons.go)
+  - idCons, negCons (id_neg_cons.go)

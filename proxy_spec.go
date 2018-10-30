@@ -40,12 +40,10 @@ type Spec struct {
 	Cr       []ConsR
 }
 
-type Rate struct {
-}
-
-// ConsR is an interface for restricting the amount of
-// bytes a connection can consume
+// ConsR is an interface for restricting several aspects of a
+// connection
 type ConsR interface {
+	Open(string) bool
 	Can(string, int) bool
 	UpdateCons(string, int)
 	Close(string)
