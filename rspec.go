@@ -1,10 +1,12 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	h "net/http"
 	"regexp"
+	"strconv"
 	"time"
 
 	rt "github.com/lamg/rtimespan"
@@ -66,5 +68,70 @@ func InvalidSpec() (e error) {
 
 func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
 	// TODO
+	ids, i := make([]int, 2), 0
+	if len(cmd.Args) < len(ids) {
+		e = InvalidArgsLen(len(cmd.Args))
+	}
+	for e == nil && i != len(ids) {
+		ids[i], e = strconv.Atoi(cmd.Args[i])
+		if e == nil {
+			i = i + 1
+		}
+	}
+	// indexes parsed
+	if e == nil {
+		switch cmd.Cmd {
+		case "add":
+			rule := new(Rule)
+			e = json.Unmarshal([]byte(cmd.Args[i+1]), rule)
+			if e == nil {
+
+			}
+			if i == 2 {
+				// index object
+			} else if i == 3 {
+				// index index object
+
+			} else {
+
+			}
+			// TODO definir un formato de la regla en los argumentos
+		case "del":
+			// delete rule by index
+			if i <= 2 {
+				s.removeRule(ids, i)
+			} else {
+				e = InvalidArgsLen(i)
+			}
+		}
+	}
+	return
+}
+
+func InvalidArgsLen(n int) (e error) {
+	e = fmt.Errorf("Invalid arguments length %d", n)
+	return
+}
+
+func (s *simpleRSpec) removeRule(args []int, argc int) (e error) {
+	if argc < len(s.rules) {
+		if argc == 1 {
+			s.rules = append(s.rules[:args[0]],
+				s.rules[args[0]+1:]...)
+			// no index out of range
+		} else if argc == 2 {
+			s.rules[args[0]] = append(s.rules[args[0]][:args[1]],
+				s.rules[args[0]][args[1]+1:]...)
+		} else {
+			e = InvalidArgsLen(argc)
+		}
+	} else {
+		e = IndexOutOfRange(argc, len(s.rules))
+	}
+	return
+}
+
+func IndexOutOfRange(i, n int) (e error) {
+	e = fmt.Errorf("Index %d out of range %d", i, n)
 	return
 }
