@@ -1,12 +1,10 @@
 package pmproxy
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	h "net/http"
 	"regexp"
-	"strconv"
 	"time"
 
 	rt "github.com/lamg/rtimespan"
@@ -67,53 +65,31 @@ func InvalidSpec() (e error) {
 }
 
 func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
-	// TODO
-	ids, i := make([]int, 2), 0
-	if len(cmd.Args) < len(ids) {
-		e = InvalidArgsLen(len(cmd.Args))
-	}
-	for e == nil && i != len(ids) {
-		ids[i], e = strconv.Atoi(cmd.Args[i])
-		if e == nil {
-			i = i + 1
+	switch cmd.Cmd {
+	case "add":
+		if cmd.Pos != nil && cmd.Rule != nil {
+			e = s.addRule(cmd.Pos, cmd.Rule)
+		} else {
+			e = InvalidArgs(cmd)
 		}
-	}
-	// indexes parsed
-	if e == nil {
-		switch cmd.Cmd {
-		case "add":
-			rule := new(Rule)
-			e = json.Unmarshal([]byte(cmd.Args[i+1]), rule)
-			if e == nil {
-
-			}
-			if i == 2 {
-				// index object
-			} else if i == 3 {
-				// index index object
-
-			} else {
-
-			}
-			// TODO definir un formato de la regla en los argumentos
-		case "del":
-			// delete rule by index
-			if i <= 2 {
-				s.removeRule(ids, i)
-			} else {
-				e = InvalidArgsLen(i)
-			}
+	case "del":
+		// delete rule by index
+		if len(cmd.Pos) <= 2 {
+			s.removeRule(cmd.Pos)
+		} else {
+			e = InvalidArgs(cmd.Args)
 		}
 	}
 	return
 }
 
-func InvalidArgsLen(n int) (e error) {
-	e = fmt.Errorf("Invalid arguments length %d", n)
+func InvalidArgs(v interface{}) (e error) {
+	e = fmt.Errorf("Invalid arguments %v", v)
 	return
 }
 
-func (s *simpleRSpec) removeRule(args []int, argc int) (e error) {
+func (s *simpleRSpec) removeRule(args []int) (e error) {
+	argc := len(args)
 	if argc < len(s.rules) {
 		if argc == 1 {
 			s.rules = append(s.rules[:args[0]],
@@ -123,10 +99,40 @@ func (s *simpleRSpec) removeRule(args []int, argc int) (e error) {
 			s.rules[args[0]] = append(s.rules[args[0]][:args[1]],
 				s.rules[args[0]][args[1]+1:]...)
 		} else {
-			e = InvalidArgsLen(argc)
+			e = InvalidArgs(args)
 		}
 	} else {
 		e = IndexOutOfRange(argc, len(s.rules))
+	}
+	return
+}
+
+func (s *simpleRSpec) addRule(pos []int, rule *Rule) (e error) {
+	if len(pos) == 1 {
+		if pos[0] == -1 {
+			s.rules = append(s.rules, []Rule{*rule})
+		} else if pos[0] >= 0 && pos[0] < len(s.rules) {
+			s.rules = append(s.rules[:pos[0]],
+				append([][]Rule{[]Rule{*rule}},
+					s.rules[pos[0]:]...)...)
+		} else {
+			e = IndexOutOfRange(pos[0], len(s.rules))
+		}
+	} else if len(pos) == 2 {
+		if 0 <= pos[0] && pos[0] < len(s.rules) {
+			rules := s.rules[pos[0]]
+			if pos[1] == -1 {
+				s.rules[pos[0]] = append(rules, *rule)
+			} else if 0 <= pos[1] &&
+				pos[1] < len(rules) {
+				s.rules[pos[0]] = append(rules[:pos[1]],
+					append([]Rule{*rule}, rules[pos[1]:]...)...)
+			} else {
+				e = IndexOutOfRange(pos[1], len(rules))
+			}
+		}
+	} else {
+		e = InvalidArgs(pos)
 	}
 	return
 }

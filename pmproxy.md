@@ -45,7 +45,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 - Admin
   - SessionMng
-  - simpleRSpec (TODO)
+  - simpleRSpec
 
 - IPMatcher
   - SessionMng (session.go)
@@ -59,7 +59,8 @@ admin = admin_http_server http_request → (rules | state) spec.
 - Authenticator
   - Ldap (github.com/lamg/ldaputil)
 
-- ProxySpec (TODO)
+- ProxySpec 
+  - proxySpec (proxy_spec.go)
 
 - ConsR
   - trCons (time_range_cons.go)
