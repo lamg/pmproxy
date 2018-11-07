@@ -59,8 +59,8 @@ admin = admin_http_server http_request → (rules | state) spec.
 - Authenticator
   - Ldap (github.com/lamg/ldaputil)
 
-- ProxySpec 
-  - proxySpec (proxy_spec.go)
+- Transport 
+  - specTransport (spec_transport.go) TODO
 
 - ConsR
   - trCons (time_range_cons.go)

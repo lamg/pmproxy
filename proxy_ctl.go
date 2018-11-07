@@ -21,10 +21,10 @@ type Admin interface {
 	Exec(*AdmCmd) (string, error)
 }
 
-// ProxySpec is a proxy server that process the request
-// according parameters in Spec instance
-type ProxySpec interface {
-	ServeSpec(*Spec, h.ResponseWriter, *h.Request)
+// Transport underlying transport for github.com/lamg/proxy
+type Transport interface {
+	h.RoundTripper
+	DialContext(context.Context, string, string) (net.Conn, error)
 }
 
 // RSpec specifies which resources correspond to a request
