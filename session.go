@@ -9,7 +9,7 @@ import (
 type SessionMng struct {
 	sessions *sync.Map
 	admin    IPMatcher
-	crypt    Crypt
+	crypt    *Crypt
 	auth     Authenticator
 }
 
@@ -22,7 +22,7 @@ func (s *SessionMng) Exec(cmd *AdmCmd) (r string, e error) {
 	case "open":
 		r, e = s.open(cmd.Args)
 	case "close":
-		r, e = s.close(cmd.Args)
+		r, e = s.close(cmd.Secret, cmd.Args)
 	case "show":
 		r, e = s.show(cmd.Args)
 	default:
@@ -76,16 +76,17 @@ func MalformedArgs() (e error) {
 	return
 }
 
-func (s *SessionMng) close(args []string) (r string, e error) {
+func (s *SessionMng) close(secr string, args []string) (r string,
+	e error) {
 	// args[0] = encrypted user name, args[1] = ip
 	var user string
-	if len(args) == 2 {
-		user, e = s.crypt.Decrypt(args[0])
+	if len(args) == 1 {
+		user, e = s.crypt.Decrypt(secr)
 	} else {
 		e = MalformedArgs()
 	}
 	if e == nil {
-		lusr, ok := s.sessions.Load(args[1])
+		lusr, ok := s.sessions.Load(args[0])
 		if ok && user == lusr {
 			s.sessions.Delete(args[1])
 		}
@@ -94,6 +95,7 @@ func (s *SessionMng) close(args []string) (r string, e error) {
 }
 
 func (s *SessionMng) show(args []string) (r string, e error) {
+	// TODO check secret
 	var bs []byte
 	if len(args) == 1 && s.admin.Match(args[0]) {
 		mp := make(map[string]string)

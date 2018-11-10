@@ -41,11 +41,14 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 ## Interface implementations
 - RSpec
-  - simpleRSPec
+  - simpleRSPec (rspec.go)
 
 - Admin
-  - SessionMng
-  - simpleRSpec
+  - SessionMng (session.go)
+  - simpleRSpec (rspec.go)
+  TODO check secret sent in administration command in
+  sensible places, Args field is for passing arguments
+  only for a particular manager, common or complex options have its dedicated field in AdmCmd
 
 - IPMatcher
   - SessionMng (session.go)
@@ -59,8 +62,8 @@ admin = admin_http_server http_request → (rules | state) spec.
 - Authenticator
   - Ldap (github.com/lamg/ldaputil)
 
-- Transport 
-  - specTransport (spec_transport.go) TODO
+- fields for initializing github.com/lamg/proxy.Proxy
+  - SpecCtx (spec_conn.go)
 
 - ConsR
   - trCons (time_range_cons.go)
@@ -68,3 +71,16 @@ admin = admin_http_server http_request → (rules | state) spec.
   - dwnCons (download_cons.go)
   - connCons (conn_amount_cons.go)
   - idCons, negCons (id_neg_cons.go)
+
+## Initializers
+
+## Commands accepted by managers
+
+- SessionMng
+  - open user password, returns secret
+  - close secret
+  - if admin then (show secret)
+
+- simpleRSpec
+  - if admin then (add secret pos rule)
+  - if admin then (del secret pos)
