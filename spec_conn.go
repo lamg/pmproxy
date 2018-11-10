@@ -1,9 +1,12 @@
 package pmproxy
 
 import (
+	"context"
 	"fmt"
 	"github.com/lamg/clock"
+	"net"
 	h "net/http"
+	"net/url"
 	"time"
 )
 
@@ -20,7 +23,7 @@ type SpecCtx struct {
 
 type SpecKT string
 
-var SpecK = specKT("spec")
+var SpecK = SpecKT("spec")
 
 type SpecV struct {
 	s   *Spec
@@ -31,7 +34,7 @@ func (p *SpecCtx) AddCtxValue(r *h.Request) (cr *h.Request) {
 	tm := p.clock.Now()
 	s, e := p.rs.Spec(tm, r)
 	ctx := r.Context()
-	nctx := context.WithValue(ctx, specK, &specV{s: s, err: e})
+	nctx := context.WithValue(ctx, SpecK, &SpecV{s: s, err: e})
 	r.WithContext(nctx)
 	return
 }
@@ -42,8 +45,8 @@ func (p *SpecCtx) Proxy(r *h.Request) (u *url.URL, e error) {
 	tm := p.clock.Now()
 	var s *Spec
 	s, e = p.rs.Spec(tm, r)
-	if e == nil && s.Proxy != "" {
-		u, e = url.Parse(s.Proxy)
+	if e == nil && s.ProxyURL != "" {
+		u, e = url.Parse(s.ProxyURL)
 	}
 	return
 }
@@ -65,7 +68,7 @@ func (p *SpecCtx) DialContext(ctx context.Context, network,
 			e = NoSpecValue()
 		}
 	} else {
-		e = NoSpecKey(specK)
+		e = NoSpecKey(SpecK)
 	}
 	var n net.Conn
 	if e == nil {
@@ -77,7 +80,7 @@ func (p *SpecCtx) DialContext(ctx context.Context, network,
 	return
 }
 
-func NoSpecKey(sk specKT) (e error) {
+func NoSpecKey(sk SpecKT) (e error) {
 	e = fmt.Errorf("No spec key %s found", sk)
 	return
 }
@@ -90,7 +93,7 @@ func NoSpecValue() (e error) {
 func dialIface(iface, addr string,
 	to time.Duration) (c net.Conn, e error) {
 	var ief *net.Interface
-	ief, e = net.InterfaceByName(s.Iface)
+	ief, e = net.InterfaceByName(iface)
 	var laddr []net.Addr
 	if e == nil {
 		laddr, e = ief.Addrs()
@@ -108,7 +111,7 @@ func dialIface(iface, addr string,
 		tca := &net.TCPAddr{IP: la.IP}
 		d := &net.Dialer{
 			LocalAddr: tca,
-			Timeout:   p.Timeout,
+			Timeout:   to,
 		}
 		c, e = d.Dial("tcp", addr)
 	}
@@ -163,7 +166,7 @@ func (r *rConn) Read(bs []byte) (n int, e error) {
 	}
 	if n != 0 {
 		for i := 0; i != len(r.cr); i++ {
-			r.cr.UpdateCons(r.raddr, n)
+			r.cr[i].UpdateCons(r.raddr, n)
 		}
 	}
 	return

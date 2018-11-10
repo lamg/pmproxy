@@ -49,6 +49,8 @@ admin = admin_http_server http_request → (rules | state) spec.
   TODO check secret sent in administration command in
   sensible places, Args field is for passing arguments
   only for a particular manager, common or complex options have its dedicated field in AdmCmd
+  - manager (manager.go)
+    - TODO command for managing managers
 
 - IPMatcher
   - SessionMng (session.go)
@@ -77,10 +79,42 @@ admin = admin_http_server http_request → (rules | state) spec.
 ## Commands accepted by managers
 
 - SessionMng
-  - open user password, returns secret
-  - close secret
-  - if admin then (show secret)
+  - open
+    - params: user, password
+    - returns: secret
+  - close
+    - params: secret
+  - show
+    - params: secret
+    - spec: if the user in secret is an administrator then show the opened sessions
 
 - simpleRSpec
-  - if admin then (add secret pos rule)
-  - if admin then (del secret pos)
+  - add
+    - params: secret, pos, rule
+    - spec: if the user in secret is an administrator then add rule
+  - del
+    - params: secret, pos, rule
+    - spec: if the user in secret is an administrator then delete rule
+
+- manager
+  - add
+    - params: secret, type, name, args
+    - spec: adds a manager if secret is from an administrator with the type, name and interpreting the specific args
+    - types:
+      - sm: SessionMng
+        - params: Active Directory (AD) address, AD user, AD password, administrators list
+      - tr: trCons
+        - params: RSpan
+      - bw: bwCons
+        - params: amount, duration
+      - dw: dwnCons
+        - params: IPUser name, limit
+      - cn: connCons
+        - params: limit
+      - id: idCons
+        - params: none
+      - ng: negCons
+        - params: none
+  - del
+    - params: secret, name
+    - spec: deletes the manager with that name if the secret is from an administrator

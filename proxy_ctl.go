@@ -12,8 +12,10 @@ import (
 type ProxyCtl struct {
 	clock clock.Clock
 	rp    RSpec
-	proxy ProxySpec
-	adm   Admin
+	// contains the fields for initializing
+	// github.com/lamg/proxy.Proxy
+	prxFls *SpecCtx
+	adm    Admin
 }
 
 // Admin is the resource specificator administrator
@@ -55,7 +57,7 @@ func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
 	var res string
 	if e == nil {
 		r.Body.Close()
-		cmd.Args = append(cmd.Args, ip)
+		cmd.RemoteIP = ip
 		res, e = p.adm.Exec(cmd)
 	}
 	if e == nil {
@@ -68,11 +70,14 @@ func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
 
 // AdmCmd is an administration command
 type AdmCmd struct {
-	Manager string `json:"mng"`
-	Cmd     string `json:"cmd"`
-	User    string `json:"user"`
-	Pass    string `json:"pass"`
-	Pos     []int  `json:"pos"`
-	Rule    *Rule  `json:"rule"`
-	Secret  string `json:"secr"`
+	Manager  string `json:"mng"`
+	Cmd      string `json:"cmd"`
+	User     string `json:"user"`
+	Pass     string `json:"pass"`
+	Pos      []int  `json:"pos"`
+	Rule     *Rule  `json:"rule"`
+	Secret   string `json:"secr"`
+	RemoteIP string `json:"remoteIP"`
+	MngName  string `json:"mngName"`
+	MngType  string `json:"mngType"`
 }

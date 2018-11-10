@@ -8,7 +8,7 @@ import (
 
 type SessionMng struct {
 	sessions *sync.Map
-	admin    IPMatcher
+	admins   []string
 	crypt    *Crypt
 	auth     Authenticator
 }
@@ -20,11 +20,11 @@ type Authenticator interface {
 func (s *SessionMng) Exec(cmd *AdmCmd) (r string, e error) {
 	switch cmd.Cmd {
 	case "open":
-		r, e = s.open(cmd.Args)
+		r, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
 	case "close":
-		r, e = s.close(cmd.Secret, cmd.Args)
+		r, e = s.close(cmd.Secret, cmd.RemoteIP)
 	case "show":
-		r, e = s.show(cmd.Args)
+		r, e = s.show(cmd.Secret, cmd.RemoteIP)
 	default:
 		e = NoCmdWithName(cmd.Cmd)
 	}
@@ -41,14 +41,9 @@ func NoCmdWithName(cmd string) (e error) {
 	return
 }
 
-func (s *SessionMng) open(args []string) (r string, e error) {
-	// args[0] = user name, args[1] = password, args[2] = ip
+func (s *SessionMng) open(usr, pass, ip string) (r string, e error) {
 	var user string
-	if len(args) == 3 {
-		user, e = s.auth.AuthAndNorm(args[0], args[1])
-	} else {
-		e = MalformedArgs()
-	}
+	user, e = s.auth.AuthAndNorm(usr, pass)
 	if e == nil {
 		r, e = s.crypt.Encrypt(user)
 	}
@@ -66,7 +61,7 @@ func (s *SessionMng) open(args []string) (r string, e error) {
 			s.sessions.Delete(oldIP)
 		}
 		// add to dictionary
-		s.sessions.Store(args[2], user)
+		s.sessions.Store(ip, user)
 	}
 	return
 }
@@ -76,40 +71,52 @@ func MalformedArgs() (e error) {
 	return
 }
 
-func (s *SessionMng) close(secr string, args []string) (r string,
+func (s *SessionMng) close(secr, ip string) (r string,
 	e error) {
-	// args[0] = encrypted user name, args[1] = ip
 	var user string
-	if len(args) == 1 {
-		user, e = s.crypt.Decrypt(secr)
-	} else {
-		e = MalformedArgs()
-	}
+	user, e = s.crypt.Decrypt(secr)
 	if e == nil {
-		lusr, ok := s.sessions.Load(args[0])
-		if ok && user == lusr {
-			s.sessions.Delete(args[1])
+		lusr, ok := s.sessions.Load(ip)
+		if ok && user == lusr.(string) {
+			s.sessions.Delete(ip)
 		}
 	}
 	return
 }
 
-func (s *SessionMng) show(args []string) (r string, e error) {
-	// TODO check secret
+func (s *SessionMng) show(secret, ip string) (r string, e error) {
+	var user string
+	user, e = s.crypt.Decrypt(secret)
 	var bs []byte
-	if len(args) == 1 && s.admin.Match(args[0]) {
-		mp := make(map[string]string)
-		s.sessions.Range(func(k, v interface{}) (ok bool) {
-			ok, mp[k.(string)] = true, v.(string)
-			return
-		})
-		bs, e = json.Marshal(&mp)
-	} else {
-		e = MalformedArgs()
+	if e == nil {
+		va, ok := s.sessions.Load(ip)
+		b := false
+		if ok {
+			adm := va.(string)
+			for i := 0; !b && i != len(s.admins); i++ {
+				b = adm == user
+			}
+		}
+
+		if ok && b {
+			mp := make(map[string]string)
+			s.sessions.Range(func(k, v interface{}) (ok bool) {
+				ok, mp[k.(string)] = true, v.(string)
+				return
+			})
+			bs, e = json.Marshal(&mp)
+		} else {
+			e = NoAdmLogged(ip)
+		}
 	}
 	if e == nil {
 		r = string(bs)
 	}
+	return
+}
+
+func NoAdmLogged(ip string) (e error) {
+	e = fmt.Errorf("No administrator logged at %s", ip)
 	return
 }
 

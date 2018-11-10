@@ -77,7 +77,7 @@ func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
 		if len(cmd.Pos) <= 2 {
 			s.removeRule(cmd.Pos)
 		} else {
-			e = InvalidArgs(cmd.Args)
+			e = InvalidArgs(cmd)
 		}
 	}
 	return
@@ -113,7 +113,7 @@ func (s *simpleRSpec) addRule(pos []int, rule *Rule) (e error) {
 			s.rules = append(s.rules, []Rule{*rule})
 		} else if pos[0] >= 0 && pos[0] < len(s.rules) {
 			s.rules = append(s.rules[:pos[0]],
-				append([][]Rule{[]Rule{*rule}},
+				append([][]Rule{{*rule}},
 					s.rules[pos[0]:]...)...)
 		} else {
 			e = IndexOutOfRange(pos[0], len(s.rules))
