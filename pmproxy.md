@@ -46,11 +46,8 @@ admin = admin_http_server http_request → (rules | state) spec.
 - Admin
   - SessionMng (session.go)
   - simpleRSpec (rspec.go)
-  TODO check secret sent in administration command in
-  sensible places, Args field is for passing arguments
-  only for a particular manager, common or complex options have its dedicated field in AdmCmd
   - manager (manager.go)
-    - TODO command for managing managers
+  - TODO command for managing managers
 
 - IPMatcher
   - SessionMng (session.go)
@@ -76,7 +73,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 ## Initializers
 
-## Commands accepted by managers
+## Commands accepted by managers (TODO)
 
 - SessionMng
   - open
@@ -104,9 +101,9 @@ admin = admin_http_server http_request → (rules | state) spec.
       - sm: SessionMng
         - params: Active Directory (AD) address, AD user, AD password, administrators list
       - tr: trCons
-        - params: RSpan
+        - params: start, end, active duration, total duration, times, infinite times, always
       - bw: bwCons
-        - params: amount, duration
+        - params: capacity, fill interval
       - dw: dwnCons
         - params: IPUser name, limit
       - cn: connCons

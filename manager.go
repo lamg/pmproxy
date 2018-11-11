@@ -5,7 +5,9 @@ import (
 )
 
 type manager struct {
-	adms map[string]Admin
+	crypt  *Crypt
+	admins []string
+	adms   map[string]Admin
 }
 
 func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
@@ -26,9 +28,27 @@ func NoMngWithName(name string) (e error) {
 }
 
 func (s *manager) admin(cmd *AdmCmd) (e error) {
-	switch cmd.Cmd {
-	case "add":
-	case "del":
+	if cmd.Cmd == "add" {
+		switch cmd.MngType {
+		case "sm":
+
+		case "tr":
+		case "bw":
+		case "dw":
+		case "cn":
+		case "id":
+		case "ng":
+		}
+	} else if cmd.Cmd == "del" {
+
+	}
+	return
+}
+
+func checkAdmin(secret string, c *Crypt, adms []string) (e error) {
+	var user string
+	user, e = c.Decrypt(secret)
+	if e == nil {
 	}
 	return
 }

@@ -89,12 +89,13 @@ func (s *SessionMng) show(secret, ip string) (r string, e error) {
 	user, e = s.crypt.Decrypt(secret)
 	var bs []byte
 	if e == nil {
-		va, ok := s.sessions.Load(ip)
 		b := false
+		// TODO
 		if ok {
 			adm := va.(string)
+			s.User(ip)
 			for i := 0; !b && i != len(s.admins); i++ {
-				b = adm == user
+				b = s.admins[i] == user
 			}
 		}
 
