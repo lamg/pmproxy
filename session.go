@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
+	ld "github.com/lamg/ldaputil"
 	"sync"
 )
 
@@ -15,6 +16,18 @@ type SessionMng struct {
 
 type Authenticator interface {
 	AuthAndNorm(string, string) (string, error)
+}
+
+func newSessionMng(admins []string, cr *Crypt,
+	ac *adConf) (s *SessionMng, e error) {
+	s = &SessionMng{
+		sessions: new(sync.Map),
+		admins:   admins,
+		crypt:    cr,
+	}
+	s.auth, e = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
+		ac.user, ac.pass)
+	return
 }
 
 func (s *SessionMng) Exec(cmd *AdmCmd) (r string, e error) {
@@ -86,29 +99,18 @@ func (s *SessionMng) close(secr, ip string) (r string,
 
 func (s *SessionMng) show(secret, ip string) (r string, e error) {
 	var user string
-	user, e = s.crypt.Decrypt(secret)
+	user, e = checkAdmin(secret, s.crypt, s.admins)
+	if e == nil && user != s.User(ip) {
+		e = NoAdmLogged(ip)
+	}
 	var bs []byte
 	if e == nil {
-		b := false
-		// TODO
-		if ok {
-			adm := va.(string)
-			s.User(ip)
-			for i := 0; !b && i != len(s.admins); i++ {
-				b = s.admins[i] == user
-			}
-		}
-
-		if ok && b {
-			mp := make(map[string]string)
-			s.sessions.Range(func(k, v interface{}) (ok bool) {
-				ok, mp[k.(string)] = true, v.(string)
-				return
-			})
-			bs, e = json.Marshal(&mp)
-		} else {
-			e = NoAdmLogged(ip)
-		}
+		mp := make(map[string]string)
+		s.sessions.Range(func(k, v interface{}) (ok bool) {
+			ok, mp[k.(string)] = true, v.(string)
+			return
+		})
+		bs, e = json.Marshal(&mp)
 	}
 	if e == nil {
 		r = string(bs)
