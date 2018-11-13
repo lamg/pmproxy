@@ -88,7 +88,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - simpleRSpec
   - add
     - params: secret, pos, rule
-    - spec: if the user in secret is an administrator then add rule
+    - spec: if the user in secret is an administrator then add rule.
   - del
     - params: secret, pos, rule
     - spec: if the user in secret is an administrator then delete rule
@@ -96,7 +96,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - manager
   - add
     - params: secret, type, name, args
-    - spec: adds a manager if secret is from an administrator with the type, name and interpreting the specific args
+    - spec: adds a manager if secret is from an administrator with the type, name and interpreting the specific args. Adding a rule requires some preprocessing because the rule inside a command doesn't have a direct reference to the value needed by simpleRule.Spec for giving the correct result.
     - types:
       - sm: SessionMng
         - params: Active Directory (AD) address, AD user, AD password, administrators list

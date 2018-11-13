@@ -2,13 +2,24 @@ package pmproxy
 
 import (
 	"fmt"
+	"github.com/lamg/clock"
 )
 
 type manager struct {
+	clock  clock.Clock
 	crypt  *Crypt
 	adcf   *adConf
 	admins []string
-	adms   map[string]Admin
+	mngs   map[string]*Mng
+}
+
+// Mng is the type for storing the types that cannot be fully
+// represented in a Rule as JSON
+type Mng struct {
+	Admin
+	// IPMatcher = nil ≢ Cr = nil
+	IPM IPMatcher
+	Cr  ConsR
 }
 
 type adConf struct {
@@ -39,20 +50,36 @@ func NoMngWithName(name string) (e error) {
 func (s *manager) admin(cmd *AdmCmd) (e error) {
 	_, e = checkAdmin(cmd.Secret, s.crypt, s.admins)
 	if e == nil {
+		var mng *Mng
 		if cmd.Cmd == "add" {
 			switch cmd.MngType {
 			case "sm":
 				var sm *SessionMng
-				s, e = newSessionMng(s.admins, s.cr, s.adcf)
-				// TODO adding sm to adms looses type information, which is
-				// needed in case s becomes part of a rule
+				s, e = newSessionMng(cmd.Manager, s.admins, s.cr, s.adcf)
+				if e == nil {
+					mng = &Mng{
+						Admin: sm,
+						IPM:   sm,
+					}
+				}
 			case "tr":
-
+				tr := &trCons{
+					name:  cmd.Manager,
+					span:  cmd.span,
+					clock: s.clock,
+				}
+				mng = &Mng{
+					Admin: tr,
+					Cr:    tr,
+				}
 			case "bw":
 			case "dw":
 			case "cn":
 			case "id":
 			case "ng":
+			}
+			if e == nil {
+				s.mngs[mng.Name()] = mng
 			}
 		} else if cmd.Cmd == "del" {
 

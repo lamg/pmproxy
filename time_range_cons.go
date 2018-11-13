@@ -7,9 +7,12 @@ import (
 
 // trCons is a time range consumption limiter for a connection
 type trCons struct {
+	name  string
 	clock clock.Clock
 	span  *rt.RSpan
 }
+
+// ConsR implementation
 
 func (t *trCons) Open(ip string) (ok bool) {
 	tm := t.clock.Now()
@@ -30,3 +33,19 @@ func (t *trCons) UpdateCons(ip string, n int) {
 func (t *trCons) Close(ip string) {
 
 }
+
+// end
+
+// Admin implementation
+
+func (t *trCons) Name() (r string) {
+	r = t.name
+	return
+}
+
+func (t *trCons) Exec(cmd *AdmCmd) (r string, e error) {
+	// TODO
+	return
+}
+
+// end

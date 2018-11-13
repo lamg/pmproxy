@@ -8,6 +8,7 @@ import (
 )
 
 type SessionMng struct {
+	name     string
 	sessions *sync.Map
 	admins   []string
 	crypt    *Crypt
@@ -18,7 +19,7 @@ type Authenticator interface {
 	AuthAndNorm(string, string) (string, error)
 }
 
-func newSessionMng(admins []string, cr *Crypt,
+func newSessionMng(name string, admins []string, cr *Crypt,
 	ac *adConf) (s *SessionMng, e error) {
 	s = &SessionMng{
 		sessions: new(sync.Map),
@@ -27,6 +28,11 @@ func newSessionMng(admins []string, cr *Crypt,
 	}
 	s.auth, e = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
 		ac.user, ac.pass)
+	return
+}
+
+func (s *SessionMng) Name() (r string) {
+	r = s.name
 	return
 }
 

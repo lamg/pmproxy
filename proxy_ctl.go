@@ -20,6 +20,7 @@ type ProxyCtl struct {
 
 // Admin is the resource specificator administrator
 type Admin interface {
+	Name() string
 	Exec(*AdmCmd) (string, error)
 }
 
