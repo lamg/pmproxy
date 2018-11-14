@@ -71,14 +71,18 @@ func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
 
 // AdmCmd is an administration command
 type AdmCmd struct {
-	Manager  string `json:"mng"`
-	Cmd      string `json:"cmd"`
-	User     string `json:"user"`
-	Pass     string `json:"pass"`
-	Pos      []int  `json:"pos"`
-	Rule     *Rule  `json:"rule"`
-	Secret   string `json:"secr"`
-	RemoteIP string `json:"remoteIP"`
-	MngName  string `json:"mngName"`
-	MngType  string `json:"mngType"`
+	Manager      string        `json:"mng"`
+	Cmd          string        `json:"cmd"`
+	User         string        `json:"user"`
+	Pass         string        `json:"pass"`
+	Pos          []int         `json:"pos"`
+	Rule         *JRule        `json:"rule"`
+	Secret       string        `json:"secr"`
+	RemoteIP     string        `json:"remoteIP"`
+	MngName      string        `json:"mngName"`
+	MngType      string        `json:"mngType"`
+	Capacity     int64         `json:"capacity"`
+	FillInterval time.Duration `json:"fillInterval"`
+	IPUser       string        `json:"ipUser"`
+	Limit        uint64        `json:"limit"`
 }

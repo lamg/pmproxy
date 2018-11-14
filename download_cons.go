@@ -4,10 +4,13 @@ import "sync"
 
 // downloaded data consumption limiter
 type dwnCons struct {
+	name    string
 	iu      IPUser
 	usrCons *sync.Map
 	limit   uint64
 }
+
+// ConsR implementation
 
 func (d *dwnCons) Open(ip string) (ok bool) {
 	cons := uint64(0)
@@ -41,3 +44,20 @@ func (d *dwnCons) UpdateCons(ip string, n int) {
 func (d *dwnCons) Close() {
 
 }
+
+// end
+
+// Admin implementation
+
+func (d *dwnCons) Name() (r string) {
+	r = d.name
+	return
+}
+
+func (d *dwnCons) Exec(cmd *AdmCmd) (r string, e error) {
+
+	return
+}
+
+// end
+// end

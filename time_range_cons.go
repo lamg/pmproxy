@@ -45,6 +45,8 @@ func (t *trCons) Name() (r string) {
 
 func (t *trCons) Exec(cmd *AdmCmd) (r string, e error) {
 	// TODO
+	// probably doing nothing here is a good option since the user
+	// can delete this manager and add the one he needs
 	return
 }
 

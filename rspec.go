@@ -22,6 +22,20 @@ type Rule struct {
 	Spec *Spec
 }
 
+type JRule struct {
+	Unit bool     `json:"unit"`
+	URLM string   `json:"urlm"`
+	Span *rt.Span `json:"span"`
+	IPM  string   `json:"ipm"`
+	Spec *JSpec   `json:"spec"`
+}
+
+type JSpec struct {
+	Iface    string   `json:"iface"`
+	ProxyURL string   `json:"proxyURL"`
+	ConsR    []string `json:"consR"`
+}
+
 type IPMatcher interface {
 	Match(string) bool
 }

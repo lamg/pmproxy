@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"fmt"
+	rl "github.com/juju/ratelimit"
 	"github.com/lamg/clock"
 )
 
@@ -10,6 +11,7 @@ type manager struct {
 	crypt  *Crypt
 	adcf   *adConf
 	admins []string
+	rspec  *simpleRSpec
 	mngs   map[string]*Mng
 }
 
@@ -36,6 +38,23 @@ func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
 		r, e = adm.Exec(cmd)
 	} else if cmd.Manager == "" {
 		e = s.admin(cmd)
+	} else if cmd.Manager == "rules" {
+		// TODO convert cmd.Rule from *JRule to *Rule
+		if cmd.Cmd == "add" {
+			if cmd.Rule != nil {
+				rule := &Rule{
+					Unit: cmd.Rule.Unit,
+					span: cmd.Rule.Span,
+					Spec: &Spec{
+						Iface:    cmd.Rule.Spec.Iface,
+						ProxyURL: cmd.Rule.Spec.ProxyURL,
+					},
+				}
+
+			} else {
+				e = InvalidArgs(cmd)
+			}
+		}
 	} else {
 		e = NoMngWithName(cmd.Manager)
 	}
@@ -73,22 +92,77 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 					Cr:    tr,
 				}
 			case "bw":
+				bw := &bwCons{
+					name: cmd.Manager,
+					rl:   rl.NewBucket(cmd.Capacity, cmd.FillInterval),
+				}
+				mng = &Mng{
+					Admin: bw,
+					Cr:    bw,
+				}
 			case "dw":
+				m, ok := s.mngs[cmd.IPUser]
+				var iu IPUser
+				if ok {
+					iu, ok = m.(IPUser)
+				}
+				if ok {
+					dw := &dwnCons{
+						name:    cmd.Name,
+						iu:      iu,
+						usrCons: new(sync.Map),
+						limit:   cmd.Limit,
+					}
+					mng = &Mng{
+						Admin: dw,
+						Cr:    dw,
+					}
+				}
 			case "cn":
+				cn := &connCons{
+					ipAmount: new(sync.Map),
+					limit:    cmd.Limit,
+				}
+				mng = &Mng{
+					Admin: cn,
+					Cr:    cn,
+				}
 			case "id":
+				id := &idCons{
+					name: cmd.Manager,
+				}
+				mng = &Mng{
+					Admin: id,
+					ConsR: id,
+				}
 			case "ng":
+				ng := &negCons{
+					name: cmd.Manager,
+				}
+				mng = &Mng{
+					Admin: ng,
+					ConsR: ng,
+				}
 			}
 			if e == nil {
 				s.mngs[mng.Name()] = mng
 			}
 		} else if cmd.Cmd == "del" {
-
+			_, ok := s.mngs[cmd.Manager]
+			if ok {
+				delete(s.mngs, cmd.Manager)
+				// TODO update rules (delete a rule if a manager belonging to
+				// it is deleted?)
+			} else {
+				e = NoMngWithName(cmd.Manager)
+			}
 		}
 	}
 	return
 }
 
-func checkAdmin(secret string, c *Crypt, adms []string) (user string, e error) {
+func checkAdmin(secret string, c *Crypt, adms []string) (user string,
+	e error) {
 	user, e = c.Decrypt(secret)
 	if e == nil {
 		b := false
