@@ -39,25 +39,56 @@ func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
 	} else if cmd.Manager == "" {
 		e = s.admin(cmd)
 	} else if cmd.Manager == "rules" {
-		// TODO convert cmd.Rule from *JRule to *Rule
 		if cmd.Cmd == "add" {
+			// conversion from *JRule to *Rule
+			var rule *Rule
 			if cmd.Rule != nil {
-				rule := &Rule{
+				rule = &Rule{
 					Unit: cmd.Rule.Unit,
 					span: cmd.Rule.Span,
 					Spec: &Spec{
 						Iface:    cmd.Rule.Spec.Iface,
 						ProxyURL: cmd.Rule.Spec.ProxyURL,
+						Cr:       make([]ConsR, 0),
 					},
 				}
-
+				if cmd.Rule.IPM != "" {
+					mng, ok := s.mngs[cmd.Rule.IPM]
+					if ok && mng.IPM != nil {
+						rule.IPM = mng.IPM
+					} else if !ok {
+						e = NoMngWithName(cmd.Rule.IPM)
+					} else if mng.IPM == nil {
+						e = NoMngWithType(cmd.Rule.IPM, "IPMatcher")
+					}
+				}
+				for i := 0; e == nil && i != len(cmd.Rule.ConsR); i++ {
+					mng, ok := s.mngs[cmd.Rule.ConsR[i]]
+					if ok && mng.ConsR != nil {
+						rule.Spec.Cr = append(rule.Spec.Cr, mng.ConsR)
+					} else if !ok {
+						e = NoMngWithName(cmd.Rule.ConsR[i])
+					} else if mng.ConsR == nil {
+						e = NoMngWithType(cmd.Rule.ConsR[i], "ConsR")
+					}
+				}
 			} else {
 				e = InvalidArgs(cmd)
 			}
+			if e == nil {
+				// TODO
+			}
+		} else if cmd.Cmd == "del" {
+			// TODO
 		}
 	} else {
 		e = NoMngWithName(cmd.Manager)
 	}
+	return
+}
+
+func NoMngWithType(name, tpe string) (e error) {
+	e = fmt.Errorf("No %s with name %s", tpe, name)
 	return
 }
 
