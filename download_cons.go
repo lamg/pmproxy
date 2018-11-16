@@ -41,7 +41,7 @@ func (d *dwnCons) UpdateCons(ip string, n int) {
 	}
 }
 
-func (d *dwnCons) Close() {
+func (d *dwnCons) Close(ip string) {
 
 }
 

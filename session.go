@@ -20,13 +20,13 @@ type Authenticator interface {
 }
 
 func newSessionMng(name string, admins []string, cr *Crypt,
-	ac *adConf) (s *SessionMng, e error) {
+	ac *adConf) (s *SessionMng) {
 	s = &SessionMng{
 		sessions: new(sync.Map),
 		admins:   admins,
 		crypt:    cr,
 	}
-	s.auth, e = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
+	s.auth = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
 		ac.user, ac.pass)
 	return
 }

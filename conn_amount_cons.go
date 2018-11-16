@@ -11,6 +11,11 @@ type connCons struct {
 
 // ConsR implementation
 
+func (c *connCons) Open(ip string) (ok bool) {
+	// TODO
+	return
+}
+
 func (c *connCons) Can(ip string, n int) (ok bool) {
 	amount := uint32(0)
 	a, b := c.ipAmount.LoadOrStore(ip, amount)

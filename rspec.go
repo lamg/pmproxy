@@ -23,11 +23,11 @@ type Rule struct {
 }
 
 type JRule struct {
-	Unit bool     `json:"unit"`
-	URLM string   `json:"urlm"`
-	Span *rt.Span `json:"span"`
-	IPM  string   `json:"ipm"`
-	Spec *JSpec   `json:"spec"`
+	Unit bool      `json:"unit"`
+	URLM string    `json:"urlm"`
+	Span *rt.RSpan `json:"span"`
+	IPM  string    `json:"ipm"`
+	Spec *JSpec    `json:"spec"`
 }
 
 type JSpec struct {
@@ -78,24 +78,24 @@ func InvalidSpec() (e error) {
 	return
 }
 
-func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
-	switch cmd.Cmd {
-	case "add":
-		if cmd.Pos != nil && cmd.Rule != nil {
-			e = s.addRule(cmd.Pos, cmd.Rule)
-		} else {
-			e = InvalidArgs(cmd)
-		}
-	case "del":
-		// delete rule by index
-		if len(cmd.Pos) <= 2 {
-			s.removeRule(cmd.Pos)
-		} else {
-			e = InvalidArgs(cmd)
-		}
-	}
-	return
-}
+// func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
+// 	switch cmd.Cmd {
+// 	case "add":
+// 		if cmd.Pos != nil && cmd.Rule != nil {
+// 			e = s.addRule(cmd.Pos, cmd.Rule)
+// 		} else {
+// 			e = InvalidArgs(cmd)
+// 		}
+// 	case "del":
+// 		// delete rule by index
+// 		if len(cmd.Pos) <= 2 {
+// 			s.removeRule(cmd.Pos)
+// 		} else {
+// 			e = InvalidArgs(cmd)
+// 		}
+// 	}
+// 	return
+// }
 
 func InvalidArgs(v interface{}) (e error) {
 	e = fmt.Errorf("Invalid arguments %v", v)

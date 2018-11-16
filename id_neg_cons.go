@@ -30,7 +30,7 @@ func (d *idCons) Close(ip string) {
 // Admin implementation
 
 func (d *idCons) Name() (r string) {
-	d.name
+	r = d.name
 	return
 }
 

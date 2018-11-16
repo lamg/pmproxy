@@ -4,6 +4,8 @@ import (
 	"fmt"
 	rl "github.com/juju/ratelimit"
 	"github.com/lamg/clock"
+	"sync"
+	"time"
 )
 
 type manager struct {
@@ -33,7 +35,7 @@ type adConf struct {
 }
 
 func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
-	adm, ok := s.adms[cmd.Manager]
+	adm, ok := s.mngs[cmd.Manager]
 	if ok {
 		r, e = adm.Exec(cmd)
 	} else if cmd.Manager == "" {
@@ -62,14 +64,14 @@ func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
 						e = NoMngWithType(cmd.Rule.IPM, "IPMatcher")
 					}
 				}
-				for i := 0; e == nil && i != len(cmd.Rule.ConsR); i++ {
-					mng, ok := s.mngs[cmd.Rule.ConsR[i]]
-					if ok && mng.ConsR != nil {
-						rule.Spec.Cr = append(rule.Spec.Cr, mng.ConsR)
+				for i := 0; e == nil && i != len(cmd.Rule.Spec.ConsR); i++ {
+					mng, ok := s.mngs[cmd.Rule.Spec.ConsR[i]]
+					if ok && mng.Cr != nil {
+						rule.Spec.Cr = append(rule.Spec.Cr, mng.Cr)
 					} else if !ok {
-						e = NoMngWithName(cmd.Rule.ConsR[i])
-					} else if mng.ConsR == nil {
-						e = NoMngWithType(cmd.Rule.ConsR[i], "ConsR")
+						e = NoMngWithName(cmd.Rule.Spec.ConsR[i])
+					} else if mng.Cr == nil {
+						e = NoMngWithType(cmd.Rule.Spec.ConsR[i], "ConsR")
 					}
 				}
 			} else {
@@ -105,17 +107,16 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 			switch cmd.MngType {
 			case "sm":
 				var sm *SessionMng
-				s, e = newSessionMng(cmd.Manager, s.admins, s.cr, s.adcf)
-				if e == nil {
-					mng = &Mng{
-						Admin: sm,
-						IPM:   sm,
-					}
+				sm = newSessionMng(cmd.Manager, s.admins, s.crypt, s.adcf)
+				mng = &Mng{
+					Admin: sm,
+					IPM:   sm,
 				}
+
 			case "tr":
 				tr := &trCons{
 					name:  cmd.Manager,
-					span:  cmd.span,
+					span:  cmd.Rule.Span,
 					clock: s.clock,
 				}
 				mng = &Mng{
@@ -125,7 +126,7 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 			case "bw":
 				bw := &bwCons{
 					name: cmd.Manager,
-					rl:   rl.NewBucket(cmd.Capacity, cmd.FillInterval),
+					rl:   rl.NewBucket(time.Duration(cmd.FillInterval), cmd.Capacity),
 				}
 				mng = &Mng{
 					Admin: bw,
@@ -135,11 +136,11 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 				m, ok := s.mngs[cmd.IPUser]
 				var iu IPUser
 				if ok {
-					iu, ok = m.(IPUser)
+					iu, ok = m.IPM.(IPUser)
 				}
 				if ok {
 					dw := &dwnCons{
-						name:    cmd.Name,
+						name:    cmd.MngName,
 						iu:      iu,
 						usrCons: new(sync.Map),
 						limit:   cmd.Limit,
@@ -152,7 +153,7 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 			case "cn":
 				cn := &connCons{
 					ipAmount: new(sync.Map),
-					limit:    cmd.Limit,
+					limit:    uint32(cmd.Limit),
 				}
 				mng = &Mng{
 					Admin: cn,
@@ -164,7 +165,7 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 				}
 				mng = &Mng{
 					Admin: id,
-					ConsR: id,
+					Cr:    id,
 				}
 			case "ng":
 				ng := &negCons{
@@ -172,7 +173,7 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 				}
 				mng = &Mng{
 					Admin: ng,
-					ConsR: ng,
+					Cr:    ng,
 				}
 			}
 			if e == nil {
