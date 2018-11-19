@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	h "net/http"
@@ -78,31 +79,12 @@ func InvalidSpec() (e error) {
 	return
 }
 
-// func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
-// 	switch cmd.Cmd {
-// 	case "add":
-// 		if cmd.Pos != nil && cmd.Rule != nil {
-// 			e = s.addRule(cmd.Pos, cmd.Rule)
-// 		} else {
-// 			e = InvalidArgs(cmd)
-// 		}
-// 	case "del":
-// 		// delete rule by index
-// 		if len(cmd.Pos) <= 2 {
-// 			s.removeRule(cmd.Pos)
-// 		} else {
-// 			e = InvalidArgs(cmd)
-// 		}
-// 	}
-// 	return
-// }
-
 func InvalidArgs(v interface{}) (e error) {
 	e = fmt.Errorf("Invalid arguments %v", v)
 	return
 }
 
-func (s *simpleRSpec) removeRule(args []int) (e error) {
+func (s *simpleRSpec) remove(args []int) (e error) {
 	argc := len(args)
 	if argc < len(s.rules) {
 		if argc == 1 {
@@ -121,7 +103,7 @@ func (s *simpleRSpec) removeRule(args []int) (e error) {
 	return
 }
 
-func (s *simpleRSpec) addRule(pos []int, rule *Rule) (e error) {
+func (s *simpleRSpec) add(pos []int, rule *Rule) (e error) {
 	if len(pos) == 1 {
 		if pos[0] == -1 {
 			s.rules = append(s.rules, []Rule{*rule})
@@ -147,6 +129,16 @@ func (s *simpleRSpec) addRule(pos []int, rule *Rule) (e error) {
 		}
 	} else {
 		e = InvalidArgs(pos)
+	}
+	return
+}
+
+func (s *simpleRSpec) show() (r string, e error) {
+	// TODO
+	var bs []byte
+	bs, e = json.Marshal(s.rules)
+	if e == nil {
+		r = string(bs)
 	}
 	return
 }

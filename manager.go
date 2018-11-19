@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	rl "github.com/juju/ratelimit"
 	"github.com/lamg/clock"
@@ -39,53 +40,67 @@ func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
 	if ok {
 		r, e = adm.Exec(cmd)
 	} else if cmd.Manager == "" {
-		e = s.admin(cmd)
+		r, e = s.admin(cmd)
 	} else if cmd.Manager == "rules" {
-		if cmd.Cmd == "add" {
-			// conversion from *JRule to *Rule
-			var rule *Rule
-			if cmd.Rule != nil {
-				rule = &Rule{
-					Unit: cmd.Rule.Unit,
-					span: cmd.Rule.Span,
-					Spec: &Spec{
-						Iface:    cmd.Rule.Spec.Iface,
-						ProxyURL: cmd.Rule.Spec.ProxyURL,
-						Cr:       make([]ConsR, 0),
-					},
-				}
-				if cmd.Rule.IPM != "" {
-					mng, ok := s.mngs[cmd.Rule.IPM]
-					if ok && mng.IPM != nil {
-						rule.IPM = mng.IPM
-					} else if !ok {
-						e = NoMngWithName(cmd.Rule.IPM)
-					} else if mng.IPM == nil {
-						e = NoMngWithType(cmd.Rule.IPM, "IPMatcher")
-					}
-				}
-				for i := 0; e == nil && i != len(cmd.Rule.Spec.ConsR); i++ {
-					mng, ok := s.mngs[cmd.Rule.Spec.ConsR[i]]
-					if ok && mng.Cr != nil {
-						rule.Spec.Cr = append(rule.Spec.Cr, mng.Cr)
-					} else if !ok {
-						e = NoMngWithName(cmd.Rule.Spec.ConsR[i])
-					} else if mng.Cr == nil {
-						e = NoMngWithType(cmd.Rule.Spec.ConsR[i], "ConsR")
-					}
-				}
-			} else {
-				e = InvalidArgs(cmd)
-			}
-			if e == nil {
-				// TODO
-			}
-		} else if cmd.Cmd == "del" {
-			// TODO
-		}
+		r, e = s.manageRules(cmd)
 	} else {
 		e = NoMngWithName(cmd.Manager)
 	}
+	return
+}
+
+func (s *manager) manageRules(cmd *AdmCmd) (r string, e error) {
+	if cmd.Cmd == "add" {
+		var rule *Rule
+		if cmd.Rule != nil {
+			rule = &Rule{
+				Unit: cmd.Rule.Unit,
+				span: cmd.Rule.Span,
+				Spec: &Spec{
+					Iface:    cmd.Rule.Spec.Iface,
+					ProxyURL: cmd.Rule.Spec.ProxyURL,
+					Cr:       make([]ConsR, 0),
+				},
+			}
+			if cmd.Rule.IPM != "" {
+				mng, ok := s.mngs[cmd.Rule.IPM]
+				if ok && mng.IPM != nil {
+					rule.IPM = mng.IPM
+				} else if !ok {
+					e = NoMngWithName(cmd.Rule.IPM)
+				} else if mng.IPM == nil {
+					e = NoMngWithType(cmd.Rule.IPM, "IPMatcher")
+				}
+			}
+			for i := 0; e == nil && i != len(cmd.Rule.Spec.ConsR); i++ {
+				mng, ok := s.mngs[cmd.Rule.Spec.ConsR[i]]
+				if ok && mng.Cr != nil {
+					rule.Spec.Cr = append(rule.Spec.Cr, mng.Cr)
+				} else if !ok {
+					e = NoMngWithName(cmd.Rule.Spec.ConsR[i])
+				} else if mng.Cr == nil {
+					e = NoMngWithType(cmd.Rule.Spec.ConsR[i], "ConsR")
+				}
+			}
+		} else {
+			e = InvalidArgs(cmd)
+		}
+		// converted from *JRule to *Rule
+		if e == nil {
+			e = s.rspec.add(cmd.Pos, rule)
+		}
+	} else if cmd.Cmd == "del" {
+		e = s.rspec.remove(cmd.Pos)
+	} else if cmd.Cmd == "show" {
+		r, e = s.rspec.show()
+	} else {
+		e = NoCmd(cmd.Cmd)
+	}
+	return
+}
+
+func NoCmd(name string) (e error) {
+	e = fmt.Errorf("No command with name %s", name)
 	return
 }
 
@@ -99,7 +114,7 @@ func NoMngWithName(name string) (e error) {
 	return
 }
 
-func (s *manager) admin(cmd *AdmCmd) (e error) {
+func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 	_, e = checkAdmin(cmd.Secret, s.crypt, s.admins)
 	if e == nil {
 		var mng *Mng
@@ -187,6 +202,14 @@ func (s *manager) admin(cmd *AdmCmd) (e error) {
 				// it is deleted?)
 			} else {
 				e = NoMngWithName(cmd.Manager)
+			}
+		} else if cmd.Cmd == "show" {
+			// TODO
+			// MarshalJSON implementation for mngs's elements?
+			var bs []byte
+			bs, e = json.Marshal(s.mngs)
+			if e == nil {
+				r = string(bs)
 			}
 		}
 	}

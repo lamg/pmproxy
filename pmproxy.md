@@ -92,6 +92,9 @@ admin = admin_http_server http_request → (rules | state) spec.
   - del
     - params: secret, pos, rule
     - spec: if the user in secret is an administrator then delete rule
+  - show
+    - params: secret
+    - spec: returns a JSON representation fo rules TODO
 
 - manager
   - add
@@ -115,3 +118,6 @@ admin = admin_http_server http_request → (rules | state) spec.
   - del
     - params: secret, name
     - spec: deletes the manager with that name if the secret is from an administrator
+  - show:
+    - params: secret
+    - spec: sends a JSON representation of managers TODO
