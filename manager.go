@@ -192,7 +192,17 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 				}
 			}
 			if e == nil {
-				s.mngs[mng.Name()] = mng
+				name := ""
+				if mng.Cr != nil {
+					name = mng.Cr.Name()
+				} else if mng.IPM != nil {
+					name = mng.IPM.Name()
+				}
+				if name != "" {
+					s.mngs[name] = mng
+				} else {
+					e = NoMngWithType("main", "ConsR or IPMatcher")
+				}
 			}
 		} else if cmd.Cmd == "del" {
 			_, ok := s.mngs[cmd.Manager]

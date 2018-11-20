@@ -23,6 +23,25 @@ type Rule struct {
 	Spec *Spec
 }
 
+func (r *Rule) MarshalJSON() (bs []byte, e error) {
+	jr := &JRule{
+		Unit: r.Unit,
+		URLM: r.URLM.String(),
+		Span: r.span,
+		IPM:  r.IPM.Name(),
+		Spec: &JSpec{
+			Iface:    r.Spec.Iface,
+			ProxyURL: r.Spec.ProxyURL,
+			ConsR:    make([]string, len(r.Spec.Cr)),
+		},
+	}
+	for i, j := range r.Spec.Cr {
+		jr.Spec.ConsR[i] = j.Name()
+	}
+	bs, e = json.Marshal(jr)
+	return
+}
+
 type JRule struct {
 	Unit bool      `json:"unit"`
 	URLM string    `json:"urlm"`
@@ -38,6 +57,7 @@ type JSpec struct {
 }
 
 type IPMatcher interface {
+	Name() string
 	Match(string) bool
 }
 

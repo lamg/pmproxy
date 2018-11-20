@@ -20,7 +20,6 @@ type ProxyCtl struct {
 
 // Admin is the resource specificator administrator
 type Admin interface {
-	Name() string
 	Exec(*AdmCmd) (string, error)
 }
 
@@ -40,6 +39,7 @@ type Spec struct {
 // ConsR stands for consumption restrictor, it restricts several
 // aspects of a connection
 type ConsR interface {
+	Name() string
 	Open(string) bool
 	Can(string, int) bool
 	UpdateCons(string, int)
