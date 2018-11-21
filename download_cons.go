@@ -1,13 +1,16 @@
 package pmproxy
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // downloaded data consumption limiter
 type dwnCons struct {
-	name    string
+	NameF   string `json:"name"`
 	iu      IPUser
 	usrCons *sync.Map
-	limit   uint64
+	Limit   uint64 `json:"limit"`
 }
 
 // ConsR implementation
@@ -27,7 +30,7 @@ func (d *dwnCons) Can(ip string, n int) (ok bool) {
 	ok = false
 	if user != "" {
 		cons, b := d.usrCons.Load(user)
-		ok = b && cons.(uint64) <= d.limit
+		ok = b && cons.(uint64) <= d.Limit
 	}
 	return
 }
@@ -45,19 +48,27 @@ func (d *dwnCons) Close(ip string) {
 
 }
 
+func (d *dwnCons) Name() (r string) {
+	r = d.NameF
+	return
+}
+
 // end
 
 // Admin implementation
 
-func (d *dwnCons) Name() (r string) {
-	r = d.name
-	return
-}
-
 func (d *dwnCons) Exec(cmd *AdmCmd) (r string, e error) {
-
+	if cmd.Cmd == "show" {
+		v, ok := d.usrCons.Load(cmd.User)
+		if ok {
+			r = fmt.Sprintf("%d", v)
+		} else {
+			NoEntry(cmd.User)
+		}
+	} else {
+		e = NoCmd(cmd.Cmd)
+	}
 	return
 }
 
-// end
 // end

@@ -1,12 +1,15 @@
 package pmproxy
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // connection amount consumption limiter
 type connCons struct {
-	name     string
+	NameF    string `json:"name"`
 	ipAmount *sync.Map
-	limit    uint32
+	Limit    uint32 `json:"limit"`
 }
 
 // ConsR implementation
@@ -27,7 +30,7 @@ func (c *connCons) canInc(ip string, increase bool) (ok bool) {
 	if b {
 		amount = a.(uint32)
 	}
-	ok = amount != c.limit
+	ok = amount != c.Limit
 	if ok && increase {
 		amount = amount + 1
 		c.ipAmount.Store(ip, amount)
@@ -45,16 +48,31 @@ func (c *connCons) Close(ip string) {
 	c.ipAmount.Store(ip, u.(uint32)-1)
 }
 
+func (c *connCons) Name() (r string) {
+	r = c.NameF
+	return
+}
+
 // end
 
 // Admin implementation
 
-func (c *connCons) Name() (r string) {
-	r = c.name
+func (c *connCons) Exec(cmd *AdmCmd) (r string, e error) {
+	if cmd.Cmd == "show" {
+		v, ok := c.ipAmount.Load(cmd.RemoteIP)
+		if ok {
+			r = fmt.Sprintf("%d", v)
+		} else {
+			e = NoEntry(cmd.RemoteIP)
+		}
+	} else {
+		e = NoCmd(cmd.Cmd)
+	}
 	return
 }
 
-func (c *connCons) Exec(cmd *AdmCmd) (r string, e error) {
+func NoEntry(ip string) (e error) {
+	e = fmt.Errorf("No entry with key %s", ip)
 	return
 }
 

@@ -1,13 +1,27 @@
 package pmproxy
 
 import (
-	"github.com/juju/ratelimit"
+	rl "github.com/juju/ratelimit"
+	"time"
 )
 
 // bandwidth consumption limiter
 type bwCons struct {
-	name string
-	rl   *ratelimit.Bucket
+	NameF    string `json:"name"`
+	rl       *rl.Bucket
+	Duration time.Duration `json:"duration"`
+	Capacity int64         `json:"capacity"`
+}
+
+func newBwCons(name string, interval time.Duration,
+	capacity int64) (bw *bwCons) {
+	bw = &bwCons{
+		NameF:    name,
+		rl:       rl.NewBucket(interval, capacity),
+		Duration: interval,
+		Capacity: capacity,
+	}
+	return
 }
 
 // ConsR implementation
@@ -30,14 +44,14 @@ func (b *bwCons) UpdateCons(ip string, n int) {
 func (b *bwCons) Close(ip string) {
 }
 
+func (b *bwCons) Name() (r string) {
+	r = b.NameF
+	return
+}
+
 // end
 
 // Admin implementation
-
-func (b *bwCons) Name() (r string) {
-	r = b.name
-	return
-}
 
 func (b *bwCons) Exec(cmd *AdmCmd) (r string, e error) {
 	// the user must delete this manager,

@@ -8,11 +8,12 @@ import (
 )
 
 type SessionMng struct {
-	name     string
+	NameF    string `json:"name"`
 	sessions *sync.Map
-	admins   []string
+	Admins   []string `json:"admins"`
 	crypt    *Crypt
 	auth     Authenticator
+	ADConf   *ADConf `json:"adConf"`
 }
 
 type Authenticator interface {
@@ -20,11 +21,13 @@ type Authenticator interface {
 }
 
 func newSessionMng(name string, admins []string, cr *Crypt,
-	ac *adConf) (s *SessionMng) {
+	ac *ADConf) (s *SessionMng) {
 	s = &SessionMng{
+		NameF:    name,
 		sessions: new(sync.Map),
-		admins:   admins,
+		Admins:   admins,
 		crypt:    cr,
+		ADConf:   ac,
 	}
 	s.auth = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
 		ac.user, ac.pass)
@@ -32,7 +35,7 @@ func newSessionMng(name string, admins []string, cr *Crypt,
 }
 
 func (s *SessionMng) Name() (r string) {
-	r = s.name
+	r = s.NameF
 	return
 }
 
@@ -105,7 +108,7 @@ func (s *SessionMng) close(secr, ip string) (r string,
 
 func (s *SessionMng) show(secret, ip string) (r string, e error) {
 	var user string
-	user, e = checkAdmin(secret, s.crypt, s.admins)
+	user, e = checkAdmin(secret, s.crypt, s.Admins)
 	if e == nil && user != s.User(ip) {
 		e = NoAdmLogged(ip)
 	}

@@ -154,7 +154,6 @@ func (s *simpleRSpec) add(pos []int, rule *Rule) (e error) {
 }
 
 func (s *simpleRSpec) show() (r string, e error) {
-	// TODO
 	var bs []byte
 	bs, e = json.Marshal(s.rules)
 	if e == nil {

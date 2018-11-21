@@ -3,16 +3,14 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	rl "github.com/juju/ratelimit"
 	"github.com/lamg/clock"
 	"sync"
-	"time"
 )
 
 type manager struct {
 	clock  clock.Clock
 	crypt  *Crypt
-	adcf   *adConf
+	adcf   *ADConf
 	admins []string
 	rspec  *simpleRSpec
 	mngs   map[string]*Mng
@@ -27,12 +25,21 @@ type Mng struct {
 	Cr  ConsR
 }
 
-type adConf struct {
-	user string
-	pass string
-	addr string
-	bdn  string
-	suff string
+func (m *Mng) MarshalJSON() (bs []byte, e error) {
+	if m.IPM != nil {
+		bs, e = json.Marshal(m.IPM)
+	} else if m.Cr != nil {
+		bs, e = json.Marshal(m.Cr)
+	}
+	return
+}
+
+type ADConf struct {
+	user string `json:"user"`
+	pass string `json:"pass"`
+	addr string `json:"addr"`
+	bdn  string `json:"bdn"`
+	suff string `json:"suff"`
 }
 
 func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
@@ -130,8 +137,8 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 
 			case "tr":
 				tr := &trCons{
-					name:  cmd.Manager,
-					span:  cmd.Rule.Span,
+					NameF: cmd.Manager,
+					Span:  cmd.Rule.Span,
 					clock: s.clock,
 				}
 				mng = &Mng{
@@ -139,10 +146,7 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 					Cr:    tr,
 				}
 			case "bw":
-				bw := &bwCons{
-					name: cmd.Manager,
-					rl:   rl.NewBucket(time.Duration(cmd.FillInterval), cmd.Capacity),
-				}
+				bw := newBwCons(cmd.Manager, cmd.FillInterval, cmd.Capacity)
 				mng = &Mng{
 					Admin: bw,
 					Cr:    bw,
@@ -155,10 +159,10 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 				}
 				if ok {
 					dw := &dwnCons{
-						name:    cmd.MngName,
+						NameF:   cmd.MngName,
 						iu:      iu,
 						usrCons: new(sync.Map),
-						limit:   cmd.Limit,
+						Limit:   cmd.Limit,
 					}
 					mng = &Mng{
 						Admin: dw,
@@ -168,7 +172,7 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 			case "cn":
 				cn := &connCons{
 					ipAmount: new(sync.Map),
-					limit:    uint32(cmd.Limit),
+					Limit:    uint32(cmd.Limit),
 				}
 				mng = &Mng{
 					Admin: cn,
