@@ -74,7 +74,15 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 ## Initializers
 
-## Commands accepted by managers (TODO)
+- ProxyCtl
+  - manager
+  - simpleRSpec
+  - TODO decide format for configuration files
+    - YAML
+    - TOML
+    - another simpler configuration format
+
+## Commands accepted by managers
 
 - SessionMng
   - open
