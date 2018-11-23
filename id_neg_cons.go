@@ -2,7 +2,7 @@ package pmproxy
 
 // idCons always allows the consumption of the associated resource
 type idCons struct {
-	name string
+	NameF string
 }
 
 // ConsR implementation
@@ -30,7 +30,7 @@ func (d *idCons) Close(ip string) {
 // Admin implementation
 
 func (d *idCons) Name() (r string) {
-	r = d.name
+	r = d.NameF
 	return
 }
 
@@ -42,7 +42,7 @@ func (d *idCons) Exec(cmd *AdmCmd) (r string, e error) {
 
 // negCons forbids the consumption of the associated resource
 type negCons struct {
-	name string
+	NameF string
 }
 
 // ConsR implementation
@@ -70,7 +70,7 @@ func (d *negCons) Close(ip string) {
 // Admin implementation
 
 func (d *negCons) Name() (r string) {
-	r = d.name
+	r = d.NameF
 	return
 }
 

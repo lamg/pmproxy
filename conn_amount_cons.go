@@ -7,9 +7,13 @@ import (
 
 // connection amount consumption limiter
 type connCons struct {
-	NameF    string `json:"name"`
+	NameF    string `json:"name" toml:"name"`
 	ipAmount *sync.Map
-	Limit    uint32 `json:"limit"`
+	Limit    uint32 `json:"limit" toml:"limit"`
+}
+
+func (c *connCons) init() {
+	c.ipAmount = new(sync.Map)
 }
 
 // ConsR implementation

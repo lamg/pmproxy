@@ -28,6 +28,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - SpecCtx
     - RSpec
     - clock.Clock
+    - logger TODO
   - Admin
     - AdmCmd
 
@@ -74,13 +75,15 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 ## Initializers
 
+- NewProxyCtl (configuration.go)
+  - reads a TOML file
+  - TODO
+    - convert [][]JRule to [][]Rule
+    - add TOML tags to struct fields
 - ProxyCtl
   - manager
   - simpleRSpec
-  - TODO decide format for configuration files
-    - YAML
-    - TOML
-    - another simpler configuration format
+  
 
 ## Commands accepted by managers
 

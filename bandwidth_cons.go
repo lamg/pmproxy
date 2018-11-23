@@ -24,6 +24,10 @@ func newBwCons(name string, interval time.Duration,
 	return
 }
 
+func (b *bwCons) init() {
+	b.rl = rl.NewBucket(b.Duration, b.Capacity)
+}
+
 // ConsR implementation
 
 func (b *bwCons) Open(ip string) (ok bool) {

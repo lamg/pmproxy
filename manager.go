@@ -58,50 +58,55 @@ func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
 
 func (s *manager) manageRules(cmd *AdmCmd) (r string, e error) {
 	if cmd.Cmd == "add" {
-		var rule *Rule
-		if cmd.Rule != nil {
-			rule = &Rule{
-				Unit: cmd.Rule.Unit,
-				span: cmd.Rule.Span,
-				Spec: &Spec{
-					Iface:    cmd.Rule.Spec.Iface,
-					ProxyURL: cmd.Rule.Spec.ProxyURL,
-					Cr:       make([]ConsR, 0),
-				},
-			}
-			if cmd.Rule.IPM != "" {
-				mng, ok := s.mngs[cmd.Rule.IPM]
-				if ok && mng.IPM != nil {
-					rule.IPM = mng.IPM
-				} else if !ok {
-					e = NoMngWithName(cmd.Rule.IPM)
-				} else if mng.IPM == nil {
-					e = NoMngWithType(cmd.Rule.IPM, "IPMatcher")
-				}
-			}
-			for i := 0; e == nil && i != len(cmd.Rule.Spec.ConsR); i++ {
-				mng, ok := s.mngs[cmd.Rule.Spec.ConsR[i]]
-				if ok && mng.Cr != nil {
-					rule.Spec.Cr = append(rule.Spec.Cr, mng.Cr)
-				} else if !ok {
-					e = NoMngWithName(cmd.Rule.Spec.ConsR[i])
-				} else if mng.Cr == nil {
-					e = NoMngWithType(cmd.Rule.Spec.ConsR[i], "ConsR")
-				}
-			}
-		} else {
-			e = InvalidArgs(cmd)
-		}
-		// converted from *JRule to *Rule
-		if e == nil {
-			e = s.rspec.add(cmd.Pos, rule)
-		}
+		e = s.addRule(cmd.Pos, cmd.Rule)
 	} else if cmd.Cmd == "del" {
 		e = s.rspec.remove(cmd.Pos)
 	} else if cmd.Cmd == "show" {
 		r, e = s.rspec.show()
 	} else {
 		e = NoCmd(cmd.Cmd)
+	}
+	return
+}
+
+func (s *manager) addRule(pos []int, jr *JRule) (e error) {
+	var rule *Rule
+	if jr != nil {
+		rule = &Rule{
+			Unit: jr.Unit,
+			span: jr.Span,
+			Spec: &Spec{
+				Iface:    jr.Spec.Iface,
+				ProxyURL: jr.Spec.ProxyURL,
+				Cr:       make([]ConsR, 0),
+			},
+		}
+		if jr.IPM != "" {
+			mng, ok := s.mngs[jr.IPM]
+			if ok && mng.IPM != nil {
+				rule.IPM = mng.IPM
+			} else if !ok {
+				e = NoMngWithName(jr.IPM)
+			} else if mng.IPM == nil {
+				e = NoMngWithType(jr.IPM, "IPMatcher")
+			}
+		}
+		for i := 0; e == nil && i != len(jr.Spec.ConsR); i++ {
+			mng, ok := s.mngs[jr.Spec.ConsR[i]]
+			if ok && mng.Cr != nil {
+				rule.Spec.Cr = append(rule.Spec.Cr, mng.Cr)
+			} else if !ok {
+				e = NoMngWithName(jr.Spec.ConsR[i])
+			} else if mng.Cr == nil {
+				e = NoMngWithType(jr.Spec.ConsR[i], "ConsR")
+			}
+		}
+	} else {
+		e = InvalidArgs(cmd)
+	}
+	// converted from *JRule to *Rule
+	if e == nil {
+		e = s.rspec.add(pos, rule)
 	}
 	return
 }

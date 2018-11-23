@@ -7,7 +7,7 @@ import (
 )
 
 type groupIPM struct {
-	group  string
+	Group  string
 	ipUser IPUser
 	ldap   *ld.Ldap
 	cache  *sync.Map
@@ -24,7 +24,7 @@ func (g *groupIPM) Match(ip string) (ok bool) {
 	if ok {
 		i, match := 0, false
 		for !match && i != len(gs) {
-			match, i = gs[i] == g.group, i+1
+			match, i = gs[i] == g.Group, i+1
 		}
 		ok = match
 	}

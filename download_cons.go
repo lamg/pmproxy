@@ -10,12 +10,12 @@ import (
 // downloaded data consumption limiter
 type dwnCons struct {
 	cl         clock.Clock
-	NameF      string `json:"name"`
+	NameF      string `json:"name" toml:"name"`
 	iu         IPUser
 	usrCons    *sync.Map
-	Limit      uint64        `json:"limit"`
-	LastReset  time.Time     `json:"lastReset"`
-	ResetCycle time.Duration `json:"resetCycle"`
+	Limit      uint64        `json:"limit" toml:"limit"`
+	LastReset  time.Time     `json:"lastReset" toml:"lastReset"`
+	ResetCycle time.Duration `json:"resetCycle" toml:"resetCycle"`
 }
 
 // ConsR implementation

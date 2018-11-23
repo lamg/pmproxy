@@ -1,0 +1,17 @@
+github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
+github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/go-ldap/ldap v2.5.1+incompatible h1:Opaoft5zMW8IU/VRULB0eGMBQ9P5buRvCW6sFTRmMn8=
+github.com/go-ldap/ldap v2.5.1+incompatible/go.mod h1:qfd9rJvER9Q0/D/Sqn1DfHRoBp40uXYvFoEVrNEPqRc=
+github.com/juju/ratelimit v1.0.1 h1:+7AIFJVQ0EQgq/K9+0Krm7m530Du7tIz0METWzN0RgY=
+github.com/juju/ratelimit v1.0.1/go.mod h1:qapgC/Gy+xNh9UxzV13HGGl/6UXNN+ct+vwSgWNm/qk=
+github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68 h1:wYDvJn0ng7WsQELKqpgTEhDwK/7tzswA5dWfR1NufW8=
+github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68/go.mod h1:MmxvSUdl4gXzw1nLIcWnPwVvQ7Gzj3btOUzcoaxVGhc=
+github.com/lamg/ldaputil v0.0.0-20180322212749-08f7df8156d3 h1:yUfe5Djvp4uvBVTU5Hj9zCk78j0/UmKfCcTrCWhlibo=
+github.com/lamg/ldaputil v0.0.0-20180322212749-08f7df8156d3/go.mod h1:9Pt0N5RUVETwTXQbAORB7G6ciXJJnznaETpsoqmud6U=
+github.com/lamg/rtimespan v0.0.0-20181123220637-274328ffef4a h1:minF0zSNbV/eOp/ZbetQsOHI6/JKN//80IuAUUvb9EY=
+github.com/lamg/rtimespan v0.0.0-20181123220637-274328ffef4a/go.mod h1:qORt8iToRjuSeTY9w5/NFsAKUquviGcwYCpFBwic2Eg=
+github.com/lamg/rtimespan v0.1.0 h1:RWt5jUZDM6+TWc9LbYc6GyAgRWK6N0dBbJxUs9uTPa0=
+github.com/lamg/rtimespan v0.1.0/go.mod h1:qORt8iToRjuSeTY9w5/NFsAKUquviGcwYCpFBwic2Eg=
+github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
