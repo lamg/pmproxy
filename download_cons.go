@@ -11,6 +11,7 @@ import (
 type dwnCons struct {
 	cl         clock.Clock
 	NameF      string `json:"name" toml:"name"`
+	IPUser     string `json:"ipUser" toml:"ipUser"`
 	iu         IPUser
 	usrCons    *sync.Map
 	Limit      uint64        `json:"limit" toml:"limit"`

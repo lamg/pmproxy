@@ -7,7 +7,8 @@ import (
 )
 
 type groupIPM struct {
-	Group  string
+	Group  string `toml: "group"`
+	IPUser string `toml: "ipUser"`
 	ipUser IPUser
 	ldap   *ld.Ldap
 	cache  *sync.Map

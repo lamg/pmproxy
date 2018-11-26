@@ -2,7 +2,7 @@ package pmproxy
 
 // idCons always allows the consumption of the associated resource
 type idCons struct {
-	NameF string
+	NameF string `toml: "name"`
 }
 
 // ConsR implementation
@@ -42,7 +42,7 @@ func (d *idCons) Exec(cmd *AdmCmd) (r string, e error) {
 
 // negCons forbids the consumption of the associated resource
 type negCons struct {
-	NameF string
+	NameF string `toml: "name"`
 }
 
 // ConsR implementation
