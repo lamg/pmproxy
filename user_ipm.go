@@ -1,9 +1,10 @@
 package pmproxy
 
 type userIPM struct {
-	IPUser string `json:"ipUser" toml: "ipUser"`
+	NameF  string `json:"name" toml:"name"`
+	IPUser string `json:"ipUser" toml:"ipUser"`
 	iu     IPUser
-	Users  []string `json:"users" toml: "users"`
+	Users  []string `json:"users" toml:"users"`
 }
 
 func (u *userIPM) Match(ip string) (ok bool) {
@@ -14,6 +15,31 @@ func (u *userIPM) Match(ip string) (ok bool) {
 		for !ok && i != len(u.Users) {
 			ok, i = user == u.Users[i], i+1
 		}
+	}
+	return
+}
+
+func (u *userIPM) Name() (r string) {
+	r = u.NameF
+	return
+}
+
+func (u *userIPM) Exec(cmd *AdmCmd) (r string, e error) {
+	if cmd.Cmd == "add" {
+		u.Users = append(u.Users, cmd.User)
+	} else if cmd.Cmd == "del" {
+		i, b := 0, true
+		for b && i != len(cmd.Users) {
+			b = cmd.Users[i] != cmd.User
+			if b {
+				i = i + 1
+			}
+		}
+		if !b {
+			u.Users = append(u.Users[:i], u.Users[i+1:]...)
+		}
+	} else {
+		e = NoCmd(cmd.Cmd)
 	}
 	return
 }

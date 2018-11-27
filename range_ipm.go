@@ -6,34 +6,22 @@ import (
 )
 
 type rangeIPM struct {
-	rg   *net.IPNet
-	name string
+	rg    *net.IPNet
+	CIDR  string `json:"cidr" toml:"cidr"`
+	NameF string `json:"name" toml:"name"`
 }
-
-type jRangeIPM struct {
-	CIDR string `json:"cidr"`
-	Name string `json:"name"`
-}
-
-// json.Marshal implementation
-
-func (m *rangeIPM) MarshalJSON() (bs []byte, e error) {
-	jr := &jRangeIPM{
-		CIDR: m.rg.String(),
-		Name: m.name,
-	}
-	bs, e = json.Marshal(jr)
-	return
-}
-
-// end
 
 func newRangeIPM(cidr string, name string) (m *rangeIPM, e error) {
 	m = &rangeIPM{
-		name: name,
+		CIDR:  cidr,
+		NameF: name,
 	}
-	_, m.rg, e = net.ParseCIDR(cidr)
+	e = m.init()
 	return
+}
+
+func (m *rangeIPM) init() (e error) {
+	_, m.rg, e = net.ParseCIDR(m.CIDR)
 }
 
 func (m *rangeIPM) Match(ip string) (ok bool) {
@@ -44,5 +32,9 @@ func (m *rangeIPM) Match(ip string) (ok bool) {
 
 func (m *rangeIPM) Name() (r string) {
 	r = m.name
+	return
+}
+
+func (m *rangeIPM) Admin(cmd *AdmCmd) (r strin, e error) {
 	return
 }

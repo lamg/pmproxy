@@ -7,6 +7,7 @@ import (
 )
 
 type groupIPM struct {
+	NameF  string `json:"name" toml:"name"`
 	Group  string `toml: "group"`
 	IPUser string `toml: "ipUser"`
 	ipUser IPUser
@@ -53,4 +54,13 @@ func (g *groupIPM) getOrUpdate(user string) (groups []string) {
 
 func (g *groupIPM) clearCache(user string) {
 	g.cache.Delete(user)
+}
+
+func (g *groupIPM) Admin(cmd *AdmCmd) (r string, e error) {
+	return
+}
+
+func (g *groupIPM) Name() (r string) {
+	r = g.NameF
+	return
 }

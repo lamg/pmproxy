@@ -49,7 +49,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - SessionMng (session.go)
   - simpleRSpec (rspec.go)
   - manager (manager.go)
-  - TODO command for managing managers
+  - userIPM (user_ipm.go)
 
 - IPMatcher
   - SessionMng (session.go)
@@ -79,11 +79,13 @@ admin = admin_http_server http_request → (rules | state) spec.
   - reads a TOML file
   - TODO
     - add TOML tags to struct fields
-    - initialize UserM
     - add initialized managers to `mng`
 - ProxyCtl
   - manager
   - simpleRSpec
+
+## TODO
+- compile project
   
 
 ## Commands accepted by managers
