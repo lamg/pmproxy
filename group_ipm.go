@@ -56,7 +56,7 @@ func (g *groupIPM) clearCache(user string) {
 	g.cache.Delete(user)
 }
 
-func (g *groupIPM) Admin(cmd *AdmCmd) (r string, e error) {
+func (g *groupIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	return
 }
 

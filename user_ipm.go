@@ -29,8 +29,8 @@ func (u *userIPM) Exec(cmd *AdmCmd) (r string, e error) {
 		u.Users = append(u.Users, cmd.User)
 	} else if cmd.Cmd == "del" {
 		i, b := 0, true
-		for b && i != len(cmd.Users) {
-			b = cmd.Users[i] != cmd.User
+		for b && i != len(u.Users) {
+			b = u.Users[i] != cmd.User
 			if b {
 				i = i + 1
 			}

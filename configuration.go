@@ -6,6 +6,8 @@ import (
 	ld "github.com/lamg/ldaputil"
 	"io"
 	"os"
+	"sync"
+	"time"
 )
 
 type Config struct {
@@ -25,7 +27,7 @@ type Config struct {
 	SessionM []SessionMng `toml: "sessionM"`
 	GroupM   []groupIPM   `toml: "groupM"`
 	UserM    []userIPM    `toml: "userM`
-	RangeIPM []RangeIPM   `toml: "rangeM"`
+	RangeIPM []rangeIPM   `toml: "rangeM"`
 
 	DialTimeout time.Duration `toml: "dialTimeout"`
 }
@@ -48,16 +50,16 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 		mng = &manager{
 			clock:  cl,
 			crypt:  cr,
-			ADConf: cfg.ADConf,
+			adcf:   cfg.ADConf,
 			admins: cfg.Admins,
 			rspec:  rspec,
 			mngs:   make(map[string]*Mng),
 		}
-		initNoErr(mng, cfg, cr)
+		initNoErr(mng, cfg, cr, cl)
 		e = initRangeIPM(mng, cfg)
 	}
 	if e == nil {
-		e = initDownR(mng, cfg)
+		e = initDownR(mng, cfg, cl)
 	}
 	if e == nil {
 		e = initGroupM(mng, cfg)
@@ -84,26 +86,26 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 
 // initializes cfg.BandWidthR, cfg.ConnAmR, cfg.TimeRangeR,
 // cfg.SessionM
-func initNoErr(mng *manager, cfg *Config, cr *Crypt) {
+func initNoErr(mng *manager, cfg *Config, cr *Crypt, cl clock.Clock) {
 	for _, j := range cfg.BandWidthR {
 		j.init()
 		mng.mngs[j.Name()] = &Mng{
-			Admin: j,
-			ConsR: j,
+			Admin: &j,
+			Cr:    &j,
 		}
 	}
 	for _, j := range cfg.ConnAmR {
 		j.init()
 		mng.mngs[j.Name()] = &Mng{
-			Admin: j,
-			ConsR: j,
+			Admin: &j,
+			Cr:    &j,
 		}
 	}
 	for _, j := range cfg.TimeRangeR {
 		j.clock = cl
 		mng.mngs[j.Name()] = &Mng{
-			Admin: j,
-			ConsR: j,
+			Admin: &j,
+			Cr:    &j,
 		}
 	}
 	for _, j := range cfg.SessionM {
@@ -114,8 +116,8 @@ func initNoErr(mng *manager, cfg *Config, cr *Crypt) {
 		j.auth = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
 			ac.user, ac.pass)
 		mng.mngs[j.Name()] = &Mng{
-			Admin:     j,
-			IPMatcher: j,
+			Admin: &j,
+			IPM:   &j,
 		}
 	}
 }
@@ -127,8 +129,8 @@ func initRangeIPM(mng *manager, cfg *Config) (e error) {
 		e = j.init()
 		if e == nil {
 			mng.mngs[j.Name()] = &Mng{
-				Admin:     j,
-				IPMatcher: j,
+				Admin: &j,
+				IPM:   &j,
 			}
 		}
 	}
@@ -136,23 +138,29 @@ func initRangeIPM(mng *manager, cfg *Config) (e error) {
 }
 
 // initializes cfg.DownR, requires initializing session managers
-func initDownR(mng *manager, cfg *Config) (e error) {
+func initDownR(mng *manager, cfg *Config, cl clock.Clock) (e error) {
 	for i := 0; e == nil && i != len(cfg.DownR); i++ {
 		j := cfg.DownR[i]
 		j.cl = cl
 		j.usrCons = new(sync.Map)
-		var ok bool
-		j.iu, ok = mng.mngs[j.IPUser]
+		m, ok := mng.mngs[j.IPUser]
 		if ok {
-			mng.mngs[j.Name()] = &Mng{
-				Admin: j,
-				ConsR: j,
+			j.iu, ok = m.Admin.(IPUser)
+			if !ok {
+				e = NoMngWithType(j.IPUser, "IPUser")
 			}
 		} else {
 			e = NoMngWithName(j.IPUser)
 		}
+		if e == nil {
+			mng.mngs[j.Name()] = &Mng{
+				Admin: &j,
+				Cr:    &j,
+			}
+		}
 	}
 	// initialized cfg.DownR or error
+	return
 }
 
 func initGroupM(mng *manager, cfg *Config) (e error) {
@@ -162,15 +170,20 @@ func initGroupM(mng *manager, cfg *Config) (e error) {
 		j.ldap = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
 			ac.user, ac.pass)
 		j.cache = new(sync.Map)
-		var ok bool
-		j.ipUser, ok = mng.mngs[j.IPUser]
+		m, ok := mng.mngs[j.IPUser]
 		if ok {
-			mng.mngs[j.Name()] = &Mng{
-				Admin:     j,
-				IPMatcher: j,
+			j.ipUser, ok = m.Admin.(IPUser)
+			if !ok {
+				e = NoMngWithType(j.IPUser, "IPUser")
 			}
 		} else {
 			e = NoMngWithName(j.IPUser)
+		}
+		if e == nil {
+			mng.mngs[j.Name()] = &Mng{
+				Admin: &j,
+				IPM:   &j,
+			}
 		}
 	}
 	// initialized cfg.GroupM or error
@@ -180,15 +193,20 @@ func initGroupM(mng *manager, cfg *Config) (e error) {
 func initUserM(mng *manager, cfg *Config) (e error) {
 	for i := 0; e == nil && i != len(cfg.UserM); i++ {
 		j := cfg.UserM[i]
-		var ok bool
-		j.iu, ok = mng.mngs[j.IPUser]
+		m, ok := mng.mngs[j.IPUser]
 		if ok {
-			mng.mngs[j.Name()] = &Mng{
-				Admin:     j,
-				IPMatcher: j,
+			j.iu, ok = m.Admin.(IPUser)
+			if !ok {
+				e = NoMngWithType(j.IPUser, "IPUser")
 			}
 		} else {
 			e = NoMngWithName(j.IPUser)
+		}
+		if e == nil {
+			mng.mngs[j.Name()] = &Mng{
+				Admin: &j,
+				IPM:   &j,
+			}
 		}
 	}
 	// initialized cfg.UserM or error

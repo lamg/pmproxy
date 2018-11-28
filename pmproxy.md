@@ -77,15 +77,12 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 - NewProxyCtl (configuration.go)
   - reads a TOML file
-  - TODO
-    - add TOML tags to struct fields
-    - add initialized managers to `mng`
 - ProxyCtl
   - manager
   - simpleRSpec
 
 ## TODO
-- compile project
+- logger using syslog
   
 
 ## Commands accepted by managers

@@ -1,7 +1,6 @@
 package pmproxy
 
 import (
-	"encoding/json"
 	"net"
 )
 
@@ -22,6 +21,7 @@ func newRangeIPM(cidr string, name string) (m *rangeIPM, e error) {
 
 func (m *rangeIPM) init() (e error) {
 	_, m.rg, e = net.ParseCIDR(m.CIDR)
+	return
 }
 
 func (m *rangeIPM) Match(ip string) (ok bool) {
@@ -31,10 +31,10 @@ func (m *rangeIPM) Match(ip string) (ok bool) {
 }
 
 func (m *rangeIPM) Name() (r string) {
-	r = m.name
+	r = m.NameF
 	return
 }
 
-func (m *rangeIPM) Admin(cmd *AdmCmd) (r strin, e error) {
+func (m *rangeIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	return
 }

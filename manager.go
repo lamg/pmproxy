@@ -102,7 +102,7 @@ func (s *manager) addRule(pos []int, jr *JRule) (e error) {
 			}
 		}
 	} else {
-		e = InvalidArgs(cmd)
+		e = InvalidArgs("add")
 	}
 	// converted from *JRule to *Rule
 	if e == nil {
@@ -185,7 +185,7 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 				}
 			case "id":
 				id := &idCons{
-					name: cmd.Manager,
+					NameF: cmd.Manager,
 				}
 				mng = &Mng{
 					Admin: id,
@@ -193,7 +193,7 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 				}
 			case "ng":
 				ng := &negCons{
-					name: cmd.Manager,
+					NameF: cmd.Manager,
 				}
 				mng = &Mng{
 					Admin: ng,
