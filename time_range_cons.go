@@ -7,9 +7,10 @@ import (
 
 // trCons is a time range consumption limiter for a connection
 type trCons struct {
-	NameF string `json:"name" toml:"name"`
-	clock clock.Clock
+	NameF string    `json:"name" toml:"name"`
 	Span  *rt.RSpan `json:"span" toml:"span"`
+
+	clock clock.Clock
 }
 
 // ConsR implementation

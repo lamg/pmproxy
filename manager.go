@@ -10,7 +10,7 @@ import (
 type manager struct {
 	clock  clock.Clock
 	crypt  *Crypt
-	adcf   *ADConf
+	adcf   *adConf
 	admins []string
 	rspec  *simpleRSpec
 	mngs   map[string]*Mng
@@ -34,12 +34,12 @@ func (m *Mng) MarshalJSON() (bs []byte, e error) {
 	return
 }
 
-type ADConf struct {
-	user string `json:"user"`
-	pass string `json:"pass"`
-	addr string `json:"addr"`
-	bdn  string `json:"bdn"`
-	suff string `json:"suff"`
+type adConf struct {
+	User string `json:"user" toml:"user"`
+	Pass string `json:"pass" toml:"pass"`
+	Addr string `json:"addr" toml:"addr"`
+	Bdn  string `json:"bdn"  toml:"bdn"`
+	Suff string `json:"suff" toml:"suff"`
 }
 
 func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
@@ -69,10 +69,10 @@ func (s *manager) manageRules(cmd *AdmCmd) (r string, e error) {
 	return
 }
 
-func (s *manager) addRule(pos []int, jr *JRule) (e error) {
-	var rule *Rule
+func (s *manager) addRule(pos []int, jr *jRule) (e error) {
+	var rl *rule
 	if jr != nil {
-		rule = &Rule{
+		rl = &rule{
 			Unit: jr.Unit,
 			span: jr.Span,
 			Spec: &Spec{
@@ -84,7 +84,7 @@ func (s *manager) addRule(pos []int, jr *JRule) (e error) {
 		if jr.IPM != "" {
 			mng, ok := s.mngs[jr.IPM]
 			if ok && mng.IPM != nil {
-				rule.IPM = mng.IPM
+				rl.IPM = mng.IPM
 			} else if !ok {
 				e = NoMngWithName(jr.IPM)
 			} else if mng.IPM == nil {
@@ -94,7 +94,7 @@ func (s *manager) addRule(pos []int, jr *JRule) (e error) {
 		for i := 0; e == nil && i != len(jr.Spec.ConsR); i++ {
 			mng, ok := s.mngs[jr.Spec.ConsR[i]]
 			if ok && mng.Cr != nil {
-				rule.Spec.Cr = append(rule.Spec.Cr, mng.Cr)
+				rl.Spec.Cr = append(rl.Spec.Cr, mng.Cr)
 			} else if !ok {
 				e = NoMngWithName(jr.Spec.ConsR[i])
 			} else if mng.Cr == nil {
@@ -106,7 +106,7 @@ func (s *manager) addRule(pos []int, jr *JRule) (e error) {
 	}
 	// converted from *JRule to *Rule
 	if e == nil {
-		e = s.rspec.add(pos, rule)
+		e = s.rspec.add(pos, rl)
 	}
 	return
 }
@@ -133,7 +133,7 @@ func (s *manager) admin(cmd *AdmCmd) (r string, e error) {
 		if cmd.Cmd == "add" {
 			switch cmd.MngType {
 			case "sm":
-				var sm *SessionMng
+				var sm *sessionMng
 				sm = newSessionMng(cmd.Manager, s.admins, s.crypt, s.adcf)
 				mng = &Mng{
 					Admin: sm,

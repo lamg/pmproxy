@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-type Config struct {
-	Rules  [][]JRule `toml: "rules"`
+type config struct {
+	Rules  [][]jRule `toml: "rules"`
 	Admins []string  `toml: "admins"`
-	ADConf *ADConf   `toml:"adConf"`
+	ADConf *adConf   `toml:"adConf"`
 
 	// arrays of TOML representations of all IPMatcher and ConsR
 	// implementations
@@ -24,7 +24,7 @@ type Config struct {
 	IdR        *idCons    `toml: "idR"`
 	TimeRangeR []trCons   `toml: "timeRangeR"`
 
-	SessionM []SessionMng `toml: "sessionM"`
+	SessionM []sessionMng `toml: "sessionM"`
 	GroupM   []groupIPM   `toml: "groupM"`
 	UserM    []userIPM    `toml: "userM`
 	RangeIPM []rangeIPM   `toml: "rangeM"`
@@ -33,7 +33,7 @@ type Config struct {
 }
 
 func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
-	cfg := new(Config)
+	cfg := new(config)
 	_, e = toml.DecodeReader(rd, cfg)
 	var cr *Crypt
 	if e == nil {
@@ -45,7 +45,7 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	if e == nil {
 		cl = new(clock.OSClock)
 		rspec = &simpleRSpec{
-			rules: make([][]Rule, 0),
+			rules: make([][]rule, 0),
 		}
 		mng = &manager{
 			clock:  cl,
@@ -69,15 +69,20 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	}
 	// managers added
 	// rules added
+	var lg *logger
+	if e == nil {
+		lg, e = newLogger("pmproxy")
+	}
 	if e == nil {
 		c = &ProxyCtl{
 			clock: cl,
 			adm:   mng,
 			rp:    rspec,
-			prxFls: &SpecCtx{
+			PrxFls: &SpecCtx{
 				clock:   cl,
 				rs:      rspec,
-				Timeout: cfg.DialTimeout,
+				timeout: cfg.DialTimeout,
+				lg:      lg,
 			},
 		}
 	}
@@ -86,7 +91,7 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 
 // initializes cfg.BandWidthR, cfg.ConnAmR, cfg.TimeRangeR,
 // cfg.SessionM
-func initNoErr(mng *manager, cfg *Config, cr *Crypt, cl clock.Clock) {
+func initNoErr(mng *manager, cfg *config, cr *Crypt, cl clock.Clock) {
 	for _, j := range cfg.BandWidthR {
 		j.init()
 		mng.mngs[j.Name()] = &Mng{
@@ -113,8 +118,8 @@ func initNoErr(mng *manager, cfg *Config, cr *Crypt, cl clock.Clock) {
 		j.crypt = cr
 		ac := cfg.ADConf
 		j.ADConf = cfg.ADConf
-		j.auth = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
-			ac.user, ac.pass)
+		j.auth = ld.NewLdapWithAcc(ac.Addr, ac.Suff, ac.Bdn,
+			ac.User, ac.Pass)
 		mng.mngs[j.Name()] = &Mng{
 			Admin: &j,
 			IPM:   &j,
@@ -123,7 +128,7 @@ func initNoErr(mng *manager, cfg *Config, cr *Crypt, cl clock.Clock) {
 }
 
 // initializes cfg.RangeIPM or error
-func initRangeIPM(mng *manager, cfg *Config) (e error) {
+func initRangeIPM(mng *manager, cfg *config) (e error) {
 	for i := 0; e == nil && i != len(cfg.RangeIPM); i++ {
 		j := cfg.RangeIPM[i]
 		e = j.init()
@@ -138,7 +143,7 @@ func initRangeIPM(mng *manager, cfg *Config) (e error) {
 }
 
 // initializes cfg.DownR, requires initializing session managers
-func initDownR(mng *manager, cfg *Config, cl clock.Clock) (e error) {
+func initDownR(mng *manager, cfg *config, cl clock.Clock) (e error) {
 	for i := 0; e == nil && i != len(cfg.DownR); i++ {
 		j := cfg.DownR[i]
 		j.cl = cl
@@ -163,12 +168,12 @@ func initDownR(mng *manager, cfg *Config, cl clock.Clock) (e error) {
 	return
 }
 
-func initGroupM(mng *manager, cfg *Config) (e error) {
+func initGroupM(mng *manager, cfg *config) (e error) {
 	for i := 0; e == nil && i != len(cfg.GroupM); i++ {
 		j := cfg.GroupM[i]
 		ac := cfg.ADConf
-		j.ldap = ld.NewLdapWithAcc(ac.addr, ac.suff, ac.bdn,
-			ac.user, ac.pass)
+		j.ldap = ld.NewLdapWithAcc(ac.Addr, ac.Suff, ac.Bdn,
+			ac.User, ac.Pass)
 		j.cache = new(sync.Map)
 		m, ok := mng.mngs[j.IPUser]
 		if ok {
@@ -190,7 +195,7 @@ func initGroupM(mng *manager, cfg *Config) (e error) {
 	return
 }
 
-func initUserM(mng *manager, cfg *Config) (e error) {
+func initUserM(mng *manager, cfg *config) (e error) {
 	for i := 0; e == nil && i != len(cfg.UserM); i++ {
 		j := cfg.UserM[i]
 		m, ok := mng.mngs[j.IPUser]

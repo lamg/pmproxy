@@ -1,10 +1,11 @@
 package pmproxy
 
 type userIPM struct {
-	NameF  string `json:"name" toml:"name"`
-	IPUser string `json:"ipUser" toml:"ipUser"`
-	iu     IPUser
+	NameF  string   `json:"name" toml:"name"`
+	IPUser string   `json:"ipUser" toml:"ipUser"`
 	Users  []string `json:"users" toml:"users"`
+
+	iu IPUser
 }
 
 func (u *userIPM) Match(ip string) (ok bool) {

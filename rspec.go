@@ -12,10 +12,10 @@ import (
 )
 
 type simpleRSpec struct {
-	rules [][]Rule
+	rules [][]rule
 }
 
-type Rule struct {
+type rule struct {
 	Unit bool
 	URLM *regexp.Regexp
 	span *rt.RSpan
@@ -23,8 +23,8 @@ type Rule struct {
 	Spec *Spec
 }
 
-func (r *Rule) MarshalJSON() (bs []byte, e error) {
-	jr := &JRule{
+func (r *rule) MarshalJSON() (bs []byte, e error) {
+	jr := &jRule{
 		Unit: r.Unit,
 		URLM: r.URLM.String(),
 		Span: r.span,
@@ -42,7 +42,7 @@ func (r *Rule) MarshalJSON() (bs []byte, e error) {
 	return
 }
 
-type JRule struct {
+type jRule struct {
 	Unit bool      `json:"unit"`
 	URLM string    `json:"urlm"`
 	Span *rt.RSpan `json:"span"`
@@ -123,13 +123,13 @@ func (s *simpleRSpec) remove(args []int) (e error) {
 	return
 }
 
-func (s *simpleRSpec) add(pos []int, rule *Rule) (e error) {
+func (s *simpleRSpec) add(pos []int, rl *rule) (e error) {
 	if len(pos) == 1 {
 		if pos[0] == -1 {
-			s.rules = append(s.rules, []Rule{*rule})
+			s.rules = append(s.rules, []rule{*rl})
 		} else if pos[0] >= 0 && pos[0] < len(s.rules) {
 			s.rules = append(s.rules[:pos[0]],
-				append([][]Rule{{*rule}},
+				append([][]rule{{*rl}},
 					s.rules[pos[0]:]...)...)
 		} else {
 			e = IndexOutOfRange(pos[0], len(s.rules))
@@ -138,11 +138,11 @@ func (s *simpleRSpec) add(pos []int, rule *Rule) (e error) {
 		if 0 <= pos[0] && pos[0] < len(s.rules) {
 			rules := s.rules[pos[0]]
 			if pos[1] == -1 {
-				s.rules[pos[0]] = append(rules, *rule)
+				s.rules[pos[0]] = append(rules, *rl)
 			} else if 0 <= pos[1] &&
 				pos[1] < len(rules) {
 				s.rules[pos[0]] = append(rules[:pos[1]],
-					append([]Rule{*rule}, rules[pos[1]:]...)...)
+					append([]rule{*rl}, rules[pos[1]:]...)...)
 			} else {
 				e = IndexOutOfRange(pos[1], len(rules))
 			}

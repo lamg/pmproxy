@@ -82,7 +82,10 @@ admin = admin_http_server http_request → (rules | state) spec.
   - simpleRSpec
 
 ## TODO
-- logger using syslog
+- tight fields and methods visibility
+- automatic configuration persistence
+  - if `Config` holds all references to persistible objects, then it can be done by marshaling at regular time lapses
+- overlapping consumption restrictors
   
 
 ## Commands accepted by managers

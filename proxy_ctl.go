@@ -14,7 +14,7 @@ type ProxyCtl struct {
 	rp    RSpec
 	// contains the fields for initializing
 	// github.com/lamg/proxy.Proxy
-	prxFls *SpecCtx
+	PrxFls *SpecCtx
 	adm    Admin
 }
 
@@ -76,7 +76,7 @@ type AdmCmd struct {
 	User         string        `json:"user"`
 	Pass         string        `json:"pass"`
 	Pos          []int         `json:"pos"`
-	Rule         *JRule        `json:"rule"`
+	Rule         *jRule        `json:"rule"`
 	Secret       string        `json:"secr"`
 	RemoteIP     string        `json:"remoteIP"`
 	MngName      string        `json:"mngName"`
