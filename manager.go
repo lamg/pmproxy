@@ -34,14 +34,6 @@ func (m *Mng) MarshalJSON() (bs []byte, e error) {
 	return
 }
 
-type adConf struct {
-	User string `json:"user" toml:"user"`
-	Pass string `json:"pass" toml:"pass"`
-	Addr string `json:"addr" toml:"addr"`
-	Bdn  string `json:"bdn"  toml:"bdn"`
-	Suff string `json:"suff" toml:"suff"`
-}
-
 func (s *manager) Exec(cmd *AdmCmd) (r string, e error) {
 	adm, ok := s.mngs[cmd.Manager]
 	if ok {

@@ -4,14 +4,10 @@ import (
 	"net"
 	h "net/http"
 	"time"
-
-	"github.com/lamg/clock"
 )
 
 // ProxyCtl has the handlers for the HTTP servers
 type ProxyCtl struct {
-	clock clock.Clock
-	rp    RSpec
 	// contains the fields for initializing
 	// github.com/lamg/proxy.Proxy
 	PrxFls *SpecCtx

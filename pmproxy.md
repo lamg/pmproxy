@@ -85,6 +85,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - tight fields and methods visibility
 - automatic configuration persistence
   - if `Config` holds all references to persistible objects, then it can be done by marshaling at regular time lapses
+  - operations carried by manager will be done by config
 - overlapping consumption restrictors
   
 

@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+type adConf struct {
+	User string `json:"user" toml:"user"`
+	Pass string `json:"pass" toml:"pass"`
+	Addr string `json:"addr" toml:"addr"`
+	Bdn  string `json:"bdn"  toml:"bdn"`
+	Suff string `json:"suff" toml:"suff"`
+}
+
 type config struct {
 	Rules  [][]jRule `toml: "rules"`
 	Admins []string  `toml: "admins"`
@@ -75,9 +83,7 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	}
 	if e == nil {
 		c = &ProxyCtl{
-			clock: cl,
-			adm:   mng,
-			rp:    rspec,
+			adm: mng,
 			PrxFls: &SpecCtx{
 				clock:   cl,
 				rs:      rspec,
