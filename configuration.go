@@ -6,6 +6,7 @@ import (
 	ld "github.com/lamg/ldaputil"
 	"io"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -38,58 +39,70 @@ type config struct {
 	RangeIPM []rangeIPM   `toml: "rangeM"`
 
 	DialTimeout time.Duration `toml: "dialTimeout"`
+
+	crypt *Crypt
+	rspec *simpleRSpec
+	clock clock.Clock
 }
 
 func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	cfg := new(config)
 	_, e = toml.DecodeReader(rd, cfg)
-	var cr *Crypt
 	if e == nil {
-		cr, e = NewCrypt()
+		cfg.crypt, e = NewCrypt()
 	}
-	var mng *manager
 	var rspec *simpleRSpec
-	var cl clock.Clock
 	if e == nil {
-		cl = new(clock.OSClock)
-		rspec = &simpleRSpec{
-			rules: make([][]rule, 0),
+		cfg.clock = new(clock.OSClock)
+		cfg.rspec = &simpleRSpec{
+			rules: make([][]rule, len(cfg.Rules)),
 		}
-		mng = &manager{
-			clock:  cl,
-			crypt:  cr,
-			adcf:   cfg.ADConf,
-			admins: cfg.Admins,
-			rspec:  rspec,
-			mngs:   make(map[string]*Mng),
+		for i := 0; e == nil && i != len(cfg.Rules); i++ {
+			for j := 0; e == nil && j != len(cfg.Rules[i]); j++ {
+				var rl *rule
+				rl, e = cfg.initRule(cfg.Rules[i][j])
+				cfg.rspec.add([]int{i, j}, rl)
+			}
 		}
-		initNoErr(mng, cfg, cr, cl)
-		e = initRangeIPM(mng, cfg)
 	}
-	if e == nil {
-		e = initDownR(mng, cfg, cl)
-	}
-	if e == nil {
-		e = initGroupM(mng, cfg)
-	}
-	if e == nil {
-		e = initUserM(mng, cfg)
-	}
-	// managers added
-	// rules added
+	// rules added to cfg.rspec
 	var lg *logger
 	if e == nil {
 		lg, e = newLogger("pmproxy")
 	}
 	if e == nil {
 		c = &ProxyCtl{
-			adm: mng,
+			adm: cfg,
 			PrxFls: &SpecCtx{
-				clock:   cl,
-				rs:      rspec,
+				clock:   cfg.clock,
+				rs:      cfg.rspec,
 				timeout: cfg.DialTimeout,
 				lg:      lg,
 			},
+		}
+	}
+	return
+}
+
+func (c *config) initRule(rl *jRule) (r *rule, e error) {
+	r = &rule{
+		unit: rl.Unit,
+		span: rl.Span,
+		spec: &Spec{
+			Iface:    rl.Spec.Iface,
+			ProxyURL: rl.Spec.ProxyURL,
+		},
+	}
+	r.urlM, e = regexp.Compile(rl.URLM)
+	for i := 0; e == nil && i != len(rl.Spec.ConsR); i++ {
+		// search and initialize managers
+		mngs := []interface{}{c.BandWidthR, c.ConnAmR, c.DownR,
+			c.NegR, c.IdR, c.TimeRangeR, c.SessionM, c.GroupM,
+			c.GroupM, c.UserM, c.RangeIPM,
+		}
+		b := false
+		for j := 0; !b && j != len(c.BandWidthR); j++ {
+
 		}
 	}
 	return

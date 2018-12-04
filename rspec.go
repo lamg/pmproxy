@@ -16,23 +16,23 @@ type simpleRSpec struct {
 }
 
 type rule struct {
-	Unit bool
-	URLM *regexp.Regexp
+	unit bool
+	urlM *regexp.Regexp
 	span *rt.RSpan
-	IPM  IPMatcher
-	Spec *Spec
+	ipM  IPMatcher
+	spec *Spec
 }
 
 func (r *rule) MarshalJSON() (bs []byte, e error) {
 	jr := &jRule{
-		Unit: r.Unit,
-		URLM: r.URLM.String(),
+		Unit: r.unit,
+		URLM: r.urlM.String(),
 		Span: r.span,
-		IPM:  r.IPM.Name(),
+		IPM:  r.ipM.Name(),
 		Spec: &JSpec{
-			Iface:    r.Spec.Iface,
-			ProxyURL: r.Spec.ProxyURL,
-			ConsR:    make([]string, len(r.Spec.Cr)),
+			Iface:    r.spec.Iface,
+			ProxyURL: r.spec.ProxyURL,
+			ConsR:    make([]string, len(r.spec.Cr)),
 		},
 	}
 	for i, j := range r.Spec.Cr {

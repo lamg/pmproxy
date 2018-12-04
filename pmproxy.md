@@ -28,7 +28,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - SpecCtx
     - RSpec
     - clock.Clock
-    - logger TODO
+    - logger
   - Admin
     - AdmCmd
 
@@ -86,6 +86,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - automatic configuration persistence
   - if `Config` holds all references to persistible objects, then it can be done by marshaling at regular time lapses
   - operations carried by manager will be done by config
+    - definition and implementation of an interface for searching elements in slices
 - overlapping consumption restrictors
   
 
