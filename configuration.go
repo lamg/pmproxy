@@ -167,8 +167,11 @@ type idSearch struct {
 	name string
 }
 
-func (b *idSearch) ok(i uint) (r bool) {
+func (b *idSearch) ok(i uint, v interface{}) (r bool) {
 	r = i < 1 && b.sl.Name() == b.name
+	if r {
+		*v = b.negCons
+	}
 	return
 }
 
@@ -182,8 +185,11 @@ type trSearch struct {
 	name string
 }
 
-func (b *trSearch) ok(i uint) (r bool) {
+func (b *trSearch) ok(i uint, v interface{}) (r bool) {
 	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
 	return
 }
 
@@ -199,10 +205,67 @@ type smSearch struct {
 
 func (b *smSearch) ok(i uint, v interface{}) (r bool) {
 	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
 	return
 }
 
 func (b *smSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type grSearch struct {
+	sl   []groupIPM
+	name string
+}
+
+func (b *grSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
+	return
+}
+
+func (b *grSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type usSearch struct {
+	sl   []userIPM
+	name string
+}
+
+func (b *usSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
+	return
+}
+
+func (b *usSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type rgSearch struct {
+	sl   []rangeIPM
+	name string
+}
+
+func (b *rgSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
+	return
+}
+
+func (b *rgSearch) len() (r uint) {
 	r = uint(len(b.sl))
 	return
 }
@@ -214,20 +277,35 @@ func (c *config) initRule(rl *jRule) (r *rule, e error) {
 		spec: &Spec{
 			Iface:    rl.Spec.Iface,
 			ProxyURL: rl.Spec.ProxyURL,
+			ConsR:    make([]ConsR, len(rl.Spec.ConsR)),
 		},
 	}
 	r.urlM, e = regexp.Compile(rl.URLM)
+	// search and initialize managers(ConsR and IPMatcher)
+
 	for i := 0; e == nil && i != len(rl.Spec.ConsR); i++ {
-		// search and initialize managers
-		mngs := []interface{}{c.BandWidthR, c.ConnAmR, c.DownR,
-			c.NegR, c.IdR, c.TimeRangeR, c.SessionM, c.GroupM,
-			c.GroupM, c.UserM, c.RangeIPM,
+		consr := []linealSearch{c.BandWidthR, c.ConnAmR, c.DownR,
+			c.NegR, c.IdR, c.TimeRangeR,
 		}
 		b := false
-		for j := 0; !b && j != len(c.BandWidthR); j++ {
-
+		for j := 0; !b && j != len(consr); j++ {
+			for k := 0; !b && k != consr[j].len(); k++ {
+				b = consr[j].ok(k, &r.spec.ConsR[i])
+			}
 		}
 	}
+	if e == nil {
+		ipms := []linealSearch{c.SessionM, c.GroupM, c.UserM,
+			c.RangeIPM,
+		}
+		b := false
+		for j := 0; !b && j != len(ipms); j++ {
+			for k := 0; !b && k != ipms[j].len(); k++ {
+				b = ipms[j].ok(k, &r.ipM)
+			}
+		}
+	}
+
 	return
 }
 
