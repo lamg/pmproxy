@@ -22,7 +22,7 @@ type adConf struct {
 type config struct {
 	Rules  [][]jRule `toml: "rules"`
 	Admins []string  `toml: "admins"`
-	ADConf *adConf   `toml:"adConf"`
+	ADConf *adConf   `toml: "adConf"`
 
 	// arrays of TOML representations of all IPMatcher and ConsR
 	// implementations
@@ -33,7 +33,7 @@ type config struct {
 	IdR        *idCons    `toml: "idR"`
 	TimeRangeR []trCons   `toml: "timeRangeR"`
 
-	SessionM []sessionMng `toml: "sessionM"`
+	SessionM []sessionIPM `toml: "sessionM"`
 	GroupM   []groupIPM   `toml: "groupM"`
 	UserM    []userIPM    `toml: "userM`
 	RangeIPM []rangeIPM   `toml: "rangeM"`
@@ -81,6 +81,129 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 			},
 		}
 	}
+	return
+}
+
+type linealSearch interface {
+	// the interface{} must be a pointer
+	ok(uint, interface{}) bool
+	len() uint
+}
+
+type bwSearch struct {
+	sl   []bwCons
+	name string
+}
+
+func (b *bwSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
+	return
+}
+
+func (b *bwSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type cnSearch struct {
+	sl   []connCons
+	name string
+}
+
+func (b *cnSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
+	return
+}
+
+func (b *cnSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type dwSearch struct {
+	sl   []dwnCons
+	name string
+}
+
+func (b *dwSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	if r {
+		*v = b.sl[i]
+	}
+	return
+}
+
+func (b *dwSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type ngSearch struct {
+	sl   *negCons
+	name string
+}
+
+func (b *ngSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < 1 && b.sl.Name() == b.name
+	if r {
+		*v = b.negCons
+	}
+	return
+}
+
+func (b *ngSearch) len() (r uint) {
+	r = uint(1)
+	return
+}
+
+type idSearch struct {
+	sl   *idCons
+	name string
+}
+
+func (b *idSearch) ok(i uint) (r bool) {
+	r = i < 1 && b.sl.Name() == b.name
+	return
+}
+
+func (b *idSearch) len() (r uint) {
+	r = uint(1)
+	return
+}
+
+type trSearch struct {
+	sl   []trCons
+	name string
+}
+
+func (b *trSearch) ok(i uint) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	return
+}
+
+func (b *trSearch) len() (r uint) {
+	r = uint(len(b.sl))
+	return
+}
+
+type smSearch struct {
+	sl   []sessionIPM
+	name string
+}
+
+func (b *smSearch) ok(i uint, v interface{}) (r bool) {
+	r = i < b.len() && b.sl[i].Name() == b.name
+	return
+}
+
+func (b *smSearch) len() (r uint) {
+	r = uint(len(b.sl))
 	return
 }
 

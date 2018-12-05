@@ -87,6 +87,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - if `Config` holds all references to persistible objects, then it can be done by marshaling at regular time lapses
   - operations carried by manager will be done by config
     - definition and implementation of an interface for searching elements in slices
+    - reference issues on interface implementation
 - overlapping consumption restrictors
   
 

@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type sessionMng struct {
+type sessionIPM struct {
 	NameF  string   `json:"name"   toml:"name"`
 	Admins []string `json:"admins" toml:"admins"`
 	ADConf *adConf  `json:"adConf" toml:"adConf"`
@@ -21,9 +21,9 @@ type Authenticator interface {
 	AuthAndNorm(string, string) (string, error)
 }
 
-func newSessionMng(name string, admins []string, cr *Crypt,
-	ac *adConf) (s *sessionMng) {
-	s = &sessionMng{
+func newsessionIPM(name string, admins []string, cr *Crypt,
+	ac *adConf) (s *sessionIPM) {
+	s = &sessionIPM{
 		NameF:    name,
 		sessions: new(sync.Map),
 		Admins:   admins,
@@ -35,12 +35,12 @@ func newSessionMng(name string, admins []string, cr *Crypt,
 	return
 }
 
-func (s *sessionMng) Name() (r string) {
+func (s *sessionIPM) Name() (r string) {
 	r = s.NameF
 	return
 }
 
-func (s *sessionMng) Exec(cmd *AdmCmd) (r string, e error) {
+func (s *sessionIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	switch cmd.Cmd {
 	case "open":
 		r, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
@@ -54,7 +54,7 @@ func (s *sessionMng) Exec(cmd *AdmCmd) (r string, e error) {
 	return
 }
 
-func (s *sessionMng) Match(ip string) (b bool) {
+func (s *sessionIPM) Match(ip string) (b bool) {
 	_, b = s.sessions.Load(ip)
 	return
 }
@@ -64,7 +64,7 @@ func NoCmdWithName(cmd string) (e error) {
 	return
 }
 
-func (s *sessionMng) open(usr, pass, ip string) (r string, e error) {
+func (s *sessionIPM) open(usr, pass, ip string) (r string, e error) {
 	var user string
 	user, e = s.auth.AuthAndNorm(usr, pass)
 	if e == nil {
@@ -94,7 +94,7 @@ func MalformedArgs() (e error) {
 	return
 }
 
-func (s *sessionMng) close(secr, ip string) (r string,
+func (s *sessionIPM) close(secr, ip string) (r string,
 	e error) {
 	var user string
 	user, e = s.crypt.Decrypt(secr)
@@ -107,7 +107,7 @@ func (s *sessionMng) close(secr, ip string) (r string,
 	return
 }
 
-func (s *sessionMng) show(secret, ip string) (r string, e error) {
+func (s *sessionIPM) show(secret, ip string) (r string, e error) {
 	var user string
 	user, e = checkAdmin(secret, s.crypt, s.Admins)
 	if e == nil && user != s.User(ip) {
@@ -137,7 +137,7 @@ type IPUser interface {
 	User(string) string
 }
 
-func (s *sessionMng) User(ip string) (user string) {
+func (s *sessionIPM) User(ip string) (user string) {
 	u, _ := s.sessions.Load(ip)
 	user = u.(string)
 	return
