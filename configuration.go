@@ -84,6 +84,87 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	return
 }
 
+func (c *config) initRule(rl *jRule) (r *rule, e error) {
+	r = &rule{
+		unit: rl.Unit,
+		span: rl.Span,
+		spec: &Spec{
+			Iface:    rl.Spec.Iface,
+			ProxyURL: rl.Spec.ProxyURL,
+			ConsR:    make([]ConsR, len(rl.Spec.ConsR)),
+		},
+	}
+	r.urlM, e = regexp.Compile(rl.URLM)
+	// search and initialize managers(ConsR and IPMatcher)
+
+	for i := 0; e == nil && i != len(rl.Spec.ConsR); i++ {
+		name := rl.Spec.ConsR[i]
+		consr := []linealSearch{
+			&bwSearch{
+				sl:   c.BandWidthR,
+				name: name,
+			},
+			&cnSearch{
+				sl:   c.ConnAmR,
+				name: name,
+			},
+			&dwSearch{
+				sl:   c.DownR,
+				name: name,
+			},
+			&ngSearch{
+				sl:   c.NegR,
+				name: name,
+			},
+			&idSearch{
+				sl:   c.IdR,
+				name: name,
+			},
+			&trSearch{
+				sl:   c.TimeRangeR,
+				name: name,
+			},
+		}
+		b := false
+		for j := 0; !b && j != len(consr); j++ {
+			for k := 0; !b && k != consr[j].len(); k++ {
+				b = consr[j].ok(k, &r.spec.ConsR[i])
+			}
+		}
+	}
+	if e == nil {
+		ipms := []linealSearch{
+			&smSearch{
+				sl:   c.SessionM,
+				name: name,
+			}, &grSearch{
+				sl:   c.GroupM,
+				name: name,
+			}, &usSearch{
+				sl:   c.UserM,
+				name: name,
+			}, &rgSearch{
+				sl:   c.RangeIPM,
+				name: name,
+			},
+		}
+		b := false
+		for j := 0; !b && j != len(ipms); j++ {
+			for k := 0; !b && k != ipms[j].len(); k++ {
+				b = ipms[j].ok(k, &r.ipM)
+			}
+		}
+	}
+	return
+}
+
+func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
+	// TODO
+	// search manager
+	// send command
+	return
+}
+
 type linealSearch interface {
 	// the interface{} must be a pointer
 	ok(uint, interface{}) bool
@@ -267,174 +348,6 @@ func (b *rgSearch) ok(i uint, v interface{}) (r bool) {
 
 func (b *rgSearch) len() (r uint) {
 	r = uint(len(b.sl))
-	return
-}
-
-func (c *config) initRule(rl *jRule) (r *rule, e error) {
-	r = &rule{
-		unit: rl.Unit,
-		span: rl.Span,
-		spec: &Spec{
-			Iface:    rl.Spec.Iface,
-			ProxyURL: rl.Spec.ProxyURL,
-			ConsR:    make([]ConsR, len(rl.Spec.ConsR)),
-		},
-	}
-	r.urlM, e = regexp.Compile(rl.URLM)
-	// search and initialize managers(ConsR and IPMatcher)
-
-	for i := 0; e == nil && i != len(rl.Spec.ConsR); i++ {
-		consr := []linealSearch{c.BandWidthR, c.ConnAmR, c.DownR,
-			c.NegR, c.IdR, c.TimeRangeR,
-		}
-		b := false
-		for j := 0; !b && j != len(consr); j++ {
-			for k := 0; !b && k != consr[j].len(); k++ {
-				b = consr[j].ok(k, &r.spec.ConsR[i])
-			}
-		}
-	}
-	if e == nil {
-		ipms := []linealSearch{c.SessionM, c.GroupM, c.UserM,
-			c.RangeIPM,
-		}
-		b := false
-		for j := 0; !b && j != len(ipms); j++ {
-			for k := 0; !b && k != ipms[j].len(); k++ {
-				b = ipms[j].ok(k, &r.ipM)
-			}
-		}
-	}
-
-	return
-}
-
-// initializes cfg.BandWidthR, cfg.ConnAmR, cfg.TimeRangeR,
-// cfg.SessionM
-func initNoErr(mng *manager, cfg *config, cr *Crypt, cl clock.Clock) {
-	for _, j := range cfg.BandWidthR {
-		j.init()
-		mng.mngs[j.Name()] = &Mng{
-			Admin: &j,
-			Cr:    &j,
-		}
-	}
-	for _, j := range cfg.ConnAmR {
-		j.init()
-		mng.mngs[j.Name()] = &Mng{
-			Admin: &j,
-			Cr:    &j,
-		}
-	}
-	for _, j := range cfg.TimeRangeR {
-		j.clock = cl
-		mng.mngs[j.Name()] = &Mng{
-			Admin: &j,
-			Cr:    &j,
-		}
-	}
-	for _, j := range cfg.SessionM {
-		j.sessions = new(sync.Map)
-		j.crypt = cr
-		ac := cfg.ADConf
-		j.ADConf = cfg.ADConf
-		j.auth = ld.NewLdapWithAcc(ac.Addr, ac.Suff, ac.Bdn,
-			ac.User, ac.Pass)
-		mng.mngs[j.Name()] = &Mng{
-			Admin: &j,
-			IPM:   &j,
-		}
-	}
-}
-
-// initializes cfg.RangeIPM or error
-func initRangeIPM(mng *manager, cfg *config) (e error) {
-	for i := 0; e == nil && i != len(cfg.RangeIPM); i++ {
-		j := cfg.RangeIPM[i]
-		e = j.init()
-		if e == nil {
-			mng.mngs[j.Name()] = &Mng{
-				Admin: &j,
-				IPM:   &j,
-			}
-		}
-	}
-	return
-}
-
-// initializes cfg.DownR, requires initializing session managers
-func initDownR(mng *manager, cfg *config, cl clock.Clock) (e error) {
-	for i := 0; e == nil && i != len(cfg.DownR); i++ {
-		j := cfg.DownR[i]
-		j.cl = cl
-		j.usrCons = new(sync.Map)
-		m, ok := mng.mngs[j.IPUser]
-		if ok {
-			j.iu, ok = m.Admin.(IPUser)
-			if !ok {
-				e = NoMngWithType(j.IPUser, "IPUser")
-			}
-		} else {
-			e = NoMngWithName(j.IPUser)
-		}
-		if e == nil {
-			mng.mngs[j.Name()] = &Mng{
-				Admin: &j,
-				Cr:    &j,
-			}
-		}
-	}
-	// initialized cfg.DownR or error
-	return
-}
-
-func initGroupM(mng *manager, cfg *config) (e error) {
-	for i := 0; e == nil && i != len(cfg.GroupM); i++ {
-		j := cfg.GroupM[i]
-		ac := cfg.ADConf
-		j.ldap = ld.NewLdapWithAcc(ac.Addr, ac.Suff, ac.Bdn,
-			ac.User, ac.Pass)
-		j.cache = new(sync.Map)
-		m, ok := mng.mngs[j.IPUser]
-		if ok {
-			j.ipUser, ok = m.Admin.(IPUser)
-			if !ok {
-				e = NoMngWithType(j.IPUser, "IPUser")
-			}
-		} else {
-			e = NoMngWithName(j.IPUser)
-		}
-		if e == nil {
-			mng.mngs[j.Name()] = &Mng{
-				Admin: &j,
-				IPM:   &j,
-			}
-		}
-	}
-	// initialized cfg.GroupM or error
-	return
-}
-
-func initUserM(mng *manager, cfg *config) (e error) {
-	for i := 0; e == nil && i != len(cfg.UserM); i++ {
-		j := cfg.UserM[i]
-		m, ok := mng.mngs[j.IPUser]
-		if ok {
-			j.iu, ok = m.Admin.(IPUser)
-			if !ok {
-				e = NoMngWithType(j.IPUser, "IPUser")
-			}
-		} else {
-			e = NoMngWithName(j.IPUser)
-		}
-		if e == nil {
-			mng.mngs[j.Name()] = &Mng{
-				Admin: &j,
-				IPM:   &j,
-			}
-		}
-	}
-	// initialized cfg.UserM or error
 	return
 }
 
