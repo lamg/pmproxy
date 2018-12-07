@@ -1,13 +1,12 @@
 package pmproxy
 
 import (
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/lamg/clock"
-	ld "github.com/lamg/ldaputil"
 	"io"
 	"os"
 	"regexp"
-	"sync"
 	"time"
 )
 
@@ -51,7 +50,6 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	if e == nil {
 		cfg.crypt, e = NewCrypt()
 	}
-	var rspec *simpleRSpec
 	if e == nil {
 		cfg.clock = new(clock.OSClock)
 		cfg.rspec = &simpleRSpec{
@@ -60,7 +58,7 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 		for i := 0; e == nil && i != len(cfg.Rules); i++ {
 			for j := 0; e == nil && j != len(cfg.Rules[i]); j++ {
 				var rl *rule
-				rl, e = cfg.initRule(cfg.Rules[i][j])
+				rl, e = cfg.initRule(&cfg.Rules[i][j])
 				cfg.rspec.add([]int{i, j}, rl)
 			}
 		}
@@ -91,7 +89,7 @@ func (c *config) initRule(rl *jRule) (r *rule, e error) {
 		spec: &Spec{
 			Iface:    rl.Spec.Iface,
 			ProxyURL: rl.Spec.ProxyURL,
-			ConsR:    make([]ConsR, len(rl.Spec.ConsR)),
+			Cr:       make([]ConsR, len(rl.Spec.ConsR)),
 		},
 	}
 	r.urlM, e = regexp.Compile(rl.URLM)
@@ -128,11 +126,14 @@ func (c *config) initRule(rl *jRule) (r *rule, e error) {
 		b := false
 		for j := 0; !b && j != len(consr); j++ {
 			for k := 0; !b && k != consr[j].len(); k++ {
-				b = consr[j].ok(k, &r.spec.ConsR[i])
+				var v interface{}
+				b, v = consr[j].ok(k)
+				r.spec.Cr[i], _ = v.(ConsR)
 			}
 		}
 	}
 	if e == nil {
+		name := rl.IPM
 		ipms := []linealSearch{
 			&smSearch{
 				sl:   c.SessionM,
@@ -151,7 +152,9 @@ func (c *config) initRule(rl *jRule) (r *rule, e error) {
 		b := false
 		for j := 0; !b && j != len(ipms); j++ {
 			for k := 0; !b && k != ipms[j].len(); k++ {
-				b = ipms[j].ok(k, &r.ipM)
+				var v interface{}
+				b, v = ipms[j].ok(k)
+				r.ipM, _ = v.(IPMatcher)
 			}
 		}
 	}
@@ -165,10 +168,14 @@ func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
 	return
 }
 
+func (c *config) search(name string) (ok bool, v interface{}) {
+	return
+}
+
 type linealSearch interface {
 	// the interface{} must be a pointer
-	ok(uint, interface{}) bool
-	len() uint
+	ok(int) (bool, interface{})
+	len() int
 }
 
 type bwSearch struct {
@@ -176,16 +183,16 @@ type bwSearch struct {
 	name string
 }
 
-func (b *bwSearch) ok(i uint, v interface{}) (r bool) {
+func (b *bwSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *bwSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *bwSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -194,16 +201,16 @@ type cnSearch struct {
 	name string
 }
 
-func (b *cnSearch) ok(i uint, v interface{}) (r bool) {
+func (b *cnSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *cnSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *cnSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -212,16 +219,16 @@ type dwSearch struct {
 	name string
 }
 
-func (b *dwSearch) ok(i uint, v interface{}) (r bool) {
+func (b *dwSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *dwSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *dwSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -230,16 +237,16 @@ type ngSearch struct {
 	name string
 }
 
-func (b *ngSearch) ok(i uint, v interface{}) (r bool) {
+func (b *ngSearch) ok(i int) (r bool, v interface{}) {
 	r = i < 1 && b.sl.Name() == b.name
 	if r {
-		*v = b.negCons
+		v = b.sl
 	}
 	return
 }
 
-func (b *ngSearch) len() (r uint) {
-	r = uint(1)
+func (b *ngSearch) len() (r int) {
+	r = 1
 	return
 }
 
@@ -248,16 +255,16 @@ type idSearch struct {
 	name string
 }
 
-func (b *idSearch) ok(i uint, v interface{}) (r bool) {
+func (b *idSearch) ok(i int) (r bool, v interface{}) {
 	r = i < 1 && b.sl.Name() == b.name
 	if r {
-		*v = b.negCons
+		v = b.sl
 	}
 	return
 }
 
-func (b *idSearch) len() (r uint) {
-	r = uint(1)
+func (b *idSearch) len() (r int) {
+	r = 1
 	return
 }
 
@@ -266,16 +273,16 @@ type trSearch struct {
 	name string
 }
 
-func (b *trSearch) ok(i uint, v interface{}) (r bool) {
+func (b *trSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *trSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *trSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -284,16 +291,16 @@ type smSearch struct {
 	name string
 }
 
-func (b *smSearch) ok(i uint, v interface{}) (r bool) {
+func (b *smSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *smSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *smSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -302,16 +309,16 @@ type grSearch struct {
 	name string
 }
 
-func (b *grSearch) ok(i uint, v interface{}) (r bool) {
+func (b *grSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *grSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *grSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -320,16 +327,16 @@ type usSearch struct {
 	name string
 }
 
-func (b *usSearch) ok(i uint, v interface{}) (r bool) {
+func (b *usSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *usSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *usSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -338,16 +345,16 @@ type rgSearch struct {
 	name string
 }
 
-func (b *rgSearch) ok(i uint, v interface{}) (r bool) {
+func (b *rgSearch) ok(i int) (r bool, v interface{}) {
 	r = i < b.len() && b.sl[i].Name() == b.name
 	if r {
-		*v = b.sl[i]
+		v = &b.sl[i]
 	}
 	return
 }
 
-func (b *rgSearch) len() (r uint) {
-	r = uint(len(b.sl))
+func (b *rgSearch) len() (r int) {
+	r = len(b.sl)
 	return
 }
 
@@ -360,5 +367,30 @@ func NewProxyCtlFile(file string) (c *ProxyCtl, e error) {
 	if fl != nil {
 		fl.Close()
 	}
+	return
+}
+
+func checkAdmin(secret string, c *Crypt, adms []string) (user string,
+	e error) {
+	user, e = c.Decrypt(secret)
+	if e == nil {
+		b := false
+		for i := 0; !b && i != len(adms); i++ {
+			b = adms[i] == user
+		}
+		if !b {
+			e = NoAdmin(user)
+		}
+	}
+	return
+}
+
+func NoAdmin(user string) (e error) {
+	e = fmt.Errorf("No administrator with name %s", user)
+	return
+}
+
+func NoCmd(name string) (e error) {
+	e = fmt.Errorf("No command with name %s", name)
 	return
 }

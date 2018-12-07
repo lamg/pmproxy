@@ -35,7 +35,7 @@ func (r *rule) MarshalJSON() (bs []byte, e error) {
 			ConsR:    make([]string, len(r.spec.Cr)),
 		},
 	}
-	for i, j := range r.Spec.Cr {
+	for i, j := range r.spec.Cr {
 		jr.Spec.ConsR[i] = j.Name()
 	}
 	bs, e = json.Marshal(jr)
@@ -67,8 +67,8 @@ func (s *simpleRSpec) Spec(t time.Time,
 	for _, j := range s.rules {
 		b, k := true, 0
 		for b && k != len(j) {
-			b = j[k].Unit == ((j[k].IPM == nil || j[k].IPM.Match(ip)) &&
-				(j[k].URLM == nil || j[k].URLM.MatchString(r.RequestURI)) &&
+			b = j[k].unit == ((j[k].ipM == nil || j[k].ipM.Match(ip)) &&
+				(j[k].urlM == nil || j[k].urlM.MatchString(r.RequestURI)) &&
 				(j[k].span == nil || j[k].span.ContainsTime(t)))
 			k = k + 1
 		}
@@ -76,7 +76,7 @@ func (s *simpleRSpec) Spec(t time.Time,
 		if b {
 			n = new(Spec)
 			// add Spec to n
-			sn := j[k].Spec
+			sn := j[k].spec
 			if sn.Cr != nil {
 				n.Cr = append(n.Cr, sn.Cr...)
 			}
