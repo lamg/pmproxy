@@ -95,69 +95,43 @@ func (c *config) initRule(rl *jRule) (r *rule, e error) {
 	r.urlM, e = regexp.Compile(rl.URLM)
 	// search and initialize managers(ConsR and IPMatcher)
 
-	for i := 0; e == nil && i != len(rl.Spec.ConsR); i++ {
-		name := rl.Spec.ConsR[i]
-		consr := []linealSearch{
-			&bwSearch{
-				sl:   c.BandWidthR,
-				name: name,
-			},
-			&cnSearch{
-				sl:   c.ConnAmR,
-				name: name,
-			},
-			&dwSearch{
-				sl:   c.DownR,
-				name: name,
-			},
-			&ngSearch{
-				sl:   c.NegR,
-				name: name,
-			},
-			&idSearch{
-				sl:   c.IdR,
-				name: name,
-			},
-			&trSearch{
-				sl:   c.TimeRangeR,
-				name: name,
-			},
-		}
-		b := false
-		for j := 0; !b && j != len(consr); j++ {
-			for k := 0; !b && k != consr[j].len(); k++ {
-				var v interface{}
-				b, v = consr[j].ok(k)
-				r.spec.Cr[i], _ = v.(ConsR)
+	if e == nil {
+		for i := 0; i != len(rl.Spec.ConsR); i++ {
+			name := rl.Spec.ConsR[i]
+			ok, v := c.search(name)
+			if ok {
+				r.spec.Cr[i], ok = v.(ConsR)
+				if !ok {
+					e = NoMngWithType(name, "ConsR")
+				}
+			} else {
+				e = NoMngWithName(name)
 			}
 		}
+		// initialized r.spec.ConsR
 	}
 	if e == nil {
-		name := rl.IPM
-		ipms := []linealSearch{
-			&smSearch{
-				sl:   c.SessionM,
-				name: name,
-			}, &grSearch{
-				sl:   c.GroupM,
-				name: name,
-			}, &usSearch{
-				sl:   c.UserM,
-				name: name,
-			}, &rgSearch{
-				sl:   c.RangeIPM,
-				name: name,
-			},
-		}
-		b := false
-		for j := 0; !b && j != len(ipms); j++ {
-			for k := 0; !b && k != ipms[j].len(); k++ {
-				var v interface{}
-				b, v = ipms[j].ok(k)
-				r.ipM, _ = v.(IPMatcher)
+		ok, v := c.search(rl.IPM)
+		if ok {
+			r.ipM, ok = v.(IPMatcher)
+			if !ok {
+				e = NoMngWithType(rl.IPM, "IPMatcher")
 			}
+		} else {
+			e = NoMngWithName(rl.IPM)
 		}
+		// initialized r.ipm
 	}
+	return
+}
+
+func NoMngWithType(name, tpe string) (e error) {
+	e = fmt.Errorf("No %s with name %s", tpe, name)
+	return
+}
+
+func NoMngWithName(name string) (e error) {
+	e = fmt.Errorf("No manager with name %s", name)
 	return
 }
 
@@ -168,193 +142,109 @@ func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
 	return
 }
 
+type nameSrch func(string) (bool, interface{})
+type nameSrchI func(string, int) (bool, interface{})
+
+func searchElm(es nameSrchI, n int) (r nameSrch) {
+	r = func(name string) (ok bool, v interface{}) {
+		ok = false
+		for i := 0; !ok && i != n; i++ {
+			ok, v = es(name, i)
+		}
+		return
+	}
+	return
+}
+
 func (c *config) search(name string) (ok bool, v interface{}) {
-	return
-}
-
-type linealSearch interface {
-	// the interface{} must be a pointer
-	ok(int) (bool, interface{})
-	len() int
-}
-
-type bwSearch struct {
-	sl   []bwCons
-	name string
-}
-
-func (b *bwSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
+	mngs := []nameSrch{
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.BandWidthR[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.BandWidthR),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.ConnAmR[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.ConnAmR),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.DownR[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.DownR),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := c.NegR
+				b, w = r.NameF == m, r
+				return
+			},
+			1,
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := c.IdR
+				b, w = r.NameF == m, r
+				return
+			},
+			1,
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.TimeRangeR[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.TimeRangeR),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.SessionM[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.SessionM),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.GroupM[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.GroupM),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.UserM[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.UserM),
+		),
+		searchElm(
+			func(m string, i int) (b bool, w interface{}) {
+				r := &c.RangeIPM[i]
+				b, w = r.NameF == m, r
+				return
+			},
+			len(c.RangeIPM),
+		),
 	}
-	return
-}
-
-func (b *bwSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type cnSearch struct {
-	sl   []connCons
-	name string
-}
-
-func (b *cnSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
+	msch := func(nm string, i int) (b bool, w interface{}) {
+		b, w = mngs[i](nm)
+		return
 	}
-	return
-}
-
-func (b *cnSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type dwSearch struct {
-	sl   []dwnCons
-	name string
-}
-
-func (b *dwSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
-	}
-	return
-}
-
-func (b *dwSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type ngSearch struct {
-	sl   *negCons
-	name string
-}
-
-func (b *ngSearch) ok(i int) (r bool, v interface{}) {
-	r = i < 1 && b.sl.Name() == b.name
-	if r {
-		v = b.sl
-	}
-	return
-}
-
-func (b *ngSearch) len() (r int) {
-	r = 1
-	return
-}
-
-type idSearch struct {
-	sl   *idCons
-	name string
-}
-
-func (b *idSearch) ok(i int) (r bool, v interface{}) {
-	r = i < 1 && b.sl.Name() == b.name
-	if r {
-		v = b.sl
-	}
-	return
-}
-
-func (b *idSearch) len() (r int) {
-	r = 1
-	return
-}
-
-type trSearch struct {
-	sl   []trCons
-	name string
-}
-
-func (b *trSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
-	}
-	return
-}
-
-func (b *trSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type smSearch struct {
-	sl   []sessionIPM
-	name string
-}
-
-func (b *smSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
-	}
-	return
-}
-
-func (b *smSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type grSearch struct {
-	sl   []groupIPM
-	name string
-}
-
-func (b *grSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
-	}
-	return
-}
-
-func (b *grSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type usSearch struct {
-	sl   []userIPM
-	name string
-}
-
-func (b *usSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
-	}
-	return
-}
-
-func (b *usSearch) len() (r int) {
-	r = len(b.sl)
-	return
-}
-
-type rgSearch struct {
-	sl   []rangeIPM
-	name string
-}
-
-func (b *rgSearch) ok(i int) (r bool, v interface{}) {
-	r = i < b.len() && b.sl[i].Name() == b.name
-	if r {
-		v = &b.sl[i]
-	}
-	return
-}
-
-func (b *rgSearch) len() (r int) {
-	r = len(b.sl)
+	nsch := searchElm(msch, len(mngs))
+	ok, v = nsch(name)
 	return
 }
 
