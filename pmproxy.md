@@ -14,7 +14,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - proxy_spec.go
   - admin.go
     - rspec.go
-      - session.go
+      - session_ipm.go
         - crypt.go
   - json.go
 
@@ -36,7 +36,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - Rule
     - IPMatcher
 
-- SessionMng
+- sessionIPM
   - Crypt
   - IPMatcher
   - Authenticator
@@ -46,19 +46,19 @@ admin = admin_http_server http_request → (rules | state) spec.
   - simpleRSPec (rspec.go)
 
 - Admin
-  - SessionMng (session.go)
+  - sessionIPM (session_ipm.go)
   - simpleRSpec (rspec.go)
-  - manager (manager.go)
+  - config (configuration.go)
   - userIPM (user_ipm.go)
 
 - IPMatcher
-  - SessionMng (session.go)
+  - sessionIPM (session_ipm.go)
   - rangeIPM (range_ipm.go)
   - groupIPM (group_ipm.go)
   - userIPM (user_ipm.go)
 
 - IPUser
-  - SessionMng
+  - sessionIPM
 
 - Authenticator
   - Ldap (github.com/lamg/ldaputil)
@@ -77,22 +77,18 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 - NewProxyCtl (configuration.go)
   - reads a TOML file
-- ProxyCtl
-  - manager
-  - simpleRSpec
 
 ## TODO
 - tight fields and methods visibility
 - automatic configuration persistence
-  - if `Config` holds all references to persistible objects, then it can be done by marshaling at regular time lapses
-  - operations carried by manager will be done by config
-    - administrate managers
+- config Admin implementation
+- simpleRSPec Admin implementation
 - overlapping consumption restrictors
   
 
 ## Commands accepted by managers
 
-- SessionMng
+- sessionIPM
   - open
     - params: user, password
     - returns: secret
@@ -118,7 +114,7 @@ admin = admin_http_server http_request → (rules | state) spec.
     - params: secret, type, name, args
     - spec: adds a manager if secret is from an administrator with the type, name and interpreting the specific args. Adding a rule requires some preprocessing because the rule inside a command doesn't have a direct reference to the value needed by simpleRule.Spec for giving the correct result.
     - types:
-      - sm: SessionMng
+      - sm: sessionIPM
         - params: Active Directory (AD) address, AD user, AD password, administrators list
       - tr: trCons
         - params: start, end, active duration, total duration, times, infinite times, always

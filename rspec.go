@@ -12,6 +12,7 @@ import (
 )
 
 type simpleRSpec struct {
+	name  string
 	rules [][]rule
 }
 
@@ -24,7 +25,13 @@ type rule struct {
 }
 
 func (r *rule) MarshalJSON() (bs []byte, e error) {
-	jr := &jRule{
+	jr := r.toJRule()
+	bs, e = json.Marshal(jr)
+	return
+}
+
+func (r *rule) toJRule() (jr *jRule) {
+	jr = &jRule{
 		Unit: r.unit,
 		URLM: r.urlM.String(),
 		Span: r.span,
@@ -38,16 +45,15 @@ func (r *rule) MarshalJSON() (bs []byte, e error) {
 	for i, j := range r.spec.Cr {
 		jr.Spec.ConsR[i] = j.Name()
 	}
-	bs, e = json.Marshal(jr)
 	return
 }
 
 type jRule struct {
-	Unit bool      `json:"unit"`
-	URLM string    `json:"urlm"`
-	Span *rt.RSpan `json:"span"`
-	IPM  string    `json:"ipm"`
-	Spec *JSpec    `json:"spec"`
+	Unit bool      `json:"unit" toml:"unit"`
+	URLM string    `json:"urlm" toml:"urlm"`
+	Span *rt.RSpan `json:"span" toml:"span"`
+	IPM  string    `json:"ipm"  toml:"ipm"`
+	Spec *JSpec    `json:"spec" toml:"spec"`
 }
 
 type JSpec struct {
@@ -164,5 +170,15 @@ func (s *simpleRSpec) show() (r string, e error) {
 
 func IndexOutOfRange(i, n int) (e error) {
 	e = fmt.Errorf("Index %d out of range %d", i, n)
+	return
+}
+
+func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
+	// TODO
+	switch cmd.Cmd {
+	case "add-rule":
+	case "del-rule":
+	case "get-rules":
+	}
 	return
 }
