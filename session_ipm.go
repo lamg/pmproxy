@@ -3,14 +3,13 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	ld "github.com/lamg/ldaputil"
+
 	"sync"
 )
 
 type sessionIPM struct {
 	NameF  string   `json:"name"   toml:"name"`
 	Admins []string `json:"admins" toml:"admins"`
-	ADConf *adConf  `json:"adConf" toml:"adConf"`
 
 	sessions *sync.Map
 	crypt    *Crypt
@@ -21,17 +20,15 @@ type Authenticator interface {
 	AuthAndNorm(string, string) (string, error)
 }
 
-func newsessionIPM(name string, admins []string, cr *Crypt,
-	ac *adConf) (s *sessionIPM) {
+func newSessionIPM(name string, admins []string, cr *Crypt,
+	auth Authenticator) (s *sessionIPM) {
 	s = &sessionIPM{
 		NameF:    name,
 		sessions: new(sync.Map),
 		Admins:   admins,
 		crypt:    cr,
-		ADConf:   ac,
+		auth:     auth,
 	}
-	s.auth = ld.NewLdapWithAcc(ac.Addr, ac.Suff, ac.Bdn,
-		ac.User, ac.Pass)
 	return
 }
 

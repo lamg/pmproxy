@@ -81,4 +81,5 @@ type AdmCmd struct {
 	FillInterval time.Duration `json:"fillInterval"`
 	IPUser       string        `json:"ipUser"`
 	Limit        uint64        `json:"limit"`
+	AD           *adConf       `json:"ad"`
 }

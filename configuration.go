@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/lamg/clock"
+	ld "github.com/lamg/ldaputil"
 	"io"
 	"os"
 	"regexp"
@@ -21,21 +22,21 @@ type adConf struct {
 type config struct {
 	Rules  [][]jRule `toml: "rules"`
 	Admins []string  `toml: "admins"`
-	ADConf *adConf   `toml: "adConf"`
+	AD     *adConf   `toml: "ad"`
 
 	// arrays of TOML representations of all IPMatcher and ConsR
 	// implementations
-	BandWidthR []bwCons   `toml: "bandWidthR"`
-	ConnAmR    []connCons `toml: "connAmR"`
-	DownR      []dwnCons  `toml: "downR"`
-	NegR       *negCons   `toml: "negR"`
-	IdR        *idCons    `toml: "idR"`
-	TimeRangeR []trCons   `toml: "timeRangeR"`
+	BandWidthR []*bwCons   `toml: "bandWidthR"`
+	ConnAmR    []*connCons `toml: "connAmR"`
+	DownR      []*dwnCons  `toml: "downR"`
+	NegR       *negCons    `toml: "negR"`
+	IdR        *idCons     `toml: "idR"`
+	TimeRangeR []*trCons   `toml: "timeRangeR"`
 
-	SessionM []sessionIPM `toml: "sessionM"`
-	GroupM   []groupIPM   `toml: "groupM"`
-	UserM    []userIPM    `toml: "userM`
-	RangeIPM []rangeIPM   `toml: "rangeM"`
+	SessionM []*sessionIPM `toml: "sessionM"`
+	GroupM   []*groupIPM   `toml: "groupM"`
+	UserM    []*userIPM    `toml: "userM`
+	RangeIPM []*rangeIPM   `toml: "rangeM"`
 
 	DialTimeout time.Duration `toml: "dialTimeout"`
 
@@ -163,7 +164,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 	mngs := []nameSrch{
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.BandWidthR[i]
+				r := c.BandWidthR[i]
 				b, w = r.NameF == m, &mng{cr: r, am: r}
 				return
 			},
@@ -171,7 +172,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.ConnAmR[i]
+				r := c.ConnAmR[i]
 				b, w = r.NameF == m, &mng{cr: r, am: r}
 				return
 			},
@@ -179,7 +180,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.DownR[i]
+				r := c.DownR[i]
 				b, w = r.NameF == m, &mng{cr: r, am: r}
 				return
 			},
@@ -203,7 +204,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.TimeRangeR[i]
+				r := c.TimeRangeR[i]
 				b, w = r.NameF == m, &mng{cr: r, am: r}
 				return
 			},
@@ -211,7 +212,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.SessionM[i]
+				r := c.SessionM[i]
 				b, w = r.NameF == m, &mng{im: r, am: r}
 				return
 			},
@@ -219,7 +220,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.GroupM[i]
+				r := c.GroupM[i]
 				b, w = r.NameF == m, &mng{im: r, am: r}
 				return
 			},
@@ -227,7 +228,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.UserM[i]
+				r := c.UserM[i]
 				b, w = r.NameF == m, &mng{im: r, am: r}
 				return
 			},
@@ -235,7 +236,7 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				r := &c.RangeIPM[i]
+				r := c.RangeIPM[i]
 				b, w = r.NameF == m, &mng{im: r, am: r}
 				return
 			},
@@ -332,6 +333,25 @@ func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
 	// TODO
 	switch cmd.Cmd {
 	case "set-ad":
+		c.AD = cmd.AD
+		ldap := ld.NewLdapWithAcc(c.AD.Addr, c.AD.Suff, c.AD.Bdn,
+			c.AD.User, c.AD.Pass)
+		// replace references
+		for i, j := range c.SessionM {
+			ns := newSessionIPM(j.NameF, c.Admins, c.crypt,
+				ldap)
+			c.SessionM[i] = ns
+			for _, k := range c.UserM {
+				if k.NameF == j.NameF {
+					k.iu = ns
+				}
+			}
+			for _, k := range c.GroupM {
+				if k.NameF == j.NameF {
+					k.ldap = ldap
+				}
+			}
+		}
 	case "get-ad":
 	case "set-timeout":
 	case "get-timeout":

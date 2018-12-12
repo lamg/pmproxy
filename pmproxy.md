@@ -84,7 +84,7 @@ admin = admin_http_server http_request → (rules | state) spec.
 - config Admin implementation
 - simpleRSPec Admin implementation
 - overlapping consumption restrictors
-  
+- github.com/lamg/goproxy and github.com/lamg/proxy benchmark 
 
 ## Commands accepted by managers
 
