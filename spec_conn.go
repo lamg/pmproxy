@@ -18,7 +18,7 @@ import (
 type SpecCtx struct {
 	rs      RSpec
 	clock   clock.Clock
-	timeout time.Duration
+	timeout *time.Duration
 	lg      *logger
 }
 
@@ -76,7 +76,7 @@ func (p *SpecCtx) DialContext(ctx context.Context, network,
 	}
 	var n net.Conn
 	if e == nil {
-		n, e = dialIface(s.Iface, addr, p.timeout)
+		n, e = dialIface(s.Iface, addr, *p.timeout)
 	}
 	if e == nil {
 		c, e = newRConn(s.Cr, n)

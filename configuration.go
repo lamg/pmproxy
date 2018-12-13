@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/lamg/clock"
@@ -38,7 +39,7 @@ type config struct {
 	UserM    []*userIPM    `toml: "userM`
 	RangeIPM []*rangeIPM   `toml: "rangeM"`
 
-	DialTimeout time.Duration `toml: "dialTimeout"`
+	DialTimeout *time.Duration `toml: "dialTimeout"`
 
 	crypt *Crypt
 	rspec *simpleRSpec
@@ -244,13 +245,6 @@ func (c *config) search(name string, n, m, a bool) (v *mng, e error) {
 		),
 		searchElm(
 			func(m string, i int) (b bool, w *mng) {
-				b, w = c.rspec.name == m, &mng{am: c.rspec}
-				return
-			},
-			1,
-		),
-		searchElm(
-			func(m string, i int) (b bool, w *mng) {
 				b, w = "config" == m, &mng{am: c}
 				return
 			},
@@ -330,7 +324,6 @@ func (c *config) Persist(w io.Writer) (e error) {
 }
 
 func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
-	// TODO
 	switch cmd.Cmd {
 	case "set-ad":
 		c.AD = cmd.AD
@@ -353,11 +346,43 @@ func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
 			}
 		}
 	case "get-ad":
+		var bs []byte
+		bs, e = json.Marshal(c.AD)
+		r = string(bs)
 	case "set-timeout":
+		c.DialTimeout = &cmd.DialTimeout
 	case "get-timeout":
+		r = c.DialTimeout.String()
 	case "add-admin":
+		c.Admins = append(c.Admins, cmd.User)
+		// references updated since slices are reference types
 	case "del-admin":
+		b, i := false, 0
+		for !b && i != len(c.Admins) {
+			b = c.Admins[i] == cmd.User
+			if !b {
+				i = i + 1
+			}
+		}
+		if b {
+			c.Admins = append(c.Admins[:i], c.Admins[i+1:]...)
+		} else {
+			e = NoAdmin(cmd.User)
+		}
 	case "get-admins":
+		var bs []byte
+		bs, e = json.Marshal(c.Admins)
+		r = string(bs)
+	case "add-rule":
+		var rl *rule
+		rl, e = c.initRule(cmd.Rule)
+		if e == nil {
+			e = c.rspec.add(cmd.Pos, rl)
+		}
+	case "del-rule":
+		e = c.rspec.delete(cmd.Pos)
+	case "show-rules":
+		r, e = c.rspec.show()
 	}
 	return
 }

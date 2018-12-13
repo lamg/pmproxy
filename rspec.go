@@ -12,7 +12,6 @@ import (
 )
 
 type simpleRSpec struct {
-	name  string
 	rules [][]rule
 }
 
@@ -110,7 +109,7 @@ func InvalidArgs(v interface{}) (e error) {
 	return
 }
 
-func (s *simpleRSpec) remove(args []int) (e error) {
+func (s *simpleRSpec) delete(args []int) (e error) {
 	argc := len(args)
 	if argc < len(s.rules) {
 		if argc == 1 {
@@ -170,15 +169,5 @@ func (s *simpleRSpec) show() (r string, e error) {
 
 func IndexOutOfRange(i, n int) (e error) {
 	e = fmt.Errorf("Index %d out of range %d", i, n)
-	return
-}
-
-func (s *simpleRSpec) Exec(cmd *AdmCmd) (r string, e error) {
-	// TODO
-	switch cmd.Cmd {
-	case "add-rule":
-	case "del-rule":
-	case "get-rules":
-	}
 	return
 }

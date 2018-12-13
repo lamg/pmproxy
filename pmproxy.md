@@ -81,10 +81,9 @@ admin = admin_http_server http_request → (rules | state) spec.
 ## TODO
 - tight fields and methods visibility
 - automatic configuration persistence
-- config Admin implementation
-- simpleRSPec Admin implementation
-- overlapping consumption restrictors
-- github.com/lamg/goproxy and github.com/lamg/proxy benchmark 
+- overlapping download consumption restrictors
+- show users the resources available for them
+- github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 
 ## Commands accepted by managers
 
