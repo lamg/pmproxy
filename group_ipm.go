@@ -33,6 +33,8 @@ func (g *groupIPM) Match(ip string) (ok bool) {
 	return
 }
 
+type usrGrp func(string) []string
+
 func (g *groupIPM) getOrUpdate(user string) (groups []string) {
 	gs, ok := g.cache.Load(user)
 	if !ok {
