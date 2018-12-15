@@ -83,4 +83,5 @@ type AdmCmd struct {
 	Limit        uint64        `json:"limit"`
 	AD           *adConf       `json:"ad"`
 	DialTimeout  time.Duration `json:"dialTimeout"`
+	Group        string        `json:"group"`
 }

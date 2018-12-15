@@ -14,7 +14,7 @@ type dwnCons struct {
 	IPUser     string `json:"ipUser" toml:"ipUser"`
 	iu         IPUser
 	usrCons    *sync.Map
-	Limit      uint64        `json:"limit" toml:"limit"`
+	UserQt     usrQt
 	LastReset  time.Time     `json:"lastReset" toml:"lastReset"`
 	ResetCycle time.Duration `json:"resetCycle" toml:"resetCycle"`
 }
@@ -40,7 +40,8 @@ func (d *dwnCons) Can(ip string, n int) (ok bool) {
 	ok = false
 	if user != "" {
 		cons, b := d.usrCons.Load(user)
-		ok = b && cons.(uint64) <= d.Limit
+		limit := d.UserQt(user)
+		ok = b && cons.(uint64) <= limit
 	}
 	return
 }
