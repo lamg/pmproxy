@@ -40,6 +40,7 @@ type config struct {
 	RangeIPM []*rangeIPM   `toml: "rangeM"`
 
 	DialTimeout *time.Duration `toml: "dialTimeout"`
+	Logger      *logger        `toml:"logger"`
 
 	crypt *Crypt
 	rspec *simpleRSpec
@@ -50,10 +51,50 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	cfg := new(config)
 	_, e = toml.DecodeReader(rd, cfg)
 	if e == nil {
-		cfg.crypt, e = NewCrypt()
+		cfg.clock = new(clock.OSClock)
+
+		for _, j := range cfg.BandWidthR {
+			j.init()
+		}
+		for _, j := range cfg.ConnAmR {
+			j.init()
+		}
+		for _, j := range cfg.TimeRangeR {
+			j.clock = cfg.clock
+		}
+
+		if e == nil {
+			cfg.crypt, e = NewCrypt()
+		}
+	}
+
+	if e == nil {
+		auth := ld.NewLdapWithAcc(cfg.AD.Addr, cfg.AD.Suff, cfg.AD.Bdn,
+			cfg.AD.User, cfg.AD.Pass)
+		for _, j := range cfg.SessionM {
+			initSM(j, cfg.crypt, auth)
+		}
+		for i := 0; e == nil && i != len(cfg.GroupM); i++ {
+			j := cfg.GroupM[i]
+			e = initGrp(j, srchSI(cfg.SessionM), cfg.AD)
+		}
+	}
+	for i := 0; e == nil && i != len(cfg.DownR); i++ {
+		j := cfg.DownR[i]
+		e = initDwn(j, srchSI(cfg.SessionM), srchGM(cfg.GroupM))
+	}
+	for i := 0; e == nil && i != len(cfg.UserM); i++ {
+		j := cfg.UserM[i]
+		e = initUsrM(j, srchSI(cfg.SessionM))
+	}
+	for i := 0; e == nil && i != len(cfg.RangeIPM); i++ {
+		j := cfg.RangeIPM[i]
+		e = j.init()
 	}
 	if e == nil {
-		cfg.clock = new(clock.OSClock)
+		e = initLg(cfg.Logger, srchSI(cfg.SessionM))
+	}
+	if e == nil {
 		cfg.rspec = &simpleRSpec{
 			rules: make([][]rule, len(cfg.Rules)),
 		}
@@ -65,11 +106,25 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 			}
 		}
 	}
+	// initialization of:
+	// - clock
+	//  - BandWidthR
+	//  - ConnAmR
+	//  - DownR
+	//    - SessionM
+	//    - GroupM
+	//      - SessionM
+	//  - NegR
+	//  - IdR
+	//  - TimeRangeR
+	//  - SessionM
+	//  - GroupM
+	//  - UserM
+	//  - RangeIPM
+	//  - Logger
+	//  - rspec
+
 	// rules added to cfg.rspec
-	var lg *logger
-	if e == nil {
-		lg, e = newLogger("pmproxy")
-	}
 	if e == nil {
 		c = &ProxyCtl{
 			adm: cfg,
@@ -77,9 +132,47 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 				clock:   cfg.clock,
 				rs:      cfg.rspec,
 				timeout: cfg.DialTimeout,
-				lg:      lg,
+				lg:      cfg.Logger,
 			},
 		}
+	}
+	return
+}
+
+func srchSI(sm []*sessionIPM) (si srchIU) {
+	si = func(name string) (iu IPUser, e error) {
+		b, i := false, 0
+		for !b && i != len(sm) {
+			b = sm[i].NameF == name
+			if !b {
+				i = i + 1
+			}
+		}
+		if b {
+			iu = sm[i]
+		} else {
+			e = NoMngWithName(name)
+		}
+		return
+	}
+	return
+}
+
+func srchGM(gm []*groupIPM) (su srchUG) {
+	su = func(name string) (ug usrGrp, e error) {
+		b, i := false, 0
+		for !b && i != len(gm) {
+			b = gm[i].NameF == name
+			if !b {
+				i = i + 1
+			}
+		}
+		if b {
+			ug = gm[i].getOrUpdate
+		} else {
+			e = NoMngWithName(name)
+		}
+		return
 	}
 	return
 }

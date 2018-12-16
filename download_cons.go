@@ -14,9 +14,31 @@ type dwnCons struct {
 	IPUser     string `json:"ipUser" toml:"ipUser"`
 	iu         IPUser
 	usrCons    *sync.Map
-	UserQt     usrQt
+	usrQt      usrQt
+	qtAdm      qtAdm
+	qtSer      usrQtSer
+	UserQt     *usrQtS       `json:"userQt" toml:"userQt"`
 	LastReset  time.Time     `json:"lastReset" toml:"lastReset"`
 	ResetCycle time.Duration `json:"resetCycle" toml:"resetCycle"`
+}
+
+type srchIU func(string) (IPUser, error)
+type srchUG func(string) (usrGrp, error)
+
+func initDwn(d *dwnCons, si srchIU, su srchUG) (e error) {
+	d.iu, e = si(d.IPUser)
+	var ug usrGrp
+	if e == nil {
+		d.usrCons = new(sync.Map)
+		ug, e = su(d.UserQt.UsrGrp)
+	}
+	if e == nil {
+		d.usrQt, d.qtAdm, d.qtSer = newUsrQt(d.UserQt.Name,
+			d.UserQt.Quotas, ug)
+		d.usrCons = new(sync.Map)
+		d.iu, e = si(d.IPUser)
+	}
+	return
 }
 
 // ConsR implementation
@@ -40,7 +62,7 @@ func (d *dwnCons) Can(ip string, n int) (ok bool) {
 	ok = false
 	if user != "" {
 		cons, b := d.usrCons.Load(user)
-		limit := d.UserQt(user)
+		limit := d.usrQt(user)
 		ok = b && cons.(uint64) <= limit
 	}
 	return
@@ -69,24 +91,36 @@ func (d *dwnCons) Name() (r string) {
 // Admin implementation
 
 func (d *dwnCons) Exec(cmd *AdmCmd) (r string, e error) {
-	if cmd.Cmd == "show" {
+	switch cmd.Cmd {
+	case "show-cons":
 		v, ok := d.usrCons.Load(cmd.User)
 		if ok {
 			r = fmt.Sprintf("%d", v)
 		} else {
-			NoEntry(cmd.User)
+			e = NoEntry(cmd.User)
 		}
-	} else if cmd.Cmd == "reset" {
+	case "reset-cons":
 		_, ok := d.usrCons.Load(cmd.User)
 		if ok {
 			d.usrCons.Store(cmd.User, uint64(0))
 		} else {
 			e = NoEntry(cmd.User)
 		}
-	} else if cmd.Cmd == "reset-all" {
+	case "reset-all":
 		// race condition with ConsR implementation?
 		d.usrCons = new(sync.Map)
-	} else {
+	case "show-quota-user":
+		r, e = d.qtAdm(true, false, false, false, cmd.User, "", 0)
+	case "show-quota-group":
+		r, e = d.qtAdm(false, true, false, false, "", cmd.Group, 0)
+	case "set-quota-group":
+		r, e = d.qtAdm(false, false, true, false, "", cmd.Group,
+			cmd.Limit)
+		d.UserQt = d.qtSer()
+	case "del-group":
+		r, e = d.qtAdm(false, false, false, true, "", cmd.Group, 0)
+		d.UserQt = d.qtSer()
+	default:
 		e = NoCmd(cmd.Cmd)
 	}
 	return

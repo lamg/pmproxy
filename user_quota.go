@@ -8,12 +8,13 @@ import (
 type usrQt func(string) uint64
 type usrQtSer func() *usrQtS
 type usrQtS struct {
-	Name   string            `toml: "name"`
-	Quotas map[string]uint64 `toml: "quotas"`
+	Name   string            `json: "name" toml: "name"`
+	Quotas map[string]uint64 `json: "quotas" toml: "quotas"`
+	UsrGrp string            `json: "usrGrp" toml: "usrGrp"`
 }
 
 func newUsrQt(name string, qs map[string]uint64,
-	ug usrGrp) (u usrQt, a Admin, ts usrQtSer) {
+	ug usrGrp) (u usrQt, qa qtAdm, ts usrQtSer) {
 	var qsc *sync.Map
 	for k, v := range qs {
 		qsc.Store(k, v)
@@ -29,26 +30,27 @@ func newUsrQt(name string, qs map[string]uint64,
 		}
 		return
 	}
-	qa := func(cmd *AdmCmd) (r string, e error) {
-		switch cmd.Cmd {
-		case "user":
-			q := u(cmd.User)
+
+	qa = func(usr, grp, sGrp, dGrp bool, user, group string,
+		quota uint64) (r string, e error) {
+		if usr {
+			q := u(user)
 			r = fmt.Sprintf("%d", q)
-		case "group":
-			v, ok := qsc.Load(cmd.Group)
+		} else if grp {
+			v, ok := qsc.Load(group)
 			if ok {
 				r = fmt.Sprintf("%d", v)
 			} else {
-				e = NoEntry(cmd.Group)
+				e = NoEntry(group)
 			}
-		case "set-group":
-			qsc.Store(cmd.Group, cmd.Limit)
-		case "del-group":
-			qsc.Delete(cmd.Group)
+		} else if sGrp {
+			qsc.Store(group, quota)
+		} else if dGrp {
+			qsc.Delete(group)
 		}
 		return
 	}
-	a = &qtAdmImp{qa: qa}
+
 	ts = func() (st *usrQtS) {
 		st = &usrQtS{
 			Name:   name,
@@ -65,13 +67,5 @@ func newUsrQt(name string, qs map[string]uint64,
 	return
 }
 
-type qtAdm func(*AdmCmd) (string, error)
-
-type qtAdmImp struct {
-	qa qtAdm
-}
-
-func (q *qtAdmImp) Exec(cmd *AdmCmd) (r string, e error) {
-	r, e = q.qa(cmd)
-	return
-}
+type qtAdm func(bool, bool, bool, bool, string, string,
+	uint64) (string, error)

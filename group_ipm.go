@@ -8,11 +8,19 @@ import (
 
 type groupIPM struct {
 	NameF  string `json:"name" toml:"name"`
-	Group  string `toml: "group"`
-	IPUser string `toml: "ipUser"`
+	Group  string `json: "group" toml: "group"`
+	IPUser string `json: "ipUser" toml: "ipUser"`
 	ipUser IPUser
 	ldap   *ld.Ldap
 	cache  *sync.Map
+}
+
+func initGrp(g *groupIPM, si srchIU, ad *adConf) (e error) {
+	g.ldap = ld.NewLdapWithAcc(ad.Addr, ad.Suff, ad.Bdn,
+		ad.User, ad.Pass)
+	g.cache = new(sync.Map)
+	g.ipUser, e = si(g.IPUser)
+	return
 }
 
 func (g *groupIPM) Match(ip string) (ok bool) {

@@ -8,6 +8,11 @@ type userIPM struct {
 	iu IPUser
 }
 
+func initUsrM(u *userIPM, si srchIU) (e error) {
+	u.iu, e = si(u.NameF)
+	return
+}
+
 func (u *userIPM) Match(ip string) (ok bool) {
 	user := u.iu.User(ip)
 	ok = false

@@ -9,14 +9,23 @@ import (
 )
 
 type logger struct {
-	cl clock.Clock
-	sl *syslog.Writer
-	iu IPUser
+	cl     clock.Clock
+	sl     *syslog.Writer
+	iu     IPUser
+	IPUser string `json:"ipUser" toml:"ipUser"`
+	Addr   string `json:"addr" toml:"addr"`
 }
 
-func newLogger(progName string) (l *logger, e error) {
-	l = &logger{}
-	l.sl, e = syslog.New(syslog.LOG_INFO, progName)
+func initLg(l *logger, si srchIU) (e error) {
+	l.cl = new(clock.OSClock)
+	l.iu, e = si(l.IPUser)
+	if e == nil {
+		if l.Addr != "" {
+			l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO, "")
+		} else {
+			l.sl, e = syslog.New(syslog.LOG_INFO, "")
+		}
+	}
 	return
 }
 

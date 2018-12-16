@@ -20,6 +20,12 @@ type Authenticator interface {
 	AuthAndNorm(string, string) (string, error)
 }
 
+func initSM(s *sessionIPM, cr *Crypt, a Authenticator) {
+	s.sessions = new(sync.Map)
+	s.crypt = cr
+	s.auth = a
+}
+
 func newSessionIPM(name string, admins []string, cr *Crypt,
 	auth Authenticator) (s *sessionIPM) {
 	s = &sessionIPM{
