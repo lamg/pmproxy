@@ -31,9 +31,9 @@ func (u *userIPM) Name() (r string) {
 }
 
 func (u *userIPM) Exec(cmd *AdmCmd) (r string, e error) {
-	if cmd.Cmd == "add" {
+	if cmd.IsAdmin && cmd.Cmd == "add" {
 		u.Users = append(u.Users, cmd.User)
-	} else if cmd.Cmd == "del" {
+	} else if cmd.IsAdmin && cmd.Cmd == "del" {
 		i, b := 0, true
 		for b && i != len(u.Users) {
 			b = u.Users[i] != cmd.User

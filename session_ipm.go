@@ -50,20 +50,19 @@ func (s *sessionIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	case "close":
 		r, e = s.close(cmd.Secret, cmd.RemoteIP)
 	case "show":
-		r, e = s.show(cmd.Secret, cmd.RemoteIP)
+		if cmd.IsAdmin {
+			r, e = s.show(cmd.Secret, cmd.RemoteIP)
+		} else {
+			e = NoCmd(cmd.Cmd)
+		}
 	default:
-		e = NoCmdWithName(cmd.Cmd)
+		e = NoCmd(cmd.Cmd)
 	}
 	return
 }
 
 func (s *sessionIPM) Match(ip string) (b bool) {
 	_, b = s.sessions.Load(ip)
-	return
-}
-
-func NoCmdWithName(cmd string) (e error) {
-	e = fmt.Errorf("No command with name %s", cmd)
 	return
 }
 

@@ -91,36 +91,37 @@ func (d *dwnCons) Name() (r string) {
 // Admin implementation
 
 func (d *dwnCons) Exec(cmd *AdmCmd) (r string, e error) {
-	switch cmd.Cmd {
-	case "show-cons":
+	if cmd.Cmd == "show-cons" {
 		v, ok := d.usrCons.Load(cmd.User)
 		if ok {
 			r = fmt.Sprintf("%d", v)
 		} else {
 			e = NoEntry(cmd.User)
 		}
-	case "reset-cons":
-		_, ok := d.usrCons.Load(cmd.User)
-		if ok {
-			d.usrCons.Store(cmd.User, uint64(0))
-		} else {
-			e = NoEntry(cmd.User)
+	} else if cmd.IsAdmin && cmd.Cmd == "reset-cons" {
+		if cmd.IsAdmin {
+			_, ok := d.usrCons.Load(cmd.User)
+			if ok {
+				d.usrCons.Store(cmd.User, uint64(0))
+			} else {
+				e = NoEntry(cmd.User)
+			}
 		}
-	case "reset-all":
+	} else if cmd.IsAdmin && cmd.Cmd == "reset-all" {
 		// race condition with ConsR implementation?
 		d.usrCons = new(sync.Map)
-	case "show-quota-user":
+	} else if cmd.IsAdmin && cmd.Cmd == "show-quota-user" {
 		r, e = d.qtAdm(true, false, false, false, cmd.User, "", 0)
-	case "show-quota-group":
+	} else if cmd.Cmd == "show-quota-group" {
 		r, e = d.qtAdm(false, true, false, false, "", cmd.Group, 0)
-	case "set-quota-group":
+	} else if cmd.IsAdmin && cmd.Cmd == "set-quota-group" {
 		r, e = d.qtAdm(false, false, true, false, "", cmd.Group,
 			cmd.Limit)
 		d.UserQt = d.qtSer()
-	case "del-group":
+	} else if cmd.IsAdmin && cmd.Cmd == "del-group" {
 		r, e = d.qtAdm(false, false, false, true, "", cmd.Group, 0)
 		d.UserQt = d.qtSer()
-	default:
+	} else {
 		e = NoCmd(cmd.Cmd)
 	}
 	return

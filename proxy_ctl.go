@@ -42,9 +42,9 @@ type ConsR interface {
 	Close(string)
 }
 
-// Admin is the handler that implements the administration
+// ServeHTTP is the handler that implements the administration
 // interface to be served by an HTTP server
-func (p *ProxyCtl) Admin(w h.ResponseWriter, r *h.Request) {
+func (p *ProxyCtl) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	ip, _, e := net.SplitHostPort(r.RemoteAddr)
 	var cmd *AdmCmd
 	if e == nil {
@@ -84,4 +84,5 @@ type AdmCmd struct {
 	AD           *adConf       `json:"ad"`
 	DialTimeout  time.Duration `json:"dialTimeout"`
 	Group        string        `json:"group"`
+	IsAdmin      bool          `json:"isAdmin"`
 }

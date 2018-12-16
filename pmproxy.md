@@ -81,6 +81,10 @@ admin = admin_http_server http_request → (rules | state) spec.
 ## TODO
 - tight fields and methods visibility
 - automatic configuration persistence
+- the matcher can leave information provided by IPUser making it superflous
+- Information needed by
+  - dwnConsR: user, group
+  - userIPM: user
 - show users the resources available for them
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 
