@@ -52,16 +52,18 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	_, e = toml.DecodeReader(rd, cfg)
 	if e == nil {
 		cfg.clock = new(clock.OSClock)
-
-		for _, j := range cfg.BandWidthR {
-			j.init()
+		bf := func(i int) {
+			cfg.BandWidthR[i].init()
 		}
-		for _, j := range cfg.ConnAmR {
-			j.init()
+		forall(bf, len(cfg.BandWidthR))
+		cf := func(i int) {
+			cfg.ConnAmR[i].init()
 		}
-		for _, j := range cfg.TimeRangeR {
-			j.clock = cfg.clock
+		forall(cf, len(cfg.ConnAmR))
+		tf := func(i int) {
+			cfg.TimeRangeR[i].clock = cfg.clock
 		}
+		forall(tf, len(cfg.TimeRangeR))
 
 		if e == nil {
 			cfg.crypt, e = NewCrypt()
@@ -71,25 +73,39 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 	if e == nil {
 		auth := ld.NewLdapWithAcc(cfg.AD.Addr, cfg.AD.Suff, cfg.AD.Bdn,
 			cfg.AD.User, cfg.AD.Pass)
-		for _, j := range cfg.SessionM {
-			initSM(j, cfg.crypt, auth)
+		inf := func(i int) {
+			initSM(cfg.SessionM[i], cfg.crypt, auth)
 		}
-		for i := 0; e == nil && i != len(cfg.GroupM); i++ {
-			j := cfg.GroupM[i]
-			e = initGrp(j, srchSI(cfg.SessionM), cfg.AD)
+		forall(inf, len(cfg.SessionM))
+		ib := func(i int) (b bool) {
+			e = initGrp(cfg.GroupM[i], srchSI(cfg.SessionM), cfg.AD)
+			b = e != nil
+			return
 		}
+		bLnSrch(ib, len(cfg.GroupM))
 	}
-	for i := 0; e == nil && i != len(cfg.DownR); i++ {
-		j := cfg.DownR[i]
-		e = initDwn(j, srchSI(cfg.SessionM), srchGM(cfg.GroupM))
+	if e == nil {
+		ib := func(i int) (b bool) {
+			e = initDwn(cfg.DownR[i], srchSI(cfg.SessionM), srchGM(cfg.GroupM))
+			b = e != nil
+			return
+		}
+		bLnSrch(ib, len(cfg.DownR))
 	}
-	for i := 0; e == nil && i != len(cfg.UserM); i++ {
-		j := cfg.UserM[i]
-		e = initUsrM(j, srchSI(cfg.SessionM))
+	if e == nil {
+		ib := func(i int) (b bool) {
+			e = initUsrM(cfg.UserM[i], srchSI(cfg.SessionM))
+			return
+		}
+		bLnSrch(ib, len(cfg.UserM))
 	}
-	for i := 0; e == nil && i != len(cfg.RangeIPM); i++ {
-		j := cfg.RangeIPM[i]
-		e = j.init()
+	if e == nil {
+		ib := func(i int) (b bool) {
+			e = cfg.RangeIPM[i].init()
+			b = e != nil
+			return
+		}
+		bLnSrch(ib, len(cfg.RangeIPM))
 	}
 	if e == nil {
 		e = initLg(cfg.Logger, srchSI(cfg.SessionM))
@@ -98,13 +114,18 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 		cfg.rspec = &simpleRSpec{
 			rules: make([][]rule, len(cfg.Rules)),
 		}
-		for i := 0; e == nil && i != len(cfg.Rules); i++ {
-			for j := 0; e == nil && j != len(cfg.Rules[i]); j++ {
+		ib := func(i int) (r bool) {
+			jb := func(j int) (b bool) {
 				var rl *rule
 				rl, e = cfg.initRule(&cfg.Rules[i][j])
 				cfg.rspec.add([]int{i, j}, rl)
+				b = e != nil
+				return
 			}
+			r, _ = bLnSrch(jb, len(cfg.Rules[i]))
+			return
 		}
+		bLnSrch(ib, len(cfg.Rules))
 	}
 	// initialization of:
 	// - clock
@@ -142,13 +163,11 @@ func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
 
 func srchSI(sm []*sessionIPM) (si srchIU) {
 	si = func(name string) (iu IPUser, e error) {
-		b, i := false, 0
-		for !b && i != len(sm) {
+		ib := func(i int) (b bool) {
 			b = sm[i].NameF == name
-			if !b {
-				i = i + 1
-			}
+			return
 		}
+		b, i := bLnSrch(ib, len(sm))
 		if b {
 			iu = sm[i]
 		} else {
@@ -161,13 +180,11 @@ func srchSI(sm []*sessionIPM) (si srchIU) {
 
 func srchGM(gm []*groupIPM) (su srchUG) {
 	su = func(name string) (ug usrGrp, e error) {
-		b, i := false, 0
-		for !b && i != len(gm) {
+		ib := func(i int) (b bool) {
 			b = gm[i].NameF == name
-			if !b {
-				i = i + 1
-			}
+			return
 		}
+		b, i := bLnSrch(ib, len(gm))
 		if b {
 			ug = gm[i].getOrUpdate
 		} else {
@@ -190,20 +207,21 @@ func (c *config) initRule(rl *jRule) (r *rule, e error) {
 	}
 	r.urlM, e = regexp.Compile(rl.URLM)
 	// search and initialize managers(ConsR and IPMatcher)
-
-	for i := 0; e == nil && i != len(rl.Spec.ConsR); i++ {
+	ib := func(i int) (b bool) {
 		name := rl.Spec.ConsR[i]
 		var v *mng
 		v, e = c.search(name, true, false, false)
 		if e == nil {
 			r.spec.Cr[i] = v.cr
 		}
+		b = e != nil
+		return
 	}
+	bLnSrch(ib, len(rl.Spec.ConsR))
 	// initialized r.spec.Cr ≡ e = nil
 	var v *mng
 	if e == nil {
 		v, e = c.search(rl.IPM, false, true, false)
-
 	}
 	if e == nil {
 		r.ipM = v.im
@@ -244,10 +262,11 @@ type nameSrchI func(string, int) (bool, *mng)
 
 func searchElm(es nameSrchI, n int) (r nameSrch) {
 	r = func(name string) (ok bool, v *mng) {
-		ok = false
-		for i := 0; !ok && i != n; i++ {
-			ok, v = es(name, i)
+		ib := func(i int) (b bool) {
+			b, v = es(name, i)
+			return
 		}
+		ok, _ = bLnSrch(ib, n)
 		return
 	}
 	return
@@ -386,10 +405,11 @@ func checkAdmin(secret string, c *Crypt, adms []string) (user string,
 	e error) {
 	user, e = c.Decrypt(secret)
 	if e == nil {
-		b := false
-		for i := 0; !b && i != len(adms); i++ {
+		ib := func(i int) (b bool) {
 			b = adms[i] == user
+			return
 		}
+		b, _ := bLnSrch(ib, len(adms))
 		if !b {
 			e = NoAdmin(user)
 		}
@@ -408,12 +428,16 @@ func NoCmd(name string) (e error) {
 }
 
 func (c *config) Persist(w io.Writer) (e error) {
-	for i, j := range c.rspec.rules {
-		for k, l := range j {
+	rf := func(i int) {
+		j := c.rspec.rules[i]
+		sr := func(k int) {
+			l := j[k]
 			r := l.toJRule()
 			c.Rules[i][k] = *r
 		}
+		forall(sr, len(j))
 	}
+	forall(rf, len(c.rspec.rules))
 	n := toml.NewEncoder(w)
 	e = n.Encode(c)
 	return
@@ -427,21 +451,27 @@ func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
 			ldap := ld.NewLdapWithAcc(c.AD.Addr, c.AD.Suff, c.AD.Bdn,
 				c.AD.User, c.AD.Pass)
 			// replace references
-			for i, j := range c.SessionM {
+			inf := func(i int) {
+				j := c.SessionM[i]
 				ns := newSessionIPM(j.NameF, c.Admins, c.crypt,
 					ldap)
 				c.SessionM[i] = ns
-				for _, k := range c.UserM {
-					if k.NameF == j.NameF {
-						k.iu = ns
+				uf := func(k int) {
+					l := c.UserM[k]
+					if l.NameF == j.NameF {
+						l.iu = ns
 					}
 				}
-				for _, k := range c.GroupM {
-					if k.NameF == j.NameF {
-						k.ldap = ldap
+				forall(uf, len(c.UserM))
+				gf := func(k int) {
+					l := c.GroupM[k]
+					if l.NameF == j.NameF {
+						l.ldap = ldap
 					}
 				}
+				forall(gf, len(c.GroupM))
 			}
+			forall(inf, len(c.SessionM))
 		case "get-ad":
 			var bs []byte
 			bs, e = json.Marshal(c.AD)
@@ -454,13 +484,11 @@ func (c *config) Exec(cmd *AdmCmd) (r string, e error) {
 			c.Admins = append(c.Admins, cmd.User)
 			// references updated since slices are reference types
 		case "del-admin":
-			b, i := false, 0
-			for !b && i != len(c.Admins) {
+			ib := func(i int) (b bool) {
 				b = c.Admins[i] == cmd.User
-				if !b {
-					i = i + 1
-				}
+				return
 			}
+			b, i := bLnSrch(ib, len(c.Admins))
 			if b {
 				c.Admins = append(c.Admins[:i], c.Admins[i+1:]...)
 			} else {

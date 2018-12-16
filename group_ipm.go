@@ -32,11 +32,11 @@ func (g *groupIPM) Match(ip string) (ok bool) {
 		ok = gs != nil
 	}
 	if ok {
-		i, match := 0, false
-		for !match && i != len(gs) {
-			match, i = gs[i] == g.Group, i+1
+		ib := func(i int) (b bool) {
+			b = gs[i] == g.Group
+			return
 		}
-		ok = match
+		ok, _ = bLnSrch(ib, len(gs))
 	}
 	return
 }

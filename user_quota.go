@@ -21,13 +21,13 @@ func newUsrQt(name string, qs map[string]uint64,
 	}
 	u = func(usr string) (r uint64) {
 		gs := ug(usr)
-		r = 0
-		for _, j := range gs {
-			v, ok := qsc.Load(j)
+		inf := func(i int) {
+			v, ok := qsc.Load(gs[i])
 			if ok {
 				r = r + v.(uint64)
 			}
 		}
+		forall(inf, len(gs))
 		return
 	}
 

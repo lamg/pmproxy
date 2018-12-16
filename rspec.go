@@ -41,9 +41,11 @@ func (r *rule) toJRule() (jr *jRule) {
 			ConsR:    make([]string, len(r.spec.Cr)),
 		},
 	}
-	for i, j := range r.spec.Cr {
+	inf := func(i int) {
+		j := r.spec.Cr[i]
 		jr.Spec.ConsR[i] = j.Name()
 	}
+	forall(inf, len(r.spec.Cr))
 	return
 }
 
@@ -69,14 +71,15 @@ type IPMatcher interface {
 func (s *simpleRSpec) Spec(t time.Time,
 	r *h.Request) (n *Spec, e error) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	for _, j := range s.rules {
-		b, k := true, 0
-		for b && k != len(j) {
-			b = j[k].unit == ((j[k].ipM == nil || j[k].ipM.Match(ip)) &&
-				(j[k].urlM == nil || j[k].urlM.MatchString(r.RequestURI)) &&
-				(j[k].span == nil || j[k].span.ContainsTime(t)))
-			k = k + 1
+	inf := func(l int) {
+		j := s.rules[l]
+		ib := func(i int) (b bool) {
+			b = j[i].unit == ((j[i].ipM == nil || j[i].ipM.Match(ip)) &&
+				(j[i].urlM == nil || j[i].urlM.MatchString(r.RequestURI)) &&
+				(j[i].span == nil || j[i].span.ContainsTime(t)))
+			return
 		}
+		b, k := bLnSrch(ib, len(j))
 		// b = all rules in j match the parameters
 		if b {
 			n = new(Spec)
@@ -93,6 +96,7 @@ func (s *simpleRSpec) Spec(t time.Time,
 			}
 		}
 	}
+	forall(inf, len(s.rules))
 	if len(n.Cr) == 0 || ((n.Iface == "") == (n.ProxyURL == "")) {
 		e = InvalidSpec()
 	}

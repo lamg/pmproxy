@@ -139,16 +139,21 @@ type rConn struct {
 func newRConn(cr []ConsR, c net.Conn) (r net.Conn, e error) {
 	var raddr string
 	raddr, _, e = net.SplitHostPort(c.RemoteAddr().String())
-	i, ok := 0, e == nil
-	for ok && i != len(cr) {
-		ok, i = cr[i].Open(raddr), i+1
+	if e == nil {
+		ib := func(i int) (b bool) {
+			b = !cr[i].Open(raddr)
+			return
+		}
+		b, _ := bLnSrch(ib, len(cr))
+		if !b {
+			// all cr[i].Open(raddr) return true
+			r = &rConn{cr: cr, Conn: c, raddr: raddr}
+		} else {
+			c.Close()
+			e = CannotOpen(raddr)
+		}
 	}
-	if ok {
-		r = &rConn{cr: cr, Conn: c, raddr: raddr}
-	} else {
-		c.Close()
-		e = CannotOpen(raddr)
-	}
+
 	return
 }
 
@@ -158,20 +163,23 @@ func CannotOpen(raddr string) (e error) {
 }
 
 func (r *rConn) Read(bs []byte) (n int, e error) {
-	i, ok := 0, true
-	for ok && i != len(r.cr) {
-		ok, i = r.cr[i].Can(r.raddr, len(bs)), i+1
+	ib := func(i int) (b bool) {
+		b = !r.cr[i].Can(r.raddr, len(bs))
+		return
 	}
+	b, _ := bLnSrch(ib, len(r.cr))
 	n = 0
-	if ok {
+	if !b {
+		// all r.cr[i].Can return true
 		n, e = r.Conn.Read(bs)
 	} else {
 		e = CannotConsume(r.raddr)
 	}
 	if n != 0 {
-		for i := 0; i != len(r.cr); i++ {
+		inf := func(i int) {
 			r.cr[i].UpdateCons(r.raddr, n)
 		}
+		forall(inf, len(r.cr))
 	}
 	return
 }
@@ -182,8 +190,9 @@ func CannotConsume(raddr string) (e error) {
 }
 
 func (r *rConn) Close() (e error) {
-	for i := 0; i != len(r.cr); i++ {
+	inf := func(i int) {
 		r.cr[i].Close(r.raddr)
 	}
+	forall(inf, len(r.cr))
 	return
 }
