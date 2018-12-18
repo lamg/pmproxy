@@ -87,6 +87,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - userIPM: user
 - show users the resources available for them
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
+- client login
 
 ## Commands accepted by managers
 
