@@ -1,0 +1,18 @@
+[ad]
+user = "luis.mendez"
+pass = "bla.123"
+addr = "ad.upr.edu.cu:636"
+bdn = "dc=upr,dc=edu,dc=cu"
+suff = "@upr.edu.cu"
+
+admins = ["luis.mendez"]
+
+dialTimeout = "10s"
+
+[sessionM]
+name = "sm"
+admins = ["luis.mendez"]
+
+[logger]
+ipUser = "sm"
+addr = ""

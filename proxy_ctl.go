@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"io"
 	"net"
 	h "net/http"
 	"time"
@@ -11,7 +12,7 @@ type ProxyCtl struct {
 	// contains the fields for initializing
 	// github.com/lamg/proxy.Proxy
 	PrxFls *SpecCtx
-	adm    Admin
+	adm    *config
 }
 
 // Admin is the resource specificator administrator
@@ -63,6 +64,11 @@ func (p *ProxyCtl) ServeHTTP(w h.ResponseWriter, r *h.Request) {
 	if e != nil {
 		h.Error(w, e.Error(), h.StatusBadRequest)
 	}
+}
+
+func (p *ProxyCtl) Persist(w io.Writer) (e error) {
+	e = p.adm.persist(w)
+	return
 }
 
 // AdmCmd is an administration command

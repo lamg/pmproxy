@@ -49,6 +49,6 @@ func login(c *cli.Context) (e error) {
 	}
 	var bs []byte
 	bs, e = json.Marshal(cmd)
-	fh.Post(bs, "pmproxy-url", nil)
+	fh.Post(bs, c.String("s"), nil)
 	return
 }

@@ -80,14 +80,15 @@ admin = admin_http_server http_request → (rules | state) spec.
 
 ## TODO
 - tight fields and methods visibility
-- automatic configuration persistence
 - the matcher can leave information provided by IPUser making it superflous
 - Information needed by
   - dwnConsR: user, group
   - userIPM: user
 - show users the resources available for them
+- not so strict error handling
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 - client login
+  - toml: cannot load TOML value of type map[string]interface {} into a Go slice
 
 ## Commands accepted by managers
 
@@ -137,3 +138,5 @@ admin = admin_http_server http_request → (rules | state) spec.
   - show:
     - params: secret
     - spec: sends a JSON representation of managers
+
+## Initial configuration example

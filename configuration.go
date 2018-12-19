@@ -427,7 +427,7 @@ func NoCmd(name string) (e error) {
 	return
 }
 
-func (c *config) Persist(w io.Writer) (e error) {
+func (c *config) persist(w io.Writer) (e error) {
 	rf := func(i int) {
 		j := c.rspec.rules[i]
 		sr := func(k int) {
