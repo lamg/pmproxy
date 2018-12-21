@@ -1,6 +1,6 @@
 [ad]
-user = "luis.mendez"
-pass = "bla.123"
+user = "gogo"
+pass = "xyz"
 addr = "ad.upr.edu.cu:636"
 bdn = "dc=upr,dc=edu,dc=cu"
 suff = "@upr.edu.cu"
