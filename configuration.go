@@ -3,9 +3,9 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"github.com/lamg/clock"
 	ld "github.com/lamg/ldaputil"
+	"github.com/spf13/viper"
 	"io"
 	"os"
 	"regexp"
@@ -39,125 +39,54 @@ type config struct {
 	UserM    []*userIPM    `toml: "userM`
 	RangeIPM []*rangeIPM   `toml: "rangeM"`
 
-	DialTimeout *time.Duration `toml: "dialTimeout"`
-	Logger      *logger        `toml:"logger"`
+	DialTimeout time.Duration `toml: "dialTimeout"`
+	Logger      *logger       `toml:"logger"`
 
 	crypt *Crypt
 	rspec *simpleRSpec
 	clock clock.Clock
 }
 
-func NewProxyCtl(rd io.Reader) (c *ProxyCtl, e error) {
-	cfg := new(config)
-	_, e = toml.DecodeReader(rd, cfg)
-	if e == nil {
-		cfg.clock = new(clock.OSClock)
-		bf := func(i int) {
-			cfg.BandWidthR[i].init()
-		}
-		forall(bf, len(cfg.BandWidthR))
-		cf := func(i int) {
-			cfg.ConnAmR[i].init()
-		}
-		forall(cf, len(cfg.ConnAmR))
-		tf := func(i int) {
-			cfg.TimeRangeR[i].clock = cfg.clock
-		}
-		forall(tf, len(cfg.TimeRangeR))
-
-		if e == nil {
-			cfg.crypt, e = NewCrypt()
-		}
+func NewProxyCtl(adm string) (c *config, e error) {
+	c = &config{
+		Admins: []string{adm},
 	}
-
-	if e == nil {
-		auth := ld.NewLdapWithAcc(cfg.AD.Addr, cfg.AD.Suff, cfg.AD.Bdn,
-			cfg.AD.User, cfg.AD.Pass)
-		inf := func(i int) {
-			initSM(cfg.SessionM[i], cfg.crypt, auth)
-		}
-		forall(inf, len(cfg.SessionM))
-		ib := func(i int) (b bool) {
-			e = initGrp(cfg.GroupM[i], srchSI(cfg.SessionM), cfg.AD)
-			b = e != nil
-			return
-		}
-		bLnSrch(ib, len(cfg.GroupM))
-	}
-	if e == nil {
-		ib := func(i int) (b bool) {
-			e = initDwn(cfg.DownR[i], srchSI(cfg.SessionM), srchGM(cfg.GroupM))
-			b = e != nil
-			return
-		}
-		bLnSrch(ib, len(cfg.DownR))
-	}
-	if e == nil {
-		ib := func(i int) (b bool) {
-			e = initUsrM(cfg.UserM[i], srchSI(cfg.SessionM))
-			return
-		}
-		bLnSrch(ib, len(cfg.UserM))
-	}
-	if e == nil {
-		ib := func(i int) (b bool) {
-			e = cfg.RangeIPM[i].init()
-			b = e != nil
-			return
-		}
-		bLnSrch(ib, len(cfg.RangeIPM))
-	}
-	if e == nil {
-		e = initLg(cfg.Logger, srchSI(cfg.SessionM))
-	}
-	if e == nil {
-		cfg.rspec = &simpleRSpec{
-			rules: make([][]rule, len(cfg.Rules)),
-		}
-		ib := func(i int) (r bool) {
-			jb := func(j int) (b bool) {
-				var rl *rule
-				rl, e = cfg.initRule(&cfg.Rules[i][j])
-				cfg.rspec.add([]int{i, j}, rl)
-				b = e != nil
-				return
-			}
-			r, _ = bLnSrch(jb, len(cfg.Rules[i]))
-			return
-		}
-		bLnSrch(ib, len(cfg.Rules))
-	}
-	// initialization of:
-	// - clock
-	// - crypt
-	//  - BandWidthR
-	//  - ConnAmR
-	//  - DownR
-	//    - SessionM
-	//    - GroupM
-	//      - SessionM
-	//  - NegR
-	//  - IdR
-	//  - TimeRangeR
-	//  - SessionM
-	//  - GroupM
-	//  - UserM
-	//  - RangeIPM
-	//  - Logger
-	//  - rspec
-
-	// rules added to cfg.rspec
-	if e == nil {
-		c = &ProxyCtl{
-			adm: cfg,
-			PrxFls: &SpecCtx{
-				clock:   cfg.clock,
-				rs:      cfg.rspec,
-				timeout: cfg.DialTimeout,
-				lg:      cfg.Logger,
+	viper.SetDefault("rules", [][]jRule{
+		{
+			Unit: true,
+			IPM:  "sm",
+			Spec: &JSPec{
+				Iface: "eth0",
+				ConsR: []string{"bw", "cn", "dw"},
 			},
-		}
+		},
+	})
+	viper.SetDefault("bandWidthR", []*bwCons{
+		newBwCons("bw", time.Millisecond, 1*MiB),
+	})
+	viper.SetDefault("connAmR", []*connCons{
+		{
+			NameF: "cn",
+			Limit: 100,
+		},
+	})
+	viper.SetDefault("sessionM", []*sessionIPM{
+		{
+			NameF:  "sm",
+			Admins: c.Admins,
+		},
+	})
+	viper.SetDefault("dialTimeout", 30*time.Second)
+
+	viper.SetConfigName("conf")
+	viper.AddConfigPath("/etc/pmproxy")
+	viper.AddConfigPath("$HOME/.config/pmproxy")
+	e = viper.ReadConfig()
+	if e != nil {
+		viper.SafeWriteConfig()
+		e = nil
 	}
+
 	return
 }
 

@@ -9,9 +9,12 @@ admins = ["luis.mendez"]
 
 dialTimeout = "10s"
 
+
 [sessionM]
-name = "sm"
-admins = ["luis.mendez"]
+	
+	[sesionM-1]
+	name = "sm"
+	admins = ["luis.mendez"]
 
 [logger]
 ipUser = "sm"

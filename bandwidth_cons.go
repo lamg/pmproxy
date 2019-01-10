@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+const (
+	KiB = 1024
+	MiB = 1024 * KiB
+)
+
 // bandwidth consumption limiter
 type bwCons struct {
 	NameF    string `json:"name"`

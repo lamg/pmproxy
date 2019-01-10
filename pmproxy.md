@@ -79,6 +79,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - reads a TOML file
 
 ## TODO
+- simpler configuration parsing with proper error reporting
 - tight fields and methods visibility
 - the matcher can leave information provided by IPUser making it superflous
 - Information needed by
