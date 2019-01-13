@@ -12,8 +12,8 @@ type logger struct {
 	cl     clock.Clock
 	sl     *syslog.Writer
 	iu     IPUser
-	IPUser string `json:"ipUser" toml:"ipUser"`
-	Addr   string `json:"addr" toml:"addr"`
+	IPUser string `json:"ipUser"`
+	Addr   string `json:"addr"`
 }
 
 func initLg(l *logger, si srchIU) (e error) {

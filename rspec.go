@@ -5,84 +5,55 @@ import (
 	"fmt"
 	"net"
 	h "net/http"
+	"net/url"
 	"regexp"
 	"time"
 
 	rt "github.com/lamg/rtimespan"
 )
 
-type simpleRSpec struct {
+type rspec struct {
 	rules [][]rule
+	ipm   func(string) (matcher, bool)
 }
 
 type rule struct {
-	unit bool
-	urlM *regexp.Regexp
-	span *rt.RSpan
-	ipM  IPMatcher
-	spec *Spec
+	Unit bool      `json:"unit"`
+	URLM string    `json:"urlm"`
+	Span *rt.RSpan `json:"span"`
+	IPM  string    `json:"ipm"`
+	Spec *spec     `json:"spec"`
 }
 
-func (r *rule) MarshalJSON() (bs []byte, e error) {
-	jr := r.toJRule()
-	bs, e = json.Marshal(jr)
-	return
-}
-
-func (r *rule) toJRule() (jr *jRule) {
-	jr = &jRule{
-		Unit: r.unit,
-		URLM: r.urlM.String(),
-		Span: r.span,
-		IPM:  r.ipM.Name(),
-		Spec: &JSpec{
-			Iface:    r.spec.Iface,
-			ProxyURL: r.spec.ProxyURL,
-			ConsR:    make([]string, len(r.spec.Cr)),
-		},
-	}
-	inf := func(i int) {
-		j := r.spec.Cr[i]
-		jr.Spec.ConsR[i] = j.Name()
-	}
-	forall(inf, len(r.spec.Cr))
-	return
-}
-
-type jRule struct {
-	Unit bool      `json:"unit" toml:"unit"`
-	URLM string    `json:"urlm" toml:"urlm"`
-	Span *rt.RSpan `json:"span" toml:"span"`
-	IPM  string    `json:"ipm"  toml:"ipm"`
-	Spec *JSpec    `json:"spec" toml:"spec"`
-}
-
-type JSpec struct {
-	Iface    string   `json:"iface"`
-	ProxyURL string   `json:"proxyURL"`
+type spec struct {
+	Iface    string `json:"iface"`
+	ProxyURL string `json:"proxyURL"`
+	proxyURL *url.URL
 	ConsR    []string `json:"consR"`
 }
 
-type IPMatcher interface {
-	Name() string
-	Match(string) bool
+func (s *spec) init() (e error) {
+	s.proxyURL, e = url.Parse(s.ProxyURL)
+	return
 }
 
-func (s *simpleRSpec) Spec(t time.Time,
-	r *h.Request) (n *Spec, e error) {
+func (s *rspec) spec(t time.Time,
+	r *h.Request) (n *spec, e error) {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	inf := func(l int) {
 		j := s.rules[l]
 		ib := func(i int) (b bool) {
-			b = j[i].unit == ((j[i].ipM == nil || j[i].ipM.Match(ip)) &&
-				(j[i].urlM == nil || j[i].urlM.MatchString(r.RequestURI)) &&
-				(j[i].span == nil || j[i].span.ContainsTime(t)))
+			ipm, ok := s.ipm(j[i].IPM)
+			b = (j[i].unit == (!ok || ipm.Match(ip))) &&
+				(j[i].urlM == nil ||
+					j[i].urlM.MatchString(r.RequestURI)) &&
+				(j[i].span == nil || j[i].span.ContainsTime(t))
 			return
 		}
 		b, k := bLnSrch(ib, len(j))
 		// b = all rules in j match the parameters
 		if b {
-			n = new(Spec)
+			n = new(spec)
 			// add Spec to n
 			sn := j[k].spec
 			if sn.Cr != nil {
@@ -91,13 +62,14 @@ func (s *simpleRSpec) Spec(t time.Time,
 			if sn.Iface != "" {
 				n.Iface = sn.Iface
 			}
-			if sn.ProxyURL != "" {
+			if sn.ProxyURL != nil {
 				n.ProxyURL = sn.ProxyURL
 			}
 		}
 	}
 	forall(inf, len(s.rules))
-	if len(n.Cr) == 0 || ((n.Iface == "") == (n.ProxyURL == "")) {
+	if len(n.Cr) == 0 ||
+		((n.Iface == "") == (n.ProxyURL == nil)) {
 		e = InvalidSpec()
 	}
 	return
@@ -113,7 +85,22 @@ func InvalidArgs(v interface{}) (e error) {
 	return
 }
 
-func (s *simpleRSpec) delete(args []int) (e error) {
+func (s *rspec) exec(c *AdmCmd) (r string, e error) {
+	switch c.Cmd {
+	case "add-rule":
+		e = rl.spec.init()
+		if e == nil {
+			e = c.rspec.add(cmd.Pos, rl)
+		}
+	case "del-rule":
+		e = c.rspec.delete(cmd.Pos)
+	case "show-rules":
+		r, e = c.rspec.show()
+	}
+	return
+}
+
+func (s *rspec) delete(args []int) (e error) {
 	argc := len(args)
 	if argc < len(s.rules) {
 		if argc == 1 {
@@ -132,7 +119,7 @@ func (s *simpleRSpec) delete(args []int) (e error) {
 	return
 }
 
-func (s *simpleRSpec) add(pos []int, rl *rule) (e error) {
+func (s *rspec) add(pos []int, rl *rule) (e error) {
 	if len(pos) == 1 {
 		if pos[0] == -1 {
 			s.rules = append(s.rules, []rule{*rl})
@@ -162,7 +149,7 @@ func (s *simpleRSpec) add(pos []int, rl *rule) (e error) {
 	return
 }
 
-func (s *simpleRSpec) show() (r string, e error) {
+func (s *rspec) show() (r string, e error) {
 	var bs []byte
 	bs, e = json.Marshal(s.rules)
 	if e == nil {
@@ -173,5 +160,19 @@ func (s *simpleRSpec) show() (r string, e error) {
 
 func IndexOutOfRange(i, n int) (e error) {
 	e = fmt.Errorf("Index %d out of range %d", i, n)
+	return
+}
+
+func (s *rspec) manager() (m *manager) {
+	name := "rules"
+	m = &manager{
+		name: name,
+		tỹpe: name,
+		adm:  s.exec,
+		toMap: func() (mp map[string]interface{}) {
+			// TODO
+			return
+		},
+	}
 	return
 }

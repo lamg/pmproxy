@@ -7,14 +7,14 @@ import (
 	"hash"
 )
 
-type Crypt struct {
+type crypt struct {
 	key   *rsa.PrivateKey
 	hs    hash.Hash
 	label []byte
 }
 
-func NewCrypt() (c *Crypt, e error) {
-	c = new(Crypt)
+func newCrypt() (c *crypt, e error) {
+	c = new(crypt)
 	c.key, e = rsa.GenerateKey(rand.Reader, 128)
 	if e == nil {
 		c.hs = sha512.New()
@@ -23,7 +23,7 @@ func NewCrypt() (c *Crypt, e error) {
 	return
 }
 
-func (c *Crypt) Encrypt(s string) (r string, e error) {
+func (c *crypt) Encrypt(s string) (r string, e error) {
 	var bs []byte
 	bs, e = rsa.EncryptOAEP(c.hs, rand.Reader, &c.key.PublicKey,
 		[]byte(s), c.label)
@@ -33,7 +33,7 @@ func (c *Crypt) Encrypt(s string) (r string, e error) {
 	return
 }
 
-func (c *Crypt) Decrypt(s string) (r string, e error) {
+func (c *crypt) Decrypt(s string) (r string, e error) {
 	var bs []byte
 	bs, e = rsa.DecryptOAEP(c.hs, rand.Reader, c.key, []byte(s),
 		c.label)

@@ -3,80 +3,36 @@
 PMProxy seen as a protocol, specified by its grammar:
 The "→" is a literal introduced for marking where ends input and starts output, it could have been introduced as literally "→", but a syntactic sugar was used instead since it is so common.
 
-```
+```ebnf
 pmproxy = proxy | admin.
 proxy = proxy_http_server http_request time state rules spec → (conn | http_response) state proxy.
 admin = admin_http_server http_request → (rules | state) spec.
 ```
 
-## File hierarchy
-
-- proxy_spec.go
-  - admin.go
-    - rspec.go
-      - session_ipm.go
-        - crypt.go
-  - json.go
-
 ## Type hierarchy
 
-- ProxyCtl
-  - clock.Clock
-  - RSpec
-    - Spec
-      - ConsR
-  - SpecCtx
-    - RSpec
-    - clock.Clock
-    - logger
-  - Admin
-    - AdmCmd
-
-- simpleRSpec
-  - Rule
-    - IPMatcher
-
-- sessionIPM
-  - Crypt
-  - IPMatcher
-  - Authenticator
-
-## Interface implementations
-- RSpec
-  - simpleRSPec (rspec.go)
-
-- Admin
-  - sessionIPM (session_ipm.go)
-  - simpleRSpec (rspec.go)
-  - config (configuration.go)
-  - userIPM (user_ipm.go)
-
-- IPMatcher
-  - sessionIPM (session_ipm.go)
-  - rangeIPM (range_ipm.go)
-  - groupIPM (group_ipm.go)
-  - userIPM (user_ipm.go)
-
-- IPUser
-  - sessionIPM
-
-- Authenticator
-  - Ldap (github.com/lamg/ldaputil)
-
-- fields for initializing github.com/lamg/proxy.Proxy
+- ProxyCtl (proxy_ctl.go)
   - SpecCtx (spec_conn.go)
+    - rspec
+  - config
+    - rspec
+    - admin
 
-- ConsR
-  - trCons (time_range_cons.go)
-  - bwCons (bandwidth_cons.go)
-  - dwnCons (download_cons.go)
-  - connCons (conn_amount_cons.go)
-  - idCons, negCons (id_neg_cons.go)
+- rspec (rspec.go)
+  - matcher
+  - consR
 
-## Initializers
+- matcher
+  - sessionIPM
+  - userIPM
+  - groupIPM
+  - rangeIPM
 
-- NewProxyCtl (configuration.go)
-  - reads a TOML file
+- consR
+  - bwCons
+  - connCons
+  - dwnCons
+  - trCons
 
 ## TODO
 - simpler configuration parsing with proper error reporting
@@ -89,7 +45,21 @@ admin = admin_http_server http_request → (rules | state) spec.
 - not so strict error handling
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 - client login
-  - toml: cannot load TOML value of type map[string]interface {} into a Go slice
+- implement NewProxyCtl:
+  - readAD
+  - readAdms
+  - readBwCons
+  - readConnCons
+  - readTimeout
+  - readDwnCons
+  - readLogger
+  - readRangeIPM
+  - readRspec
+  - readSessionIPM
+  - readUserIPM
+  - setDefaults
+- implement persist:
+- maybe instead of replacing references I can create rules with access to the context the managers are defined
 
 ## Commands accepted by managers
 

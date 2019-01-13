@@ -5,65 +5,71 @@ import (
 	"fmt"
 	"github.com/lamg/clock"
 	"net"
-	h "net/http"
+	"net/http"
 	"net/url"
 	"time"
 )
 
-// In this file the package proxy refers to github.com/lamg/proxy
-// package
+// In this file the package proxy refers to
+//github.com/lamg/proxy package
 
-// SpecCtx puts the correspondent *Spec to each *h.Request in the
-// context sent to DialContext
+// SpecCtx puts the correspondent *spec to each
+// req in the context sent to DialContext
 type SpecCtx struct {
-	rs      RSpec
+	rs      *rspec
 	clock   clock.Clock
-	timeout *time.Duration
+	timeout func() time.Timeout
 	lg      *logger
+	crs     func(string) (*consR, bool)
 }
+
+type req *http.Request
 
 type SpecKT string
 
 var SpecK = SpecKT("spec")
 
 type SpecV struct {
-	s   *Spec
+	s   *spec
 	err error
 }
 
-func (p *SpecCtx) AddCtxValue(r *h.Request) (cr *h.Request) {
+func (p *SpecCtx) AddCtxValue(r req) (cr req) {
 	tm := p.clock.Now()
-	s, e := p.rs.Spec(tm, r)
+	s, e := p.rs.spec(tm, r)
 	if e == nil {
 		e = p.lg.log(r)
 	}
 	ctx := r.Context()
-	nctx := context.WithValue(ctx, SpecK, &SpecV{s: s, err: e})
+	nctx := context.WithValue(ctx, SpecK,
+		&SpecV{s: s, err: e})
 	r.WithContext(nctx)
 	return
 }
 
 // Proxy is made to be used by the *h.Transport used as
 // h.RoundTripper by proxy.Proxy
-func (p *SpecCtx) Proxy(r *h.Request) (u *url.URL, e error) {
+func (p *SpecCtx) Proxy(r req) (u *url.URL,
+	e error) {
 	tm := p.clock.Now()
-	var s *Spec
+	var s *spec
 	s, e = p.rs.Spec(tm, r)
-	if e == nil && s.ProxyURL != "" {
-		u, e = url.Parse(s.ProxyURL)
+	if e == nil && s.proxyURL != nil {
+		u = s.proxyURL
 	}
 	return
 }
 
-// DialContext dials a connection according the *SpecV value
-// passed in context by SpecCtx.AddCtxValue. For working according
-// specification this function must be the DialContext of
-// proxy.Proxy, and also the DialContext of the *h.Transport
-// used as h.RoundTripper by proxy.Proxy
-func (p *SpecCtx) DialContext(ctx context.Context, network,
-	addr string) (c net.Conn, e error) {
+// DialContext dials a connection according the *SpecV
+// value
+// passed in context by SpecCtx.AddCtxValue. For working
+// according specification this function must be the
+// DialContext of proxy.Proxy, and also the DialContext of
+// the *h.Transport used as h.RoundTripper by proxy.Proxy
+func (p *SpecCtx) DialContext(ctx context.Context,
+	network, addr string) (c net.Conn, e error) {
 	v := ctx.Value(SpecK)
-	var s *Spec
+	var s *spec
 	if v != nil {
 		sv, ok := v.(*SpecV)
 		if ok {
@@ -76,10 +82,18 @@ func (p *SpecCtx) DialContext(ctx context.Context, network,
 	}
 	var n net.Conn
 	if e == nil {
-		n, e = dialIface(s.Iface, addr, *p.timeout)
+		n, e = dialIface(s.Iface, addr, p.timeout())
 	}
 	if e == nil {
-		c, e = newRConn(s.Cr, n)
+		cr := make([]*consR, 0, len(s.Cr))
+		inf := func(i int) {
+			cs, ok := p.crs(s.Cr[i])
+			if ok {
+				cr = append(cr, cs)
+			}
+		}
+		forall(inf, len(s.Cr))
+		c, e = newRConn(cr, n)
 	}
 	return
 }
@@ -109,7 +123,8 @@ func dialIface(iface, addr string,
 		} else {
 			e = NotLocalIP()
 		}
-		// { found an IP local address in laddr for dialing or error }
+		// { found an IP local address in laddr for
+		// dialing or error }
 	}
 	if e == nil {
 		tca := &net.TCPAddr{IP: la.IP}
@@ -131,17 +146,18 @@ func NotLocalIP() (e error) {
 // rConn is a restricted net connection by the consumption
 // restrictors slice
 type rConn struct {
-	cr []ConsR
+	cr []*consR
 	net.Conn
 	raddr string
 }
 
-func newRConn(cr []ConsR, c net.Conn) (r net.Conn, e error) {
+func newRConn(cr []*consR, c net.Conn) (r net.Conn,
+	e error) {
 	var raddr string
 	raddr, _, e = net.SplitHostPort(c.RemoteAddr().String())
 	if e == nil {
 		ib := func(i int) (b bool) {
-			b = !cr[i].Open(raddr)
+			b = !cr[i].open(raddr)
 			return
 		}
 		b, _ := bLnSrch(ib, len(cr))
@@ -164,7 +180,7 @@ func CannotOpen(raddr string) (e error) {
 
 func (r *rConn) Read(bs []byte) (n int, e error) {
 	ib := func(i int) (b bool) {
-		b = !r.cr[i].Can(r.raddr, len(bs))
+		b = !r.cr[i].can(r.raddr, len(bs))
 		return
 	}
 	b, _ := bLnSrch(ib, len(r.cr))
@@ -177,7 +193,7 @@ func (r *rConn) Read(bs []byte) (n int, e error) {
 	}
 	if n != 0 {
 		inf := func(i int) {
-			r.cr[i].UpdateCons(r.raddr, n)
+			r.cr[i].update(r.raddr, n)
 		}
 		forall(inf, len(r.cr))
 	}
