@@ -10,16 +10,16 @@ import (
 // downloaded data consumption limiter
 type dwnCons struct {
 	cl         clock.Clock
-	NameF      string `json:"name" toml:"name"`
-	IPUser     string `json:"ipUser" toml:"ipUser"`
+	Name       string `json:"name"`
+	IPUser     string `json:"ipUser"`
 	iu         IPUser
 	usrCons    *sync.Map
 	usrQt      usrQt
 	qtAdm      qtAdm
 	qtSer      usrQtSer
-	UserQt     *usrQtS       `json:"userQt" toml:"userQt"`
-	LastReset  time.Time     `json:"lastReset" toml:"lastReset"`
-	ResetCycle time.Duration `json:"resetCycle" toml:"resetCycle"`
+	UserQt     *usrQtS       `json:"userQt"`
+	LastReset  time.Time     `json:"lastReset"`
+	ResetCycle time.Duration `json:"resetCycle"`
 }
 
 type srchIU func(string) (IPUser, error)

@@ -8,17 +8,16 @@ import (
 )
 
 type sessionIPM struct {
-	NameF  string   `json:"name"   toml:"name"`
-	Admins []string `json:"admins" toml:"admins"`
+	Name string `json:"name"`
+	Auth string `json:"auth"`
 
+	admins   func() []string
 	sessions *sync.Map
-	crypt    *Crypt
-	auth     Authenticator
+	crypt    func() *crypt
+	auth     func() AuthAndNorm
 }
 
-type Authenticator interface {
-	AuthAndNorm(string, string) (string, error)
-}
+type AuthAndNorm func(string, string) (string, error)
 
 func initSM(s *sessionIPM, cr *Crypt, a Authenticator) {
 	s.sessions = new(sync.Map)

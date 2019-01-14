@@ -1,7 +1,6 @@
 package pmproxy
 
 import (
-	"github.com/spf13/viper"
 	"os"
 	"sync"
 )
@@ -28,6 +27,28 @@ func idMatch(s string) (b bool) {
 }
 
 type admin func(*AdmCmd) ([]byte, error)
+
+// AdmCmd is an administration command
+type AdmCmd struct {
+	Manager      string        `json:"mng"`
+	Cmd          string        `json:"cmd"`
+	User         string        `json:"user"`
+	Pass         string        `json:"pass"`
+	Pos          []int         `json:"pos"`
+	Rule         *rule         `json:"rule"`
+	Secret       string        `json:"secr"`
+	RemoteIP     string        `json:"remoteIP"`
+	MngName      string        `json:"mngName"`
+	MngType      string        `json:"mngType"`
+	Capacity     int64         `json:"capacity"`
+	FillInterval time.Duration `json:"fillInterval"`
+	IPUser       string        `json:"ipUser"`
+	Limit        uint64        `json:"limit"`
+	AD           *adConf       `json:"ad"`
+	DialTimeout  time.Duration `json:"dialTimeout"`
+	Group        string        `json:"group"`
+	IsAdmin      bool          `json:"isAdmin"`
+}
 
 // consR stands for consumption restrictor,
 // it restricts several aspects of a connection

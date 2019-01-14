@@ -7,9 +7,9 @@ import (
 
 // connection amount consumption limiter
 type connCons struct {
-	NameF    string `json:"name" toml:"name"`
+	Name     string `json:"name"`
 	ipAmount *sync.Map
-	Limit    uint32 `json:"limit" toml:"limit"`
+	Limit    uint32 `json:"limit"`
 }
 
 func (c *connCons) init() {

@@ -67,31 +67,56 @@ func setDefaults(adm string) (c *config) {
 	c = &config{
 		Admins: []string{adm},
 	}
-	viper.SetDefault("rules", [][]jRule{
+	viper.SetDefault("rule", []map[string]interface{}{
 		{
-			Unit: true,
-			IPM:  "sm",
-			Spec: &JSPec{
-				Iface: "eth0",
-				ConsR: []string{"bw", "cn", "dw"},
+			"unit": true,
+			"pos":  0,
+			"ipm":  "sm",
+			"spec": map[string]interface{}{
+				"iface": "eth0",
+				"consR": []string{"dw", "cn", "bw"},
 			},
 		},
 	})
-	viper.SetDefault("bandWidthR", []*bwCons{
-		newBwCons("bw", time.Millisecond, 1*MiB),
-	})
-	viper.SetDefault("connAmR", []*connCons{
+	viper.SetDefault("bwCons", []map[string]interface{}{
 		{
-			NameF: "cn",
-			Limit: 100,
+			"name":     "bw",
+			"capacity": 100,
+			"duration": time.Second.String(),
 		},
 	})
-	viper.SetDefault("sessionM", []*sessionIPM{
+	viper.SetDefault("connCons", []map[string]interface{}{
 		{
-			NameF:  "sm",
-			Admins: c.Admins,
+			"name":  "cn",
+			"limit": 100,
 		},
 	})
-	viper.SetDefault("dialTimeout", 30*time.Second)
+	viper.SetDefault("dwCons", []map[string]interface{}{
+		{
+			"name":       "dw",
+			"ipUser":     "sm",
+			"userQt":     "qt",
+			"lastReset":  "2019-01-12 00:00:00-05:00",
+			"resetCycle": "168h",
+		},
+	})
+	viper.SetDefault("dialTimeout", "30s")
+	viper.SetDefault("sessionIPM", []map[string]interface{}{
+		{
+			"name": "sm",
+			"auth": "ad",
+		},
+	})
+	viper.SetDefault("userDB", []map[string]interface{}{
+		{
+			"name": "ad",
+			"type": "AD",
+			"addr": "ad.upr.edu.cu:636",
+			"bdn":  "dc=upr,dc=edu,dc=cu",
+			"suff": "@upr.edu.cu",
+			"user": "xyz",
+			"pass": "abc",
+		},
+	})
 	return
 }

@@ -12,7 +12,7 @@ type ProxyCtl struct {
 	// contains the fields for initializing
 	// github.com/lamg/proxy.Proxy
 	PrxFls *SpecCtx
-	adm    *config
+	adm    *globalAdm
 }
 
 // ServeHTTP is the handler that implements the
@@ -42,26 +42,4 @@ func (p *ProxyCtl) ServeHTTP(w h.ResponseWriter,
 func (p *ProxyCtl) Persist(w io.Writer) (e error) {
 	e = p.adm.persist(w)
 	return
-}
-
-// AdmCmd is an administration command
-type AdmCmd struct {
-	Manager      string        `json:"mng"`
-	Cmd          string        `json:"cmd"`
-	User         string        `json:"user"`
-	Pass         string        `json:"pass"`
-	Pos          []int         `json:"pos"`
-	Rule         *rule         `json:"rule"`
-	Secret       string        `json:"secr"`
-	RemoteIP     string        `json:"remoteIP"`
-	MngName      string        `json:"mngName"`
-	MngType      string        `json:"mngType"`
-	Capacity     int64         `json:"capacity"`
-	FillInterval time.Duration `json:"fillInterval"`
-	IPUser       string        `json:"ipUser"`
-	Limit        uint64        `json:"limit"`
-	AD           *adConf       `json:"ad"`
-	DialTimeout  time.Duration `json:"dialTimeout"`
-	Group        string        `json:"group"`
-	IsAdmin      bool          `json:"isAdmin"`
 }

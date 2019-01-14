@@ -3,13 +3,6 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/lamg/clock"
-	ld "github.com/lamg/ldaputil"
-	"github.com/spf13/viper"
-	"io"
-	"os"
-	"regexp"
-	"sync"
 	"time"
 )
 
