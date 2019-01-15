@@ -58,8 +58,7 @@ admin = admin_http_server http_request → (rules | state) spec.
   - readSessionIPM
   - readUserIPM
   - setDefaults
-- implement persist:
-- maybe instead of replacing references I can create rules with access to the context the managers are defined
+- NewProxyCtl
 
 ## Commands accepted by managers
 

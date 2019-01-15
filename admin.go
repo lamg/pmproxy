@@ -16,7 +16,9 @@ type manager struct {
 	cons  *consR
 	mtch  matcher
 	adm   admin
-	toMap func() map[string]interface{}
+	toSer func() interface{}
+	// to serializable by viper type
+	// like []map[string]interface{} or map[string]interface{}
 }
 
 type matcher func(string) bool
@@ -102,19 +104,16 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 }
 
 func (g *globAdm) persist(w io.Writer) (e error) {
-	sm := make(map[string][]map[string]interface{})
+	sm := make(map[string][]interface{})
+	// for TOML array of tables
 	g.mngs.Range(func(k, v interface{}) (ok bool) {
 		ks, vm := k.(string), v.(*manager)
-		mp := vm.toMap()
+		mp := vm.toSer()
 		if vm.name == vm.tỹpe {
 			viper.Set(ks, mp)
 		} else {
-			n := sm[vm.tỹpe]
-			if n == nil {
-				sm[vm.tỹpe] = []map[string]interface{}{mp}
-			} else {
-				sm[vm.tỹpe] = append(sm[vm.tỹpe], mp)
-			}
+			// vm is part of an array of tables
+			sm[vm.tỹpe] = append(sm[vm.tỹpe], mp)
 		}
 		return
 	})

@@ -3,19 +3,122 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
+	rt "github.com/lamg/rtimespan"
+	"github.com/spf13/cast"
 	"net"
 	h "net/http"
 	"net/url"
 	"regexp"
 	"time"
-
-	rt "github.com/lamg/rtimespan"
 )
 
 type rspec struct {
 	rules [][]rule
-	ipm   func(string) (matcher, bool)
+	ipm   nameMatcher
 }
+
+type nameMatcher func(string) (matcher, bool)
+
+func newRspec(rm []map[string]interface{},
+	ipm nameMatcher) (r *rspec, e error) {
+	r = &rspec{
+		ipm:   ipm,
+		rules: make([][]rule, 0),
+	}
+	inf := func(i int) (ok bool, i int) {
+		mp := rm[i]
+		rl := new(rule)
+		rl.Unit, e = cast.ToBool(mp[unitK])
+		if e == nil {
+			rl.URLM, e = cast.ToString(mp[urlmK])
+		}
+		if e == nil {
+			rl.IPM, e = cast.ToString(mp[ipmK])
+		}
+		var pmp map[string]interface{} // map representing rt.RSpan
+		if e == nil {
+			pmp, e = cast.ToStringMap(mp[spanK])
+		}
+		var tms string
+		if e == nil {
+			rl.Span = new(rt.RSpan)
+			tms, e = cast.ToString(pmp[starK])
+		}
+		if e == nil {
+			rl.Span.Start, e = time.Parse(time.RFC3339, tms)
+		}
+		var drs string
+		if e == nil {
+			drs, e = cast.ToString(pmp[activeK])
+		}
+		if e == nil {
+			rl.Span.Active, e = time.ParseDuration(drs)
+		}
+		var total string
+		if e == nil {
+			total, e = cast.ToString(pmp[totalK])
+		}
+		if e == nil {
+			rl.Span.Total, e = time.ParseDuration(total)
+		}
+		if e == nil {
+			rl.Span.Times, e = cast.ToInt(pmp[timesK])
+		}
+		if e == nil {
+			rl.Span.Infinite, e = cast.ToBool(pmp[infiniteK])
+		}
+		if e == nil {
+			rl.Span.AllTime, e = cast.ToBool(pmp[allTimeK])
+		}
+		var smp map[string]interface{} // map representinng spec
+		if e == nil {
+			smp, e = cast.ToStringMap(mp[specK])
+		}
+		if e == nil {
+			rl.Spec = new(rt.Spec)
+			rl.Spec.Iface, e = cast.ToString(smp[ifaceK])
+		}
+		if e == nil {
+			rl.Spec.ProxyURL, e = cast.ToString(smp[proxyURLK])
+		}
+		if e == nil {
+			rl.Spec.ConsR, e = cast.ToStringSlice(smp[consRK])
+		}
+		var pos int
+		if e == nil {
+			pos, e = cast.ToInt(mp[posK])
+		}
+		if e == nil {
+			if pos >= len(r.rules) {
+				nl := pos - len(r.rules)
+				nrl := make([][]rule, nl+1)
+				r.rules = append(r.rules, nrl...)
+			}
+			r.rules[pos] = append(r.rules[pos], rl)
+		}
+		ok = e != nil
+	}
+	bLnSrch(inf, len(rm))
+	return
+}
+
+const (
+	unitK     = "unit"
+	urlmK     = "urlm"
+	impK      = "ipm"
+	specK     = "spec"
+	startK    = "start"
+	activeK   = "active"
+	totalK    = "total"
+	timesK    = "times"
+	infiniteK = "infinite"
+	allTimeK  = "allTime"
+	spanK     = "span"
+	ifaceK    = "iface"
+	proxyURLK = "proxyURL"
+	consRK    = "consR"
+	posK      = "pos"
+)
 
 type rule struct {
 	Unit bool      `json:"unit"`
@@ -169,8 +272,35 @@ func (s *rspec) manager() (m *manager) {
 		name: name,
 		tỹpe: name,
 		adm:  s.exec,
-		toMap: func() (mp map[string]interface{}) {
-			// TODO
+		toSer: func() (mp interface{}) {
+			mp = make([]map[string]interface{}, 0)
+			inf := func(i int) {
+				inf0 := func(j int) {
+					rl := s.rules[i][j]
+					// TODO careful with nil references
+					rmap = map[string]interface{}{
+						unitK: rl.Unit,
+						posk:  i,
+						urlmK: rl.URLM,
+						impK:  rl.IPM,
+						spanK: map[string]interface{}{
+							startK:    rl.Span.Start.String(),
+							activeK:   rl.Span.Active.String(),
+							totalK:    rl.Span.Total.String(),
+							infiniteK: rl.Span.Infinite,
+							allTimeK:  rl.Span.AllTime,
+						},
+						spec: map[string]interface{}{
+							ifaceK:    rl.Spec.Iface,
+							proxyURLK: rl.Spec.ProxyURL,
+							consRK:    rl.Spec.ConsR,
+						},
+					}
+					mp = append(mp, rmap)
+				}
+				forall(inf0, len(s.rules[i]))
+			}
+			forall(inf, len(s.rules))
 			return
 		},
 	}
