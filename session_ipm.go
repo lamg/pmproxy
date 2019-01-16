@@ -14,13 +14,15 @@ type sessionIPM struct {
 	admins   func() []string
 	sessions *sync.Map
 	crypt    func() *crypt
-	auth     func() AuthAndNorm
+	auth     func() authNorm
+	grps     func(string) ([]string, error)
+	grpCache *sync.Map
 }
 
-type AuthAndNorm func(string, string) (string, error)
+type authNorm func(string, string) (string, error)
 
-func initSM(s *sessionIPM, cr *Crypt, a Authenticator) {
-	s.sessions = new(sync.Map)
+func initSM(s *sessionIPM, cr *Crypt, a authNorm) {
+	s.sessions, s.grpCache = new(sync.Map), new(sync.Map)
 	s.crypt = cr
 	s.auth = a
 }

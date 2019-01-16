@@ -12,19 +12,65 @@ type connCons struct {
 	Limit    uint32 `json:"limit"`
 }
 
-func (c *connCons) init() {
+func newConnCons(name string, limit uint32) (c *connCons) {
+	c = &connCons{
+		Name:  name,
+		Limit: limit,
+	}
 	c.ipAmount = new(sync.Map)
-}
-
-// ConsR implementation
-
-func (c *connCons) Open(ip string) (ok bool) {
-	ok = c.canInc(ip, true)
 	return
 }
 
-func (c *connCons) Can(ip string, n int) (ok bool) {
-	ok = c.canInc(ip, false)
+func (c *connCons) manager() (m *manager) {
+	cr = consR{
+		open: func(i ip) (ok bool) {
+			ok = c.canInc(i, true)
+			return
+		},
+		can: func(i ip, d download) (ok bool) {
+			ok = c.canInc(i, false)
+			return
+		},
+		update: func(i ip, d download) {
+			u, _ := c.ipAmount.Load(i)
+			c.ipAmount.Store(i, u.(uint32)+1)
+		},
+		close: func(i ip) {
+			u, _ := c.ipAmount.Load(i)
+			c.ipAmount.Store(i, u.(uint32)-1)
+		},
+	}
+	m = &manager{
+		name: c.Name,
+		tỹpe: "connCons",
+		mtch: idMatch,
+		cons: cr,
+		adm: func(a *AdmCmd) (bs []byte, e error) {
+			switch a.Cmd {
+			case "get-limit":
+				bs = []byte(fmt.Sprintf("%d", c.Limit))
+			case "set-limit":
+				c.Limit = a.Limit
+			case "show":
+				v, ok := c.ipAmount.Load(cmd.RemoteIP)
+				if ok {
+					bs = []byte(fmt.Sprintf("%d", v))
+				} else {
+					e = NoEntry(cmd.RemoteIP)
+				}
+			default:
+				e = NoCmd(c.Cmd)
+			}
+			return
+		},
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				limitK: c.Limit,
+				nameK:  c.Name,
+			}
+			return
+		},
+	}
 	return
 }
 
@@ -42,42 +88,7 @@ func (c *connCons) canInc(ip string, increase bool) (ok bool) {
 	return
 }
 
-func (c *connCons) UpdateCons(ip string, n int) {
-	u, _ := c.ipAmount.Load(ip)
-	c.ipAmount.Store(ip, u.(uint32)+1)
-}
-
-func (c *connCons) Close(ip string) {
-	u, _ := c.ipAmount.Load(ip)
-	c.ipAmount.Store(ip, u.(uint32)-1)
-}
-
-func (c *connCons) Name() (r string) {
-	r = c.NameF
-	return
-}
-
-// end
-
-// Admin implementation
-
-func (c *connCons) Exec(cmd *AdmCmd) (r string, e error) {
-	if cmd.Cmd == "show" {
-		v, ok := c.ipAmount.Load(cmd.RemoteIP)
-		if ok {
-			r = fmt.Sprintf("%d", v)
-		} else {
-			e = NoEntry(cmd.RemoteIP)
-		}
-	} else {
-		e = NoCmd(cmd.Cmd)
-	}
-	return
-}
-
 func NoEntry(ip string) (e error) {
 	e = fmt.Errorf("No entry with key %s", ip)
 	return
 }
-
-// end

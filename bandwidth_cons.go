@@ -12,7 +12,7 @@ const (
 
 // bandwidth consumption limiter
 type bwCons struct {
-	NameF    string `json:"name"`
+	Name     string `json:"name"`
 	rl       *rl.Bucket
 	Duration time.Duration `json:"duration"`
 	Capacity int64         `json:"capacity"`
@@ -21,7 +21,7 @@ type bwCons struct {
 func newBwCons(name string, interval time.Duration,
 	capacity int64) (bw *bwCons) {
 	bw = &bwCons{
-		NameF:    name,
+		Name:     name,
 		rl:       rl.NewBucket(interval, capacity),
 		Duration: interval,
 		Capacity: capacity,
@@ -33,37 +33,52 @@ func (b *bwCons) init() {
 	b.rl = rl.NewBucket(b.Duration, b.Capacity)
 }
 
-// ConsR implementation
+func (b *bwCons) manager() (m *manager) {
+	c := &consR{
+		open: func(i ip) (ok bool) {
+			ok = true
+			return
+		},
+		can: func(i ip, d download) (ok bool) {
+			b.rl.Wait(int64(n))
+			ok = true
+			return
+		},
+		update: func(i ip, d download) {
 
-func (b *bwCons) Open(ip string) (ok bool) {
-	ok = true
-	return
-}
+		},
+		close: func(i ip) {
 
-func (b *bwCons) Can(ip string, n int) (ok bool) {
-	b.rl.Wait(int64(n))
-	ok = true
-	return
-}
-
-func (b *bwCons) UpdateCons(ip string, n int) {
-	return
-}
-
-func (b *bwCons) Close(ip string) {
-}
-
-func (b *bwCons) Name() (r string) {
-	r = b.NameF
-	return
-}
-
-// end
-
-// Admin implementation
-
-func (b *bwCons) Exec(cmd *AdmCmd) (r string, e error) {
-	// the user must delete this manager,
-	// instead of trying to change it
+		},
+	}
+	m = &manager{
+		name:    b.Name,
+		tỹpe:    "bwCons",
+		consR:   c,
+		matcher: idMatch,
+		adm: func(a *AdmCmd) (bs []byte, e error) {
+			switch a.Cmd {
+			case "set-duration":
+				b.Duration = a.FillInterval
+			case "get-duration":
+				bs = []byte(b.Duration.String())
+			case "set-capacity":
+				b.Capacity = a.Capacity
+			case "get-capacity":
+				bs = []byte(strconv.FormatInt(b.Capacity, 10))
+			default:
+				e = NoCmd(a.Cmd)
+			}
+			return
+		},
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				nameK:     b.Name,
+				durationK: b.Duration.String(),
+				capacityK: b.Capacity,
+			}
+			return
+		},
+	}
 	return
 }

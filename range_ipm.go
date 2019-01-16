@@ -5,9 +5,9 @@ import (
 )
 
 type rangeIPM struct {
-	rg    *net.IPNet
-	CIDR  string `json:"cidr" toml:"cidr"`
-	NameF string `json:"name" toml:"name"`
+	rg   *net.IPNet
+	CIDR string `json:"cidr"`
+	Name string `json:"name"`
 }
 
 func newRangeIPM(cidr string, name string) (m *rangeIPM, e error) {
@@ -24,17 +24,35 @@ func (m *rangeIPM) init() (e error) {
 	return
 }
 
-func (m *rangeIPM) Match(ip string) (ok bool) {
-	pip := net.ParseIP(ip)
-	ok = pip != nil && m.rg.Contains(pip)
-	return
-}
-
-func (m *rangeIPM) Name() (r string) {
-	r = m.NameF
-	return
-}
-
-func (m *rangeIPM) Exec(cmd *AdmCmd) (r string, e error) {
+func (r *rangeIPM) manager() (m *manager) {
+	m = &manager{
+		name: r.Name,
+		tỹpe: "rangeIPM",
+		cons: idConsR(),
+		adm: func(c *AdmCmd) (bs []byte, e error) {
+			switch c.Cmd {
+			case "get-cidr":
+				bs = []byte(r.CIDR)
+			case "set-cidr":
+				r.CIDR = c.CIDR
+				e = m.init()
+			default:
+				e = NoCmd(c.Cmd)
+			}
+			return
+		},
+		mtch: func(i string) (ok bool) {
+			pip := net.ParseIP(ip)
+			ok = pip != nil && m.rg.Contains(pip)
+			return
+		},
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				nameK: r.Name,
+				cidrK: r.CIDR,
+			}
+			return
+		},
+	}
 	return
 }

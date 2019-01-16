@@ -45,20 +45,11 @@ admin = admin_http_server http_request → (rules | state) spec.
 - not so strict error handling
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 - client login
-- implement NewProxyCtl:
-  - readAD
-  - readAdms
-  - readBwCons
-  - readConnCons
-  - readTimeout
-  - readDwnCons
-  - readLogger
-  - readRangeIPM
-  - readRspec
-  - readSessionIPM
-  - readUserIPM
-  - setDefaults
 - NewProxyCtl
+  - implementation of manager
+  - sessionIPM wip
+- Test "github.com/juju/ratelimit"
+- Build proxy with fasthttp
 
 ## Commands accepted by managers
 

@@ -53,7 +53,6 @@ func (c *config) exec(cmd *AdmCmd) (bs []byte, e error) {
 			e = NoCmd(cmd.Cmd)
 		}
 	}
-
 	return
 }
 

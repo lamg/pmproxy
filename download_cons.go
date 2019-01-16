@@ -43,86 +43,88 @@ func initDwn(d *dwnCons, si srchIU, su srchUG) (e error) {
 
 // ConsR implementation
 
-func (d *dwnCons) Open(ip string) (ok bool) {
-	// the reset cycle property is maintained on demand, rather than
-	// at regular time lapses
-	d.keepResetCycle()
+func (d *dwnCons) manager() (m *manager) {
+	m = &manager{
+		name: d.Name,
+		cons: &consR{
+			open: func(i ip) (ok bool) {
+				// the reset cycle property is maintained on demand,
+				// rather than at regular time lapses
+				d.keepResetCycle()
 
-	cons := uint64(0)
-	user := d.iu.User(ip)
-	if user != "" {
-		d.usrCons.LoadOrStore(user, cons)
-	}
-	ok = true
-	return
-}
-
-func (d *dwnCons) Can(ip string, n int) (ok bool) {
-	user := d.iu.User(ip)
-	ok = false
-	if user != "" {
-		cons, b := d.usrCons.Load(user)
-		limit := d.usrQt(user)
-		ok = b && cons.(uint64) <= limit
-	}
-	return
-}
-
-func (d *dwnCons) UpdateCons(ip string, n int) {
-	user := d.iu.User(ip)
-	u, ok := d.usrCons.Load(user)
-	if ok {
-		cons := u.(uint64)
-		d.usrCons.Store(user, cons+uint64(n))
-	}
-}
-
-func (d *dwnCons) Close(ip string) {
-
-}
-
-func (d *dwnCons) Name() (r string) {
-	r = d.NameF
-	return
-}
-
-// end
-
-// Admin implementation
-
-func (d *dwnCons) Exec(cmd *AdmCmd) (r string, e error) {
-	if cmd.Cmd == "show-cons" {
-		v, ok := d.usrCons.Load(cmd.User)
-		if ok {
-			r = fmt.Sprintf("%d", v)
-		} else {
-			e = NoEntry(cmd.User)
-		}
-	} else if cmd.IsAdmin && cmd.Cmd == "reset-cons" {
-		if cmd.IsAdmin {
-			_, ok := d.usrCons.Load(cmd.User)
-			if ok {
-				d.usrCons.Store(cmd.User, uint64(0))
-			} else {
-				e = NoEntry(cmd.User)
+				cons := uint64(0)
+				user := d.iu.User(ip)
+				if user != "" {
+					d.usrCons.LoadOrStore(user, cons)
+				}
+				ok = true
+				return
+			},
+			can: func(i ip, d download) (ok bool) {
+				user := d.iu.User(ip)
+				ok = false
+				if user != "" {
+					cons, b := d.usrCons.Load(user)
+					limit := d.usrQt(user)
+					ok = b && cons.(uint64) <= limit
+				}
+				return
+			},
+			update: func(i ip, d download) {
+				user := d.iu.User(ip)
+				u, ok := d.usrCons.Load(user)
+				if ok {
+					cons := u.(uint64)
+					d.usrCons.Store(user, cons+uint64(n))
+				}
+			},
+			close: func(i ip) {},
+		},
+		mtch: idMatch,
+		adm: func(c *AdmCmd) (bs []byte, e error) {
+			switch c.Cmd {
+			case "show-cons":
+				v, ok := d.usrCons.Load(cmd.User)
+				if ok {
+					r = fmt.Sprintf("%d", v)
+				} else {
+					e = NoEntry(cmd.User)
+				}
+			case "reset-cons":
+				if cmd.IsAdmin {
+					_, ok := d.usrCons.Load(cmd.User)
+					if ok {
+						d.usrCons.Store(cmd.User, uint64(0))
+					} else {
+						e = NoEntry(cmd.User)
+					}
+				}
+			case "show-quota-user":
+				r, e = d.qtAdm(true, false, false, false, cmd.User,
+					"", 0)
+			case "set-quota-group":
+				r, e = d.qtAdm(false, false, true, false, "",
+					cmd.Group, cmd.Limit)
+				d.UserQt = d.qtSer()
+			case "del-group":
+				r, e = d.qtAdm(false, false, false, true, "",
+					cmd.Group, 0)
+				d.UserQt = d.qtSer()
+			default:
+				e = NoCmd(c.Cmd)
 			}
-		}
-	} else if cmd.IsAdmin && cmd.Cmd == "reset-all" {
-		// race condition with ConsR implementation?
-		d.usrCons = new(sync.Map)
-	} else if cmd.IsAdmin && cmd.Cmd == "show-quota-user" {
-		r, e = d.qtAdm(true, false, false, false, cmd.User, "", 0)
-	} else if cmd.Cmd == "show-quota-group" {
-		r, e = d.qtAdm(false, true, false, false, "", cmd.Group, 0)
-	} else if cmd.IsAdmin && cmd.Cmd == "set-quota-group" {
-		r, e = d.qtAdm(false, false, true, false, "", cmd.Group,
-			cmd.Limit)
-		d.UserQt = d.qtSer()
-	} else if cmd.IsAdmin && cmd.Cmd == "del-group" {
-		r, e = d.qtAdm(false, false, false, true, "", cmd.Group, 0)
-		d.UserQt = d.qtSer()
-	} else {
-		e = NoCmd(cmd.Cmd)
+			return
+		},
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				nameK:      d.Name,
+				ipUserK:    d.IPUser,
+				userQtK:    d.usrQtS.Name,
+				lastResetK: d.LastReset.String(),
+				resetCycle: d.ResetCycle.String(),
+			}
+			return
+		},
 	}
 	return
 }

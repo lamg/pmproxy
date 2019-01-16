@@ -2,75 +2,60 @@ package pmproxy
 
 import (
 	"sync"
-
-	ld "github.com/lamg/ldaputil"
 )
 
 type groupIPM struct {
-	NameF  string `json:"name" toml:"name"`
-	Group  string `json: "group" toml: "group"`
-	IPUser string `json: "ipUser" toml: "ipUser"`
-	ipUser IPUser
-	ldap   *ld.Ldap
-	cache  *sync.Map
+	Name  string `json:"name"`
+	Group string `json: "group"`
+	IPGrp string `json: "ipGrp"`
+	ipGS  func(string) (ipGrp, bool)
 }
 
-func initGrp(g *groupIPM, si srchIU, ad *adConf) (e error) {
-	g.ldap = ld.NewLdapWithAcc(ad.Addr, ad.Suff, ad.Bdn,
-		ad.User, ad.Pass)
-	g.cache = new(sync.Map)
-	g.ipUser, e = si(g.IPUser)
-	return
-}
+type ipGrp func(ip) ([]string, error)
 
-func (g *groupIPM) Match(ip string) (ok bool) {
-	user := g.ipUser.User(ip)
-	ok = user != ""
-	var gs []string
-	if ok {
-		gs = g.getOrUpdate(user)
-		ok = gs != nil
-	}
-	if ok {
-		ib := func(i int) (b bool) {
-			b = gs[i] == g.Group
+func (g *groupIPM) manager() (m *manager) {
+	m = &manager{
+		name: g.Name,
+		cons: idCons,
+		adm: func(c *AdmCmd) (bs []byte, e error) {
+			switch c.Cmd {
+			case "set-group":
+				g.Group = c.Group
+			case "get-group":
+				bs = []byte(g.Group)
+			case "set-ipGrp":
+				g.IPGrp = c.MngName
+			case "get-ipGrp":
+				bs = []byte(g.IPGrp)
+			default:
+				e = NoCmd(c.Cmd)
+			}
 			return
-		}
-		ok, _ = bLnSrch(ib, len(gs))
+		},
+		mtch: func(i ip) (ok bool) {
+			ig, ok := g.ipGS(g.IPGrp)
+			var gs []string
+			if ok {
+				gs, e := ig(ip)
+				ok = e == nil
+			}
+			if ok {
+				ib := func(i int) (b bool) {
+					b = gs[i] == g.Group
+					return
+				}
+				ok, _ = bLnSrch(ib, len(gs))
+			}
+			return
+		},
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				nameK:  g.Name,
+				groupK: g.Group,
+				ipGrpK: g.IPGrp,
+			}
+			return
+		},
 	}
-	return
-}
-
-type usrGrp func(string) []string
-
-func (g *groupIPM) getOrUpdate(user string) (groups []string) {
-	gs, ok := g.cache.Load(user)
-	if !ok {
-		rec, e := g.ldap.FullRecordAcc(user)
-		if e == nil {
-			groups, e = g.ldap.MembershipCNs(rec)
-		}
-		if e == nil {
-			g.cache.Store(user, groups)
-		}
-		if e != nil {
-			groups = nil
-		}
-	} else {
-		groups = gs.([]string)
-	}
-	return
-}
-
-func (g *groupIPM) clearCache(user string) {
-	g.cache.Delete(user)
-}
-
-func (g *groupIPM) Exec(cmd *AdmCmd) (r string, e error) {
-	return
-}
-
-func (g *groupIPM) Name() (r string) {
-	r = g.NameF
 	return
 }

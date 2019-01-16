@@ -21,13 +21,6 @@ type manager struct {
 	// like []map[string]interface{} or map[string]interface{}
 }
 
-type matcher func(string) bool
-
-func idMatch(s string) (b bool) {
-	b = true
-	return
-}
-
 type admin func(*AdmCmd) ([]byte, error)
 
 // AdmCmd is an administration command
@@ -50,33 +43,7 @@ type AdmCmd struct {
 	DialTimeout  time.Duration `json:"dialTimeout"`
 	Group        string        `json:"group"`
 	IsAdmin      bool          `json:"isAdmin"`
-}
-
-// consR stands for consumption restrictor,
-// it restricts several aspects of a connection
-type consR struct {
-	Name   string `json: "name"`
-	open   func(ip) bool
-	can    func(ip, download) bool
-	update func(ip, download)
-	close  func(ip)
-}
-
-type download int
-type ip string
-
-func idCons() (c *consR) {
-	c = &consR{
-		Name: "id",
-		open: func(i ip) (b bool) { b = true; return },
-		can: func(i ip, d download) (b bool) {
-			b = true
-			return
-		},
-		update: func(i ip, d download) {},
-		close:  func(i ip) {},
-	}
-	return
+	CIDR         string        `json: "cidr"`
 }
 
 func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
@@ -86,9 +53,15 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 	if ok {
 		r, e = v.(*manager).adm.exec(cmd)
 	} else if c.Manager == "global" {
+		var mng *manager
 		switch c.Cmd {
 		case "add-bwCons":
+			bw := newBwCons(cmd.MngName, cmd.FillInterval,
+				cmd.Capacity)
+			mng = bw.manager()
 		case "add-connCons":
+			cn := newConnCons(cmd.MngName, cmd.Limit)
+
 		case "add-dwCons":
 		case "add-trCons":
 		case "add-groupIPM":
@@ -96,6 +69,11 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 		case "add-sessionIPM":
 		case "add-userIPM":
 		case "del-manager":
+		default:
+			e = NoCmd(c.Cmd)
+		}
+		if mng != nil {
+			g.mngs.Store(mng.Name, mng)
 		}
 	} else {
 		e = NoMngWithName(c.Manager)
