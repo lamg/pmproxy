@@ -8,46 +8,58 @@ import (
 )
 
 type sessionIPM struct {
-	Name string `json:"name"`
-	Auth string `json:"auth"`
+	Name   string `json:"name"`
+	UserDB string `json:"userDB"`
 
+	usrDB    func(string) *userDB
 	admins   func() []string
 	sessions *sync.Map
 	crypt    func() *crypt
-	auth     func() authNorm
-	grps     func(string) ([]string, error)
 	grpCache *sync.Map
 }
 
-type authNorm func(string, string) (string, error)
-
-func initSM(s *sessionIPM, cr *Crypt, a authNorm) {
-	s.sessions, s.grpCache = new(sync.Map), new(sync.Map)
-	s.crypt = cr
-	s.auth = a
-}
-
-func newSessionIPM(name string, admins []string, cr *Crypt,
-	auth Authenticator) (s *sessionIPM) {
+func newSessionIPM(name string, admins func() []string,
+	cr *Crypt, udb *userDB) (s *sessionIPM) {
 	s = &sessionIPM{
-		NameF:    name,
+		Name:     name,
 		sessions: new(sync.Map),
 		Admins:   admins,
 		crypt:    cr,
-		auth:     auth,
+		usrDB:    usrDB,
+		grpCache: new(sync.Map),
 	}
 	return
 }
 
-func (s *sessionIPM) Exec(cmd *AdmCmd) (r string, e error) {
+func (s *sessionIPM) manager() (m *manager) {
+	m = &manager{
+		name: s.Name,
+		tỹpe: "sessionIPM",
+		cons: idConsR(),
+		mtch: func(s string) (ok bool) {
+			_, b = s.sessions.Load(ip)
+			return
+		},
+		adm: s.exec,
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				nameK:   s.Name,
+				userDBK: s.UserDB.name,
+			}
+			return
+		},
+	}
+}
+
+func (s *sessionIPM) exec(cmd *AdmCmd) (bs []byte, e error) {
 	switch cmd.Cmd {
 	case "open":
-		r, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
+		bs, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
 	case "close":
-		r, e = s.close(cmd.Secret, cmd.RemoteIP)
+		bs, e = s.close(cmd.Secret, cmd.RemoteIP)
 	case "show":
 		if cmd.IsAdmin {
-			r, e = s.show(cmd.Secret, cmd.RemoteIP)
+			bs, e = s.show(cmd.Secret, cmd.RemoteIP)
 		} else {
 			e = NoCmd(cmd.Cmd)
 		}
@@ -57,16 +69,16 @@ func (s *sessionIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	return
 }
 
-func (s *sessionIPM) Match(ip string) (b bool) {
-	_, b = s.sessions.Load(ip)
-	return
-}
-
-func (s *sessionIPM) open(usr, pass, ip string) (r string, e error) {
+func (s *sessionIPM) open(usr, pass, ip string) (bs []byte,
+	e error) {
+	udb, e := s.usrDB(s.UserDB)
 	var user string
-	user, e = s.auth.AuthAndNorm(usr, pass)
 	if e == nil {
-		r, e = s.crypt.Encrypt(user)
+		user, e = udb.authNorm(usr, pass)
+	}
+
+	if e == nil {
+		bs, e = s.crypt.Encrypt(user)
 	}
 	if e == nil {
 		// close session opened by same user
@@ -92,7 +104,7 @@ func MalformedArgs() (e error) {
 	return
 }
 
-func (s *sessionIPM) close(secr, ip string) (r string,
+func (s *sessionIPM) close(secr, ip string) (bs []byte,
 	e error) {
 	var user string
 	user, e = s.crypt.Decrypt(secr)
@@ -100,18 +112,19 @@ func (s *sessionIPM) close(secr, ip string) (r string,
 		lusr, ok := s.sessions.Load(ip)
 		if ok && user == lusr.(string) {
 			s.sessions.Delete(ip)
+			s.grpCache.Delete(ip)
 		}
 	}
 	return
 }
 
-func (s *sessionIPM) show(secret, ip string) (r string, e error) {
+func (s *sessionIPM) show(secret, ip string) (bs []byte,
+	e error) {
 	var user string
 	user, e = checkAdmin(secret, s.crypt, s.Admins)
 	if e == nil && user != s.User(ip) {
 		e = NoAdmLogged(ip)
 	}
-	var bs []byte
 	if e == nil {
 		mp := make(map[string]string)
 		s.sessions.Range(func(k, v interface{}) (ok bool) {
@@ -119,9 +132,6 @@ func (s *sessionIPM) show(secret, ip string) (r string, e error) {
 			return
 		})
 		bs, e = json.Marshal(&mp)
-	}
-	if e == nil {
-		r = string(bs)
 	}
 	return
 }
@@ -138,5 +148,14 @@ func (s *sessionIPM) user(ip string) (usr string) {
 }
 
 func (s *sessionIPM) ipGroup(i ip) (gs []string, e error) {
+	v, ok := s.grpCache.Load(i)
+	if ok {
+		gs = v.([]string)
+	} else {
+		usr := s.user(i)
+		if usr != "" {
+			gs, e = s.usrDB().grps(usr)
+		}
+	}
 	return
 }

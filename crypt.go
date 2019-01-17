@@ -23,13 +23,9 @@ func newCrypt() (c *crypt, e error) {
 	return
 }
 
-func (c *crypt) Encrypt(s string) (r string, e error) {
-	var bs []byte
+func (c *crypt) Encrypt(s string) (bs []byte, e error) {
 	bs, e = rsa.EncryptOAEP(c.hs, rand.Reader, &c.key.PublicKey,
 		[]byte(s), c.label)
-	if e == nil {
-		r = string(bs)
-	}
 	return
 }
 
