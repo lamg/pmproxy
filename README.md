@@ -19,39 +19,99 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 - The factor determining how fast the quota is reached, which is a float that is multiplied by the amount of downloaded bytes (consumption).
 - The connection delay.
 
-## Installation
+## Work in progress
 
-Go 1.11 is required since is the first with module support, and the project has some specific dependencies managed with it.
+Please don't be such a fundamentalist on this is being done at the master branch. Checkout tag `v0.2` for getting the last working version.
 
-```sh
-git clone https://github.com/lamg/pmproxy
-cd pmproxy/cmd/pmproxy && go install
-cd ../../..
-```
+### Type hierarchy
 
-## Usage
+- ProxyCtl (proxy_ctl.go)
+  - SpecCtx (spec_conn.go)
+    - rspec
+  - config
+    - rspec
+    - admin
 
-The following will start the server using example configuration files.
+- rspec (rspec.go)
+  - matcher
+  - consR
 
-```sh
-mkdir pmproxy-dir
-cd pmproxy/cmd/pmproxy/
-cp *.yaml *.pem ../../../pmproxy-dir
-cd ../../../pmproxy-dir
-pmproxy -c conf.yaml
-```
+- matcher
+  - sessionIPM
+  - userIPM
+  - groupIPM
+  - rangeIPM
 
-Now configure your web browser (or another client) to use localhost:8081 as HTTP proxy server, and request any page visible in your network.
+- consR
+  - bwCons
+  - connCons
+  - dwnCons
+  - trCons
 
-## Tasks
+### TODO
+- simpler configuration parsing with proper error reporting
+- tight fields and methods visibility
+- the matcher can leave information provided by IPUser making it superflous
+- Information needed by
+  - dwnConsR: user, group
+  - userIPM: user
+- show users the resources available for them
+- not so strict error handling
+- github.com/lamg/goproxy and github.com/lamg/proxy benchmark
+- client login
+- NewProxyCtl
+  - implementation of manager
+  - sessionIPM wip
+- Test "github.com/juju/ratelimit"
+- Build proxy with fasthttp
 
-- [ ] simpler design based in proxy_spec.go's definitions.
-  - [ ] Implement `Admin` interface (admin.go)
-    - [ ] Implement managers
-      - [x] session (session.go)
-      - [ ] connection limit
-      - [ ] delay
-      - [ ] quota consumption
-      - [ ] rules
-  - [x] Implement `RSpec` interface (rspec.go)
-    - [x] implement `IPMatcher` (session.go)
+### Commands accepted by managers
+
+- sessionIPM
+  - open
+    - params: user, password
+    - returns: secret
+  - close
+    - params: secret
+  - show
+    - params: secret
+    - spec: if the user in secret is an administrator then show the opened sessions
+
+- simpleRSpec
+  - add
+    - params: secret, pos, rule
+    - spec: if the user in secret is an administrator then add rule.
+  - del
+    - params: secret, pos, rule
+    - spec: if the user in secret is an administrator then delete rule
+  - show
+    - params: secret
+    - spec: returns a JSON representation fo rules
+
+- manager
+  - add
+    - params: secret, type, name, args
+    - spec: adds a manager if secret is from an administrator with the type, name and interpreting the specific args. Adding a rule requires some preprocessing because the rule inside a command doesn't have a direct reference to the value needed by simpleRule.Spec for giving the correct result.
+    - types:
+      - sm: sessionIPM
+        - params: Active Directory (AD) address, AD user, AD password, administrators list
+      - tr: trCons
+        - params: start, end, active duration, total duration, times, infinite times, always
+      - bw: bwCons
+        - params: capacity, fill interval
+      - dw: dwnCons
+        - params: IPUser name, limit
+      - cn: connCons
+        - params: limit
+      - id: idCons
+        - params: none
+      - ng: negCons
+        - params: none
+  - del:
+    - params: secret, name
+    - spec: deletes the manager with that name if the secret is from an administrator
+  - show:
+    - params: secret
+    - spec: sends a JSON representation of managers
+
+### Initial configuration example

@@ -39,11 +39,6 @@ func newSessionIPM(name string, admins []string, cr *Crypt,
 	return
 }
 
-func (s *sessionIPM) Name() (r string) {
-	r = s.NameF
-	return
-}
-
 func (s *sessionIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	switch cmd.Cmd {
 	case "open":
@@ -136,12 +131,12 @@ func NoAdmLogged(ip string) (e error) {
 	return
 }
 
-type IPUser interface {
-	User(string) string
+func (s *sessionIPM) user(ip string) (usr string) {
+	u, _ := s.sessions.Load(ip)
+	usr = u.(string)
+	return
 }
 
-func (s *sessionIPM) User(ip string) (user string) {
-	u, _ := s.sessions.Load(ip)
-	user = u.(string)
+func (s *sessionIPM) ipGroup(i ip) (gs []string, e error) {
 	return
 }
