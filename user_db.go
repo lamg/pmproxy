@@ -5,8 +5,8 @@ import (
 )
 
 type userDB struct {
-	name   string
-	params map[string]interface{}
+	Name   string                 `json: "name"`
+	Params map[string]interface{} `json: "params"`
 	grps   userGrp
 	auth   authNorm
 }
@@ -22,10 +22,10 @@ const (
 	passK = "pass"
 )
 
-func newADUserDB(params map[string]interface{}) (u *userDB,
-	e error) {
+func newADUserDB(name string,
+	params map[string]interface{}) (u *userDB, e error) {
 	ldap := new(ld.Ldap)
-	mpErr := func(key string) (r string, e error) {
+	mpErr := func(key string) (r string) {
 		r, ok := params[key]
 		if !ok {
 			e = fmt.Errorf("Key %s not found", key)
@@ -34,23 +34,24 @@ func newADUserDB(params map[string]interface{}) (u *userDB,
 	}
 	fe := []func(){
 		func() {
-			ldap.Addr, e = mpErr(addrK)
+			ldap.Addr = mpErr(addrK)
 		},
 		func() {
-			ldap.BaseDN, e = mpErr(bdnK)
+			ldap.BaseDN = mpErr(bdnK)
 		},
 		func() {
-			ldap.Suff, e = mpErr(suffK)
+			ldap.Suff = mpErr(suffK)
 		},
 		func() {
-			ldap.User, e = mpErr(userK)
+			ldap.User = mpErr(userK)
 		},
 		func() {
-			ldap.Pass, e = mpErr(passK)
+			ldap.Pass = mpErr(passK)
 		},
 		func() {
 			u = &userDB{
-				params:   params,
+				Pame:     name,
+				Params:   params,
 				authNorm: ldap.AuthAndNorm,
 				grps: func(user string) (gs []string, d error) {
 					rec, d := ldap.FullRecordAcc(user)
@@ -62,11 +63,6 @@ func newADUserDB(params map[string]interface{}) (u *userDB,
 			}
 		},
 	}
-	ib := func(i int) (b bool) {
-		fe(i)()
-		b = e != nil
-		return
-	}
-	bLnSrch(ib, len(fe))
+	bLnSrch(ferror(fe, func() bool { return e != nil }), len(fe))
 	return
 }

@@ -60,8 +60,7 @@ Please don't be such a fundamentalist on this is being done at the master branch
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 - client login
 - NewProxyCtl
-  - implementation of manager
-  - sessionIPM wip
+  - userQt redefinition wip
 - Test "github.com/juju/ratelimit"
 - Build proxy with fasthttp
 

@@ -19,7 +19,7 @@ type sessionIPM struct {
 }
 
 func newSessionIPM(name string, admins func() []string,
-	cr *Crypt, udb *userDB) (s *sessionIPM) {
+	cr func() *crypt, udb func(string) *userDB) (s *sessionIPM) {
 	s = &sessionIPM{
 		Name:     name,
 		sessions: new(sync.Map),
@@ -71,31 +71,36 @@ func (s *sessionIPM) exec(cmd *AdmCmd) (bs []byte, e error) {
 
 func (s *sessionIPM) open(usr, pass, ip string) (bs []byte,
 	e error) {
-	udb, e := s.usrDB(s.UserDB)
+	var udb *userDB
 	var user string
-	if e == nil {
-		user, e = udb.authNorm(usr, pass)
-	}
-
-	if e == nil {
-		bs, e = s.crypt.Encrypt(user)
-	}
-	if e == nil {
-		// close session opened by same user
-		var oldIP string
-		s.sessions.Range(func(k, v interface{}) (ok bool) {
-			ok = v.(string) != user
-			if !ok {
-				oldIP = k.(string)
+	fe := []func(){
+		func() {
+			udb, e = s.usrDB(s.UserDB)
+		},
+		func() {
+			user, e = udb.authNorm(usr, pass)
+		},
+		func() {
+			bs, e = s.crypt.Encrypt(user)
+		},
+		func() {
+			// close session opened by same user
+			var oldIP string
+			s.sessions.Range(func(k, v interface{}) (ok bool) {
+				ok = v.(string) != user
+				if !ok {
+					oldIP = k.(string)
+				}
+				return
+			})
+			if oldIP != "" {
+				s.sessions.Delete(oldIP)
 			}
-			return
-		})
-		if oldIP != "" {
-			s.sessions.Delete(oldIP)
-		}
-		// add to dictionary
-		s.sessions.Store(ip, user)
+			// add to dictionary
+			s.sessions.Store(ip, user)
+		},
 	}
+	bLnSrch(ferror(fe, func() bool { return e != nil }), len(fe))
 	return
 }
 

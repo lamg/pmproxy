@@ -7,47 +7,60 @@ import (
 
 // trCons is a time range consumption limiter for a connection
 type trCons struct {
-	NameF string    `json:"name" toml:"name"`
-	Span  *rt.RSpan `json:"span" toml:"span"`
+	Name string    `json:"name"`
+	Span *rt.RSpan `json:"span"`
 
 	clock clock.Clock
 }
 
-// ConsR implementation
-
-func (t *trCons) Open(ip string) (ok bool) {
-	tm := t.clock.Now()
-	ok = t.Span.ContainsTime(tm)
+func (t *trCons) manager() (m *manager) {
+	m = &manager{
+		name: t.Name,
+		tỹpe: "trCons",
+		cons: &consR{
+			open: func(i ip) (ok bool) {
+				tm := t.clock.Now()
+				ok = t.Span.ContainsTime(tm)
+				return
+			},
+			can: func(i ip) (ok bool) {
+				tm := t.clock.Now()
+				ok = t.Span.ContainsTime(tm)
+				return
+			},
+			update: func(i ip, d download) {},
+			close:  func(i ip) {},
+		},
+		adm: func(c *AdmCmd) (bs []byte, e error) {
+			switch c.Cmd {
+			case "get-span":
+				bs, e = json.Marshal(t.Span)
+			case "set-span":
+				t.Span = c.Span
+			default:
+				e = NoCmd(c.Cmd)
+			}
+			return
+		},
+		toSer: func() (i interface{}) {
+			i = map[string]interface{}{
+				nameK: t.Name,
+				spanK: toSer(t.Span),
+			}
+			return
+		},
+	}
 	return
 }
 
-func (t *trCons) Can(ip string, n int) (ok bool) {
-	tm := t.clock.Now()
-	ok = t.Span.ContainsTime(tm)
+func toSer(r *rt.Span) (m map[string]interface{}) {
+	m = map[string]interface{}{
+		startK:    r.Start.String(),
+		activeK:   r.Active.String(),
+		totalK:    r.Total.String(),
+		timesK:    r.Times,
+		infiniteK: r.Infinite,
+		allTimeK:  r.AllTime,
+	}
 	return
 }
-
-func (t *trCons) UpdateCons(ip string, n int) {
-
-}
-
-func (t *trCons) Close(ip string) {
-
-}
-
-func (t *trCons) Name() (r string) {
-	r = t.NameF
-	return
-}
-
-// end
-
-// Admin implementation
-
-func (t *trCons) Exec(cmd *AdmCmd) (r string, e error) {
-	// probably doing nothing here is a good option since the user
-	// can delete this manager and add the one he needs
-	return
-}
-
-// end

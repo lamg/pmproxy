@@ -10,16 +10,15 @@ import (
 // downloaded data consumption limiter
 type dwnCons struct {
 	cl         clock.Clock
-	Name       string `json:"name"`
-	IPUser     string `json:"ipUser"`
-	iu         IPUser
-	usrCons    *sync.Map
-	usrQt      usrQt
-	qtAdm      qtAdm
-	qtSer      usrQtSer
-	UserQt     *usrQtS       `json:"userQt"`
+	Name       string        `json:"name"`
+	IPUser     string        `json:"ipUser"`
+	GroupQuota string        `json: "groupQuota"`
 	LastReset  time.Time     `json:"lastReset"`
 	ResetCycle time.Duration `json:"resetCycle"`
+
+	iu      func(string) ipUser
+	gq      func(string) ipQuota
+	usrCons *sync.Map
 }
 
 type srchIU func(string) (IPUser, error)
@@ -65,7 +64,7 @@ func (d *dwnCons) manager() (m *manager) {
 				ok = false
 				if user != "" {
 					cons, b := d.usrCons.Load(user)
-					limit := d.usrQt(user)
+					limit := d.grp(i)
 					ok = b && cons.(uint64) <= limit
 				}
 				return

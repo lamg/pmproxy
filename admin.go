@@ -6,8 +6,13 @@ import (
 )
 
 type globAdm struct {
-	mngs *sync.Map
-	conf *config
+	adms   *sync.Map
+	cons   *sync.Map
+	ipms   *sync.Map
+	ipgs   *sync.Map
+	usrDBs *sync.Map
+	toSer  *sync.Map
+	conf   *config
 }
 
 type manager struct {
@@ -39,7 +44,7 @@ type AdmCmd struct {
 	FillInterval time.Duration `json: "fillInterval"`
 	IPUser       string        `json: "ipUser"`
 	Limit        uint64        `json: "limit"`
-	AD           *adConf       `json: "ad"`
+	UserDB       *userDB       `json: "usrDB"`
 	DialTimeout  time.Duration `json: "dialTimeout"`
 	Group        string        `json: "group"`
 	IsAdmin      bool          `json: "isAdmin"`
@@ -61,13 +66,15 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			mng = bw.manager()
 		case "add-connCons":
 			cn := newConnCons(cmd.MngName, cmd.Limit)
-
+			mng = cn.manager()
 		case "add-dwCons":
+			dw := newDwn
 		case "add-trCons":
 		case "add-groupIPM":
 		case "add-rangeIPM":
 		case "add-sessionIPM":
 		case "add-userIPM":
+		case "add-userDB":
 		case "del-manager":
 		default:
 			e = NoCmd(c.Cmd)
@@ -100,5 +107,10 @@ func (g *globAdm) persist(w io.Writer) (e error) {
 	}
 	os.Rename(g.conf.file, g.conf.file+".back")
 	viper.WriteConfigAs(g.conf.file)
+	return
+}
+
+func NoKey(k string) (e error) {
+	e = fmt.Errorf("No key %s", c.Group)
 	return
 }

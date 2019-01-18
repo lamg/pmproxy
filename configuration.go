@@ -7,29 +7,17 @@ import (
 )
 
 type config struct {
-	admins      []string
-	ad          *adConf
+	admins []string
+
 	dialTimeout time.Duration
 	lg          *logger
 	crypt       *crypt
 	file        string
 }
 
-type adConf struct {
-	User string `json:"user"`
-	Pass string `json:"pass"`
-	Addr string `json:"addr"`
-	Bdn  string `json:"bdn"`
-	Suff string `json:"suff"`
-}
-
 func (c *config) exec(cmd *AdmCmd) (bs []byte, e error) {
 	if cmd.IsAdmin {
 		switch cmd.Cmd {
-		case "set-ad":
-			c.ad = cmd.ad
-		case "get-ad":
-			bs, e = json.Marshal(c.ad)
 		case "set-timeout":
 			c.DialTimeout = cmd.DialTimeout
 		case "get-timeout":
