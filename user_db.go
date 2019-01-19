@@ -28,7 +28,7 @@ func newADUserDB(name string,
 	mpErr := func(key string) (r string) {
 		r, ok := params[key]
 		if !ok {
-			e = fmt.Errorf("Key %s not found", key)
+			e = NoKey(key)
 		}
 		return
 	}
@@ -64,5 +64,12 @@ func newADUserDB(name string,
 		},
 	}
 	bLnSrch(ferror(fe, func() bool { return e != nil }), len(fe))
+	return
+}
+
+func (u *userDB) toSer() (tỹpe string, i interface{}) {
+	tỹpe = "userDB"
+	i = u.Params
+	i[nameK] = u.Name
 	return
 }

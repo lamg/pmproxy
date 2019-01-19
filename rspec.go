@@ -266,43 +266,34 @@ func IndexOutOfRange(i, n int) (e error) {
 	return
 }
 
-func (s *rspec) manager() (m *manager) {
-	name := "rules"
-	m = &manager{
-		name: name,
-		tỹpe: name,
-		adm:  s.exec,
-		toSer: func() (mp interface{}) {
-			mp = make([]map[string]interface{}, 0)
-			inf := func(i int) {
-				inf0 := func(j int) {
-					rl := s.rules[i][j]
-					// TODO careful with nil references
-					rmap = map[string]interface{}{
-						unitK: rl.Unit,
-						posk:  i,
-						urlmK: rl.URLM,
-						impK:  rl.IPM,
-						spanK: map[string]interface{}{
-							startK:    rl.Span.Start.String(),
-							activeK:   rl.Span.Active.String(),
-							totalK:    rl.Span.Total.String(),
-							infiniteK: rl.Span.Infinite,
-							allTimeK:  rl.Span.AllTime,
-						},
-						spec: map[string]interface{}{
-							ifaceK:    rl.Spec.Iface,
-							proxyURLK: rl.Spec.ProxyURL,
-							consRK:    rl.Spec.ConsR,
-						},
-					}
-					mp = append(mp, rmap)
-				}
-				forall(inf0, len(s.rules[i]))
+func (s *rspec) toSer() (mp interface{}) {
+	mp = make([]map[string]interface{}, 0)
+	inf := func(i int) {
+		inf0 := func(j int) {
+			rl := s.rules[i][j]
+			// TODO careful with nil references
+			rmap = map[string]interface{}{
+				unitK: rl.Unit,
+				posk:  i,
+				urlmK: rl.URLM,
+				impK:  rl.IPM,
+				spanK: map[string]interface{}{
+					startK:    rl.Span.Start.String(),
+					activeK:   rl.Span.Active.String(),
+					totalK:    rl.Span.Total.String(),
+					infiniteK: rl.Span.Infinite,
+					allTimeK:  rl.Span.AllTime,
+				},
+				spec: map[string]interface{}{
+					ifaceK:    rl.Spec.Iface,
+					proxyURLK: rl.Spec.ProxyURL,
+					consRK:    rl.Spec.ConsR,
+				},
 			}
-			forall(inf, len(s.rules))
-			return
-		},
+			mp = append(mp, rmap)
+		}
+		forall(inf0, len(s.rules[i]))
 	}
+	forall(inf, len(s.rules))
 	return
 }

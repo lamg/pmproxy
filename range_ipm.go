@@ -24,35 +24,30 @@ func (m *rangeIPM) init() (e error) {
 	return
 }
 
-func (r *rangeIPM) manager() (m *manager) {
-	m = &manager{
-		name: r.Name,
-		tỹpe: "rangeIPM",
-		cons: idConsR(),
-		adm: func(c *AdmCmd) (bs []byte, e error) {
-			switch c.Cmd {
-			case "get-cidr":
-				bs = []byte(r.CIDR)
-			case "set-cidr":
-				r.CIDR = c.CIDR
-				e = m.init()
-			default:
-				e = NoCmd(c.Cmd)
-			}
-			return
-		},
-		mtch: func(i string) (ok bool) {
-			pip := net.ParseIP(ip)
-			ok = pip != nil && m.rg.Contains(pip)
-			return
-		},
-		toSer: func() (i interface{}) {
-			i = map[string]interface{}{
-				nameK: r.Name,
-				cidrK: r.CIDR,
-			}
-			return
-		},
+func (r *rangeIPM) admin(c *AdmCmd) (bs []byte, e error) {
+	switch c.Cmd {
+	case "get-cidr":
+		bs = []byte(r.CIDR)
+	case "set-cidr":
+		r.CIDR = c.CIDR
+		e = m.init()
+	default:
+		e = NoCmd(c.Cmd)
 	}
+	return
+}
+
+func (r *rangeIPM) match(i string) (ok bool) {
+	pip := net.ParseIP(ip)
+	ok = pip != nil && m.rg.Contains(pip)
+	return
+}
+
+func (r *rangeIPM) toSer() (tỹpe string, i interface{}) {
+	i = map[string]interface{}{
+		nameK: r.Name,
+		cidrK: r.CIDR,
+	}
+	tỹpe = "rangeIPM"
 	return
 }

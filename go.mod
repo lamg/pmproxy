@@ -7,6 +7,7 @@ require (
 	github.com/lamg/ldaputil v0.1.0
 	github.com/lamg/proxy v1.2.0
 	github.com/lamg/rtimespan v0.1.0
+	github.com/spf13/cast v1.3.0
 	github.com/spf13/viper v1.3.1
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fasthttp v1.0.0

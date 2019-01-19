@@ -6,27 +6,27 @@ import (
 )
 
 type globAdm struct {
-	adms   *sync.Map
-	cons   *sync.Map
-	ipms   *sync.Map
-	ipgs   *sync.Map
-	usrDBs *sync.Map
-	toSer  *sync.Map
+	adms   *sync.Map // admins
+	cons   *sync.Map // consRs
+	ipms   *sync.Map // ipMatchers
+	ipUI   *sync.Map // ipUserInfs
+	ipQs   *sync.Map // ipQuotas
+	usrDBs *sync.Map // userDBs
+	toSer  *sync.Map // toSers
 	conf   *config
 }
 
-type manager struct {
-	name  string
-	tỹpe  string
-	cons  *consR
-	mtch  matcher
-	adm   admin
-	toSer func() interface{}
-	// to serializable by viper type
-	// like []map[string]interface{} or map[string]interface{}
-}
+type toSer func() (string, interface{})
 
 type admin func(*AdmCmd) ([]byte, error)
+
+type ipQuota func(ip) uint64
+
+type ipGroup func(ip) ([]string, error)
+type ipUserInf struct {
+	ipg ipGroup
+	ipu ipUser
+}
 
 // AdmCmd is an administration command
 type AdmCmd struct {
@@ -54,9 +54,9 @@ type AdmCmd struct {
 func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 	adm, _ := g.conf.checkAdmin(cmd.Secret)
 	cmd.IsAdmin = adm != ""
-	v, ok := c.mngs.Load(c.Manager)
+	v, ok := c.admins.Load(c.Manager)
 	if ok {
-		r, e = v.(*manager).adm.exec(cmd)
+		r, e = (v.(admin))(cmd)
 	} else if c.Manager == "global" {
 		var mng *manager
 		switch c.Cmd {
@@ -68,7 +68,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			cn := newConnCons(cmd.MngName, cmd.Limit)
 			mng = cn.manager()
 		case "add-dwCons":
-			dw := newDwn
+			dw := newDwn //TODO
 		case "add-trCons":
 		case "add-groupIPM":
 		case "add-rangeIPM":
@@ -91,14 +91,14 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 func (g *globAdm) persist(w io.Writer) (e error) {
 	sm := make(map[string][]interface{})
 	// for TOML array of tables
-	g.mngs.Range(func(k, v interface{}) (ok bool) {
-		ks, vm := k.(string), v.(*manager)
-		mp := vm.toSer()
-		if vm.name == vm.tỹpe {
+	g.toSer.Range(func(k, v interface{}) (ok bool) {
+		ks, vm := k.(string), v.(toSer)
+		tỹpe, mp := vm()
+		if ks == tỹpe {
 			viper.Set(ks, mp)
 		} else {
 			// vm is part of an array of tables
-			sm[vm.tỹpe] = append(sm[vm.tỹpe], mp)
+			sm[tỹpe] = append(sm[tỹpe], mp)
 		}
 		return
 	})

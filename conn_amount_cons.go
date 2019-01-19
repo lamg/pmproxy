@@ -21,8 +21,8 @@ func newConnCons(name string, limit uint32) (c *connCons) {
 	return
 }
 
-func (c *connCons) manager() (m *manager) {
-	cr = consR{
+func (c *connCons) consR() (c *consR) {
+	c = consR{
 		open: func(i ip) (ok bool) {
 			ok = c.canInc(i, true)
 			return
@@ -40,37 +40,34 @@ func (c *connCons) manager() (m *manager) {
 			c.ipAmount.Store(i, u.(uint32)-1)
 		},
 	}
-	m = &manager{
-		name: c.Name,
-		tỹpe: "connCons",
-		mtch: idMatch,
-		cons: cr,
-		adm: func(a *AdmCmd) (bs []byte, e error) {
-			switch a.Cmd {
-			case "get-limit":
-				bs = []byte(fmt.Sprintf("%d", c.Limit))
-			case "set-limit":
-				c.Limit = a.Limit
-			case "show":
-				v, ok := c.ipAmount.Load(cmd.RemoteIP)
-				if ok {
-					bs = []byte(fmt.Sprintf("%d", v))
-				} else {
-					e = NoEntry(cmd.RemoteIP)
-				}
-			default:
-				e = NoCmd(c.Cmd)
-			}
-			return
-		},
-		toSer: func() (i interface{}) {
-			i = map[string]interface{}{
-				limitK: c.Limit,
-				nameK:  c.Name,
-			}
-			return
-		},
+	return
+}
+
+func (c *connCons) admin(a *AdmCmd) (bs []byte, e error) {
+	switch a.Cmd {
+	case "get-limit":
+		bs = []byte(fmt.Sprintf("%d", c.Limit))
+	case "set-limit":
+		c.Limit = a.Limit
+	case "show":
+		v, ok := c.ipAmount.Load(cmd.RemoteIP)
+		if ok {
+			bs = []byte(fmt.Sprintf("%d", v))
+		} else {
+			e = NoEntry(cmd.RemoteIP)
+		}
+	default:
+		e = NoCmd(c.Cmd)
 	}
+	return
+}
+
+func (c *connCons) toSer() (tỹpe string, i interface{}) {
+	i = map[string]interface{}{
+		limitK: c.Limit,
+		nameK:  c.Name,
+	}
+	tỹpe = "connCons"
 	return
 }
 

@@ -13,47 +13,46 @@ type trCons struct {
 	clock clock.Clock
 }
 
-func (t *trCons) manager() (m *manager) {
-	m = &manager{
-		name: t.Name,
-		tỹpe: "trCons",
-		cons: &consR{
-			open: func(i ip) (ok bool) {
-				tm := t.clock.Now()
-				ok = t.Span.ContainsTime(tm)
-				return
-			},
-			can: func(i ip) (ok bool) {
-				tm := t.clock.Now()
-				ok = t.Span.ContainsTime(tm)
-				return
-			},
-			update: func(i ip, d download) {},
-			close:  func(i ip) {},
-		},
-		adm: func(c *AdmCmd) (bs []byte, e error) {
-			switch c.Cmd {
-			case "get-span":
-				bs, e = json.Marshal(t.Span)
-			case "set-span":
-				t.Span = c.Span
-			default:
-				e = NoCmd(c.Cmd)
-			}
+func (t *trCons) consR() (c *consR) {
+	c = &consR{
+		open: func(i ip) (ok bool) {
+			tm := t.clock.Now()
+			ok = t.Span.ContainsTime(tm)
 			return
 		},
-		toSer: func() (i interface{}) {
-			i = map[string]interface{}{
-				nameK: t.Name,
-				spanK: toSer(t.Span),
-			}
+		can: func(i ip) (ok bool) {
+			tm := t.clock.Now()
+			ok = t.Span.ContainsTime(tm)
 			return
 		},
+		update: func(i ip, d download) {},
+		close:  func(i ip) {},
 	}
 	return
 }
 
-func toSer(r *rt.Span) (m map[string]interface{}) {
+func (t *trCons) admin(c *AdmCmd) (bs []byte, e error) {
+	switch c.Cmd {
+	case "get-span":
+		bs, e = json.Marshal(t.Span)
+	case "set-span":
+		t.Span = c.Span
+	default:
+		e = NoCmd(c.Cmd)
+	}
+	return
+}
+
+func (t *trCons) toSer() (tỹpe string, i interface{}) {
+	i = map[string]interface{}{
+		nameK: t.Name,
+		spanK: toSerSpan(t.Span),
+	}
+	tỹpe = "trCons"
+	return
+}
+
+func toSerSpan(r *rt.Span) (m map[string]interface{}) {
 	m = map[string]interface{}{
 		startK:    r.Start.String(),
 		activeK:   r.Active.String(),

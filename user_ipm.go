@@ -13,7 +13,7 @@ func initUsrM(u *userIPM, si srchIU) (e error) {
 	return
 }
 
-func (u *userIPM) Match(ip string) (ok bool) {
+func (u *userIPM) match(ip string) (ok bool) {
 	user := u.iu.User(ip)
 	ok = user != ""
 	if ok {
@@ -26,7 +26,7 @@ func (u *userIPM) Match(ip string) (ok bool) {
 	return
 }
 
-func (u *userIPM) Exec(cmd *AdmCmd) (r string, e error) {
+func (u *userIPM) admin(cmd *AdmCmd) (r []byte, e error) {
 	if cmd.IsAdmin && cmd.Cmd == "add" {
 		u.Users = append(u.Users, cmd.User)
 	} else if cmd.IsAdmin && cmd.Cmd == "del" {
@@ -41,5 +41,9 @@ func (u *userIPM) Exec(cmd *AdmCmd) (r string, e error) {
 	} else {
 		e = NoCmd(cmd.Cmd)
 	}
+	return
+}
+
+func (u *userIPM) toSer() (tỹpe string, i interface{}) {
 	return
 }

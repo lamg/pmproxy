@@ -31,24 +31,19 @@ func newSessionIPM(name string, admins func() []string,
 	return
 }
 
-func (s *sessionIPM) manager() (m *manager) {
-	m = &manager{
-		name: s.Name,
-		tỹpe: "sessionIPM",
-		cons: idConsR(),
-		mtch: func(s string) (ok bool) {
-			_, b = s.sessions.Load(ip)
-			return
-		},
-		adm: s.exec,
-		toSer: func() (i interface{}) {
-			i = map[string]interface{}{
-				nameK:   s.Name,
-				userDBK: s.UserDB.name,
-			}
-			return
-		},
+func (s *sessionIPM) toSer() (tỹpe string, i interface{}) {
+	i = map[string]interface{}{
+		nameK:   s.Name,
+		userDBK: s.UserDB.name,
 	}
+	tỹpe = "sessionIPM"
+	return
+
+}
+
+func (s *sessionIPM) match(s string) (ok bool) {
+	_, b = s.sessions.Load(ip)
+	return
 }
 
 func (s *sessionIPM) exec(cmd *AdmCmd) (bs []byte, e error) {
@@ -161,6 +156,14 @@ func (s *sessionIPM) ipGroup(i ip) (gs []string, e error) {
 		if usr != "" {
 			gs, e = s.usrDB().grps(usr)
 		}
+	}
+	return
+}
+
+func (s *sessionIPM) ipInfo() (i *ipUserInf) {
+	i = &ipUserInf{
+		ipg: s.ipGroup,
+		ipu: s.user,
 	}
 	return
 }
