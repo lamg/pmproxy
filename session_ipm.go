@@ -46,7 +46,7 @@ func (s *sessionIPM) match(s string) (ok bool) {
 	return
 }
 
-func (s *sessionIPM) exec(cmd *AdmCmd) (bs []byte, e error) {
+func (s *sessionIPM) admin(cmd *AdmCmd) (bs []byte, e error) {
 	switch cmd.Cmd {
 	case "open":
 		bs, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)

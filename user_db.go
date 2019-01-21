@@ -73,3 +73,29 @@ func (u *userDB) toSer() (tỹpe string, i interface{}) {
 	i[nameK] = u.Name
 	return
 }
+
+func newMapUserDB(name string, usrPass map[string]string,
+	usrGrp map[string][]string) (u *userDB) {
+	u = &userDB{
+		Name: Name,
+		Params: map[string]interface{}{
+			"userPass":  usrPass,
+			"userGroup": usrGrp,
+		},
+		grps: func(user string) (gs []string, e error) {
+			gs, ok := usrGrp[user]
+			if !ok {
+				e = NoKey(user)
+			}
+			return
+		},
+		auth: func(user, pass string) (usr string, e error) {
+			ps, ok := usrPass[user]
+			if !ok || pass != ps {
+				e = NoKey(user)
+			}
+			return
+		},
+	}
+	return
+}

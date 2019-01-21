@@ -4,7 +4,7 @@ type groupIPM struct {
 	Name  string `json:"name"`
 	Group string `json: "group"`
 	IPGrp string `json: "ipGrp"`
-	ipGS  func(string) (ipGrp, bool)
+	ipGS  func(string) ipGrp
 }
 
 type ipGrp func(ip) ([]string, error)
@@ -26,13 +26,8 @@ func (g *groupIPM) admin(c *AdmCmd) (bs []byte, e error) {
 }
 
 func (g *groupIPM) match(i ip) (ok bool) {
-	ig, ok := g.ipGS(g.IPGrp)
-	var gs []string
-	if ok {
-		gs, e := ig(ip)
-		ok = e == nil
-	}
-	if ok {
+	gs, e := g.ipGS(g.IPGrp)(i)
+	if e == nil {
 		ib := func(i int) (b bool) {
 			b = gs[i] == g.Group
 			return

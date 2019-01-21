@@ -5,7 +5,7 @@ type userIPM struct {
 	IPUser string   `json:"ipUser"`
 	Users  []string `json:"users"`
 
-	iu IPUser
+	iu func(string) ipUser
 }
 
 func initUsrM(u *userIPM, si srchIU) (e error) {

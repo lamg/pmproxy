@@ -12,32 +12,13 @@ type dwnCons struct {
 	cl         clock.Clock
 	Name       string        `json:"name"`
 	IPUser     string        `json:"ipUser"`
-	GroupQuota string        `json: "groupQuota"`
+	IPQuota    string        `json: "groupQuota"`
 	LastReset  time.Time     `json:"lastReset"`
 	ResetCycle time.Duration `json:"resetCycle"`
 
 	iu      func(string) ipUser
 	gq      func(string) ipQuota
 	usrCons *sync.Map
-}
-
-type srchIU func(string) (IPUser, error)
-type srchUG func(string) (usrGrp, error)
-
-func initDwn(d *dwnCons, si srchIU, su srchUG) (e error) {
-	d.iu, e = si(d.IPUser)
-	var ug usrGrp
-	if e == nil {
-		d.usrCons = new(sync.Map)
-		ug, e = su(d.UserQt.UsrGrp)
-	}
-	if e == nil {
-		d.usrQt, d.qtAdm, d.qtSer = newUsrQt(d.UserQt.Name,
-			d.UserQt.Quotas, ug)
-		d.usrCons = new(sync.Map)
-		d.iu, e = si(d.IPUser)
-	}
-	return
 }
 
 func (d *dwnCons) consR() (c *consR) {
@@ -87,6 +68,7 @@ func (d *dwnCons) toSer() (tỹpe string, i interface{}) {
 		resetCycle: d.ResetCycle.String(),
 	}
 	tỹpe = "dwnCons"
+	// TODO serialize user consumption
 	return
 }
 

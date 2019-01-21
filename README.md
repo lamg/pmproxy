@@ -59,6 +59,7 @@ Please don't be such a fundamentalist on this is being done at the master branch
 - not so strict error handling
 - github.com/lamg/goproxy and github.com/lamg/proxy benchmark
 - client login
+- dwnCons user consumption serialization
 - NewProxyCtl
   - a map for each interface wip
   - globAdm.exec wip
