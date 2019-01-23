@@ -79,13 +79,14 @@ func (b *bwCons) fromMap(i interface{}) (e error) {
 			},
 		},
 	}
-
-	bLnSrch(func(i int) (b bool) {
-		me(fe[i].f)(fe[i].k)
-		b = e != nil
-		return
-	},
-		len(fe))
+	if e == nil {
+		bLnSrch(func(i int) (b bool) {
+			me(fe[i].f)(fe[i].k)
+			b = e != nil
+			return
+		},
+			len(fe))
+	}
 	return
 }
 

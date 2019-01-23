@@ -2,6 +2,7 @@ package pmproxy
 
 import (
 	"fmt"
+	"github.com/spf13/cast"
 	"sync"
 )
 
@@ -87,5 +88,14 @@ func (c *connCons) canInc(ip string, increase bool) (ok bool) {
 
 func NoEntry(ip string) (e error) {
 	e = fmt.Errorf("No entry with key %s", ip)
+	return
+}
+
+func (c *connCons) fromMap(i interface{}) (e error) {
+	m, e := cast.ToStringMapE(i)
+	me := func(f func(interface{})) (fk func(string)) {
+		fk = mpErr(m, func(d error) { e = d }, f)
+		return
+	}
 	return
 }

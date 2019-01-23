@@ -133,27 +133,41 @@ type AdmCmd struct {
 	CIDR         string        `json: "cidr"`
 }
 
+const (
+	globAdmN      = "globar"
+	addBwCons     = "addBwCons"
+	addConnCons   = "addConnCons"
+	addDwCons     = "addDwCons"
+	addTrCons     = "addTrCons"
+	addGroupIPM   = "addGroupIPM"
+	addRangeIPM   = "addRangeIPM"
+	addSessionIPM = "addSessionIPM"
+	addUserIPM    = "addUserIPM"
+	addUserDB     = "addUserDB"
+	delManager    = "delManager"
+)
+
 func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 	adm, _ := g.conf.checkAdmin(cmd.Secret)
 	cmd.IsAdmin = adm != ""
 	v, ok := c.admins.Load(c.Manager)
 	if ok {
 		r, e = (v.(admin))(cmd)
-	} else if c.Manager == "global" {
+	} else if c.Manager == globAdmN {
 		var mng *manager
 		switch c.Cmd {
-		case "add-bwCons":
+		case addBwCons:
 			bw := newBwCons(cmd.MngName, cmd.FillInterval,
 				cmd.Capacity)
 			g.adms.Store(bw.Name, bw.admin)
 			g.cons.Store(bw.Name, bw.consR())
 			g.toSer.Store(bw.Name, bw.toSer)
-		case "add-connCons":
+		case addConnCons:
 			cn := newConnCons(cmd.MngName, cmd.Limit)
 			g.adms.Store(cn.Name, cn.admin)
 			g.cons.Store(cn.Name, cn.consR())
 			g.toSer.Store(cn.Name, cn.toSer)
-		case "add-dwCons":
+		case addDwCons:
 			dw := &dwnCons{
 				Name:       c.MngName,
 				IPUser:     c.IPUser,
@@ -183,7 +197,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			g.adms.Store(dw.Name, dw.admin)
 			g.cons.Store(dw.Name, dw.consR())
 			g.toSer.Store(dw.Name, dw.toSer)
-		case "add-trCons":
+		case addTrCons:
 			tr := &trCons{
 				Name:  c.Name,
 				Span:  c.Span,
@@ -192,7 +206,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			g.adms.Store(tr.Name, tr.admin)
 			g.consR.Store(tr.Name, tr.consR())
 			g.toSer.Store(tr.Name, tr.toSer)
-		case "add-groupIPM":
+		case addGroupIPM:
 			gp := &groupIPM{
 				Name:  c.Name,
 				Group: c.Group,
@@ -210,7 +224,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			g.adms.Store(gp.Name, gp.admin)
 			g.ipms.Store(gp.Name, gp.match)
 			g.toSer.Store(gp.Name, gp.toSer)
-		case "add-rangeIPM":
+		case addRangeIPM:
 			rm := &rangeIPM{
 				CIDR: c.CIDR,
 				Name: c.Name,
@@ -221,7 +235,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 				g.ipms.Store(rm.Name, rm.match)
 				g.toSer.Store(rm.Name, rm.toSer)
 			}
-		case "add-sessionIPM":
+		case addSessionIPM:
 			sm := &sessionIPM{
 				Name:   c.MngName,
 				UserDB: c.UserDB.Name,
@@ -256,7 +270,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			g.adms.Store(sm.Name, sm.admin)
 			g.ipms.Store(sm.Name, sm.match)
 			g.toSer.Store(sm.Name, sm.toSer)
-		case "add-userIPM":
+		case addUserIPM:
 			um := &userIPM{
 				Name:   c.Name,
 				IPUser: c.IPUser,
@@ -272,11 +286,11 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			g.adms.Store(um.Name, um.admin)
 			g.ipms.Store(um.Name, um.match)
 			g.toSer.Store(um.Name, um.toSer)
-		case "add-userDB":
+		case addUserDB:
 			udb := c.UserDB
-			if udb.Type == "AD" {
+			if udb.SrcType == adSrc {
 				e = u.initAD()
-			} else if udb.Type == "Map" {
+			} else if udb.SrcType == mapSrc {
 				e = u.initMap()
 			} else {
 				e = fmt.Errorf("Unrecognized type %s", udb.Type)
@@ -284,7 +298,7 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 			if e == nil {
 				g.usrDBs.Store(udb.Name, udb)
 			}
-		case "del-manager":
+		case delManager:
 			fs := []*sync.Map{
 				g.adms,
 				g.cons,
