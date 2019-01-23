@@ -31,6 +31,83 @@ type ipUserInf struct {
 	ipu ipUser
 }
 
+func newGlobAdm() (g *globAdm, e error) {
+	viper.SetConfigName("conf")
+	viper.AddConfigPath("/etc/pmproxy")
+	viper.AddConfigPath("$HOME/.config/pmproxy")
+	e = viper.ReadInConfig()
+
+	g.adms.Store(configT, g.conf.admin)
+	g.toSer.Store(configT, g.conf.toSer)
+}
+
+func setDefaults(adm string) (c *config) {
+	c = &config{
+		Admins: []string{adm},
+	}
+	viper.SetDefault("rule", []map[string]interface{}{
+		{
+			"unit": true,
+			"pos":  0,
+			"ipm":  "sm",
+			"spec": map[string]interface{}{
+				"iface": "eth0",
+				"consR": []string{"dw", "cn", "bw"},
+			},
+		},
+	})
+	viper.SetDefault("bwCons", []map[string]interface{}{
+		{
+			"name":     "bw",
+			"capacity": 100,
+			"duration": time.Second.String(),
+		},
+	})
+	viper.SetDefault("connCons", []map[string]interface{}{
+		{
+			"name":  "cn",
+			"limit": 100,
+		},
+	})
+	viper.SetDefault("dwCons", []map[string]interface{}{
+		{
+			"name":       "dw",
+			"ipUser":     "sm",
+			"userQt":     "qt",
+			"lastReset":  "2019-01-19 00:00:00-05:00",
+			"resetCycle": "168h",
+		},
+	})
+	viper.SetDefault("dialTimeout", "30s")
+	viper.SetDefault("sessionIPM", []map[string]interface{}{
+		{
+			"name": "sm",
+			"auth": "ad",
+		},
+	})
+	viper.SetDefault("userDB", []map[string]interface{}{
+		{
+			nameK: "ad",
+			srcK:  adSrc,
+			paramsK: map[string]string{
+				addrK: "ad.upr.edu.cu:636",
+				bdnK:  "dc=upr,dc=edu,dc=cu",
+				suffK: "@upr.edu.cu",
+				userK: "xyz",
+				passK: "abc",
+			},
+		},
+		{
+			nameK: "map",
+			srcK:  mapSrc,
+			paramsK: map[string]string{
+				"coco": "pepe",
+			},
+		},
+	})
+	return
+}
+
 // AdmCmd is an administration command
 type AdmCmd struct {
 	Manager      string        `json: "mng"`
@@ -145,19 +222,37 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 				g.toSer.Store(rm.Name, rm.toSer)
 			}
 		case "add-sessionIPM":
-			sm := newSessionIPM(c.Name,
-				func() []string { return g.conf.admins },
-				func() *crypt { return g.conf.crypt },
-				func(s string) (u *userDB) {
-					v, ok := g.usrDBs.Load(s)
+			sm := &sessionIPM{
+				Name:   c.MngName,
+				UserDB: c.UserDB.Name,
+				authNormN: func(name string) (a authNorm) {
+					v, ok := g.usrDBs.Load(name)
 					if ok {
-						u = v.(*userDB)
+						a = v.(*userDB).auth
 					} else {
-						// TODO
+						a = func(u, p string) (r string, e error) {
+							e = fmt.Errorf("Zero authNorm")
+							return
+						}
 					}
 					return
 				},
-			)
+				usrGroupN: func(name string) (g usrGrp) {
+					v, ok := g.usrDBs.Load(name)
+					if ok {
+						a = v.(*userDB).grps
+					} else {
+						a = func(u string) (gs []string, e error) {
+							e = fmt.Errorf("Zero userGrp")
+							return
+						}
+					}
+				},
+				admins:   func() []string { return g.conf.admins },
+				crypt:    func() *crypt { return g.conf.crypt },
+				sessions: new(sync.Map),
+				grpCache: new(sync.Map),
+			}
 			g.adms.Store(sm.Name, sm.admin)
 			g.ipms.Store(sm.Name, sm.match)
 			g.toSer.Store(sm.Name, sm.toSer)
@@ -170,21 +265,39 @@ func (g *globAdm) exec(c *AdmCmd) (r []byte, e error) {
 					if ok {
 						iu = v.(*ipUserInf).ipUser
 					} else {
-						// TODO
+						iu = func(i ip) (u string) { return }
 					}
 				},
 			}
 			g.adms.Store(um.Name, um.admin)
 			g.ipms.Store(um.Name, um.match)
-			g.toSer.Store(um.Name.um.toSer)
+			g.toSer.Store(um.Name, um.toSer)
 		case "add-userDB":
-			// TODO
+			udb := c.UserDB
+			if udb.Type == "AD" {
+				e = u.initAD()
+			} else if udb.Type == "Map" {
+				e = u.initMap()
+			} else {
+				e = fmt.Errorf("Unrecognized type %s", udb.Type)
+			}
+			if e == nil {
+				g.usrDBs.Store(udb.Name, udb)
+			}
 		case "del-manager":
+			fs := []*sync.Map{
+				g.adms,
+				g.cons,
+				g.ipQs,
+				g.ipUI,
+				g.ipms,
+				g.toSer,
+				g.usrDBs,
+			}
+			forall(func(i int) { fs[i].Delete(c.MngName) },
+				len(fs))
 		default:
 			e = NoCmd(c.Cmd)
-		}
-		if mng != nil {
-			g.mngs.Store(mng.Name, mng)
 		}
 	} else {
 		e = NoMngWithName(c.Manager)

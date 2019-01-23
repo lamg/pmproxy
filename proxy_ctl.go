@@ -17,72 +17,7 @@ type ProxyCtl struct {
 	Persist func(io.Writer) error
 }
 
-type defConf func() *config
-
-func NewProxyCtl(dc defConf) (p *ProxyCtl, e error) {
-	viper.SetConfigName("conf")
-	viper.AddConfigPath("/etc/pmproxy")
-	viper.AddConfigPath("$HOME/.config/pmproxy")
-	e = viper.ReadInConfig()
-
-	return
-}
-
-func setDefaults(adm string) (c *config) {
-	c = &config{
-		Admins: []string{adm},
-	}
-	viper.SetDefault("rule", []map[string]interface{}{
-		{
-			"unit": true,
-			"pos":  0,
-			"ipm":  "sm",
-			"spec": map[string]interface{}{
-				"iface": "eth0",
-				"consR": []string{"dw", "cn", "bw"},
-			},
-		},
-	})
-	viper.SetDefault("bwCons", []map[string]interface{}{
-		{
-			"name":     "bw",
-			"capacity": 100,
-			"duration": time.Second.String(),
-		},
-	})
-	viper.SetDefault("connCons", []map[string]interface{}{
-		{
-			"name":  "cn",
-			"limit": 100,
-		},
-	})
-	viper.SetDefault("dwCons", []map[string]interface{}{
-		{
-			"name":       "dw",
-			"ipUser":     "sm",
-			"userQt":     "qt",
-			"lastReset":  "2019-01-12 00:00:00-05:00",
-			"resetCycle": "168h",
-		},
-	})
-	viper.SetDefault("dialTimeout", "30s")
-	viper.SetDefault("sessionIPM", []map[string]interface{}{
-		{
-			"name": "sm",
-			"auth": "ad",
-		},
-	})
-	viper.SetDefault("userDB", []map[string]interface{}{
-		{
-			"name": "ad",
-			"type": "AD",
-			"addr": "ad.upr.edu.cu:636",
-			"bdn":  "dc=upr,dc=edu,dc=cu",
-			"suff": "@upr.edu.cu",
-			"user": "xyz",
-			"pass": "abc",
-		},
-	})
+func NewProxyCtl() (p *ProxyCtl, e error) {
 	return
 }
 

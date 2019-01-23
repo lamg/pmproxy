@@ -2,12 +2,20 @@ package pmproxy
 
 import (
 	rl "github.com/juju/ratelimit"
+	"github.com/spf13/cast"
 	"time"
 )
 
 const (
-	KiB = 1024
-	MiB = 1024 * KiB
+	KiB         = 1024
+	MiB         = 1024 * KiB
+	durationK   = "duration"
+	capacityK   = "capacity"
+	bwConsT     = "bwCons"
+	setDuration = "set-duration"
+	getDuration = "get-duration"
+	setCapacity = "set-capacity"
+	getCapacity = "get-capacity"
 )
 
 // bandwidth consumption limiter
@@ -29,6 +37,58 @@ func newBwCons(name string, interval time.Duration,
 	return
 }
 
+func mpErr(m map[string]interface{},
+	fe func(error), fi func(interface{})) (fk func(string)) {
+	fk = func(k string) {
+		v, ok := m[k]
+		if ok {
+			fi(v)
+		} else {
+			fe(NoKey(k))
+		}
+	}
+	return
+}
+
+func (b *bwCons) fromMap(i interface{}) (e error) {
+	m, e := cast.ToStringMapE(i)
+	me := func(fi func(interface{})) (fk func(string)) {
+		fk = mpErr(m, func(d error) { e = d }, fi)
+		return
+	}
+	fe := []struct {
+		k string
+		f func(interface{})
+	}{
+		{
+			nameK,
+			func(i interface{}) {
+				b.Name, e = cast.ToStringE(i)
+			},
+		},
+		{
+			durationK,
+			func(i interface{}) {
+				b.Duration, e = cast.ToDurationE(i)
+			},
+		},
+		{
+			capacityK,
+			func(i interface{}) {
+				b.Capacity, e = cast.ToInt64E(i)
+			},
+		},
+	}
+
+	bLnSrch(func(i int) (b bool) {
+		me(fe[i].f)(fe[i].k)
+		b = e != nil
+		return
+	},
+		len(fe))
+	return
+}
+
 func (b *bwCons) init() {
 	b.rl = rl.NewBucket(b.Duration, b.Capacity)
 }
@@ -44,25 +104,21 @@ func (b *bwCons) consR() (c *consR) {
 			ok = true
 			return
 		},
-		update: func(i ip, d download) {
-
-		},
-		close: func(i ip) {
-
-		},
+		update: func(i ip, d download) {},
+		close:  func(i ip) {},
 	}
 	return
 }
 
 func (b *bwCons) admin(a *AdmCmd) (bs []byte, e error) {
 	switch a.Cmd {
-	case "set-duration":
+	case setDuration:
 		b.Duration = a.FillInterval
-	case "get-duration":
+	case getDuration:
 		bs = []byte(b.Duration.String())
-	case "set-capacity":
+	case setCapacity:
 		b.Capacity = a.Capacity
-	case "get-capacity":
+	case getCapacity:
 		bs = []byte(strconv.FormatInt(b.Capacity, 10))
 	default:
 		e = NoCmd(a.Cmd)
@@ -76,6 +132,6 @@ func (b *bwCons) toSer() (tỹpe string, i interface{}) {
 		durationK: b.Duration.String(),
 		capacityK: b.Capacity,
 	}
-	tỹpe = "bwCons"
+	tỹpe = bwConsT
 	return
 }

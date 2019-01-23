@@ -11,24 +11,12 @@ type sessionIPM struct {
 	Name   string `json:"name"`
 	UserDB string `json:"userDB"`
 
-	usrDB    func(string) *userDB
-	admins   func() []string
-	sessions *sync.Map
-	crypt    func() *crypt
-	grpCache *sync.Map
-}
-
-func newSessionIPM(name string, admins func() []string,
-	cr func() *crypt, udb func(string) *userDB) (s *sessionIPM) {
-	s = &sessionIPM{
-		Name:     name,
-		sessions: new(sync.Map),
-		Admins:   admins,
-		crypt:    cr,
-		usrDB:    usrDB,
-		grpCache: new(sync.Map),
-	}
-	return
+	authNormN func(string) authNorm
+	usrGroupN func(string) userGrp
+	admins    func() []string
+	sessions  *sync.Map
+	crypt     func() *crypt
+	grpCache  *sync.Map
 }
 
 func (s *sessionIPM) toSer() (tỹpe string, i interface{}) {
@@ -42,7 +30,7 @@ func (s *sessionIPM) toSer() (tỹpe string, i interface{}) {
 }
 
 func (s *sessionIPM) match(s string) (ok bool) {
-	_, b = s.sessions.Load(ip)
+	_, ok = s.sessions.Load(s)
 	return
 }
 

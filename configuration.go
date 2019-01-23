@@ -15,7 +15,7 @@ type config struct {
 	file        string
 }
 
-func (c *config) exec(cmd *AdmCmd) (bs []byte, e error) {
+func (c *config) admin(cmd *AdmCmd) (bs []byte, e error) {
 	if cmd.IsAdmin {
 		switch cmd.Cmd {
 		case "set-timeout":
@@ -81,29 +81,22 @@ func NoMngWithName(name string) (e error) {
 }
 
 const (
-	adAddr       = "adAddr"
-	adUser       = "adUser"
-	adPass       = "adPass"
-	adBdn        = "adBdn"
-	adSuff       = "adSuff"
 	dialTimeout  = "dialTimeout"
 	loggerIPUser = "loggerIPUser"
 	loggerAddr   = "loggerAddr"
 	admins       = "admins"
+	configT      = "config"
 )
 
-func (c *config) toMap() (m map[string]interface{}) {
-	m = map[string]interface{}{
-		adAddr:       c.ad.Addr,
-		adUser:       c.ad.User,
-		adPass:       c.ad.Pass,
-		adBdn:        c.ad.Bdn,
-		adSuff:       c.ad.Suff,
+func (c *config) toSer() (tỹpe string, i interface{}) {
+	i = map[string]interface{}{
+		nameK:        configT,
 		dialTimeout:  c.dialTimeout.String(),
 		loggerIPUser: c.lg.ipUser,
 		loggerAddr:   c.lg.Addr,
 		admins:       c.admins,
 	}
+	tỹpe = configT
 	return
 }
 
@@ -155,23 +148,6 @@ func (c *config) init(m map[string]interface{},
 	if e == nil {
 		c.crypt, e = newCrypt()
 	}
-	return
-}
-
-func (c *config) manager() (m *manager) {
-	m = &manager{
-		name:  "config",
-		tỹpe:  "config",
-		cons:  idCons(),
-		mtch:  idMatch,
-		adm:   c.exec,
-		toMap: c.toMap,
-	}
-	return
-}
-
-func (c *config) adConf() (a *adConf) {
-	a = c.ad
 	return
 }
 

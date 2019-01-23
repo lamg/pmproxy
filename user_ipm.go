@@ -45,5 +45,11 @@ func (u *userIPM) admin(cmd *AdmCmd) (r []byte, e error) {
 }
 
 func (u *userIPM) toSer() (tỹpe string, i interface{}) {
+	i = map[string]interface{}{
+		nameK:   u.Name,
+		ipUserK: u.IPUser,
+		usersK:  u.Users,
+	}
+	tỹpe = "userIPM"
 	return
 }
