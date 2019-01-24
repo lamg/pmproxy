@@ -1,11 +1,9 @@
 package pmproxy
 
 import (
-	"github.com/spf13/viper"
 	"io"
 	"net"
 	h "net/http"
-	"time"
 )
 
 // ProxyCtl has the handlers for the HTTP servers
@@ -13,7 +11,7 @@ type ProxyCtl struct {
 	// contains the fields for initializing
 	// github.com/lamg/proxy.Proxy
 	PrxFls  *SpecCtx
-	adm     *globalAdm
+	adm     *globAdm
 	Persist func(io.Writer) error
 }
 

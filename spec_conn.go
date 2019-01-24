@@ -18,7 +18,7 @@ import (
 type SpecCtx struct {
 	rs      *rspec
 	clock   clock.Clock
-	timeout func() time.Timeout
+	timeout func() time.Duration
 	lg      *logger
 	crs     func(string) (*consR, bool)
 }

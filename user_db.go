@@ -1,7 +1,6 @@
 package pmproxy
 
 import (
-	"fmt"
 	ld "github.com/lamg/ldaputil"
 	"github.com/spf13/cast"
 )
@@ -33,15 +32,8 @@ const (
 )
 
 func (u *userDB) fromMap(i interface{}) (e error) {
-	m, e := cast.ToStringMapE(i)
-	me := func(f func(interface{})) (fk func(string)) {
-		fk = mpErr(m, func(d error) { e = d }, f)
-		return
-	}
-	fa := []struct {
-		d string
-		f func(interface{})
-	}{
+
+	kf := []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
@@ -59,26 +51,23 @@ func (u *userDB) fromMap(i interface{}) (e error) {
 			func(i interface{}) {
 				u.SrcType, e = cast.ToStringE(i)
 			},
-		},
-	}
-	fe := []func(){
-		func() {
-			bLnSrch(func(i int) (b bool) {
-				me(fa[i].f)(fa[i].k)
-				b = e != nil
-				return
+		}, {
+			srcK, // gets executed if previous executions success
+			func(i interface{}) {
+				if u.SrcType == adSrc {
+					e = u.initAD()
+				} else if u.SrcType == mapSrc {
+					e = u.initMap()
+				}
 			},
-				len(fa))
-		},
-		func() {
-			if u.SrcType == adSrc {
-				e = u.initAD()
-			} else if u.SrcType == mapSrc {
-				e = u.initMap()
-			}
 		},
 	}
-	bLnSrch(ferror(fe, func() bool { return e != nil }), len(fe))
+	mapKF(
+		fe,
+		i,
+		func(d error) { e = d },
+		func() bool { return e != nil },
+	)
 	return
 }
 

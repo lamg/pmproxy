@@ -1,21 +1,19 @@
 package pmproxy
 
 import (
+	"fmt"
 	rl "github.com/juju/ratelimit"
 	"github.com/spf13/cast"
+	"strconv"
 	"time"
 )
 
 const (
-	KiB         = 1024
-	MiB         = 1024 * KiB
-	durationK   = "duration"
-	capacityK   = "capacity"
-	bwConsT     = "bwCons"
-	setDuration = "set-duration"
-	getDuration = "get-duration"
-	setCapacity = "set-capacity"
-	getCapacity = "get-capacity"
+	KiB       = 1024
+	MiB       = 1024 * KiB
+	durationK = "duration"
+	capacityK = "capacity"
+	bwConsT   = "bwCons"
 )
 
 // bandwidth consumption limiter
@@ -37,29 +35,8 @@ func newBwCons(name string, interval time.Duration,
 	return
 }
 
-func mpErr(m map[string]interface{},
-	fe func(error), fi func(interface{})) (fk func(string)) {
-	fk = func(k string) {
-		v, ok := m[k]
-		if ok {
-			fi(v)
-		} else {
-			fe(NoKey(k))
-		}
-	}
-	return
-}
-
 func (b *bwCons) fromMap(i interface{}) (e error) {
-	m, e := cast.ToStringMapE(i)
-	me := func(fi func(interface{})) (fk func(string)) {
-		fk = mpErr(m, func(d error) { e = d }, fi)
-		return
-	}
-	fe := []struct {
-		k string
-		f func(interface{})
-	}{
+	kf := []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
@@ -79,14 +56,12 @@ func (b *bwCons) fromMap(i interface{}) (e error) {
 			},
 		},
 	}
-	if e == nil {
-		bLnSrch(func(i int) (b bool) {
-			me(fe[i].f)(fe[i].k)
-			b = e != nil
-			return
-		},
-			len(fe))
-	}
+	mapKF(
+		kf,
+		i,
+		func(d error) { e = d },
+		func() bool { return e != nil },
+	)
 	return
 }
 
@@ -101,7 +76,7 @@ func (b *bwCons) consR() (c *consR) {
 			return
 		},
 		can: func(i ip, d download) (ok bool) {
-			b.rl.Wait(int64(n))
+			b.rl.Wait(int64(b.Duration))
 			ok = true
 			return
 		},
@@ -112,17 +87,50 @@ func (b *bwCons) consR() (c *consR) {
 }
 
 func (b *bwCons) admin(a *AdmCmd) (bs []byte, e error) {
-	switch a.Cmd {
-	case setDuration:
-		b.Duration = a.FillInterval
-	case getDuration:
-		bs = []byte(b.Duration.String())
-	case setCapacity:
-		b.Capacity = a.Capacity
-	case getCapacity:
-		bs = []byte(strconv.FormatInt(b.Capacity, 10))
-	default:
+	cs := []struct {
+		cmd  string
+		prop string
+		f    func()
+	}{
+		{
+			cmd:  set,
+			prop: durationK,
+			f:    func() { b.Duration = a.FillInterval },
+		},
+		{
+			cmd:  set,
+			prop: capacityK,
+			f:    func() { b.Capacity = a.Capacity },
+		},
+		{
+			cmd:  get,
+			prop: durationK,
+			f:    func() { bs = []byte(b.Duration.String()) },
+		},
+		{
+			cmd:  get,
+			prop: capacityK,
+			f: func() {
+				bs = []byte(strconv.FormatInt(b.Capacity, 10))
+			},
+		},
+	}
+	cmdf, propf := false, false
+	bLnSrch(
+		func(i int) (b bool) {
+			cmdf, propf = cs[i].cmd == a.Cmd, cs[i].prop == a.Prop
+			b = cmdf && propf
+			if b {
+				cs[i].f()
+			}
+		},
+		len(cs),
+	)
+	if !cmdf {
 		e = NoCmd(a.Cmd)
+	}
+	if !propf {
+		e = NoProp(a.Prop)
 	}
 	return
 }
@@ -134,5 +142,10 @@ func (b *bwCons) toSer() (tỹpe string, i interface{}) {
 		capacityK: b.Capacity,
 	}
 	tỹpe = bwConsT
+	return
+}
+
+func NoProp(p string) (e error) {
+	e = fmt.Errorf("No property %s", p)
 	return
 }

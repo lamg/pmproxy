@@ -145,6 +145,7 @@ func (s *rspec) spec(t time.Time,
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	inf := func(l int) {
 		j := s.rules[l]
+		regexp.Compile(j[i].URLM) // TODO
 		ib := func(i int) (b bool) {
 			ipm, ok := s.ipm(j[i].IPM)
 			b = (j[i].unit == (!ok || ipm.Match(ip))) &&
@@ -188,16 +189,21 @@ func InvalidArgs(v interface{}) (e error) {
 	return
 }
 
-func (s *rspec) exec(c *AdmCmd) (r string, e error) {
+const (
+	addRule = "addRule"
+	delRule = "delRule"
+)
+
+func (s *rspec) admin(c *AdmCmd) (r string, e error) {
 	switch c.Cmd {
-	case "add-rule":
+	case addRule:
 		e = rl.spec.init()
 		if e == nil {
 			e = c.rspec.add(cmd.Pos, rl)
 		}
-	case "del-rule":
+	case delRule:
 		e = c.rspec.delete(cmd.Pos)
-	case "show-rules":
+	case show:
 		r, e = c.rspec.show()
 	}
 	return

@@ -4,23 +4,32 @@ type groupIPM struct {
 	Name  string `json:"name"`
 	Group string `json: "group"`
 	IPGrp string `json: "ipGrp"`
-	ipGS  func(string) ipGrp
+	ipGS  func(string) ipGroup
 }
 
-type ipGrp func(ip) ([]string, error)
+const (
+	setGroup = "setGroup"
+	getGroup = "getGroup"
+	setIPGrp = "setIPGrp"
+	getIPGrp = "getIPGrp"
+	ipGrpK   = "ipGrp"
+	groupK   = "group"
+)
 
 func (g *groupIPM) admin(c *AdmCmd) (bs []byte, e error) {
-	switch c.Cmd {
-	case "set-group":
-		g.Group = c.Group
-	case "get-group":
-		bs = []byte(g.Group)
-	case "set-ipGrp":
-		g.IPGrp = c.MngName
-	case "get-ipGrp":
-		bs = []byte(g.IPGrp)
-	default:
-		e = NoCmd(c.Cmd)
+	if c.IsAdmin {
+		switch c.Cmd {
+		case setGroup:
+			g.Group = c.Group
+		case getGroup:
+			bs = []byte(g.Group)
+		case setIPGrp:
+			g.IPGrp = c.MngName
+		case getIPGrp:
+			bs = []byte(g.IPGrp)
+		default:
+			e = NoCmd(c.Cmd)
+		}
 	}
 	return
 }
@@ -37,12 +46,46 @@ func (g *groupIPM) match(i ip) (ok bool) {
 	return
 }
 
+const (
+	groupIPMT = "groupIPM"
+)
+
 func (g *groupIPM) toSer() (tỹpe string, i interface{}) {
 	i = map[string]interface{}{
 		nameK:  g.Name,
 		groupK: g.Group,
 		ipGrpK: g.IPGrp,
 	}
-	tỹpe = "groupIPM"
+	tỹpe = groupIPMT
+	return
+}
+
+func (g *groupIPM) fromMap(i interface{}) (e error) {
+	kf := []kFuncI{
+		{
+			nameK,
+			func(i interface{}) {
+				g.Name, e = cast.ToStringE(i)
+			},
+		},
+		{
+			groupK,
+			func(i interface{}) {
+				g.Group, e = cast.ToStringE(i)
+			},
+		},
+		{
+			ipGrpK,
+			func(i interface{}) {
+				g.ipGrp, e = cast.ToStringE(i)
+			},
+		},
+	}
+	mapKF(
+		fe,
+		i,
+		func(d error) { e = d },
+		func() bool { return e != nil },
+	)
 	return
 }

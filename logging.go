@@ -11,20 +11,16 @@ import (
 type logger struct {
 	cl     clock.Clock
 	sl     *syslog.Writer
-	iu     IPUser
+	iu     func(string) ipUser
 	IPUser string `json:"ipUser"`
 	Addr   string `json:"addr"`
 }
 
-func initLg(l *logger, si srchIU) (e error) {
-	l.cl = new(clock.OSClock)
-	l.iu, e = si(l.IPUser)
-	if e == nil {
-		if l.Addr != "" {
-			l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO, "")
-		} else {
-			l.sl, e = syslog.New(syslog.LOG_INFO, "")
-		}
+func (l *logger) init() (e error) {
+	if l.Addr != "" {
+		l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO, "")
+	} else {
+		l.sl, e = syslog.New(syslog.LOG_INFO, "")
 	}
 	return
 }
@@ -32,7 +28,7 @@ func initLg(l *logger, si srchIU) (e error) {
 func (l *logger) log(r *h.Request) (e error) {
 	time := l.cl.Now()
 	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
-	user := l.iu.User(clientIP)
+	user := l.iu(l.IPUser)(clientIP)
 	if user == "" {
 		e = NoUserLogged(clientIP)
 		user = "-"

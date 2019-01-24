@@ -16,27 +16,28 @@ type config struct {
 }
 
 func (c *config) admin(cmd *AdmCmd) (bs []byte, e error) {
+	// TODO
 	if cmd.IsAdmin {
 		switch cmd.Cmd {
 		case "set-timeout":
-			c.DialTimeout = cmd.DialTimeout
+			c.dialTimeout = cmd.DialTimeout
 		case "get-timeout":
-			r = c.DialTimeout.String()
+			bs = []byte(c.dialTimeout.String())
 		case "add-admin":
-			c.Admins = append(c.Admins, cmd.User)
+			c.admins = append(c.admins, cmd.User)
 		case "del-admin":
 			ib := func(i int) (b bool) {
-				b = c.Admins[i] == cmd.User
+				b = c.admins[i] == cmd.User
 				return
 			}
-			b, i := bLnSrch(ib, len(c.Admins))
+			b, i := bLnSrch(ib, len(c.admins))
 			if b {
-				c.Admins = append(c.Admins[:i], c.Admins[i+1:]...)
+				c.admins = append(c.admins[:i], c.admins[i+1:]...)
 			} else {
 				e = NoAdmin(cmd.User)
 			}
 		case "get-admins":
-			bs, e = json.Marshal(c.Admins)
+			bs, e = json.Marshal(c.admins)
 		default:
 			e = NoCmd(cmd.Cmd)
 		}
@@ -49,10 +50,10 @@ func (c *config) checkAdmin(secret string) (user string,
 	user, e = c.crypt.Decrypt(secret)
 	if e == nil {
 		ib := func(i int) (b bool) {
-			b = c.Admins[i] == user
+			b = c.admins[i] == user
 			return
 		}
-		b, _ := bLnSrch(ib, len(c.Admins))
+		b, _ := bLnSrch(ib, len(c.admins))
 		if !b {
 			e = NoAdmin(user)
 		}
@@ -92,7 +93,7 @@ func (c *config) toSer() (tỹpe string, i interface{}) {
 	i = map[string]interface{}{
 		nameK:        configT,
 		dialTimeout:  c.dialTimeout.String(),
-		loggerIPUser: c.lg.ipUser,
+		loggerIPUser: c.lg.IPUser,
 		loggerAddr:   c.lg.Addr,
 		admins:       c.admins,
 	}
@@ -102,9 +103,9 @@ func (c *config) toSer() (tỹpe string, i interface{}) {
 
 func (c *config) init(m map[string]interface{},
 	file string) (e error) {
+	// TODO
 	c.file = file
-	c.ad = new(adConf)
-	c.lg = new(lg)
+	c.lg = new(logger)
 	fs := []*string{&c.ad.Addr, &c.ad.Bdn, &c.ad.Pass,
 		&c.ad.Suff, &c.ad.User, &c.lg.ipUser, &c.lg.Addr,
 	}

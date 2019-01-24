@@ -5,7 +5,8 @@ import (
 	rt "github.com/lamg/rtimespan"
 )
 
-// trCons is a time range consumption limiter for a connection
+// trCons is a time range consumption limiter
+// for a connection
 type trCons struct {
 	Name string    `json:"name"`
 	Span *rt.RSpan `json:"span"`
@@ -32,34 +33,89 @@ func (t *trCons) consR() (c *consR) {
 }
 
 func (t *trCons) admin(c *AdmCmd) (bs []byte, e error) {
-	switch c.Cmd {
-	case "get-span":
-		bs, e = json.Marshal(t.Span)
-	case "set-span":
-		t.Span = c.Span
-	default:
-		e = NoCmd(c.Cmd)
+	if c.IsAdmin {
+		kf := []kFunc{
+			{get, func() { bs, e = json.Marshal(t.Span) }},
+			{set, func() { t.Span = c.Span }},
+		}
+		exF(kf, cmd.Cmd, func(d error) { e = d })
 	}
+
 	return
 }
+
+const (
+	trConsT = "trCons"
+)
 
 func (t *trCons) toSer() (tỹpe string, i interface{}) {
 	i = map[string]interface{}{
-		nameK: t.Name,
-		spanK: toSerSpan(t.Span),
+		nameK:     t.Name,
+		startK:    t.Span.Start.String(),
+		activeK:   t.Span.Active.String(),
+		totalK:    t.Span.Total.String(),
+		timesK:    t.Span.Times,
+		infiniteK: t.Span.Infinite,
+		allTimeK:  t.Span.AllTime,
 	}
-	tỹpe = "trCons"
+	tỹpe = trConsT
 	return
 }
 
-func toSerSpan(r *rt.Span) (m map[string]interface{}) {
-	m = map[string]interface{}{
-		startK:    r.Start.String(),
-		activeK:   r.Active.String(),
-		totalK:    r.Total.String(),
-		timesK:    r.Times,
-		infiniteK: r.Infinite,
-		allTimeK:  r.AllTime,
+func (t *trCons) fromMap(i interface{}) (e error) {
+	t.Span = new(rt.RSpan)
+	kf := []struct {
+		k string
+		f func(interface{})
+	}{
+		{
+			nameK,
+			func(i interface{}) {
+				t.Name, e = cast.ToStringE(i)
+			},
+		},
+		{
+			startK,
+			func(i interface{}) {
+				t.Span.Start, e = cast.StringToDate(i)
+			},
+		},
+		{
+			activeK,
+			func(i interface{}) {
+				t.Span.Active, e = stringToDuration(i)
+			},
+		},
+		{
+			totalK,
+			func(i interface{}) {
+				t.Span.Total, e = stringToDuration(i)
+			},
+		},
+		{
+			timesK,
+			func(i interface{}) {
+				t.Span.Times, e = cast.ToIntE(i)
+			},
+		},
+		{
+			infiniteK,
+			func(i interface{}) {
+				t.Span.Infinite, e = cast.ToBoolE(i)
+			},
+		},
+		{
+			allTimeK,
+			func(i interface{}) {
+				t.Span.AllTime, e = cast.ToBoolE(i)
+			},
+		},
 	}
+	mapKF(
+		fe,
+		i,
+		func(d error) { e = d },
+		func() bool { return e != nil },
+	)
 	return
 }

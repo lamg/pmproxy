@@ -3,7 +3,7 @@ package pmproxy
 import (
 	"encoding/json"
 	"fmt"
-
+	"github.com/spf13/cast"
 	"sync"
 )
 
@@ -24,9 +24,32 @@ func (s *sessionIPM) toSer() (tỹpe string, i interface{}) {
 		nameK:   s.Name,
 		userDBK: s.UserDB.name,
 	}
-	tỹpe = "sessionIPM"
+	tỹpe = sessionIPMT
 	return
+}
 
+func (s *sessionIPM) fromMap(i interface{}) (e error) {
+	kf := []kFuncI{
+		{
+			nameK,
+			func(i interface{}) {
+				s.Name, e = cast.ToStringE(i)
+			},
+		},
+		{
+			userDBK,
+			func(i interface{}) {
+				s.UserDB, e = cast.ToStringE(i)
+			},
+		},
+	}
+	mapKF(
+		kf,
+		i,
+		func(d error) { e = d },
+		func() bool { return e != nil },
+	)
+	return
 }
 
 func (s *sessionIPM) match(s string) (ok bool) {
@@ -34,21 +57,35 @@ func (s *sessionIPM) match(s string) (ok bool) {
 	return
 }
 
-func (s *sessionIPM) admin(cmd *AdmCmd) (bs []byte, e error) {
-	switch cmd.Cmd {
-	case "open":
-		bs, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
-	case "close":
-		bs, e = s.close(cmd.Secret, cmd.RemoteIP)
-	case "show":
-		if cmd.IsAdmin {
-			bs, e = s.show(cmd.Secret, cmd.RemoteIP)
-		} else {
-			e = NoCmd(cmd.Cmd)
-		}
-	default:
-		e = NoCmd(cmd.Cmd)
+const (
+	sessionIPMT = "sessionIPM"
+)
+
+func (s *sessionIPM) admin(cmd *AdmCmd) (bs []byte,
+	e error) {
+	kf := []kFunc{
+		{
+			open,
+			func() {
+				bs, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
+			},
+		},
+		{
+			close,
+			func() { bs, e = s.close(cmd.Secret, cmd.RemoteIP) },
+		},
+		{
+			show,
+			func() {
+				if cmd.IsAdmin {
+					bs, e = s.show(cmd.Secret, cmd.RemoteIP)
+				} else {
+					e = NoCmd(cmd.Cmd)
+				}
+			},
+		},
 	}
+	exF(kf, cmd.Cmd, func(d error) { e = d })
 	return
 }
 
@@ -83,7 +120,10 @@ func (s *sessionIPM) open(usr, pass, ip string) (bs []byte,
 			s.sessions.Store(ip, user)
 		},
 	}
-	bLnSrch(ferror(fe, func() bool { return e != nil }), len(fe))
+	bLnSrch(
+		ferror(fe, func() bool { return e != nil }),
+		len(fe),
+	)
 	return
 }
 
