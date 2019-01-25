@@ -28,27 +28,21 @@ func (s *sessionIPM) toSer() (tỹpe string, i interface{}) {
 	return
 }
 
-func (s *sessionIPM) fromMap(i interface{}) (e error) {
-	kf := []kFuncI{
+func (s *sessionIPM) fromMap(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				s.Name, e = cast.ToStringE(i)
+				s.Name = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			userDBK,
 			func(i interface{}) {
-				s.UserDB, e = cast.ToStringE(i)
+				s.UserDB = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 	}
-	mapKF(
-		kf,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }
 
@@ -61,31 +55,36 @@ const (
 	sessionIPMT = "sessionIPM"
 )
 
-func (s *sessionIPM) admin(cmd *AdmCmd) (bs []byte,
-	e error) {
-	kf := []kFunc{
+func (s *sessionIPM) admin(cmd *AdmCmd, fb fbs,
+	fe ferr) (kf []kFunc) {
+	kf = []kFunc{
 		{
 			open,
 			func() {
-				bs, e = s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
+				bs, e := s.open(cmd.User, cmd.Pass, cmd.RemoteIP)
+				fb(bs)
+				fe(e)
 			},
 		},
 		{
 			close,
-			func() { bs, e = s.close(cmd.Secret, cmd.RemoteIP) },
+			func() {
+				bs, e := s.close(cmd.Secret, cmd.RemoteIP)
+				fb(bs)
+				fe(e)
+			},
 		},
 		{
 			show,
 			func() {
 				if cmd.IsAdmin {
-					bs, e = s.show(cmd.Secret, cmd.RemoteIP)
-				} else {
-					e = NoCmd(cmd.Cmd)
+					bs, e := s.show(cmd.Secret, cmd.RemoteIP)
+					fb(bs)
+					fe(e)
 				}
 			},
 		},
 	}
-	exF(kf, cmd.Cmd, func(d error) { e = d })
 	return
 }
 

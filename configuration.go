@@ -12,34 +12,61 @@ type config struct {
 	dialTimeout time.Duration
 	lg          *logger
 	crypt       *crypt
-	file        string
 }
 
-func (c *config) admin(cmd *AdmCmd) (bs []byte, e error) {
+const (
+	dialTimeoutK  = "dialTimeout"
+	adminsK       = "admins"
+	loggerIPUserK = "loggerIPUser"
+	loggerAddrK   = "loggerAddr"
+	configT       = "config"
+)
+
+func (c *config) admin(cmd *AdmCmd, fb func([]byte),
+	fe func(error)) (cs []cmdProp) {
 	// TODO
 	if cmd.IsAdmin {
-		switch cmd.Cmd {
-		case "set-timeout":
-			c.dialTimeout = cmd.DialTimeout
-		case "get-timeout":
-			bs = []byte(c.dialTimeout.String())
-		case "add-admin":
-			c.admins = append(c.admins, cmd.User)
-		case "del-admin":
-			ib := func(i int) (b bool) {
-				b = c.admins[i] == cmd.User
-				return
-			}
-			b, i := bLnSrch(ib, len(c.admins))
-			if b {
-				c.admins = append(c.admins[:i], c.admins[i+1:]...)
-			} else {
-				e = NoAdmin(cmd.User)
-			}
-		case "get-admins":
-			bs, e = json.Marshal(c.admins)
-		default:
-			e = NoCmd(cmd.Cmd)
+		cs = []cmdProp{
+			{
+				cmd:  set,
+				prop: dialTimeoutK,
+				f:    func() { c.dialTimeout = cmd.DialTimeout },
+			},
+			{
+				cmd:  get,
+				prop: dialTimeoutK,
+				f:    func() { fb([]byte(c.dialTimeout.String())) },
+			},
+			{
+				cmd:  add,
+				prop: adminsK,
+				f:    func() { c.admins = append(c.admins, cmd.User) },
+			},
+			{
+				cmd:  del,
+				prop: adminsK,
+				f: func() {
+					ib := func(i int) (b bool) {
+						b = c.admins[i] == cmd.User
+						return
+					}
+					b, i := bLnSrch(ib, len(c.admins))
+					if b {
+						c.admins = append(c.admins[:i], c.admins[i+1:]...)
+					} else {
+						fe(NoAdmin(cmd.User))
+					}
+				},
+			},
+			{
+				cmd:  get,
+				prop: adminsK,
+				f: func() {
+					bs, e := json.Marshal(c.admins)
+					fb(bs)
+					fe(e)
+				},
+			},
 		}
 	}
 	return
@@ -81,73 +108,52 @@ func NoMngWithName(name string) (e error) {
 	return
 }
 
-const (
-	dialTimeout  = "dialTimeout"
-	loggerIPUser = "loggerIPUser"
-	loggerAddr   = "loggerAddr"
-	admins       = "admins"
-	configT      = "config"
-)
-
 func (c *config) toSer() (tỹpe string, i interface{}) {
 	i = map[string]interface{}{
-		nameK:        configT,
-		dialTimeout:  c.dialTimeout.String(),
-		loggerIPUser: c.lg.IPUser,
-		loggerAddr:   c.lg.Addr,
-		admins:       c.admins,
+		nameK:         configT,
+		dialTimeoutK:  c.dialTimeout.String(),
+		loggerIPUserK: c.lg.IPUser,
+		loggerAddrK:   c.lg.Addr,
+		adminsK:       c.admins,
 	}
 	tỹpe = configT
 	return
 }
 
-func (c *config) init(m map[string]interface{},
-	file string) (e error) {
-	// TODO
-	c.file = file
-	c.lg = new(logger)
-	fs := []*string{&c.ad.Addr, &c.ad.Bdn, &c.ad.Pass,
-		&c.ad.Suff, &c.ad.User, &c.lg.ipUser, &c.lg.Addr,
-	}
-	ks := []string{adAddr, adBdn, adPass, adSuff, adUser,
-		loggerIPUser, loggerAddr,
-	}
-	ib := func(i int) (ok bool) {
-		v, b := mp[ks[i]]
-		if b {
-			*fs[i], b = v.(string)
-		}
-		ok = !b
-		return
-	}
-	ok, i := bLnSrch(ib, len(ks))
-	if ok {
-		e = NoKeyType(ks[i], "string")
-	}
-	if e == nil {
-		v, ok := m[admins]
-		if ok {
-			c.admins, ok = v.([]string)
-		}
-		if !ok {
-			e = NoKeyType(admins, "[]string")
-		}
-	}
-	var dur string
-	if e == nil {
-		v, ok := m[dialTimeout]
-		if ok {
-			dur, ok = v.(string)
-		}
-		if !ok {
-			e = NoKeyType(dialTimeout)
-		}
-	}
-	if e == nil {
-		c.dialTimeout, e = time.ParseDuration(dur)
-	}
-	if e == nil {
-		c.crypt, e = newCrypt()
+func (c *config) fromMapKF(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
+		{
+			adminsK,
+			func(i interface{}) {
+				c.admins = stringSliceE(cast.ToStringSliceE, fe)(i)
+			},
+		},
+		{
+			dialTimeoutK,
+			func(i interface{}) {
+				c.dialTimeout = stringDurationE(stringToDurationE,
+					fe)(i)
+			},
+		},
+		{
+			loggerAddrK,
+			func(i interface{}) {
+				c.lg = new(logger)
+				c.lg.Addr = stringE(cast.ToStringE, fe)(i)
+			},
+		},
+		{
+			loggerIPUserK,
+			func(i interface{}) {
+				c.lg.IPUser = stringE(cast.ToStringE, fe)(i)
+			},
+		},
+		{
+			loggerIPUserK,
+			func(i interface{}) {
+				fe(c.lg.init())
+			},
+		},
 	}
 	return
 }

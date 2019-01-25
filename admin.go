@@ -25,7 +25,7 @@ type globAdm struct {
 
 type toSer func() (string, interface{})
 
-type admin func(*AdmCmd) ([]byte, error)
+type admin func(*AdmCmd, fbs, ferr) []cmdProp
 
 type ipQuota func(ip) uint64
 
@@ -161,19 +161,18 @@ func (g *globAdm) dispatch(c *AdmCmd) (r []byte, e error) {
 	c.IsAdmin = adm != ""
 	v, ok := g.adms.Load(c.Manager)
 	if ok {
-		r, e = (v.(admin))(c)
+		fe := func(d error) { e = d }
+		cs := (v.(admin))(c, func(b []byte) { r = b }, fe)
+		exCmdProp(cs, fe)
 	} else {
 		e = NoMngWithName(c.Manager)
 	}
 	return
 }
 
-func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
-	cs := []struct {
-		cmd  string
-		tỹpe string
-		f    func()
-	}{
+func (g *globAdm) admin(c *AdmCmd, fb fbs,
+	fe ferr) (cs []cmdProp) {
+	cs = []cmdProp{
 		{
 			cmd:  add,
 			tỹpe: bwConsT,
@@ -187,7 +186,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: connConsT,
+			prop: connConsT,
 			f: func() {
 				cn := newConnCons(c.MngName, c.Limit)
 				g.adms.Store(cn.Name, cn.admin)
@@ -197,7 +196,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: dwnConsT,
+			prop: dwnConsT,
 			f: func() {
 				dw := &dwnCons{
 					Name:       c.MngName,
@@ -232,7 +231,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: trConsT,
+			prop: trConsT,
 			f: func() {
 				tr := &trCons{
 					Name:  c.MngName,
@@ -246,7 +245,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: groupIPMT,
+			prop: groupIPMT,
 			f: func() {
 				gp := &groupIPM{
 					Name:  c.MngName,
@@ -272,7 +271,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: rangeIPMT,
+			prop: rangeIPMT,
 			f: func() {
 				rm := &rangeIPM{
 					CIDR: c.CIDR,
@@ -288,7 +287,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: sessionIPMT,
+			prop: sessionIPMT,
 			f: func() {
 				sm := &sessionIPM{
 					Name:   c.MngName,
@@ -330,7 +329,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: userIPMT,
+			prop: userIPMT,
 			f: func() {
 				um := &userIPM{
 					Name:   c.MngName,
@@ -351,7 +350,7 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: userDBT,
+			prop: userDBT,
 			f: func() {
 				udb := c.UserDB
 				if udb.SrcType == adSrc {
@@ -369,14 +368,14 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 		},
 		{
 			cmd:  add,
-			tỹpe: groupQuotaT,
+			prop: groupQuotaT,
 			f: func() {
 				// TODO
 			},
 		},
 		{
 			cmd:  del,
-			tỹpe: all,
+			prop: all,
 			f: func() {
 				fs := []*sync.Map{
 					g.adms,
@@ -391,24 +390,6 @@ func (g *globAdm) admin(c *AdmCmd) (bs []byte, e error) {
 					len(fs))
 			},
 		},
-	}
-	cmdf, tỹpef := false, false
-	bLnSrch(
-		func(i int) (b bool) {
-			cmdf, tỹpef = cs[i].cmd == c.Cmd,
-				cs[i].tỹpe == c.MngType || cs[i].tỹpe == all
-			b = cmdf && tỹpef
-			if b {
-				cs[i].f()
-			}
-		},
-		len(cs),
-	)
-	if !cmdf {
-		e = NoCmd(c.Cmd)
-	}
-	if !tỹpef {
-		e = NoMngWithType(c.MngName, c.MngType)
 	}
 	return
 }

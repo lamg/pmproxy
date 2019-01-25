@@ -31,47 +31,41 @@ const (
 	userDBT    = "userDB"
 )
 
-func (u *userDB) fromMap(i interface{}) (e error) {
-
-	kf := []kFuncI{
+func (u *userDB) fromMap(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				u.Name, e = cast.ToStringE(i)
+				u.Name = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			paramsK,
 			func(i interface{}) {
-				u.Params, e = cast.ToStringMapE(i)
+				u.Params = stringMapE(cast.ToStringMapE, fe)(i)
 			},
 		},
 		{
 			srcK,
 			func(i interface{}) {
-				u.SrcType, e = cast.ToStringE(i)
+				u.SrcType = stringE(cast.ToStringE(i), fe)(i)
 			},
 		}, {
 			srcK, // gets executed if previous executions success
 			func(i interface{}) {
 				if u.SrcType == adSrc {
-					e = u.initAD()
+					fe(u.initAD())
 				} else if u.SrcType == mapSrc {
-					e = u.initMap()
+					fe(u.initMap())
 				}
 			},
 		},
 	}
-	mapKF(
-		fe,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }
 
 func (u *userDB) initAD() (e error) {
+	// TODO
 	ldap := new(ld.Ldap)
 
 	me := func(fi func(interface{})) (fk func(string)) {

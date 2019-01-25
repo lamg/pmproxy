@@ -25,9 +25,10 @@ func (u *userIPM) match(ip string) (ok bool) {
 	return
 }
 
-func (u *userIPM) admin(cmd *AdmCmd) (r []byte, e error) {
+func (u *userIPM) admin(cmd *AdmCmd, fb fbs,
+	fe ferr) (kf []kFunc) {
 	if cmd.IsAdmin {
-		kf := []kFunc{
+		kf = []kFunc{
 			{
 				add,
 				func() {
@@ -48,7 +49,6 @@ func (u *userIPM) admin(cmd *AdmCmd) (r []byte, e error) {
 				},
 			},
 		}
-		exF(kf, cmd.Cmd, func(d error) { e = d })
 	}
 	return
 }
@@ -67,32 +67,26 @@ func (u *userIPM) toSer() (tỹpe string, i interface{}) {
 	return
 }
 
-func (u *userIPM) fromMap(i interface{}) (e error) {
-	kf := []kFuncI{
+func (u *userIPM) fromMap(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				u.Name, e = cast.ToStringE(i)
+				u.Name = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			ipUserK,
 			func(i interface{}) {
-				u.IPUser, e = cast.ToStringE(i)
+				u.IPUser = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			usersK,
 			func(i interface{}) {
-				u.Users, e = cast.ToStringSliceE(i)
+				u.Users = stringSliceE(cast.ToStringSliceE, fe)(i)
 			},
 		},
 	}
-	mapKF(
-		fe,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }

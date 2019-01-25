@@ -32,15 +32,26 @@ func (t *trCons) consR() (c *consR) {
 	return
 }
 
-func (t *trCons) admin(c *AdmCmd) (bs []byte, e error) {
+func (t *trCons) admin(c *AdmCmd, fb fbs,
+	fe ferr) (cs []cmdProp) {
 	if c.IsAdmin {
-		kf := []kFunc{
-			{get, func() { bs, e = json.Marshal(t.Span) }},
-			{set, func() { t.Span = c.Span }},
+		cs = []cmdProp{
+			{
+				cmd:  get,
+				prop: spanK,
+				f: func() {
+					bs, e := json.Marshal(t.Span)
+					fb(bs)
+					fe(e)
+				},
+			},
+			{
+				cmd:  set,
+				prop: spanK,
+				f:    func() { t.Span = c.Span },
+			},
 		}
-		exF(kf, cmd.Cmd, func(d error) { e = d })
 	}
-
 	return
 }
 

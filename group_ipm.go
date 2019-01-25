@@ -8,27 +8,34 @@ type groupIPM struct {
 }
 
 const (
-	setGroup = "setGroup"
-	getGroup = "getGroup"
-	setIPGrp = "setIPGrp"
-	getIPGrp = "getIPGrp"
-	ipGrpK   = "ipGrp"
-	groupK   = "group"
+	ipGrpK = "ipGrp"
+	groupK = "group"
 )
 
-func (g *groupIPM) admin(c *AdmCmd) (bs []byte, e error) {
+func (g *groupIPM) admin(c *AdmCmd, fb fbs,
+	fe ferr) (cs []cmdProp) {
 	if c.IsAdmin {
-		switch c.Cmd {
-		case setGroup:
-			g.Group = c.Group
-		case getGroup:
-			bs = []byte(g.Group)
-		case setIPGrp:
-			g.IPGrp = c.MngName
-		case getIPGrp:
-			bs = []byte(g.IPGrp)
-		default:
-			e = NoCmd(c.Cmd)
+		cs = []cmdProp{
+			{
+				cmd:  set,
+				prop: groupK,
+				f:    func() { g.Group = c.Group },
+			},
+			{
+				cmd:  get,
+				prop: groupK,
+				f:    func() { fb([]byte(g.Group)) },
+			},
+			{
+				cmd:  set,
+				prop: ipGrpK,
+				f:    func() { g.IPGrp = c.MngName },
+			},
+			{
+				cmd:  get,
+				prop: ipGrpK,
+				f:    func() { fb([]byte(g.IPGrp)) },
+			},
 		}
 	}
 	return
@@ -60,32 +67,26 @@ func (g *groupIPM) toSer() (tỹpe string, i interface{}) {
 	return
 }
 
-func (g *groupIPM) fromMap(i interface{}) (e error) {
-	kf := []kFuncI{
+func (g *groupIPM) fromMapKF(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				g.Name, e = cast.ToStringE(i)
+				g.Name = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			groupK,
 			func(i interface{}) {
-				g.Group, e = cast.ToStringE(i)
+				g.Group = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			ipGrpK,
 			func(i interface{}) {
-				g.ipGrp, e = cast.ToStringE(i)
+				g.ipGrp = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 	}
-	mapKF(
-		fe,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }

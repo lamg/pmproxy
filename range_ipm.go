@@ -16,21 +16,28 @@ func (m *rangeIPM) init() (e error) {
 }
 
 const (
-	getCIDR   = "getCIDR"
-	setCIDR   = "setCIDR"
 	rangeIPMT = "rangeIPM"
 	cidrK     = "cidr"
 )
 
-func (r *rangeIPM) admin(c *AdmCmd) (bs []byte, e error) {
-	switch c.Cmd {
-	case getCIDR:
-		bs = []byte(r.CIDR)
-	case setCIDR:
-		r.CIDR = c.CIDR
-		e = m.init()
-	default:
-		e = NoCmd(c.Cmd)
+func (r *rangeIPM) admin(c *AdmCmd, fb fbs,
+	fe ferr) (cs []cmdProp) {
+	if c.IsAdmin {
+		cs = []cmdProp{
+			{
+				cmd:  get,
+				prop: cidrK,
+				f:    func() { fb([]byte(r.CIDR)) },
+			},
+			{
+				cmd:  set,
+				prop: cidrK,
+				f: func() {
+					r.CIDR = c.CIDR
+					fe(r.init())
+				},
+			},
+		}
 	}
 	return
 }

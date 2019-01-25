@@ -35,33 +35,27 @@ func newBwCons(name string, interval time.Duration,
 	return
 }
 
-func (b *bwCons) fromMap(i interface{}) (e error) {
-	kf := []kFuncI{
+func (b *bwCons) fromMapKF(fe ferr) (fk []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				b.Name, e = cast.ToStringE(i)
+				b.Name = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			durationK,
 			func(i interface{}) {
-				b.Duration, e = cast.ToDurationE(i)
+				b.Duration = stringDurationE(stringToToDurationE, fe)(i)
 			},
 		},
 		{
 			capacityK,
 			func(i interface{}) {
-				b.Capacity, e = cast.ToInt64E(i)
+				b.Capacity = int64E(cast.ToInt64E, fe)(i)
 			},
 		},
 	}
-	mapKF(
-		kf,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }
 
@@ -86,12 +80,9 @@ func (b *bwCons) consR() (c *consR) {
 	return
 }
 
-func (b *bwCons) admin(a *AdmCmd) (bs []byte, e error) {
-	cs := []struct {
-		cmd  string
-		prop string
-		f    func()
-	}{
+func (b *bwCons) admin(a *AdmCmd, fb fbs,
+	fe ferr) (cs []cmdProp) {
+	cs = []cmdProp{
 		{
 			cmd:  set,
 			prop: durationK,
@@ -105,32 +96,15 @@ func (b *bwCons) admin(a *AdmCmd) (bs []byte, e error) {
 		{
 			cmd:  get,
 			prop: durationK,
-			f:    func() { bs = []byte(b.Duration.String()) },
+			f:    func() { fb([]byte(b.Duration.String())) },
 		},
 		{
 			cmd:  get,
 			prop: capacityK,
 			f: func() {
-				bs = []byte(strconv.FormatInt(b.Capacity, 10))
+				fb([]byte(strconv.FormatInt(b.Capacity, 10)))
 			},
 		},
-	}
-	cmdf, propf := false, false
-	bLnSrch(
-		func(i int) (b bool) {
-			cmdf, propf = cs[i].cmd == a.Cmd, cs[i].prop == a.Prop
-			b = cmdf && propf
-			if b {
-				cs[i].f()
-			}
-		},
-		len(cs),
-	)
-	if !cmdf {
-		e = NoCmd(a.Cmd)
-	}
-	if !propf {
-		e = NoProp(a.Prop)
 	}
 	return
 }

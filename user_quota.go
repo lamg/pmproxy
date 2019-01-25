@@ -58,16 +58,17 @@ func (g *groupQuota) toSer() (tỹpe string, i interface{}) {
 	return
 }
 
-func (g *groupQuota) admin(c *AdmCmd) (bs []byte, e error) {
-	kf := []kFunc{
+func (g *groupQuota) admin(c *AdmCmd, fb fbs,
+	fe ferr) (kf []kFunc) {
+	kf = []kFunc{
 		{
 			get,
 			func() {
 				v, ok := g.qts.Load(c.Group)
 				if !ok {
-					e = NoKey(c.Group)
+					fe(NoKey(c.Group))
 				} else {
-					bs = string(fmt.Sprintf("%v", v))
+					fb([]byte(fmt.Sprintf("%v", v)))
 				}
 			},
 		},
@@ -84,31 +85,24 @@ func (g *groupQuota) admin(c *AdmCmd) (bs []byte, e error) {
 			},
 		},
 	}
-	exF(kf, cmd.Cmd, func(d error) { e = d })
 	return
 }
 
-func (g *groupQuota) fromMap(i interface{}) (e error) {
-	kf := []kFuncI{
+func (g *groupQuota) fromMap(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				g.Name, e = cast.ToStringE(i)
+				g.Name = stringE(cast.ToStringE, fe)(i)
 			},
 		},
 		{
 			quotasK,
 			func(i interface{}) {
-				g.Quotas, e = toStringMapUint64E(i)
+				g.Quotas = stringMapUint64E(toStringMapUint64E, fe)(i)
 			},
 		},
 	}
-	mapKF(
-		kf,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }
 

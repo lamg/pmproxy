@@ -48,11 +48,12 @@ const (
 	connConsT = "connCons"
 )
 
-func (c *connCons) admin(a *AdmCmd) (bs []byte, e error) {
-	kf := []kFunc{
+func (c *connCons) admin(a *AdmCmd, fb fbs,
+	fe ferr) (kf []kFunc) {
+	kf = []kFunc{
 		{
 			get,
-			func() { bs = []byte(fmt.Sprintf("%d", c.Limit)) },
+			func() { fb([]byte(fmt.Sprintf("%d", c.Limit))) },
 		},
 		{set, func() { c.Limit = a.Limit }},
 		{
@@ -60,14 +61,13 @@ func (c *connCons) admin(a *AdmCmd) (bs []byte, e error) {
 			func() {
 				v, ok := c.ipAmount.Load(cmd.RemoteIP)
 				if ok {
-					bs = []byte(fmt.Sprintf("%d", v))
+					fb([]byte(fmt.Sprintf("%d", v)))
 				} else {
-					e = NoEntry(cmd.RemoteIP)
+					fe(NoEntry(cmd.RemoteIP))
 				}
 			},
 		},
 	}
-	exF(kf, cmd.Cmd, func(d error) { e = d })
 	return
 }
 
@@ -104,26 +104,20 @@ func NoEntry(ip string) (e error) {
 	return
 }
 
-func (c *connCons) fromMap(i interface{}) (e error) {
-	kf := []kFuncI{
+func (c *connCons) fromMap(fe ferr) (kf []kFuncI) {
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				c.Name, e = cast.ToStringE(i)
+				c.Name = stringE(cast.ToStringE(i), fe)(i)
 			},
 		},
 		{
 			limitK,
 			func(i interface{}) {
-				c.Limit, e = cast.ToUint32E(i)
+				c.Limit = uint32E(cast.ToUint32E(i), fe)(i)
 			},
 		},
 	}
-	mapKF(
-		kf,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
 	return
 }
