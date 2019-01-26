@@ -10,9 +10,8 @@ import (
 type ProxyCtl struct {
 	// contains the fields for initializing
 	// github.com/lamg/proxy.Proxy
-	PrxFls  *SpecCtx
-	adm     *globAdm
-	Persist func(io.Writer) error
+	PrxFls *SpecCtx
+	adm    *globAdm
 }
 
 func NewProxyCtl() (p *ProxyCtl, e error) {
@@ -33,7 +32,7 @@ func (p *ProxyCtl) ServeHTTP(w h.ResponseWriter,
 	if e == nil {
 		r.Body.Close()
 		cmd.RemoteIP = ips
-		bs, e = p.adm.exec(cmd)
+		bs, e = p.adm.dispatch(cmd)
 	}
 	if e == nil {
 		_, e = w.Write(bs)

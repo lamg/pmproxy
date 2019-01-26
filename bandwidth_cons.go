@@ -3,7 +3,6 @@ package pmproxy
 import (
 	"fmt"
 	rl "github.com/juju/ratelimit"
-	"github.com/spf13/cast"
 	"strconv"
 	"time"
 )
@@ -35,24 +34,24 @@ func newBwCons(name string, interval time.Duration,
 	return
 }
 
-func (b *bwCons) fromMapKF(fe ferr) (fk []kFuncI) {
+func (b *bwCons) fromMapKF(fe ferr) (kf []kFuncI) {
 	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				b.Name = stringE(cast.ToStringE, fe)(i)
+				b.Name = stringE(i, fe)
 			},
 		},
 		{
 			durationK,
 			func(i interface{}) {
-				b.Duration = stringDurationE(stringToToDurationE, fe)(i)
+				b.Duration = stringDurationE(i, fe)
 			},
 		},
 		{
 			capacityK,
 			func(i interface{}) {
-				b.Capacity = int64E(cast.ToInt64E, fe)(i)
+				b.Capacity = int64E(i, fe)
 			},
 		},
 	}
@@ -65,17 +64,17 @@ func (b *bwCons) init() {
 
 func (b *bwCons) consR() (c *consR) {
 	c = &consR{
-		open: func(i ip) (ok bool) {
+		open: func(ip string) (ok bool) {
 			ok = true
 			return
 		},
-		can: func(i ip, d download) (ok bool) {
+		can: func(ip string, down int) (ok bool) {
 			b.rl.Wait(int64(b.Duration))
 			ok = true
 			return
 		},
-		update: func(i ip, d download) {},
-		close:  func(i ip) {},
+		update: func(ip string, down int) {},
+		close:  func(ip string) {},
 	}
 	return
 }

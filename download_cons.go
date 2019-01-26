@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/lamg/clock"
-	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
@@ -29,38 +28,38 @@ type dwnCons struct {
 
 func (d *dwnCons) consR() (c *consR) {
 	c = &consR{
-		open: func(i ip) (ok bool) {
+		open: func(ip string) (ok bool) {
 			// the reset cycle property is maintained on demand,
 			// rather than at regular time lapses
 			d.keepResetCycle()
 
 			cons := uint64(0)
-			user := d.iu.User(ip)
+			user := d.iu(d.IPUser)(ip)
 			if user != "" {
 				d.usrCons.LoadOrStore(user, cons)
 			}
 			ok = true
 			return
 		},
-		can: func(i ip, d download) (ok bool) {
-			user := d.iu.User(ip)
+		can: func(ip string, down int) (ok bool) {
+			user := d.iu(d.IPUser)(ip)
 			ok = false
 			if user != "" {
 				cons, b := d.usrCons.Load(user)
-				limit := d.grp(i)
+				limit := d.gq(d.IPQuota)(ip)
 				ok = b && cons.(uint64) <= limit
 			}
 			return
 		},
-		update: func(i ip, d download) {
-			user := d.iu.User(ip)
+		update: func(ip string, down int) {
+			user := d.iu(d.IPUser)(ip)
 			u, ok := d.usrCons.Load(user)
 			if ok {
 				cons := u.(uint64)
-				d.usrCons.Store(user, cons+uint64(n))
+				d.usrCons.Store(user, cons+uint64(down))
 			}
 		},
-		close: func(i ip) {},
+		close: func(ip string) {},
 	}
 	return
 }
@@ -71,13 +70,13 @@ const (
 
 func (d *dwnCons) toSer() (tỹpe string, i interface{}) {
 	i = map[string]interface{}{
-		nameK:      d.Name,
-		ipUserK:    d.IPUser,
-		userQtK:    d.usrQtS.Name,
-		lastResetK: d.LastReset.String(),
-		resetCycle: d.ResetCycle.String(),
+		nameK:       d.Name,
+		ipUserK:     d.IPUser,
+		ipQuotaK:    d.IPQuota,
+		lastResetK:  d.LastReset.String(),
+		resetCycleK: d.ResetCycle.String(),
 	}
-	tỹpe = dwnCons
+	tỹpe = dwnConsT
 	mp := make(map[string]uint64)
 	d.usrCons.Range(func(k, v interface{}) (b bool) {
 		ks, vu := k.(string), v.(uint64)
@@ -97,23 +96,23 @@ func (d *dwnCons) admin(c *AdmCmd, fb fbs,
 		{
 			show,
 			func() {
-				v, ok := d.usrCons.Load(cmd.User)
+				v, ok := d.usrCons.Load(c.User)
 				if ok {
-					fbs([]byte(fmt.Sprintf("%d", v)))
+					fb([]byte(fmt.Sprintf("%d", v)))
 				} else {
-					fe(NoEntry(cmd.User))
+					fe(NoEntry(c.User))
 				}
 			},
 		},
 		{
 			reset,
 			func() {
-				if cmd.IsAdmin {
-					_, ok := d.usrCons.Load(cmd.User)
+				if c.IsAdmin {
+					_, ok := d.usrCons.Load(c.User)
 					if ok {
-						d.usrCons.Store(cmd.User, uint64(0))
+						d.usrCons.Store(c.User, uint64(0))
 					} else {
-						fe(NoEntry(cmd.User))
+						fe(NoEntry(c.User))
 					}
 				}
 			},
@@ -141,45 +140,47 @@ func (d *dwnCons) fromMapKF(fe ferr) (kf []kFuncI) {
 		{
 			nameK,
 			func(i interface{}) {
-				d.Name, e = cast.ToStringE(i)
+				d.Name = stringE(i, fe)
 			},
 		},
 		{
 			ipUserK,
 			func(i interface{}) {
-				d.IPUser, e = cast.ToStringE(i)
+				d.IPUser = stringE(i, fe)
 			},
 		},
 		{
 			ipQuotaK,
 			func(i interface{}) {
-				d.IPQuota, e = cast.ToStringE(i)
+				d.IPQuota = stringE(i, fe)
 			},
 		},
 		{
 			lastResetK,
 			func(i interface{}) {
-				d.LastReset, e = cast.StringToDate(i)
+				d.LastReset = stringDateE(i, fe)
 			},
 		},
 		{
 			resetCycleK,
 			func(i interface{}) {
-				d.ResetCycle, e = stringToDuration(s)
+				d.ResetCycle = stringDurationE(i, fe)
 			},
 		},
 		{
 			resetCycleK,
 			func(i interface{}) {
 				fl := d.filename()
+				var e error
 				bs, e = ioutil.ReadFile(fl)
+				fe(e)
 			},
 		},
 		{
 			resetCycleK,
 			func(i interface{}) {
 				mp = make(map[string]uint64)
-				e = json.Unmarshal(bs, &mp)
+				fe(json.Unmarshal(bs, &mp))
 			},
 		},
 		{

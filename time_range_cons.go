@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"github.com/lamg/clock"
 	rt "github.com/lamg/rtimespan"
 )
@@ -16,18 +17,18 @@ type trCons struct {
 
 func (t *trCons) consR() (c *consR) {
 	c = &consR{
-		open: func(i ip) (ok bool) {
+		open: func(ip string) (ok bool) {
 			tm := t.clock.Now()
 			ok = t.Span.ContainsTime(tm)
 			return
 		},
-		can: func(i ip) (ok bool) {
+		can: func(ip string, down int) (ok bool) {
 			tm := t.clock.Now()
 			ok = t.Span.ContainsTime(tm)
 			return
 		},
-		update: func(i ip, d download) {},
-		close:  func(i ip) {},
+		update: func(ip string, down int) {},
+		close:  func(ip string) {},
 	}
 	return
 }
@@ -73,60 +74,16 @@ func (t *trCons) toSer() (tỹpe string, i interface{}) {
 	return
 }
 
-func (t *trCons) fromMap(i interface{}) (e error) {
+func (t *trCons) fromMap(fe ferr) (kf []kFuncI) {
 	t.Span = new(rt.RSpan)
-	kf := []struct {
-		k string
-		f func(interface{})
-	}{
+	kf = []kFuncI{
 		{
 			nameK,
 			func(i interface{}) {
-				t.Name, e = cast.ToStringE(i)
-			},
-		},
-		{
-			startK,
-			func(i interface{}) {
-				t.Span.Start, e = cast.StringToDate(i)
-			},
-		},
-		{
-			activeK,
-			func(i interface{}) {
-				t.Span.Active, e = stringToDuration(i)
-			},
-		},
-		{
-			totalK,
-			func(i interface{}) {
-				t.Span.Total, e = stringToDuration(i)
-			},
-		},
-		{
-			timesK,
-			func(i interface{}) {
-				t.Span.Times, e = cast.ToIntE(i)
-			},
-		},
-		{
-			infiniteK,
-			func(i interface{}) {
-				t.Span.Infinite, e = cast.ToBoolE(i)
-			},
-		},
-		{
-			allTimeK,
-			func(i interface{}) {
-				t.Span.AllTime, e = cast.ToBoolE(i)
+				t.Name = stringE(i, fe)
 			},
 		},
 	}
-	mapKF(
-		fe,
-		i,
-		func(d error) { e = d },
-		func() bool { return e != nil },
-	)
+	kf = append(kf, fromMapKFSpan(t.Span, fe)...)
 	return
 }

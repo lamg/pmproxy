@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cast"
 	"net"
 	h "net/http"
-	"net/url"
 	"regexp"
 	"time"
 )
@@ -19,124 +18,29 @@ type rspec struct {
 
 type nameMatcher func(string) (matcher, bool)
 
-func newRspec(rm []map[string]interface{},
-	ipm nameMatcher) (r *rspec, e error) {
-	r = &rspec{
-		ipm:   ipm,
-		rules: make([][]rule, 0),
-	}
-	inf := func(i int) (ok bool, i int) {
-		mp := rm[i]
-		rl := new(rule)
-		rl.Unit, e = cast.ToBool(mp[unitK])
-		if e == nil {
-			rl.URLM, e = cast.ToString(mp[urlmK])
-		}
-		if e == nil {
-			rl.IPM, e = cast.ToString(mp[ipmK])
-		}
-		var pmp map[string]interface{} // map representing rt.RSpan
-		if e == nil {
-			pmp, e = cast.ToStringMap(mp[spanK])
-		}
-		var tms string
-		if e == nil {
-			rl.Span = new(rt.RSpan)
-			tms, e = cast.ToString(pmp[starK])
-		}
-		if e == nil {
-			rl.Span.Start, e = time.Parse(time.RFC3339, tms)
-		}
-		var drs string
-		if e == nil {
-			drs, e = cast.ToString(pmp[activeK])
-		}
-		if e == nil {
-			rl.Span.Active, e = time.ParseDuration(drs)
-		}
-		var total string
-		if e == nil {
-			total, e = cast.ToString(pmp[totalK])
-		}
-		if e == nil {
-			rl.Span.Total, e = time.ParseDuration(total)
-		}
-		if e == nil {
-			rl.Span.Times, e = cast.ToInt(pmp[timesK])
-		}
-		if e == nil {
-			rl.Span.Infinite, e = cast.ToBool(pmp[infiniteK])
-		}
-		if e == nil {
-			rl.Span.AllTime, e = cast.ToBool(pmp[allTimeK])
-		}
-		var smp map[string]interface{} // map representinng spec
-		if e == nil {
-			smp, e = cast.ToStringMap(mp[specK])
-		}
-		if e == nil {
-			rl.Spec = new(rt.Spec)
-			rl.Spec.Iface, e = cast.ToString(smp[ifaceK])
-		}
-		if e == nil {
-			rl.Spec.ProxyURL, e = cast.ToString(smp[proxyURLK])
-		}
-		if e == nil {
-			rl.Spec.ConsR, e = cast.ToStringSlice(smp[consRK])
-		}
-		var pos int
-		if e == nil {
-			pos, e = cast.ToInt(mp[posK])
-		}
-		if e == nil {
-			if pos >= len(r.rules) {
-				nl := pos - len(r.rules)
-				nrl := make([][]rule, nl+1)
-				r.rules = append(r.rules, nrl...)
-			}
-			r.rules[pos] = append(r.rules[pos], rl)
-		}
-		ok = e != nil
-	}
-	bLnSrch(inf, len(rm))
-	return
-}
-
 const (
-	unitK     = "unit"
-	urlmK     = "urlm"
-	impK      = "ipm"
-	specK     = "spec"
-	startK    = "start"
-	activeK   = "active"
-	totalK    = "total"
-	timesK    = "times"
-	infiniteK = "infinite"
-	allTimeK  = "allTime"
-	spanK     = "span"
-	ifaceK    = "iface"
-	proxyURLK = "proxyURL"
-	consRK    = "consR"
-	posK      = "pos"
+	unitK = "unit"
+	urlmK = "urlm"
+	ipmK  = "ipm"
+	specK = "spec"
+	spanK = "span"
+	posK  = "pos"
 )
 
 type rule struct {
-	Unit bool      `json:"unit"`
-	URLM string    `json:"urlm"`
+	Unit bool   `json:"unit"`
+	URLM string `json:"urlm"`
+	urlm *regexp.Regexp
 	Span *rt.RSpan `json:"span"`
 	IPM  string    `json:"ipm"`
 	Spec *spec     `json:"spec"`
 }
 
-type spec struct {
-	Iface    string `json:"iface"`
-	ProxyURL string `json:"proxyURL"`
-	proxyURL *url.URL
-	ConsR    []string `json:"consR"`
-}
-
-func (s *spec) init() (e error) {
-	s.proxyURL, e = url.Parse(s.ProxyURL)
+func (r *rule) init() (e error) {
+	r.urlm, e = regexp.Compile(r.URLM)
+	if e == nil {
+		e = r.Spec.init()
+	}
 	return
 }
 
@@ -145,13 +49,12 @@ func (s *rspec) spec(t time.Time,
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	inf := func(l int) {
 		j := s.rules[l]
-		regexp.Compile(j[i].URLM) // TODO
 		ib := func(i int) (b bool) {
 			ipm, ok := s.ipm(j[i].IPM)
-			b = (j[i].unit == (!ok || ipm.Match(ip))) &&
-				(j[i].urlM == nil ||
-					j[i].urlM.MatchString(r.RequestURI)) &&
-				(j[i].span == nil || j[i].span.ContainsTime(t))
+			b = (j[i].Unit == (!ok || ipm(ip))) &&
+				(j[i].urlm == nil ||
+					j[i].urlm.MatchString(r.RequestURI)) &&
+				(j[i].Span == nil || j[i].Span.ContainsTime(t))
 			return
 		}
 		b, k := bLnSrch(ib, len(j))
@@ -159,21 +62,21 @@ func (s *rspec) spec(t time.Time,
 		if b {
 			n = new(spec)
 			// add Spec to n
-			sn := j[k].spec
-			if sn.Cr != nil {
-				n.Cr = append(n.Cr, sn.Cr...)
+			sn := j[k].Spec
+			if sn.ConsR != nil {
+				n.ConsR = append(n.ConsR, sn.ConsR...)
 			}
 			if sn.Iface != "" {
 				n.Iface = sn.Iface
 			}
-			if sn.ProxyURL != nil {
-				n.ProxyURL = sn.ProxyURL
+			if sn.proxyURL != nil {
+				n.proxyURL = sn.proxyURL
 			}
 		}
 	}
 	forall(inf, len(s.rules))
-	if len(n.Cr) == 0 ||
-		((n.Iface == "") == (n.ProxyURL == nil)) {
+	if len(n.ConsR) == 0 ||
+		((n.Iface == "") == (n.proxyURL == nil)) {
 		e = InvalidSpec()
 	}
 	return
@@ -189,22 +92,33 @@ func InvalidArgs(v interface{}) (e error) {
 	return
 }
 
-const (
-	addRule = "addRule"
-	delRule = "delRule"
-)
-
-func (s *rspec) admin(c *AdmCmd) (r string, e error) {
-	switch c.Cmd {
-	case addRule:
-		e = rl.spec.init()
-		if e == nil {
-			e = c.rspec.add(cmd.Pos, rl)
-		}
-	case delRule:
-		e = c.rspec.delete(cmd.Pos)
-	case show:
-		r, e = c.rspec.show()
+func (s *rspec) admin(c *AdmCmd, fb fbs,
+	fe ferr) (cs []cmdProp) {
+	cs = []cmdProp{
+		{
+			cmd: add,
+			f: func() {
+				e := c.Rule.init()
+				if e == nil {
+					e = s.add(c.Pos, c.Rule)
+				}
+				fe(e)
+			},
+		},
+		{
+			cmd: del,
+			f: func() {
+				fe(s.delete(c.Pos))
+			},
+		},
+		{
+			cmd: show,
+			f: func() {
+				bs, e := json.Marshal(s.rules)
+				fb(bs)
+				fe(e)
+			},
+		},
 	}
 	return
 }
@@ -258,48 +172,90 @@ func (s *rspec) add(pos []int, rl *rule) (e error) {
 	return
 }
 
-func (s *rspec) show() (r string, e error) {
-	var bs []byte
-	bs, e = json.Marshal(s.rules)
-	if e == nil {
-		r = string(bs)
-	}
-	return
-}
-
 func IndexOutOfRange(i, n int) (e error) {
 	e = fmt.Errorf("Index %d out of range %d", i, n)
 	return
 }
 
-func (s *rspec) toSer() (mp interface{}) {
-	mp = make([]map[string]interface{}, 0)
+func (s *rspec) toSer() (i interface{}) {
+	mp := make([]map[string]interface{}, 0)
 	inf := func(i int) {
 		inf0 := func(j int) {
 			rl := s.rules[i][j]
 			// TODO careful with nil references
-			rmap = map[string]interface{}{
+			rmap := map[string]interface{}{
 				unitK: rl.Unit,
-				posk:  i,
+				posK:  i,
 				urlmK: rl.URLM,
-				impK:  rl.IPM,
-				spanK: map[string]interface{}{
-					startK:    rl.Span.Start.String(),
-					activeK:   rl.Span.Active.String(),
-					totalK:    rl.Span.Total.String(),
-					infiniteK: rl.Span.Infinite,
-					allTimeK:  rl.Span.AllTime,
-				},
-				spec: map[string]interface{}{
-					ifaceK:    rl.Spec.Iface,
-					proxyURLK: rl.Spec.ProxyURL,
-					consRK:    rl.Spec.ConsR,
-				},
+				ipmK:  rl.IPM,
+				spanK: toSerSpan(rl.Span),
+				specK: rl.Spec.toSer(),
 			}
 			mp = append(mp, rmap)
 		}
 		forall(inf0, len(s.rules[i]))
 	}
 	forall(inf, len(s.rules))
+	i = mp
+	return
+}
+
+func (r *rspec) fromMapIKF(fe ferr) (f fikf) {
+	f = func(n int) (kf []kFuncI) {
+		rl := new(rule)
+		kf = []kFuncI{
+			{
+				urlmK,
+				func(i interface{}) {
+					rl.URLM = stringE(i, fe)
+					e := rl.init()
+					fe(e)
+				},
+			},
+			{
+				ipmK,
+				func(i interface{}) {
+					rl.IPM = stringE(i, fe)
+				},
+			},
+			{
+				unitK,
+				func(i interface{}) {
+					rl.Unit = boolE(i, fe)
+				},
+			},
+			{
+				spanK,
+				func(i interface{}) {
+					rl.Span = new(rt.RSpan)
+				},
+			},
+			{
+				specK,
+				func(i interface{}) {
+					rl.Spec = new(spec)
+				},
+			},
+		}
+		kf = append(kf, fromMapKFSpan(rl.Span, fe)...)
+		kf = append(kf, rl.Spec.fromMapKF(fe)...)
+		kf = append(kf, kFuncI{
+			posK,
+			func(i interface{}) {
+				pos, e := cast.ToIntE(i)
+				if e == nil {
+					if pos >= len(r.rules) {
+						nl := pos - len(r.rules)
+						nrl := make([][]rule, nl+1)
+						r.rules = append(r.rules, nrl...)
+					}
+					r.rules[pos] = append(r.rules[pos], *rl)
+				}
+				fe(e)
+			},
+		},
+		)
+		return
+	}
 	return
 }

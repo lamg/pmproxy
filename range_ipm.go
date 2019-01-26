@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"github.com/spf13/cast"
 	"net"
 )
 
@@ -42,9 +43,9 @@ func (r *rangeIPM) admin(c *AdmCmd, fb fbs,
 	return
 }
 
-func (r *rangeIPM) match(i string) (ok bool) {
+func (r *rangeIPM) match(ip string) (ok bool) {
 	pip := net.ParseIP(ip)
-	ok = pip != nil && m.rg.Contains(pip)
+	ok = pip != nil && r.rg.Contains(pip)
 	return
 }
 

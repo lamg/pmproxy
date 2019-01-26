@@ -27,10 +27,10 @@ type toSer func() (string, interface{})
 
 type admin func(*AdmCmd, fbs, ferr) []cmdProp
 
-type ipQuota func(ip) uint64
+type ipQuota func(string) uint64
 
-type ipGroup func(ip) ([]string, error)
-type ipUser func(ip) string
+type ipGroup func(string) ([]string, error)
+type ipUser func(string) string
 
 type ipUserInf struct {
 	ipg ipGroup
@@ -145,15 +145,23 @@ type AdmCmd struct {
 }
 
 const (
-	globAdmN = "global"
-	add      = "add"
-	show     = "show"
-	get      = "get"
-	set      = "set"
-	del      = "del"
-	prop     = "prop"
-	all      = "all"
-	nameK    = "name"
+	globAdmN    = "global"
+	add         = "add"
+	open        = "open"
+	clöse       = "close"
+	show        = "show"
+	get         = "get"
+	set         = "set"
+	del         = "del"
+	prop        = "prop"
+	reset       = "reset"
+	all         = "all"
+	nameK       = "name"
+	ipUserK     = "ipUser"
+	ipQuotaK    = "ipQuota"
+	lastResetK  = "lastReset"
+	resetCycleK = "resetCycle"
+	userQtK     = "userQt"
 )
 
 func (g *globAdm) dispatch(c *AdmCmd) (r []byte, e error) {
@@ -163,7 +171,7 @@ func (g *globAdm) dispatch(c *AdmCmd) (r []byte, e error) {
 	if ok {
 		fe := func(d error) { e = d }
 		cs := (v.(admin))(c, func(b []byte) { r = b }, fe)
-		exCmdProp(cs, fe)
+		exCmdProp(cs, c, fe)
 	} else {
 		e = NoMngWithName(c.Manager)
 	}
@@ -175,7 +183,7 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 	cs = []cmdProp{
 		{
 			cmd:  add,
-			tỹpe: bwConsT,
+			prop: bwConsT,
 			f: func() {
 				bw := newBwCons(c.MngName, c.FillInterval,
 					c.Capacity)
@@ -209,7 +217,7 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 						if ok {
 							i = v.(*ipUserInf).ipu
 						} else {
-							i = func(n ip) (s string) { return }
+							i = func(ip string) (s string) { return }
 						}
 						return
 					},
@@ -218,7 +226,7 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 						if ok {
 							i = v.(ipQuota)
 						} else {
-							i = func(n ip) (q uint64) { return }
+							i = func(ip string) (q uint64) { return }
 						}
 						return
 					},
@@ -256,7 +264,7 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 						if ok {
 							i = v.(*ipUserInf).ipg
 						} else {
-							i = func(n ip) (gs []string,
+							i = func(ip string) (gs []string,
 								e error) {
 								return
 							}
@@ -277,7 +285,7 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 					CIDR: c.CIDR,
 					Name: c.MngName,
 				}
-				e = rm.init()
+				e := rm.init()
 				if e == nil {
 					g.adms.Store(rm.Name, rm.admin)
 					g.ipms.Store(rm.Name, rm.match)
@@ -314,6 +322,7 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 								return
 							}
 						}
+						return
 					},
 					admins: func() []string {
 						return g.conf.admins
@@ -339,8 +348,9 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 						if ok {
 							iu = v.(*ipUserInf).ipu
 						} else {
-							iu = func(i ip) (u string) { return }
+							iu = func(ip string) (u string) { return }
 						}
+						return
 					},
 				}
 				g.adms.Store(um.Name, um.admin)
@@ -353,14 +363,24 @@ func (g *globAdm) admin(c *AdmCmd, fb fbs,
 			prop: userDBT,
 			f: func() {
 				udb := c.UserDB
+				var e error
+				var kf []kFuncI
+				fe := func(d error) { e = d }
 				if udb.SrcType == adSrc {
-					e = udb.initAD()
+					kf = udb.fromMapKFLd(fe)
 				} else if udb.SrcType == mapSrc {
-					e = udb.initMap()
+					kf = udb.fromMapKFMp(fe)
 				} else {
 					e = fmt.Errorf("Unrecognized type %s",
 						udb.SrcType)
 				}
+				mapKF(kf, udb.Params, fe,
+					func() (b bool) {
+						e = udb.errFunc(e)
+						b = e != nil
+						return
+					},
+				)
 				if e == nil {
 					g.usrDBs.Store(udb.Name, udb)
 				}
@@ -411,8 +431,9 @@ func (g *globAdm) persist(w io.Writer) (e error) {
 	for k, v := range sm {
 		viper.Set(k, v)
 	}
-	os.Rename(g.conf.file, g.conf.file+".back")
-	viper.WriteConfigAs(g.conf.file)
+	fl := viper.ConfigFileUsed()
+	os.Rename(fl, fl+".back")
+	viper.WriteConfigAs(fl)
 	return
 }
 

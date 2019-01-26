@@ -1,7 +1,9 @@
 package pmproxy
 
 import (
+	"fmt"
 	"github.com/spf13/cast"
+	"time"
 )
 
 type intBool func(int) bool
@@ -89,6 +91,7 @@ func exF(kf []kFunc, cmd string, fe ferr) {
 			if b {
 				kf[i].f()
 			}
+			return
 		},
 		len(kf),
 	)
@@ -104,7 +107,7 @@ type cmdProp struct {
 	f    func()
 }
 
-func exCmdProp(cs []cmdProp, fe ferr) {
+func exCmdProp(cs []cmdProp, a *AdmCmd, fe ferr) {
 	cmdf, propf := false, false
 	bLnSrch(
 		func(i int) (b bool) {
@@ -113,6 +116,7 @@ func exCmdProp(cs []cmdProp, fe ferr) {
 			if b {
 				cs[i].f()
 			}
+			return
 		},
 		len(cs),
 	)
@@ -123,89 +127,86 @@ func exCmdProp(cs []cmdProp, fe ferr) {
 	}
 }
 
-func stringE(fc func(interface{}) (string, error),
-	fe ferr) (f func(interface{}) string) {
-	f = func(i interface{}) (s string) {
-		s, e := fc(i)
-		fe(e)
-		return
+func stringE(i interface{}, fe ferr) (s string) {
+	s, e := cast.ToStringE(i)
+	fe(e)
+	return
+}
+
+func stringSliceE(i interface{}, fe ferr) (ss []string) {
+	ss, e := cast.ToStringSliceE(i)
+	fe(e)
+	return
+}
+
+func stringDurationE(i interface{},
+	fe ferr) (d time.Duration) {
+	s, e := cast.ToStringE(i)
+	if e == nil {
+		d, e = time.ParseDuration(s)
+	}
+	fe(e)
+	return
+}
+
+func stringMapE(i interface{},
+	fe ferr) (m map[string]interface{}) {
+	m, e := cast.ToStringMapE(i)
+	fe(e)
+	return
+}
+
+func stringMapUint64E(i interface{},
+	fe ferr) (m map[string]uint64) {
+	m, ok := i.(map[string]uint64)
+	if !ok {
+		fe(fmt.Errorf("Failed cast to map[string]uint64"))
 	}
 	return
 }
 
-func stringSliceE(fc func(interface{}) ([]string, error),
-	fe ferr) (f func(interface{}) string) {
-	f = func(i interface{}) (ss []string) {
-		ss, e := fc(i)
-		fe(e)
-		return
-	}
+func stringMapString(i interface{},
+	fe ferr) (m map[string]string) {
+	m, e := cast.ToStringMapStringE(i)
+	fe(e)
 	return
 }
 
-func stringDurationE(
-	fc func(interface{}) (time.Duration, error), fe ferr,
-) (f func(interface{}) time.Duration) {
-	f = func(i interface{}) (d time.Duration) {
-		d, e := fc(i)
-		fe(e)
-		return
-	}
-	return
-}
-
-func stringMapE(
-	fc func(interface{}) (map[string]interface{}, error),
-	fe ferr,
-) (f func(i interface{}) map[string]interface{}) {
-	f = func(i interface{}) (m map[string]interface{}) {
-		m, e := fc(i)
-		fe(e)
-	}
-	return
-}
-
-func stringMapUint64E(
-	fc func(interface{}) (map[string]uint64, error),
-	fe ferr,
-) (f func(i interface{}) map[string]uint64) {
-	f = func(i interface{}) (m map[string]uint64) {
-		m, e := fc(i)
-		fe(e)
-		return
-	}
+func stringMapStringSlice(i interface{},
+	fe ferr) (m map[string][]string) {
+	m, e := cast.ToStringMapStringSliceE(i)
+	fe(e)
 	return
 }
 
 type ferr func(error)
 type fbs func([]byte)
 type fin func(interface{})
+type fikf func(int) []kFuncI
 
-func int64E(fc func(interface{}) (int64, error),
-	fe ferr) (f fin) {
-	f = func(i interface{}) (n int64) {
-		n, e := fc(i)
-		fe(e)
-		return
-	}
+func int64E(i interface{}, fe ferr) (n int64) {
+	n, e := cast.ToInt64E(i)
+	fe(e)
 	return
 }
 
-func uint32E(fc func(interface{}) (uint32, error),
-	fe ferr) (f fin) {
-	f = func(i interface{}) (n uint32) {
-		n, e := fc(i)
-		fe(e)
-		return
-	}
+func uint32E(i interface{}, fe ferr) (n uint32) {
+	n, e := cast.ToUint32E(i)
+	fe(e)
 	return
 }
 
-func stringToDuration(i interface{}) (d time.Duration,
-	e error) {
+func stringDateE(i interface{}, fe ferr) (t time.Time) {
 	s, e := cast.ToStringE(i)
 	if e == nil {
-		d, e = time.ParseDuration(s)
+		t, e = time.Parse(time.RFC3339, s)
 	}
+	fe(e)
+	return
+}
+
+func boolE(i interface{}, fe ferr) (b bool) {
+	b, e := cast.ToBoolE(i)
+	fe(e)
 	return
 }

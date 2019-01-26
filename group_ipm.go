@@ -41,8 +41,8 @@ func (g *groupIPM) admin(c *AdmCmd, fb fbs,
 	return
 }
 
-func (g *groupIPM) match(i ip) (ok bool) {
-	gs, e := g.ipGS(g.IPGrp)(i)
+func (g *groupIPM) match(ip string) (ok bool) {
+	gs, e := g.ipGS(g.IPGrp)(ip)
 	if e == nil {
 		ib := func(i int) (b bool) {
 			b = gs[i] == g.Group
@@ -72,19 +72,19 @@ func (g *groupIPM) fromMapKF(fe ferr) (kf []kFuncI) {
 		{
 			nameK,
 			func(i interface{}) {
-				g.Name = stringE(cast.ToStringE, fe)(i)
+				g.Name = stringE(i, fe)
 			},
 		},
 		{
 			groupK,
 			func(i interface{}) {
-				g.Group = stringE(cast.ToStringE, fe)(i)
+				g.Group = stringE(i, fe)
 			},
 		},
 		{
 			ipGrpK,
 			func(i interface{}) {
-				g.ipGrp = stringE(cast.ToStringE, fe)(i)
+				g.IPGrp = stringE(i, fe)
 			},
 		},
 	}

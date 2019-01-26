@@ -125,27 +125,26 @@ func (c *config) fromMapKF(fe ferr) (kf []kFuncI) {
 		{
 			adminsK,
 			func(i interface{}) {
-				c.admins = stringSliceE(cast.ToStringSliceE, fe)(i)
+				c.admins = stringSliceE(i, fe)
 			},
 		},
 		{
 			dialTimeoutK,
 			func(i interface{}) {
-				c.dialTimeout = stringDurationE(stringToDurationE,
-					fe)(i)
+				c.dialTimeout = stringDurationE(i, fe)
 			},
 		},
 		{
 			loggerAddrK,
 			func(i interface{}) {
 				c.lg = new(logger)
-				c.lg.Addr = stringE(cast.ToStringE, fe)(i)
+				c.lg.Addr = stringE(i, fe)
 			},
 		},
 		{
 			loggerIPUserK,
 			func(i interface{}) {
-				c.lg.IPUser = stringE(cast.ToStringE, fe)(i)
+				c.lg.IPUser = stringE(i, fe)
 			},
 		},
 		{

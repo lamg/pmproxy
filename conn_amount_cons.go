@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/spf13/cast"
 	"sync"
 )
 
@@ -23,22 +22,22 @@ func newConnCons(name string, limit uint32) (c *connCons) {
 }
 
 func (c *connCons) consR() (r *consR) {
-	r = consR{
-		open: func(i ip) (ok bool) {
-			ok = c.canInc(i, true)
+	r = &consR{
+		open: func(ip string) (ok bool) {
+			ok = c.canInc(ip, true)
 			return
 		},
-		can: func(i ip, d download) (ok bool) {
-			ok = c.canInc(i, false)
+		can: func(ip string, down int) (ok bool) {
+			ok = c.canInc(ip, false)
 			return
 		},
-		update: func(i ip, d download) {
-			u, _ := c.ipAmount.Load(i)
-			c.ipAmount.Store(i, u.(uint32)+1)
+		update: func(ip string, down int) {
+			u, _ := c.ipAmount.Load(ip)
+			c.ipAmount.Store(ip, u.(uint32)+1)
 		},
-		close: func(i ip) {
-			u, _ := c.ipAmount.Load(i)
-			c.ipAmount.Store(i, u.(uint32)-1)
+		close: func(ip string) {
+			u, _ := c.ipAmount.Load(ip)
+			c.ipAmount.Store(ip, u.(uint32)-1)
 		},
 	}
 	return
@@ -59,11 +58,11 @@ func (c *connCons) admin(a *AdmCmd, fb fbs,
 		{
 			show,
 			func() {
-				v, ok := c.ipAmount.Load(cmd.RemoteIP)
+				v, ok := c.ipAmount.Load(a.RemoteIP)
 				if ok {
 					fb([]byte(fmt.Sprintf("%d", v)))
 				} else {
-					fe(NoEntry(cmd.RemoteIP))
+					fe(NoEntry(a.RemoteIP))
 				}
 			},
 		},
@@ -109,13 +108,13 @@ func (c *connCons) fromMap(fe ferr) (kf []kFuncI) {
 		{
 			nameK,
 			func(i interface{}) {
-				c.Name = stringE(cast.ToStringE(i), fe)(i)
+				c.Name = stringE(i, fe)
 			},
 		},
 		{
 			limitK,
 			func(i interface{}) {
-				c.Limit = uint32E(cast.ToUint32E(i), fe)(i)
+				c.Limit = uint32E(i, fe)
 			},
 		},
 	}

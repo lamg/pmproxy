@@ -1,9 +1,5 @@
 package pmproxy
 
-import (
-	"github.com/spf13/cast"
-)
-
 type userIPM struct {
 	Name   string   `json:"name"`
 	IPUser string   `json:"ipUser"`
@@ -13,7 +9,12 @@ type userIPM struct {
 }
 
 func (u *userIPM) match(ip string) (ok bool) {
-	user := u.iu.User(ip)
+	iu := u.iu(u.IPUser)
+	ok = iu != nil
+	var user string
+	if ok {
+		user = iu(ip)
+	}
 	ok = user != ""
 	if ok {
 		ib := func(i int) (b bool) {
@@ -55,6 +56,7 @@ func (u *userIPM) admin(cmd *AdmCmd, fb fbs,
 
 const (
 	userIPMT = "userIPM"
+	usersK   = "users"
 )
 
 func (u *userIPM) toSer() (tỹpe string, i interface{}) {
@@ -72,19 +74,19 @@ func (u *userIPM) fromMap(fe ferr) (kf []kFuncI) {
 		{
 			nameK,
 			func(i interface{}) {
-				u.Name = stringE(cast.ToStringE, fe)(i)
+				u.Name = stringE(i, fe)
 			},
 		},
 		{
 			ipUserK,
 			func(i interface{}) {
-				u.IPUser = stringE(cast.ToStringE, fe)(i)
+				u.IPUser = stringE(i, fe)
 			},
 		},
 		{
 			usersK,
 			func(i interface{}) {
-				u.Users = stringSliceE(cast.ToStringSliceE, fe)(i)
+				u.Users = stringSliceE(i, fe)
 			},
 		},
 	}

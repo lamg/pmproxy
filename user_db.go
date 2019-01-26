@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	ld "github.com/lamg/ldaputil"
-	"github.com/spf13/cast"
 )
 
 type userDB struct {
@@ -36,76 +35,90 @@ func (u *userDB) fromMap(fe ferr) (kf []kFuncI) {
 		{
 			nameK,
 			func(i interface{}) {
-				u.Name = stringE(cast.ToStringE, fe)(i)
+				u.Name = stringE(i, fe)
 			},
 		},
 		{
 			paramsK,
 			func(i interface{}) {
-				u.Params = stringMapE(cast.ToStringMapE, fe)(i)
+				u.Params = stringMapE(i, fe)
 			},
 		},
 		{
 			srcK,
 			func(i interface{}) {
-				u.SrcType = stringE(cast.ToStringE(i), fe)(i)
-			},
-		}, {
-			srcK, // gets executed if previous executions success
-			func(i interface{}) {
-				if u.SrcType == adSrc {
-					fe(u.initAD())
-				} else if u.SrcType == mapSrc {
-					fe(u.initMap())
-				}
+				u.SrcType = stringE(i, fe)
 			},
 		},
 	}
+	// TODO check alternative initializations using an
+	// intermediate ferr
+	kf = append(kf, u.fromMapKFLd(fe)...)
+	kf = append(kf, u.fromMapKFMp(fe)...)
 	return
 }
 
-func (u *userDB) initAD() (e error) {
-	// TODO
-	ldap := new(ld.Ldap)
+func (u *userDB) errFunc(e error) (d error) {
+	var ers []string
+	if u.SrcType == adSrc {
+		ers = []string{userPassK, userGroupK}
+	} else if u.SrcType == mapSrc {
+		ers = []string{addrK, bdnK, suffK, userK, passK}
+	}
+	ib := func(i int) (b bool) {
+		b = e == NoKey(ers[i])
+		return
+	}
+	ok, _ := bLnSrch(ib, len(ers))
+	if ok {
+		d = nil
+	} else {
+		d = e
+	}
+	// for each u.SrcType the keys valid for the other
+	// aren't found in the map, therefore that shouldn't
+	// count as an error
+	return
+}
 
-	me := func(fi func(interface{})) (fk func(string)) {
-		fk = mpErr(u.Params, func(d error) { e = d }, fi)
-		return
-	}
-	fe := []struct {
-		d *string
-		k string
+func (u *userDB) fromMapKFLd(fe ferr) (kf []kFuncI) {
+	ldap := new(ld.Ldap)
+	ss := []struct {
+		s string
+		f func(string)
 	}{
-		{&ldap.Addr, addrK},
-		{&ldap.BaseDN, bdnK},
-		{&ldap.Suff, suffK},
-		{&ldap.User, userK},
-		{&ldap.Pass, passK},
+		{addrK, func(s string) { ldap.Addr = s }},
+		{bdnK, func(s string) { ldap.BaseDN = s }},
+		{suffK, func(s string) { ldap.Suff = s }},
+		{userK, func(s string) { ldap.User = s }},
+		{passK, func(s string) { ldap.Pass = s }},
 	}
-	fei := func(n int) (fi func(interface{})) {
-		fi = func(i interface{}) {
-			if e == nil {
-				*fe[n].d, e = cast.ToStringE(i)
-			}
-		}
-		return
-	}
-	bLnSrch(func(i int) (b bool) {
-		me(fei(i))(fe[i].k)
-		b = e != nil
-		return
-	},
-		len(fe))
-	if e == nil {
-		u.authNorm = ldap.AuthAndNorm
-		u.grps = func(user string) (gs []string, d error) {
-			rec, d := ldap.FullRecordAcc(user)
-			if d == nil {
-				gs, d = ldap.MembershipCNs(rec)
-			}
-			return
+	kf = make([]kFuncI, len(ss))
+	inf := func(i int) {
+		// putting this check here is the solution I found
+		// for optional parameters in map
+		kf[i] = kFuncI{
+			ss[i].s,
+			func(v interface{}) {
+				ss[i].f(stringE(v, fe))
+			},
 		}
 	}
+	forall(inf, len(kf))
+	kf = append(kf, kFuncI{
+		passK,
+		func(i interface{}) {
+
+			u.auth = ldap.AuthAndNorm
+			u.grps = func(user string) (gs []string, d error) {
+				rec, d := ldap.FullRecordAcc(user)
+				if d == nil {
+					gs, d = ldap.MembershipCNs(rec)
+				}
+				return
+			}
+		},
+	})
 	return
 }
 
@@ -119,50 +132,42 @@ func (u *userDB) toSer() (tỹpe string, i interface{}) {
 	return
 }
 
-func (u *userDB) initMap() (e error) {
-	me := func(f func(interface{})) (fk func(string)) {
-		fk = mpErr(u.Params, func(d error) { e = d }, f)
-		return
-	}
-	fs := []struct {
-		k string
-		f func(interface{})
-	}{
+func (u *userDB) fromMapKFMp(fe ferr) (kf []kFuncI) {
+	var userPass map[string]string
+	var userGroup map[string][]string
+	kf = []kFuncI{
 		{
 			userPassK,
 			func(i interface{}) {
-				usrPass, e = cast.ToStringMapStringE(i)
+				userPass = stringMapString(i, fe)
 			},
 		},
 		{
 			userGroupK,
 			func(i interface{}) {
-				usrGrp, e = cast.ToStringMapStringSliceE(i)
+				userGroup = stringMapStringSlice(i, fe)
 			},
 		},
-	}
-	bLnSrch(func(i int) (b bool) {
-		me(fs[i].f)(fs[i].k)
-		b = e != nil
-		return
-	},
-		len(fs))
-	if e == nil {
-		u.grps = func(user string) (gs []string, e error) {
-			gs, ok := usrGrp[user]
-			if !ok {
-				e = NoKey(user)
-			}
-			return
-		}
-		u.auth = func(user, pass string) (usr string,
-			e error) {
-			ps, ok := usrPass[user]
-			if !ok || pass != ps {
-				e = NoKey(user)
-			}
-			return
-		}
+		{
+			userGroupK,
+			func(i interface{}) {
+				u.grps = func(user string) (gs []string, e error) {
+					gs, ok := userGroup[user]
+					if !ok {
+						e = NoKey(user)
+					}
+					return
+				}
+				u.auth = func(user, pass string) (usr string,
+					e error) {
+					ps, ok := userPass[user]
+					if !ok || pass != ps {
+						e = NoKey(user)
+					}
+					return
+				}
+			},
+		},
 	}
 	return
 }

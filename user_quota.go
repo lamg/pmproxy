@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/spf13/cast"
 	"sync"
 )
 
@@ -25,20 +24,22 @@ func (g *groupQuota) init() {
 	}
 }
 
-func (g *groupQuota) ipQuota() (iq ipQuota) {
-	iq = func(i ip) (q uint64) {
-		ig := g.ipg(g.IPGroup)
-		var grp string
-		if ig != nil {
-			grp = ig(i)
-		}
-		if grp != "" {
-			v, ok := g.qts.Load(grp)
+func (g *groupQuota) ipQuota(ip string) (q uint64) {
+	// this could be cached in the session manager
+	ig := g.ipg(g.IPGroup)
+	var grp []string
+	var e error
+	if ig != nil {
+		grp, e = ig(ip)
+	}
+	if e == nil {
+		inf := func(i int) {
+			v, ok := g.qts.Load(grp[i])
 			if ok {
-				q = v.(uint64)
+				q = q + v.(uint64)
 			}
 		}
-		return
+		forall(inf, len(grp))
 	}
 	return
 }
@@ -93,13 +94,13 @@ func (g *groupQuota) fromMap(fe ferr) (kf []kFuncI) {
 		{
 			nameK,
 			func(i interface{}) {
-				g.Name = stringE(cast.ToStringE, fe)(i)
+				g.Name = stringE(i, fe)
 			},
 		},
 		{
 			quotasK,
 			func(i interface{}) {
-				g.Quotas = stringMapUint64E(toStringMapUint64E, fe)(i)
+				g.Quotas = stringMapUint64E(i, fe)
 			},
 		},
 	}

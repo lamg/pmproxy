@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/lamg/clock"
 	"net"
-	"net/http"
+	h "net/http"
 	"net/url"
 	"time"
 )
@@ -23,8 +23,6 @@ type SpecCtx struct {
 	crs     func(string) (*consR, bool)
 }
 
-type req *http.Request
-
 type SpecKT string
 
 var SpecK = SpecKT("spec")
@@ -34,7 +32,7 @@ type SpecV struct {
 	err error
 }
 
-func (p *SpecCtx) AddCtxValue(r req) (cr req) {
+func (p *SpecCtx) AddCtxValue(r *h.Request) (cr *h.Request) {
 	tm := p.clock.Now()
 	s, e := p.rs.spec(tm, r)
 	if e == nil {
@@ -49,11 +47,11 @@ func (p *SpecCtx) AddCtxValue(r req) (cr req) {
 
 // Proxy is made to be used by the *h.Transport used as
 // h.RoundTripper by proxy.Proxy
-func (p *SpecCtx) Proxy(r req) (u *url.URL,
+func (p *SpecCtx) Proxy(r *h.Request) (u *url.URL,
 	e error) {
 	tm := p.clock.Now()
 	var s *spec
-	s, e = p.rs.Spec(tm, r)
+	s, e = p.rs.spec(tm, r)
 	if e == nil && s.proxyURL != nil {
 		u = s.proxyURL
 	}
@@ -85,14 +83,14 @@ func (p *SpecCtx) DialContext(ctx context.Context,
 		n, e = dialIface(s.Iface, addr, p.timeout())
 	}
 	if e == nil {
-		cr := make([]*consR, 0, len(s.Cr))
+		cr := make([]*consR, 0, len(s.ConsR))
 		inf := func(i int) {
-			cs, ok := p.crs(s.Cr[i])
+			cs, ok := p.crs(s.ConsR[i])
 			if ok {
 				cr = append(cr, cs)
 			}
 		}
-		forall(inf, len(s.Cr))
+		forall(inf, len(s.ConsR))
 		c, e = newRConn(cr, n)
 	}
 	return
@@ -207,7 +205,7 @@ func CannotConsume(raddr string) (e error) {
 
 func (r *rConn) Close() (e error) {
 	inf := func(i int) {
-		r.cr[i].Close(r.raddr)
+		r.cr[i].close(r.raddr)
 	}
 	forall(inf, len(r.cr))
 	return
