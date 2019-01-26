@@ -24,8 +24,8 @@ func main() {
 	flag.DurationVar(&rdt, "d", 30*time.Second,
 		"Connection with server read timeout")
 	flag.Parse()
-
-	pctl, e := pmproxy.NewProxyCtlFile(conf)
+	println(conf)
+	pctl, e := pmproxy.NewProxyCtl()
 	if e == nil {
 		// Setting timeouts according
 		// https://blog.cloudflare.com/
