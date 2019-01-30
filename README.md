@@ -25,29 +25,6 @@ Please don't be such a fundamentalist on this is being done at the master branch
 
 ### Type hierarchy
 
-- ProxyCtl (proxy_ctl.go)
-  - SpecCtx (spec_conn.go)
-    - rspec
-  - config
-    - rspec
-    - admin
-
-- rspec (rspec.go)
-  - matcher
-  - consR
-
-- matcher
-  - sessionIPM
-  - userIPM
-  - groupIPM
-  - rangeIPM
-
-- consR
-  - bwCons
-  - connCons
-  - dwnCons
-  - trCons
-
 ### TODO
 - simpler configuration parsing with proper error reporting
 - tight fields and methods visibility
@@ -77,7 +54,7 @@ Please don't be such a fundamentalist on this is being done at the master branch
     - params: secret
     - spec: if the user in secret is an administrator then show the opened sessions
 
-- simpleRSpec
+- rspec
   - add
     - params: secret, pos, rule
     - spec: if the user in secret is an administrator then add rule.

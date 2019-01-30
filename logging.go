@@ -6,6 +6,7 @@ import (
 	"log/syslog"
 	"net"
 	h "net/http"
+	"time"
 )
 
 type logger struct {
@@ -18,16 +19,17 @@ type logger struct {
 
 func (l *logger) init() (e error) {
 	if l.Addr != "" {
-		l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO, "")
+		l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO,
+			"")
 	} else {
 		l.sl, e = syslog.New(syslog.LOG_INFO, "")
 	}
 	return
 }
 
-func (l *logger) log(r *h.Request) (e error) {
-	time := l.cl.Now()
-	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+func (l *logger) log(method, url, rAddr string,
+	d time.Time) (e error) {
+	clientIP, _, _ := net.SplitHostPort(rAddr)
 	user := l.iu(l.IPUser)(clientIP)
 	if user == "" {
 		e = NoUserLogged(clientIP)
@@ -36,9 +38,8 @@ func (l *logger) log(r *h.Request) (e error) {
 	// squid log format
 	m := fmt.Sprintf(
 		"%9d.000 %6d %s %s/%03d %d %s %s %s %s/%s %s",
-		time.Unix(), 0, clientIP,
-		"TCP_MISS", h.StatusOK, 0, r.Method, r.RequestURI, user,
-		"DIRECT", "-", "-")
+		d.Unix(), 0, clientIP, "TCP_MISS", h.StatusOK, 0,
+		method, url, user, "DIRECT", "-", "-")
 	if e == nil {
 		e = l.sl.Info(m)
 	} else {

@@ -32,16 +32,15 @@ type SpecV struct {
 	err error
 }
 
-func (p *SpecCtx) AddCtxValue(r *h.Request) (cr *h.Request) {
-	tm := p.clock.Now()
-	s, e := p.rs.spec(tm, r)
+func (p *SpecCtx) CtxValue(ctx context.Context,
+	method string, url, rAddr string,
+	d time.Time) (nctx context.Context) {
+	s, e := p.rs.spec(d, method, url, rAddr)
 	if e == nil {
-		e = p.lg.log(r)
+		// TODO is safe to pass a pointer?
+		nctx = context.WithValue(ctx, SpecK, &SpecV{s, e})
+		e = p.lg.log(method, url, rAddr, d)
 	}
-	ctx := r.Context()
-	nctx := context.WithValue(ctx, SpecK,
-		&SpecV{s: s, err: e})
-	r.WithContext(nctx)
 	return
 }
 
@@ -50,8 +49,8 @@ func (p *SpecCtx) AddCtxValue(r *h.Request) (cr *h.Request) {
 func (p *SpecCtx) Proxy(r *h.Request) (u *url.URL,
 	e error) {
 	tm := p.clock.Now()
-	var s *spec
-	s, e = p.rs.spec(tm, r)
+	s, e := p.rs.spec(tm, r.Method, r.URL.String(),
+		r.RemoteAddr)
 	if e == nil && s.proxyURL != nil {
 		u = s.proxyURL
 	}

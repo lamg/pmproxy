@@ -6,7 +6,6 @@ import (
 	rt "github.com/lamg/rtimespan"
 	"github.com/spf13/cast"
 	"net"
-	h "net/http"
 	"regexp"
 	"time"
 )
@@ -44,16 +43,16 @@ func (r *rule) init() (e error) {
 	return
 }
 
-func (s *rspec) spec(t time.Time,
-	r *h.Request) (n *spec, e error) {
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+func (s *rspec) spec(t time.Time, method, url,
+	rAddr string) (n *spec, e error) {
+	ip, _, _ := net.SplitHostPort(rAddr)
 	inf := func(l int) {
 		j := s.rules[l]
 		ib := func(i int) (b bool) {
 			ipm, ok := s.ipm(j[i].IPM)
 			b = (j[i].Unit == (!ok || ipm(ip))) &&
 				(j[i].urlm == nil ||
-					j[i].urlm.MatchString(r.RequestURI)) &&
+					j[i].urlm.MatchString(url)) &&
 				(j[i].Span == nil || j[i].Span.ContainsTime(t))
 			return
 		}
