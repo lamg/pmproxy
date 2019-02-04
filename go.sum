@@ -22,6 +22,8 @@ github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68 h1:wYDvJn0ng7WsQELKqpgT
 github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68/go.mod h1:MmxvSUdl4gXzw1nLIcWnPwVvQ7Gzj3btOUzcoaxVGhc=
 github.com/lamg/ldaputil v0.1.0 h1:RRlvTehDJpRJkUNp/SgqxkXVXuWQgkUCb41L1VGAyFE=
 github.com/lamg/ldaputil v0.1.0/go.mod h1:vK75itx8r1akJnkYLx1AnHXANBquFGTUErMH0ViZNic=
+github.com/lamg/proxy v0.0.0-20190202022709-43fafc18873a h1:tMh6lK15q9dZrdArnKS6GEk4YOSz673QoNpCBnZArrc=
+github.com/lamg/proxy v0.0.0-20190202022709-43fafc18873a/go.mod h1:LzVd3ii7yrPFmElAcs/YiXpOAaNPYQK7HfbD0ZEQ4xk=
 github.com/lamg/proxy v1.2.0 h1:cymaapeaeZhGrOj7ZfonfHagNSOC1bfW8YDNBJ++7jg=
 github.com/lamg/proxy v1.2.0/go.mod h1:yJS9SSmOS6ZvE2AETH8ZefrxQiaVnmPH/bS5sWUW4Xk=
 github.com/lamg/rtimespan v0.1.0 h1:RWt5jUZDM6+TWc9LbYc6GyAgRWK6N0dBbJxUs9uTPa0=
@@ -53,10 +55,14 @@ github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6Kllzaw
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasthttp v1.0.0 h1:BwIoZQbBsTo3v2F5lz5Oy3TlTq4wLKTLV260EVTEWco=
 github.com/valyala/fasthttp v1.0.0/go.mod h1:4vX61m6KN+xDduDNwXrhIAVZaZaZiQ1luJk8LWSxF3s=
+github.com/valyala/fasthttp v1.1.0 h1:3BohG7mqwj4lq7PTX//7gLbUlzNvZSPmuHFnloXT0lw=
+github.com/valyala/fasthttp v1.1.0/go.mod h1:4vX61m6KN+xDduDNwXrhIAVZaZaZiQ1luJk8LWSxF3s=
 github.com/valyala/tcplisten v0.0.0-20161114210144-ceec8f93295a/go.mod h1:v3UYOV9WzVtRmSR+PDvWpU/qWl4Wa5LApYYX4ZtKbio=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+golang.org/x/net v0.0.0-20181213202711-891ebc4b82d6 h1:gT0Y6H7hbVPUtvtk0YGxMXPgN+p8fYlqWkgJeUCZcaQ=
+golang.org/x/net v0.0.0-20181213202711-891ebc4b82d6/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/sys v0.0.0-20181205085412-a5c9d58dba9a h1:1n5lsVfiQW3yfsRGu98756EH1YthsFqr/5mxHduZW2A=
 golang.org/x/sys v0.0.0-20181205085412-a5c9d58dba9a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=

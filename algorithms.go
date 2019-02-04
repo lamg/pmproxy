@@ -9,17 +9,35 @@ import (
 type intBool func(int) bool
 
 // bLnSrch is the bounded lineal search algorithm
-// { n ≥ 0 ∧ ⟨∀i: 0 ≤ i < n: def.(ib.i)⟩ }
-// { i = ⟨↑j: 0 ≤ j ≤ n ∧ ⟨∀k: 0 ≤ k < j: ¬ib.k⟩: j⟩ ∧
-//   b ≡ i ≠ n }
+// { n ≥ 0 ∧ forall.n.(def.ib) }
+// { i =⟨↑j: 0 ≤ j ≤ n ∧ ⟨∀k: 0 ≤ k < j: ¬ib.k⟩: j⟩
+//   ∧ b ≡ i ≠ n }
 func bLnSrch(ib intBool, n int) (b bool, i int) {
-	b, i = false, 0
+	b, i, udb := false, 0, true
+	// udb: undefined b for i
 	for !b && i != n {
-		b = ib(i)
-		if !b {
-			i = i + 1
+		if udb {
+			// udb ∧ i ≠ n
+			b, udb = ib(i), false
+		} else {
+			// ¬udb ∧ ¬b
+			i, udb = i+1, true
 		}
 	}
+	return
+}
+
+func trueForall(ib intBool, n int) (ok bool, i int) {
+	r, i := bLnSrch(
+		func(i int) (b bool) {
+			b = !ib(i)
+			return
+		},
+		n,
+	)
+	// calculated showing that doesn't exists function
+	// yielding false
+	ok = !r
 	return
 }
 
@@ -66,7 +84,7 @@ func mapKF(kf []kFuncI, i interface{}, fe ferr,
 			fk = mpErr(m, fi, fe)
 			return
 		}
-		bLnSrch(
+		trueForall(
 			func(i int) (b bool) {
 				me(kf[i].f)(kf[i].k)
 				b = fb()
@@ -139,7 +157,7 @@ func stringSliceE(i interface{}, fe ferr) (ss []string) {
 	return
 }
 
-func stringDurationE(i interface{},
+func durationE(i interface{},
 	fe ferr) (d time.Duration) {
 	s, e := cast.ToStringE(i)
 	if e == nil {
@@ -209,4 +227,43 @@ func boolE(i interface{}, fe ferr) (b bool) {
 	b, e := cast.ToBoolE(i)
 	fe(e)
 	return
+}
+
+type choice struct {
+	guard func() bool
+	runf  func() error
+}
+
+func runChoice(chs []choice) (ok bool, i int, e error) {
+	ib := func(i int) (b bool) {
+		b = chs[i].guard()
+		return
+	}
+	ok, i = bLnSrch(ib, len(srvs))
+	if ok {
+		e = chs[i].runf()
+	}
+	return
+}
+
+func runConcurr(fe []func() error) (e error) {
+	ec := make(chan error)
+	runf := func(i int) {
+		go func() {
+			ec <- fe[i]()
+		}()
+	}
+	forall(runf, len(fe))
+	e = <-ec
+}
+
+// trueFF means true forall function
+func trueFF(fs []func(), okf func() bool) {
+	forallTrue(func(i int) (b bool) {
+		fs[i]()
+		b = okf()
+		return
+	},
+		len(fs),
+	)
 }
