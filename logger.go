@@ -10,11 +10,9 @@ import (
 )
 
 type logger struct {
-	cl     clock.Clock
-	sl     *syslog.Writer
-	iu     func(string) ipUser
-	IPUser string `json:"ipUser"`
-	Addr   string `json:"addr"`
+	sl   *syslog.Writer
+	iu   ipUser
+	Addr string `json:"addr"`
 }
 
 func (l *logger) init() (e error) {
@@ -30,9 +28,9 @@ func (l *logger) init() (e error) {
 func (l *logger) log(method, url, rAddr string,
 	d time.Time) (e error) {
 	clientIP, _, _ := net.SplitHostPort(rAddr)
-	user := l.iu(l.IPUser)(clientIP)
+	user := l.iu(clientIP)
 	if user == "" {
-		e = NoUserLogged(clientIP)
+		e = noUserLogged(clientIP)
 		user = "-"
 	}
 	// squid log format
@@ -45,10 +43,5 @@ func (l *logger) log(method, url, rAddr string,
 	} else {
 		e = l.sl.Alert(m)
 	}
-	return
-}
-
-func NoUserLogged(ip string) (e error) {
-	e = fmt.Errorf("No user logged at %s", ip)
 	return
 }

@@ -3,7 +3,10 @@ package pmproxy
 import (
 	"github.com/lamg/proxy"
 	fh "github.com/valyala/fasthttp"
+	"io"
+	"net"
 	h "net/http"
+	"path"
 )
 
 // Serve starts the control interface and proxy servers,
@@ -72,7 +75,9 @@ func serveFunc(c *srvConf,
 			guard: func() bool { return !c.proxyOrIface },
 			runf: func() (e error) {
 				fe = func() error {
-					return listenAndServeTLS(c.certFl, c.keyFl)
+					cert, key := configPath(c.certFl),
+						configPath(c.keyFl)
+					return listenAndServeTLS(cert, key)
 				}
 				return
 			},
@@ -83,5 +88,11 @@ func serveFunc(c *srvConf,
 		runChoice(chs[i])
 	}
 	forall(inf, len(chs))
+	return
+}
+
+func configPath(file string) (fpath string) {
+	cfl := viper.ConfigFileUsed()
+	fpath = path.Join(path.Dir(cfl), file)
 	return
 }
