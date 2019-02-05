@@ -65,8 +65,31 @@ func readHnd(hcs []*handlerConf, ac *admConn) {
 		// administration, and serializer are part of the
 		// control interface, and also have consumers and
 		// matchers
+		comp02 := viper.GetBool("compatible0.2")
+		staticFPath := viper.GetString("staticFilesPath")
 		if hcs[i].sc.fastOrStd {
+			fs := &fh.FS{
+				Root: staticFPath,
+			}
+			fsHnd := fs.NewRequestHandler()
 			hcs[i].reqHnd = func(ctx *fh.RequestCtx) {
+				if comp02 {
+					pth := string(ctx.Request.URI().Path)
+					meth := string(ctx.Method)
+					token := string(ctx.Request.Header.Peek("authHd"))
+					if strings.HasPrefix(pth, "/api") {
+						cmd, e = compatibleCmd(pth, meth, token)
+					} else {
+						// serve static files
+						if pth == "/login" || pth == "/login/" {
+							pth = ""
+						}
+						fsHnd(ctx)
+						cmd = admCmd{
+							Cmd: "skip",
+						}
+					}
+				}
 				buff, cmd := new(bytes.Buffer), new(admCmd)
 				var e error
 				var bs []byte
@@ -74,7 +97,11 @@ func readHnd(hcs []*handlerConf, ac *admConn) {
 					func() { e = ctx.Request.BodyWriteTo(buff) },
 					func() { e = json.NewDecoder(buff).Decode(cmd) },
 					func() { bs, e = ac.admin(cmd) },
-					func() { ctx.Response.SetBody(bs) },
+					func() {
+						if bs != nil {
+							ctx.Response.SetBody(bs)
+						}
+					},
 				}
 				ok := trueFF(fs, func() bool { return e == nil })
 				if !ok {
@@ -85,7 +112,27 @@ func readHnd(hcs []*handlerConf, ac *admConn) {
 		} else {
 			hcs[i].serveHTTP = func(w h.ResponseWriter,
 				r *h.Request) {
-				cmd := new(admCmd)
+				var cmd *admCmd
+				var e error
+				if comp02 {
+					pth := r.URL.Path
+					if strings.HasPrefix(pth, "/api") {
+						cmd, e = compatibleCmd(pth, r.Method,
+							r.Header.Get("authHd"))
+					} else {
+						if pth == "/login" || pth == "/login/" {
+							pth = ""
+						}
+						// serve static
+						h.ServeFile(w, r, path.Join(staticFPath, pth))
+						cmd := &admCmd{
+							Cmd: "skip",
+						}
+					}
+				} else {
+					cmd = new(admCmd)
+				}
+
 				var e error
 				var bs []byte
 				fs := []func(){
@@ -93,7 +140,11 @@ func readHnd(hcs []*handlerConf, ac *admConn) {
 						e = json.NewDecoder(r.Body).Decode(cmd)
 					},
 					func() { bs, e = ac.admin(cmd) },
-					func() { _, e = w.Write(bs) },
+					func() {
+						if bs != nil {
+							_, e = w.Write(bs)
+						}
+					},
 				}
 				ok := trueFF(fs, func() bool { return e == nil })
 				if !ok {
@@ -101,6 +152,70 @@ func readHnd(hcs []*handlerConf, ac *admConn) {
 				}
 			}
 		}
+	}
+	return
+}
+
+func compatibleCmd(pth, meth, rAddr, hd string) (c *admCmd,
+	e error) {
+	ip, _, e := net.SplitHostPort(rAddr)
+	c = &admCmd{
+		RemoteAddr: ip,
+		Secret:     hd,
+	}
+
+	kf := []kFunc{
+		{
+			"/api/auth" + h.MethodPost,
+			func() {
+				c.Cmd = open
+				c.Adm = "sm"
+			},
+		},
+		{
+			"/api/auth" + h.MethodDelete,
+			func() {
+				c.Cmd = clöse
+				c.Adm = "sm"
+			},
+		},
+		{
+			"/api/userStatus" + h.MethodGet,
+			func() {
+				c.Cmd = get
+				c.Adm = "dw"
+			},
+		},
+		{
+			"/api/userStatus" + h.MethodPut,
+			func() {
+				c.Cmd = set
+				c.Adm = "dw"
+			},
+		},
+		{
+			"/api/checkUser" + h.MethodGet,
+			func() {
+				c.Cmd = check
+				c.Adm = "sm"
+			},
+		},
+		{
+			"/api/userInfo" + h.MethodGet,
+			func() {
+				c.Cmd = get
+				c.Adm = "userInfo"
+				// User {
+				// 	 "userName" string,
+				// 		"name" string,
+				// 		"isAdmin" bool,
+				// 		"quotaGroup" uint64
+				// }
+			},
+		},
+	}
+	if e == nil {
+		exF(kf, pth+meth, func(d error) { e = d })
 	}
 	return
 }

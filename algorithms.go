@@ -114,7 +114,7 @@ func exF(kf []kFunc, cmd string, fe ferr) {
 		len(kf),
 	)
 	if !ok {
-		fe(NoCmd(cmd))
+		fe(noCmd(cmd))
 	}
 	return
 }

@@ -27,6 +27,7 @@ func newDialer(consRF func(string) (*consR, bool),
 			{
 				get,
 				func() (bs []byte, e error) {
+					bs = []byte(dl.timeout.String())
 					return
 				},
 			},

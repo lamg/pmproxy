@@ -40,3 +40,9 @@ func negConsR() (c *consR) {
 	}
 	return
 }
+
+func readConsR() (s *sync.Map, e error) {
+	sl := viper.Get("downCons")
+	// TODO
+	return
+}

@@ -10,6 +10,13 @@ type ipUserS struct {
 
 type ipUser func(string) (string, bool)
 
+func newIPuserS() (s *ipUserS) {
+	s = &ipUserS{
+		mäp: new(sync.Map),
+	}
+	return
+}
+
 func (p *ipUserS) get(ip string) (user string, ok bool) {
 	v, ok := p.mäp.Load(ip)
 	if ok {

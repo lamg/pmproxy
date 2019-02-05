@@ -1,5 +1,8 @@
 package pmproxy
 
+// admConn has the values for controlling how
+// the proxy (github.com/lamg/proxy) handles the connection,
+// and the values for controlling at runtime those values
 type admConn struct {
 	maxIdle int
 	idleT   time.Duration
@@ -15,16 +18,15 @@ type admConn struct {
 type admin func(*admCmd) ([]byte, error)
 
 type admCmd struct {
-	Cmd     string
-	AdmName string
+	Cmd        string
+	Adm        string
+	RemoteAddr string
+	Secret     string
 }
 
 func readAdmConn() (a *admConn, e error) {
-	a = new(admConn)
-	a.confs = append(a.confs, p.toStringMap)
-	mp := viper.Get(proxyTr)
-	e = a.fromStringMap(mp)
 	// read ip matchers
+	// read user information provider
 	// read consumption restrictors
 	// read rules
 	// read admins
@@ -33,7 +35,27 @@ func readAdmConn() (a *admConn, e error) {
 	// initialize direct, proxyF, ctxVal
 	//   admin
 	//   confs
-	a.proxyF, a.ctxVal = evalRules(rules)
+
+	iu := newIPUserS()
+	ms, e := readMatchers(iu)
+	admins, e := readAdmins(iu)
+
+	a = new(admConn)
+	a.confs = append(a.confs, p.toStringMap)
+	mp := viper.Get(proxyTr)
+	e = a.fromStringMap(mp)
+	rls, e := readRules()
+	a.proxyF, a.ctxVal = rls.evaluators(ms)
+
+	consR, e := readConsR(iu)
+	consRF := func(name string) (c *consR, ok bool) {
+		v, ok := consR.Load(name)
+		if ok {
+			c = v.(*consR)
+		}
+		return
+	}
+	lg, e := readLogger(iu.get)
 	a.direct, e = newDialer(consR, lg)
 	return
 }
