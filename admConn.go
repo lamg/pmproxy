@@ -1,5 +1,10 @@
 package pmproxy
 
+import (
+	"github.com/lamg/proxy"
+	"time"
+)
+
 // admConn has the values for controlling how
 // the proxy (github.com/lamg/proxy) handles the connection,
 // and the values for controlling at runtime those values
@@ -24,7 +29,7 @@ type admCmd struct {
 	Secret     string
 }
 
-func readAdmConn() (a *admConn, e error) {
+func readAdmConn(cf *conf) (a *admConn, e error) {
 	// read ip matchers
 	// read user information provider
 	// read consumption restrictors
@@ -37,14 +42,14 @@ func readAdmConn() (a *admConn, e error) {
 	//   confs
 
 	iu := newIPUserS()
-	ms, e := readMatchers(iu)
-	admins, e := readAdmins(iu)
+	ms, e := cf.matchers()
 
 	a = new(admConn)
+	a.admin = cf.admin
 	a.confs = append(a.confs, p.toStringMap)
 	mp := viper.Get(proxyTr)
 	e = a.fromStringMap(mp)
-	rls, e := readRules()
+	rls, e := readRules(c)
 	a.proxyF, a.ctxVal = rls.evaluators(ms)
 
 	consR, e := readConsR(iu)

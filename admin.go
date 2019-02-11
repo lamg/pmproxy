@@ -4,6 +4,12 @@ import (
 	"sync"
 )
 
+func readAdmins(cf *conf, iu *ipUserS) (a admin, e error) {
+	sms, e := cf.sessionIPMs()
+
+	return
+}
+
 type admins struct {
 	adms *sync.Map
 }

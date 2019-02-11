@@ -1,5 +1,9 @@
 package pmproxy
 
+import (
+	"net"
+)
+
 type dialer struct {
 	timeout time.Duration
 	lg      *logger

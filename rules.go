@@ -3,8 +3,8 @@ package pmproxy
 import (
 	"context"
 	"github.com/lamg/proxy"
+	"net/url"
 	"time"
-	"url"
 )
 
 type rules struct {

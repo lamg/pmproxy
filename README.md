@@ -25,7 +25,7 @@ The file hierarchy is the following:
 
 - serve
   - handlers
-    - [ ] admConn (readAdmConn, admins according compatibleCmd)
+    - admConn (load admin, matchers in conf)
       - dialer
         - logger
         - consR

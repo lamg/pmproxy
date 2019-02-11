@@ -12,11 +12,12 @@ import (
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
 func Serve() (e error) {
-	hcs, e := newHnds()
+	c := newConf()
+	hcs, e := newHnds(c)
 	if e == nil {
 		fes := make([]func() error, len(hcs))
 		forall(func(i int) {
-			fes[i] = serveFunc(hcs[i].sc, hcs[i].sh)
+			fes[i] = serveFunc(c, hcs[i].sc, hcs[i].sh)
 		},
 			len(fes),
 		)
@@ -25,7 +26,7 @@ func Serve() (e error) {
 	return
 }
 
-func serveFunc(c *srvConf,
+func serveFunc(cf *conf, c *srvConf,
 	sh *srvHandler) (fe func() error) {
 	var listenAndServe func() error
 	var listenAndServeTLS func(string, string) error
@@ -75,8 +76,8 @@ func serveFunc(c *srvConf,
 			guard: func() bool { return !c.proxyOrIface },
 			runf: func() (e error) {
 				fe = func() error {
-					cert, key := configPath(c.certFl),
-						configPath(c.keyFl)
+					cert, key := cf.configPath(c.certFl),
+						cf.configPath(c.keyFl)
 					return listenAndServeTLS(cert, key)
 				}
 				return
@@ -88,11 +89,5 @@ func serveFunc(c *srvConf,
 		runChoice(chs[i])
 	}
 	forall(inf, len(chs))
-	return
-}
-
-func configPath(file string) (fpath string) {
-	cfl := viper.ConfigFileUsed()
-	fpath = path.Join(path.Dir(cfl), file)
 	return
 }

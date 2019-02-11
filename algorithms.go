@@ -125,7 +125,7 @@ type cmdProp struct {
 	f    func()
 }
 
-func exCmdProp(cs []cmdProp, a *AdmCmd, fe ferr) {
+func exCmdProp(cs []cmdProp, a *admCmd, fe ferr) {
 	cmdf, propf := false, false
 	bLnSrch(
 		func(i int) (b bool) {
@@ -259,7 +259,7 @@ func runConcurr(fe []func() error) (e error) {
 
 // trueFF means true forall function
 func trueFF(fs []func(), okf func() bool) (ok bool) {
-	ok, _ = forallTrue(func(i int) (b bool) {
+	ok, _ = trueForall(func(i int) (b bool) {
 		fs[i]()
 		b = okf()
 		return

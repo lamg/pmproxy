@@ -13,13 +13,13 @@ type handlerConf struct {
 	conf []func() interface{}
 }
 
-func newHnds() (hs []*handlerConf,
+func newHnds(c *conf) (hs []*handlerConf,
 	fs []func() interface{}, e error) {
 	var sl []interface{}
 	var ac *admConn
 	fs := []func(){
 		func() {
-			sl, e = cast.ToSliceE(viper.Get("srvConf"))
+			sl, e = c.sliceE("srvConf")
 		},
 		func() {
 			if len(sl) != 2 {
@@ -35,10 +35,10 @@ func newHnds() (hs []*handlerConf,
 			trueForall(ib, len(sl))
 		},
 		func() {
-			ac, e = readAdmConn()
+			ac, e = readAdmConn(c)
 		},
 		func() {
-			readHnd(hs, ac)
+			readHnd(hs, ac, c)
 			forall(func(i int) {
 				fs = append(fs, hs[i].sc.toStringMap)
 			}, len(hs))
@@ -49,108 +49,122 @@ func newHnds() (hs []*handlerConf,
 	return
 }
 
-func readHnd(hcs []*handlerConf, ac *admConn) {
-	if hcs[i].sc.proxyOrIface {
-		// consumers, matchers determine context values
-		// dialer and proxy process context values
-		if hcs[i].sc.fastOrStd {
-			hcs[i].reqHnd = proxy.NewFastProxy(ac.direct,
-				ac.ctxVal, ac.proxyF, time.Now).FastHandler
+func readHnd(hcs []*handlerConf, ac *admConn, c *conf) {
+	inf := func(i int) {
+		if hcs[i].sc.proxyOrIface {
+			// consumers, matchers determine context values
+			// dialer and proxy process context values
+			if hcs[i].sc.fastOrStd {
+				hcs[i].reqHnd = proxy.NewFastProxy(ac.direct,
+					ac.ctxVal, ac.proxyF, time.Now).FastHandler
+			} else {
+				hcs[i].serveHTTP = proxy.NewProxy(ac.direct,
+					ac.ctxVal, ac.proxyF, ac.maxIdle, ac.idleT,
+					ac.tlsHT, ac.expCT).ServeHTTP
+			}
 		} else {
-			hcs[i].serveHTTP = proxy.NewProxy(ac.direct,
-				ac.ctxVal, ac.proxyF, ac.maxIdle, ac.idleT,
-				ac.tlsHT, ac.expCT).ServeHTTP
+			// administration, and serializer are part of the
+			// control interface, and also have consumers and
+			// matchers
+			comp02 := c.böol("compatible0.2")
+			staticFPath := c.strïng("staticFilesPath")
+			if hcs[i].sc.fastOrStd {
+				hcs[i].reqHnd = fastIface(ac, comp02, staticFPath)
+			} else {
+				hcs[i].serveHTTP = stdIface(ac, comp02, staticFPath)
+			}
 		}
-	} else {
-		// administration, and serializer are part of the
-		// control interface, and also have consumers and
-		// matchers
-		comp02 := viper.GetBool("compatible0.2")
-		staticFPath := viper.GetString("staticFilesPath")
-		if hcs[i].sc.fastOrStd {
-			fs := &fh.FS{
-				Root: staticFPath,
+	}
+	forall(inf, len(hcs))
+	return
+}
+
+func fastIface(ac *admConn, comp02 bool,
+	staticFPath string) (hnd fh.RequestHandler) {
+	fs := &fh.FS{
+		Root: staticFPath,
+	}
+	fsHnd := fs.NewRequestHandler()
+	hnd = func(ctx *fh.RequestCtx) {
+		if comp02 {
+			pth := string(ctx.Request.URI().Path)
+			meth := string(ctx.Method)
+			token := string(ctx.Request.Header.Peek("authHd"))
+			if strings.HasPrefix(pth, "/api") {
+				cmd, e = compatibleCmd(pth, meth, token)
+			} else {
+				// serve static files
+				if pth == "/login" || pth == "/login/" {
+					pth = ""
+				}
+				fsHnd(ctx)
+				cmd = admCmd{
+					Cmd: skip,
+				}
 			}
-			fsHnd := fs.NewRequestHandler()
-			hcs[i].reqHnd = func(ctx *fh.RequestCtx) {
-				if comp02 {
-					pth := string(ctx.Request.URI().Path)
-					meth := string(ctx.Method)
-					token := string(ctx.Request.Header.Peek("authHd"))
-					if strings.HasPrefix(pth, "/api") {
-						cmd, e = compatibleCmd(pth, meth, token)
-					} else {
-						// serve static files
-						if pth == "/login" || pth == "/login/" {
-							pth = ""
-						}
-						fsHnd(ctx)
-						cmd = admCmd{
-							Cmd: "skip",
-						}
-					}
+		}
+		buff, cmd := new(bytes.Buffer), new(admCmd)
+		var e error
+		var bs []byte
+		fs := []func(){
+			func() { e = ctx.Request.BodyWriteTo(buff) },
+			func() { e = json.NewDecoder(buff).Decode(cmd) },
+			func() { bs, e = ac.admin(cmd) },
+			func() {
+				if bs != nil {
+					ctx.Response.SetBody(bs)
 				}
-				buff, cmd := new(bytes.Buffer), new(admCmd)
-				var e error
-				var bs []byte
-				fs := []func(){
-					func() { e = ctx.Request.BodyWriteTo(buff) },
-					func() { e = json.NewDecoder(buff).Decode(cmd) },
-					func() { bs, e = ac.admin(cmd) },
-					func() {
-						if bs != nil {
-							ctx.Response.SetBody(bs)
-						}
-					},
+			},
+		}
+		ok := trueFF(fs, func() bool { return e == nil })
+		if !ok {
+			ctx.Response.SetStatusCode(h.StatusBadRequest)
+			ctx.Response.SetBodyString(e.Error())
+		}
+	}
+	return
+}
+
+func stdIface(ac *admConn, comp02 bool,
+	staticFPath string) (hnd h.HandlerFunc) {
+	hnd = func(w h.ResponseWriter, r *h.Request) {
+		var cmd *admCmd
+		var e error
+		if comp02 {
+			pth := r.URL.Path
+			if strings.HasPrefix(pth, "/api") {
+				cmd, e = compatibleCmd(pth, r.Method,
+					r.Header.Get("authHd"))
+			} else {
+				if pth == "/login" || pth == "/login/" {
+					pth = ""
 				}
-				ok := trueFF(fs, func() bool { return e == nil })
-				if !ok {
-					ctx.Response.SetStatusCode(h.StatusBadRequest)
-					ctx.Response.SetBodyString(e.Error())
+				// serve static
+				h.ServeFile(w, r, path.Join(staticFPath, pth))
+				cmd := &admCmd{
+					Cmd: skip,
 				}
 			}
 		} else {
-			hcs[i].serveHTTP = func(w h.ResponseWriter,
-				r *h.Request) {
-				var cmd *admCmd
-				var e error
-				if comp02 {
-					pth := r.URL.Path
-					if strings.HasPrefix(pth, "/api") {
-						cmd, e = compatibleCmd(pth, r.Method,
-							r.Header.Get("authHd"))
-					} else {
-						if pth == "/login" || pth == "/login/" {
-							pth = ""
-						}
-						// serve static
-						h.ServeFile(w, r, path.Join(staticFPath, pth))
-						cmd := &admCmd{
-							Cmd: "skip",
-						}
-					}
-				} else {
-					cmd = new(admCmd)
-				}
+			cmd = new(admCmd)
+		}
 
-				var e error
-				var bs []byte
-				fs := []func(){
-					func() {
-						e = json.NewDecoder(r.Body).Decode(cmd)
-					},
-					func() { bs, e = ac.admin(cmd) },
-					func() {
-						if bs != nil {
-							_, e = w.Write(bs)
-						}
-					},
+		var e error
+		var bs []byte
+		fs := []func(){
+			func() {
+				e = json.NewDecoder(r.Body).Decode(cmd)
+			},
+			func() { bs, e = ac.admin(cmd) },
+			func() {
+				if bs != nil {
+					_, e = w.Write(bs)
 				}
-				ok := trueFF(fs, func() bool { return e == nil })
-				if !ok {
-					h.Error(w, e.Error())
-				}
-			}
+			},
+		}
+		ok := trueFF(fs, func() bool { return e == nil })
+		if !ok {
+			h.Error(w, e.Error())
 		}
 	}
 	return
