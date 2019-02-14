@@ -16,14 +16,14 @@ type handlerConf struct {
 func newHnds(c *conf) (hs []*handlerConf,
 	fs []func() interface{}, e error) {
 	var sl []interface{}
-	var ac *admConn
+	var ac *connMng
 	fs := []func(){
 		func() {
-			sl, e = c.sliceE("srvConf")
+			sl, e = c.sliceE(srvConfK)
 		},
 		func() {
 			if len(sl) != 2 {
-				e = fmt.Errorf("Need two servers, not %d", len(sl))
+				e = needXServers(2, len(sl))
 			}
 		},
 		func() {
@@ -35,7 +35,7 @@ func newHnds(c *conf) (hs []*handlerConf,
 			trueForall(ib, len(sl))
 		},
 		func() {
-			ac, e = readAdmConn(c)
+			ac, e = newConnMng(c)
 		},
 		func() {
 			readHnd(hs, ac, c)
@@ -66,12 +66,12 @@ func readHnd(hcs []*handlerConf, ac *admConn, c *conf) {
 			// administration, and serializer are part of the
 			// control interface, and also have consumers and
 			// matchers
-			comp02 := c.böol("compatible0.2")
-			staticFPath := c.strïng("staticFilesPath")
+			comp02 := c.böol(compatible02K)
+			staticFPath := c.strïng(staticFilesPathK)
 			if hcs[i].sc.fastOrStd {
-				hcs[i].reqHnd = fastIface(ac, comp02, staticFPath)
+				hcs[i].reqHnd = fastIface(c, comp02, staticFPath)
 			} else {
-				hcs[i].serveHTTP = stdIface(ac, comp02, staticFPath)
+				hcs[i].serveHTTP = stdIface(c, comp02, staticFPath)
 			}
 		}
 	}
@@ -79,7 +79,7 @@ func readHnd(hcs []*handlerConf, ac *admConn, c *conf) {
 	return
 }
 
-func fastIface(ac *admConn, comp02 bool,
+func fastIface(cf *conf, comp02 bool,
 	staticFPath string) (hnd fh.RequestHandler) {
 	fs := &fh.FS{
 		Root: staticFPath,
@@ -89,30 +89,27 @@ func fastIface(ac *admConn, comp02 bool,
 		if comp02 {
 			pth := string(ctx.Request.URI().Path)
 			meth := string(ctx.Method)
-			token := string(ctx.Request.Header.Peek("authHd"))
-			if strings.HasPrefix(pth, "/api") {
+			token := string(ctx.Request.Header.Peek(authHd))
+			if strings.HasPrefix(pth, apiPref) {
 				cmd, e = compatibleCmd(pth, meth, token)
 			} else {
 				// serve static files
-				if pth == "/login" || pth == "/login/" {
-					pth = ""
-				}
+				pth = emptyPathIfLogin(pth)
 				fsHnd(ctx)
-				cmd = admCmd{
+				cmd = cmd{
 					Cmd: skip,
 				}
 			}
 		}
-		buff, cmd := new(bytes.Buffer), new(admCmd)
+		buff, cmd := new(bytes.Buffer), new(cmd)
 		var e error
-		var bs []byte
 		fs := []func(){
 			func() { e = ctx.Request.BodyWriteTo(buff) },
 			func() { e = json.NewDecoder(buff).Decode(cmd) },
-			func() { bs, e = ac.admin(cmd) },
+			func() { cf.manager(cmd); e = cmd.e },
 			func() {
-				if bs != nil {
-					ctx.Response.SetBody(bs)
+				if cmd.bs != nil {
+					ctx.Response.SetBody(cmd.bs)
 				}
 			},
 		}
@@ -125,40 +122,45 @@ func fastIface(ac *admConn, comp02 bool,
 	return
 }
 
-func stdIface(ac *admConn, comp02 bool,
+func emptyPathIfLogin(pth string) (r string) {
+	r = pth
+	if pth == loginPref || pth == loginPrefSlash {
+		r = ""
+	}
+	return
+}
+
+func stdIface(cf *conf, comp02 bool,
 	staticFPath string) (hnd h.HandlerFunc) {
 	hnd = func(w h.ResponseWriter, r *h.Request) {
-		var cmd *admCmd
+		var cmd *cmd
 		var e error
 		if comp02 {
 			pth := r.URL.Path
-			if strings.HasPrefix(pth, "/api") {
+			if strings.HasPrefix(pth, apiPref) {
 				cmd, e = compatibleCmd(pth, r.Method,
-					r.Header.Get("authHd"))
+					r.Header.Get(authHd))
 			} else {
-				if pth == "/login" || pth == "/login/" {
-					pth = ""
-				}
+				pth = emptyPathIfLogin(pth)
 				// serve static
 				h.ServeFile(w, r, path.Join(staticFPath, pth))
-				cmd := &admCmd{
+				cmd := &cmd{
 					Cmd: skip,
 				}
 			}
 		} else {
-			cmd = new(admCmd)
+			cmd = new(cmd)
 		}
 
 		var e error
-		var bs []byte
 		fs := []func(){
 			func() {
 				e = json.NewDecoder(r.Body).Decode(cmd)
 			},
-			func() { bs, e = ac.admin(cmd) },
+			func() { cf.manager(cmd); e = cmd.e },
 			func() {
-				if bs != nil {
-					_, e = w.Write(bs)
+				if cmd.bs != nil {
+					_, e = w.Write(cmd.bs)
 				}
 			},
 		}
@@ -170,61 +172,55 @@ func stdIface(ac *admConn, comp02 bool,
 	return
 }
 
-func compatibleCmd(pth, meth, rAddr, hd string) (c *admCmd,
+func compatibleCmd(pth, meth, rAddr, hd string) (c *cmd,
 	e error) {
 	ip, _, e := net.SplitHostPort(rAddr)
-	c = &admCmd{
+	c = &cmd{
 		RemoteAddr: ip,
 		Secret:     hd,
 	}
 
 	kf := []kFunc{
 		{
-			"/api/auth" + h.MethodPost,
+			apiAuth + h.MethodPost,
 			func() {
 				c.Cmd = open
-				c.Adm = "sm"
+				c.Adm = defaultSessionIPM
 			},
 		},
 		{
-			"/api/auth" + h.MethodDelete,
+			apiAuth + h.MethodDelete,
 			func() {
 				c.Cmd = clöse
-				c.Adm = "sm"
+				c.Adm = defaultSessionIPM
 			},
 		},
 		{
-			"/api/userStatus" + h.MethodGet,
+			apiUserStatus + h.MethodGet,
 			func() {
 				c.Cmd = get
-				c.Adm = "dw"
+				c.Adm = defaultDwnConsR
 			},
 		},
 		{
-			"/api/userStatus" + h.MethodPut,
+			apiUserStatus + h.MethodPut,
 			func() {
 				c.Cmd = set
-				c.Adm = "dw"
+				c.Adm = defaultDwnConsR
 			},
 		},
 		{
-			"/api/checkUser" + h.MethodGet,
+			apiCheckUser + h.MethodGet,
 			func() {
 				c.Cmd = check
-				c.Adm = "sm"
+				c.Adm = defaultSessionIPM
 			},
 		},
 		{
-			"/api/userInfo" + h.MethodGet,
+			apiUserInfo + h.MethodGet,
 			func() {
 				c.Cmd = get
-				c.Adm = "userInfo"
-				// User {
-				// 	 "userName" string,
-				// 		"name" string,
-				// 		"isAdmin" bool,
-				// 		"quotaGroup" uint64
-				// }
+				c.Adm = defaultUserDBInfo
 			},
 		},
 	}
@@ -252,18 +248,6 @@ type srvConf struct {
 	maxConnIP  int
 	maxReqConn int
 }
-
-const (
-	proxyOrIfaceK = "proxyOrIface"
-	fastOrStdK    = "fastOrStd"
-	readTimeoutK  = "readTimeout"
-	writeTimeoutK = "writeTimeout"
-	addrK         = "addr"
-	certK         = "cert"
-	keyK          = "key"
-	maxConnIPK    = "maxConnIP"
-	maxReqConnK   = "maxReqConn"
-)
 
 func readSrvConf(i interface{}) (h *handlerConf,
 	e error) {

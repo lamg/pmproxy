@@ -10,11 +10,6 @@ import (
 type rules struct {
 }
 
-func readRules() (r *rules, e error) {
-	v := viper.Get("rules")
-	return
-}
-
 func (r *rules) evaluators() (pf proxy.ParentProxyF,
 	cv proxy.ContextValueF) {
 	cv := func(ctx context.Context, method, ürl, rAddr string,

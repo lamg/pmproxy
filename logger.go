@@ -15,9 +15,9 @@ type logger struct {
 	Addr string `json:"addr"`
 }
 
-func readLogger(iu ipUser) (l *logger, e error) {
+func newLogger(addr string) (l *logger, e error) {
 	l = &logger{
-		Addr: viper.GetString("logger"),
+		Addr: addr,
 	}
 	if l.Addr != "" {
 		l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO,

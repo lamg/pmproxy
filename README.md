@@ -25,14 +25,16 @@ The file hierarchy is the following:
 
 - serve
   - handlers
-    - admConn (load admin, matchers in conf)
+    - connMng (load admin, matchers in conf)
       - dialer
         - logger
         - consR
         - spec
-      - rules
-      - admin
-
-## TODO
-
-Replace calls to viper by calls to a cache that reads specific objects and has interface for reading admins, matchers, restrictors.
+      - rules (TODO)
+      - conf
+      	- userInfo (TODO)
+      	- dwnConsR (TODO)
+      	- sessionIPM (TODO)
+        - groupIPM (TODO)
+        - rules (TODO)
+        - connMng (TODO)

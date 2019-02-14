@@ -39,3 +39,8 @@ func noSpecKey(sk SpecKT) (e error) {
 	e = fmt.Errorf("No spec key %s found", sk)
 	return
 }
+
+func needXServers(x, n int) (e error) {
+	e = fmt.Errorf("Need %d servers, not %d", x, n)
+	return
+}

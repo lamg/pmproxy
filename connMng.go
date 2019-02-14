@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-// admConn has the values for controlling how
+// connMng has the values for controlling how
 // the proxy (github.com/lamg/proxy) handles the connection,
 // and the values for controlling at runtime those values
-type admConn struct {
+type connMng struct {
 	maxIdle int
 	idleT   time.Duration
 	tlsHT   time.Duration
@@ -16,37 +16,28 @@ type admConn struct {
 	direct  proxy.ContextDialer
 	proxyF  proxy.ParentProxyF
 	ctxVal  proxy.ContextValueF
-	admin   admin
-	confs   []func() interface{}
 }
 
-type admin func(*admCmd) ([]byte, error)
+type manager func(*cmd)
+type managerKF func(*cmd) []kFunc
 
-type admCmd struct {
+type cmd struct {
 	Cmd        string
-	Adm        string
+	Manager    string
 	RemoteAddr string
 	Secret     string
+	bs         []byte
+	e          error
 }
 
-func readAdmConn(cf *conf) (a *admConn, e error) {
-	// read ip matchers
-	// read user information provider
-	// read consumption restrictors
-	// read rules
-	// read admins
-	// read logger
-	// get searializers
-	// initialize direct, proxyF, ctxVal
-	//   admin
-	//   confs
+func newConnMng(cf *conf) (a *connMng, e error) {
+	// TODO initialize direct, proxyF, ctxVal
 
 	iu := newIPUserS()
 	ms, e := cf.matchers()
 
-	a = new(admConn)
-	a.admin = cf.admin
-	a.confs = append(a.confs, p.toStringMap)
+	a = new(connMng)
+	cf.mappers = append(cf.mappers, a.toMap)
 	mp := viper.Get(proxyTr)
 	e = a.fromStringMap(mp)
 	rls, e := readRules(c)
@@ -65,15 +56,7 @@ func readAdmConn(cf *conf) (a *admConn, e error) {
 	return
 }
 
-const (
-	proxyTr  = "proxyTransport"
-	maxIdleK = "maxIdle"
-	idleTK   = "idleT"
-	tlsHTK   = "tlsHT"
-	expCTK   = "expCT"
-)
-
-func (p *admConn) toStringMap() (i interface{}) {
+func (p *connMng) toMap() (i interface{}) {
 	i = map[string]interface{}{
 		nameK:    proxyTr,
 		maxIdleK: p.maxIdle,
@@ -84,7 +67,7 @@ func (p *admConn) toStringMap() (i interface{}) {
 	return
 }
 
-func (p *admConn) fromStringMap(i interface{}) (e error) {
+func (p *connMng) fromMap(i interface{}) (e error) {
 	fe := func(d error) { d = e }
 	kf := []kFuncI{
 		{
