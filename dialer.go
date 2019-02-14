@@ -55,6 +55,12 @@ func (d *dialer) dialContext(ctx context.Context,
 	} else {
 		e = noSpecKey(specK)
 	}
+	if e == nil {
+		if (s.Iface == "") == (s.proxyURL == nil) ||
+			len(s.consR) == 0 {
+			e = invalidSpec(s)
+		}
+	}
 	var n net.Conn
 	if e == nil {
 		n, e = dialIface(s.Iface, addr, p.timeout)

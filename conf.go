@@ -1,11 +1,26 @@
 package pmproxy
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"sync"
+	"time"
+	"url"
 )
+
+type manager func(*cmd)
+type managerKF func(*cmd) []kFunc
+
+type cmd struct {
+	Cmd        string
+	Manager    string
+	RemoteAddr string
+	Secret     string
+	bs         []byte
+	e          error
+}
 
 type conf struct {
 	admins     []string
@@ -17,6 +32,8 @@ type conf struct {
 	userDBs    *sync.Map
 	ipQuotas   *sync.Map
 	lg         *logger
+	rls        *rules
+	cm         *connMng
 }
 
 func newConf(iu *ipUser) (c *conf, e error) {
@@ -52,6 +69,7 @@ func newConf(iu *ipUser) (c *conf, e error) {
 		func() { e = c.initGroupIPMs() },
 		func() { e = c.initLogger() },
 		func() { e = c.initRules() },
+		func() { e = c.initConnMng() },
 	}
 	trueFF(fs, func() bool { return e == nil })
 	return
@@ -203,7 +221,12 @@ func (c *conf) initLogger() (e error) {
 }
 
 func (c *conf) initRules() (e error) {
-	viper.Get(rulesK)
+	// c.initSessionIPMs() /\ c.initGroupIPMs()
+	// /\ c.initDwnConsRs()
+	v := viper.Get(rulesK)
+	c.rls = new(rules)
+	e = c.rls.fromMap(v)
+	c.managerKFs.Store(rulesK, c.rls.managerKF)
 	// TODO
 	// set matchers and consRs to rules
 	// add rules.manager to c.managerKFs
@@ -211,6 +234,33 @@ func (c *conf) initRules() (e error) {
 }
 
 func (c *conf) initConnMng() (e error) {
+	// c.initRules()
+	c.cm = new(connMng)
+	v := viper.Get(connMngK)
+	e = c.cm.fromMap(v)
+	c.cm.direct = newDialer(
+		func(name string) (cr *consR, ok bool) {
+			v, ok := c.consRs.Load(name)
+			if ok {
+				cr = v.(*consR)
+			}
+			return
+		},
+		c.lg,
+	)
+	c.cm.ctxVal = func(ctx context.Context, meth, ürl, addr,
+		t time.Time) (nctx context.Context) {
+		spec := c.rules.match(meth, ürl, addr, t)
+		nctx = context.WithValue(ctx, specK, &specV{spec: spec})
+		return
+	}
+	c.cm.proxyF = func(meth, ürl, addr string,
+		t time.Time) (r *url.URL, e error) {
+		spec := c.rules.match(meth, ürl, addr, t)
+		r = spec.ProxyURL
+		return
+	}
+	c.mappers.Store(connMngK, c.cm.toMap)
 	return
 }
 

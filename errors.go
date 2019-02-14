@@ -44,3 +44,18 @@ func needXServers(x, n int) (e error) {
 	e = fmt.Errorf("Need %d servers, not %d", x, n)
 	return
 }
+
+func invalidSpec(s *spec) (e error) {
+	e = fmt.Errorf("Invalid spec: %v", s)
+	return
+}
+
+func indexOutOfRange(i, n int) (e error) {
+	e = fmt.Errorf("Not 0 ≤ %d < %d", i, n)
+	return
+}
+
+func invalidPos(pos []int) (e error) {
+	e = fmt.Errorf("Invalid positions %v", pos)
+	return
+}
