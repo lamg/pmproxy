@@ -1,11 +1,12 @@
 package pmproxy
 
 import (
-	"context"
 	"encoding/json"
-	"github.com/lamg/proxy"
+	rt "github.com/lamg/rtimespan"
+	"github.com/spf13/cast"
 	"net"
 	"net/url"
+	"regexp"
 	"time"
 )
 
@@ -14,14 +15,6 @@ type spec struct {
 	ProxyURL string `json:"proxyURL"`
 	proxyURL *url.URL
 	ConsR    []string `json:"consR"`
-}
-
-func (m *requestMatcher) init() (e error) {
-	r.urlm, e = regexp.Compile(r.URLM)
-	if e == nil {
-		r.Spec.ProxyURL, e = url.Parse(s.ProxyURL)
-	}
-	return
 }
 
 func (s *spec) fromMap(i interface{}) (e error) {
@@ -65,6 +58,11 @@ func (s *spec) toMap() (i interface{}) {
 	return
 }
 
+func (s *spec) init() (e error) {
+	s.proxyURL, e = url.Parse(s.ProxyURL)
+	return
+}
+
 type requestMatcher struct {
 	Unit bool   `json:"unit"`
 	URLM string `json:"urlm"`
@@ -73,6 +71,62 @@ type requestMatcher struct {
 	IPM  string    `json:"ipm"`
 
 	Spec *spec `json:"spec"`
+}
+
+func (m *requestMatcher) init() (e error) {
+	r.urlm, e = regexp.Compile(r.URLM)
+	return
+}
+
+func (m *requestMatcher) fromMap(i interface{}) (e error) {
+	fe := func(d error) { e = d }
+	kf := []kFuncI{
+		{
+			unitK,
+			func(i interface{}) {
+				m.Unit = boolE(i, fe)
+			},
+		},
+		{
+			urlmK,
+			func(i interface{}) {
+				m.URLM = stringE(i, fe)
+			},
+		},
+		{
+			urlmK,
+			func(i interface{}) {
+				fe(m.init())
+			},
+		},
+		{
+			spanK,
+			func(i interface{}) {
+				m.Span = new(span)
+				fe(fromMapSpan(m.Span))
+			},
+		},
+		{
+			ipmK,
+			func(i interface{}) {
+				m.IPM = stringE(i, fe)
+			},
+		},
+		{
+			specK,
+			func(i interface{}) {
+				m.Spec = new(spec)
+				fe(m.Spec.fromMap(i))
+			},
+		},
+		{
+			specK,
+			func(i interface{}) {
+				fe(m.Spec.init())
+			},
+		},
+	}
+	return
 }
 
 type rules struct {
@@ -149,7 +203,94 @@ func (r *rules) managerKF(c *cmd) (kf []kFunc) {
 	return
 }
 
-func (r *rules) add(pos []int, rm *requestMatcher) (e error) {
+func (r *rules) toMap() (i interface{}) {
+	var smp []map[string]interface{}
+	inf := func(i, j int) {
+		rm := r.mts[i][j]
+		// TODO careful with nil references
+		rmap := map[string]interface{}{
+			unitK: rm.Unit,
+			posK:  i,
+			urlmK: rm.URLM,
+			ipmK:  rm.IPM,
+			spanK: toMapSpan(rm.Span),
+			specK: rm.Spec.toMap(),
+		}
+		mp = append(mp, rmap)
+	}
+	forall(
+		func(i int) {
+			forall(func(j int) { inf(i, j) }, len(r.mts[i]))
+		},
+		len(r.mts),
+	)
+	return
+}
+
+func (r *rules) fromMap(i interface{}) (e error) {
+	var ms []interface{}
+	var prs []*posReq
+	fs := []func(){
+		func() {
+			ms, e = cast.ToSlice(i)
+		},
+		func() {
+			ib := func(i int) (ok bool) {
+				pr := new(posReq)
+				e = pr.fromMap(i)
+				ok = e == nil
+				if ok {
+					prs = append(prs, pr)
+				}
+				return
+			}
+			trueForall(ib, len(ms))
+		},
+		func() {
+			inf := func(i int) {
+				pos := prs[i].pos
+				if pos >= len(r.mts) {
+					diff := pos - len(r.mts)
+					ext := make([][]requestMatcher, diff+1)
+					r.mts = append(r.mts, ext...)
+				}
+				r.mts[pos] = append(r.mts[pos], *prs[i].req)
+			}
+			forall(inf, len(prs))
+		},
+	}
+	trueFF(fs, func() bool { return e == nil })
+	return
+}
+
+type posReq struct {
+	pos int
+	req *requestMatcher
+}
+
+func (r *posReq) fromMap(i interface{}) (e error) {
+	fe := func(d error) { e = d }
+	kf := []kFuncI{
+		{
+			posK,
+			func(i interface{}) {
+				r.pos = intE(i, fe)
+			},
+		},
+		{
+			reqK,
+			func(i interface{}) {
+				r.req = new(requestMatcher)
+				fe(r.req.fromMap(i))
+			},
+		},
+	}
+	mapKF(kf, i, fe, func() bool { return e == nil })
+	return
+}
+
+func (r *rules) add(pos []int,
+	rm *requestMatcher) (e error) {
 	if len(pos) == 1 {
 		if pos[0] == -1 {
 			s.mts = append(s.mts, []requestMatcher{*rm})

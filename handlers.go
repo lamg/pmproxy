@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
+	"time"
 )
 
 type handlerConf struct {
@@ -17,7 +18,7 @@ func newHnds(c *conf) (hs []*handlerConf,
 	fs []func() interface{}, e error) {
 	var sl []interface{}
 	var ac *connMng
-	fs := []func(){
+	fs = []func(){
 		func() {
 			sl, e = c.sliceE(srvConfK)
 		},
@@ -49,7 +50,7 @@ func newHnds(c *conf) (hs []*handlerConf,
 	return
 }
 
-func readHnd(hcs []*handlerConf, ac *admConn, c *conf) {
+func readHnd(hcs []*handlerConf, c *conf) {
 	inf := func(i int) {
 		if hcs[i].sc.proxyOrIface {
 			// consumers, matchers determine context values
@@ -152,7 +153,6 @@ func stdIface(cf *conf, comp02 bool,
 			cmd = new(cmd)
 		}
 
-		var e error
 		fs := []func(){
 			func() {
 				e = json.NewDecoder(r.Body).Decode(cmd)
@@ -231,7 +231,7 @@ func compatibleCmd(pth, meth, rAddr, hd string) (c *cmd,
 }
 
 type srvHandler struct {
-	serveHTTP h.HandleFunc
+	serveHTTP h.HandlerFunc
 	reqHnd    fh.RequestHandler
 }
 

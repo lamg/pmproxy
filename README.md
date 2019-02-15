@@ -25,16 +25,15 @@ The file hierarchy is the following:
 
 - serve
   - handlers
-    - connMng (load admin, matchers in conf)
-      - dialer
-        - logger
-        - consR
-        - spec
-      - rules (TODO)
-      - conf
-      	- userInfo (TODO)
-      	- dwnConsR (TODO)
-      	- sessionIPM (TODO)
+    - conf
+        - userInfo (TODO)
+        - dwnConsR (TODO)
+        - sessionIPM (TODO)
         - groupIPM (TODO)
-        - rules (TODO)
+        - rules
         - connMng (TODO)
+        - dialer (TODO manager interface)
+          - logger
+          - consR
+          - spec
+      

@@ -1,7 +1,10 @@
 package pmproxy
 
 import (
+	"context"
+	"github.com/lamg/proxy"
 	"net"
+	"time"
 )
 
 type dialer struct {
@@ -16,7 +19,7 @@ const (
 )
 
 func newDialer(consRF func(string) (*consR, bool),
-	lg *logger) (d proxy.DialContext,
+	lg *logger) (d proxy.ContextDialer,
 	a *adminName,
 	fs func() interface{},
 	e error) {

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
+	"net/url"
 	"sync"
 	"time"
-	"url"
 )
 
 type manager func(*cmd)
@@ -15,12 +15,15 @@ type managerKF func(*cmd) []kFunc
 
 type cmd struct {
 	Cmd        string
+	Prop       string
 	Manager    string
 	RemoteAddr string
 	Secret     string
 	bs         []byte
 	e          error
 }
+
+type ipMatcher func(string) bool
 
 type conf struct {
 	admins     []string
@@ -36,7 +39,7 @@ type conf struct {
 	cm         *connMng
 }
 
-func newConf(iu *ipUser) (c *conf, e error) {
+func newConf(iu *ipUserS) (c *conf, e error) {
 	// read ip matchers
 	// read user information provider
 	// read consumption restrictors
@@ -227,9 +230,14 @@ func (c *conf) initRules() (e error) {
 	c.rls = new(rules)
 	e = c.rls.fromMap(v)
 	c.managerKFs.Store(rulesK, c.rls.managerKF)
-	// TODO
-	// set matchers and consRs to rules
-	// add rules.manager to c.managerKFs
+	c.rls.ipm = func(name string) (m ipMatcher, ok bool) {
+		v, ok := c.matchers.Load(name)
+		if ok {
+			m = v.(ipMatcher)
+		}
+		return
+	}
+	c.mappers.Store(rulesK, c.rls.toMap)
 	return
 }
 

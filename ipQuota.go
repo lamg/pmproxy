@@ -2,15 +2,15 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/spf13/cast"
+
 	"sync"
 )
 
 type ipQuotaS struct {
-	name       string
-	ipGroup    *ipGroupS
-	quotaCache *sync.Map
-	groupQuota *sync.Map
+	name        string
+	ipGroup     *ipGroupS
+	quotaCache  *sync.Map
+	groupQuotaM *sync.Map
 }
 
 type ipQuota func(string) uint64
@@ -96,8 +96,8 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 
 type groupQuota func(string) uint64
 
-func (p *ipQuotaS) get(group string) (n uint64) {
-	v, ok := p.groupQuota.Load(group)
+func (p *ipQuotaS) groupQuota(group string) (n uint64) {
+	v, ok := p.groupQuotaM.Load(group)
 	if ok {
 		n = v.(uint64)
 	}

@@ -70,7 +70,7 @@ func mpErr(m map[string]interface{}, fi fin,
 		if ok {
 			fi(v)
 		} else {
-			fe(NoKey(k))
+			fe(noKey(k))
 		}
 	}
 	return
@@ -114,7 +114,7 @@ func exF(kf []kFunc, cmd string, fe ferr) {
 		len(kf),
 	)
 	if !ok {
-		fe(noCmd(cmd))
+		fe(noKey(cmd))
 	}
 	return
 }
@@ -125,7 +125,7 @@ type cmdProp struct {
 	f    func()
 }
 
-func exCmdProp(cs []cmdProp, a *admCmd, fe ferr) {
+func exCmdProp(cs []cmdProp, a *cmd, fe ferr) {
 	cmdf, propf := false, false
 	bLnSrch(
 		func(i int) (b bool) {
@@ -139,9 +139,9 @@ func exCmdProp(cs []cmdProp, a *admCmd, fe ferr) {
 		len(cs),
 	)
 	if !cmdf {
-		fe(NoCmd(a.Cmd))
+		fe(noKey(a.Cmd))
 	} else if !propf {
-		fe(NoProp(a.Prop))
+		fe(noKey(a.Prop))
 	}
 }
 
@@ -239,7 +239,7 @@ func runChoice(chs []choice) (ok bool, i int, e error) {
 		b = chs[i].guard()
 		return
 	}
-	ok, i = bLnSrch(ib, len(srvs))
+	ok, i = bLnSrch(ib, len(chs))
 	if ok {
 		e = chs[i].runf()
 	}
@@ -255,6 +255,7 @@ func runConcurr(fe []func() error) (e error) {
 	}
 	forall(runf, len(fe))
 	e = <-ec
+	return
 }
 
 // trueFF means true forall function

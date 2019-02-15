@@ -1,12 +1,8 @@
 package pmproxy
 
 import (
-	"github.com/lamg/proxy"
 	fh "github.com/valyala/fasthttp"
-	"io"
-	"net"
 	h "net/http"
-	"path"
 )
 
 // Serve starts the control interface and proxy servers,

@@ -63,3 +63,8 @@ const (
 	clöse   = "close"
 	showAll = "showAll"
 )
+
+const (
+	posK = "pos"
+	reqK = "requestMatcher"
+)

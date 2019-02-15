@@ -2,7 +2,6 @@ package pmproxy
 
 import (
 	"fmt"
-	"github.com/lamg/clock"
 	"log/syslog"
 	"net"
 	h "net/http"

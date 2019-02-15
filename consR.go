@@ -1,5 +1,9 @@
 package pmproxy
 
+import (
+	"sync"
+)
+
 // consR stands for consumption restrictor,
 // it restricts several aspects of a connection
 type consR struct {
