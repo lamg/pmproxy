@@ -214,6 +214,12 @@ func uint32E(i interface{}, fe ferr) (n uint32) {
 	return
 }
 
+func intE(i interface{}, fe ferr) (n int) {
+	n, e := cast.ToIntE(i)
+	fe(e)
+	return
+}
+
 func stringDateE(i interface{}, fe ferr) (t time.Time) {
 	s, e := cast.ToStringE(i)
 	if e == nil {

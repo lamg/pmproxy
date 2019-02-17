@@ -25,7 +25,7 @@ func cannotOpen(raddr string) (e error) {
 }
 
 // NotLocalIP is the not found local IP address error
-func notLocalIP() (e error) {
+func noLocalIP() (e error) {
 	e = fmt.Errorf("Not found local IP address")
 	return
 }
@@ -35,7 +35,7 @@ func noSpecValue() (e error) {
 	return
 }
 
-func noSpecKey(sk SpecKT) (e error) {
+func noSpecKey(sk specKT) (e error) {
 	e = fmt.Errorf("No spec key %s found", sk)
 	return
 }

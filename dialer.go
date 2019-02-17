@@ -2,7 +2,7 @@ package pmproxy
 
 import (
 	"context"
-	"github.com/lamg/proxy"
+	"github.com/spf13/viper"
 	"net"
 	"time"
 )
@@ -19,64 +19,46 @@ const (
 )
 
 func newDialer(consRF func(string) (*consR, bool),
-	lg *logger) (d proxy.ContextDialer,
-	a *adminName,
-	fs func() interface{},
-	e error) {
+	lg *logger) (d *dialer) {
 	dl := &dialer{
 		timeout: viper.GetDuration(timeoutK),
 		lg:      lg,
 		consRF:  consRF,
 	}
-	a = &adminName{
-		name: dialerName,
-		admin: []kRes{
-			{
-				get,
-				func() (bs []byte, e error) {
-					bs = []byte(dl.timeout.String())
-					return
-				},
-			},
-		},
-	}
-	d = dl.dialContext
+	return
+}
+
+func (d *dialer) managerKF(c *cmd) (kf []kFunc) {
+	// TODO
 	return
 }
 
 func (d *dialer) dialContext(ctx context.Context,
 	network, addr string) (c net.Conn, e error) {
 	v := ctx.Value(specK)
-	var s *spec
-	if v != nil {
-		sv, ok := v.(*specV)
-		if ok {
-			s, e = sv.s, sv.err
-		} else {
-			e = noSpecValue()
-		}
-	} else {
-		e = noSpecKey(specK)
+	s, ok := v.(*spec)
+	if !ok {
+		e = noKey(string(specK))
 	}
 	if e == nil {
 		if (s.Iface == "") == (s.proxyURL == nil) ||
-			len(s.consR) == 0 {
+			len(s.ConsR) == 0 {
 			e = invalidSpec(s)
 		}
 	}
 	var n net.Conn
 	if e == nil {
-		n, e = dialIface(s.Iface, addr, p.timeout)
+		n, e = dialIface(s.Iface, addr, d.timeout)
 	}
 	if e == nil {
 		cr := make([]*consR, 0, len(s.ConsR))
 		inf := func(i int) {
-			cs, ok := p.consRF(s.consR[i])
+			cs, ok := d.consRF(s.ConsR[i])
 			if ok {
 				cr = append(cr, cs)
 			}
 		}
-		forall(inf, len(s.consR))
+		forall(inf, len(s.ConsR))
 		c, e = newRConn(cr, n)
 	}
 	return
@@ -95,7 +77,7 @@ func dialIface(iface, addr string,
 		if len(laddr) != 0 {
 			la = laddr[0].(*net.IPNet)
 		} else {
-			e = NotLocalIP()
+			e = noLocalIP()
 		}
 		// { found an IP local address in laddr for
 		// dialing or error }

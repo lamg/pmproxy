@@ -59,4 +59,5 @@ func (p *connMng) fromMap(i interface{}) (e error) {
 		},
 	}
 	mapKF(kf, i, fe, func() bool { return e == nil })
+	return
 }

@@ -6,7 +6,7 @@ import (
 
 type userInfo struct {
 	iu       ipUser
-	userName func(string) string
+	userName func(string) (string, error)
 	quota    ipQuota
 	isAdm    func(string) bool
 }
@@ -26,11 +26,14 @@ func (u *userInfo) managerKF(c *cmd) (kf []kFunc) {
 				user := u.iu(c.RemoteAddr)
 				inf := &cmdInfo{
 					UserName:   user,
-					Name:       u.userName(user),
 					IsAdmin:    u.isAdm(user),
 					QuotaGroup: u.quota(user),
 				}
-				c.bs, c.e = json.Marshal(inf)
+				fs := []func(){
+					func() { inf.Name, c.e = u.userName(user) },
+					func() { c.bs, c.e = json.Marshal(inf) },
+				}
+				trueFF(fs, func() bool { return c.e == nil })
 			},
 		},
 	}

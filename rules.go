@@ -126,6 +126,7 @@ func (m *requestMatcher) fromMap(i interface{}) (e error) {
 			},
 		},
 	}
+	mapKF(kf, i, fe, func() bool { return e == nil })
 	return
 }
 

@@ -1,9 +1,5 @@
 package pmproxy
 
-import (
-	"sync"
-)
-
 // consR stands for consumption restrictor,
 // it restricts several aspects of a connection
 type consR struct {
@@ -42,11 +38,5 @@ func negConsR() (c *consR) {
 		update: func(ip string, down int) {},
 		close:  func(ip string) {},
 	}
-	return
-}
-
-func readConsR() (s *sync.Map, e error) {
-	sl := viper.Get("downCons")
-	// TODO
 	return
 }

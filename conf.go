@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"net/url"
+	"path"
 	"sync"
 	"time"
 )
@@ -78,6 +79,14 @@ func newConf(iu *ipUserS) (c *conf, e error) {
 	return
 }
 
+func (c *conf) setDefaults() {
+	// TODO
+	// set default timeout
+	// set default matchers
+	// set default consR
+	// …
+}
+
 func (c *conf) initUserDBs() (e error) {
 	// def.(maps in c)
 	fm := func(i interface{}) {
@@ -101,13 +110,13 @@ func (c *conf) initSessionIPMs() (e error) {
 		}
 		e = sm.fromMap(i)
 		if e == nil {
-			sm.auth = c.authenticator
+			sm.nameAuth = c.authenticator
 			c.managerKFs.Store(sm.name, sm.managerKF)
 			c.matchers.Store(sm.name, sm.match)
 			c.mappers.Store(sm.name, sm.toMap)
 		}
 	}
-	e = sliceMap(sessionIPMK, fm,
+	e = c.sliceMap(sessionIPMK, fm,
 		func() bool { return e == nil })
 	return
 }
@@ -154,7 +163,7 @@ func (c *conf) initDwnConsRs() (e error) {
 			c.mappers.Store(dw.name, dw.toMap)
 		}
 	}
-	e = sliceMap(dwnConsRK, fm,
+	e = c.sliceMap(dwnConsRK, fm,
 		func() bool { return e == nil })
 	return
 }
@@ -187,10 +196,10 @@ func (c *conf) initUserInfos() (e error) {
 		if ok {
 			udb := uv.(*userDB)
 			ui := &userInfo{
-				iu:        c.iu,
-				userName:  c.userName,
-				quota:     v.(ipQuota),
-				userIsAdm: isAdm,
+				iu:       c.iu.get,
+				userName: udb.userName,
+				quota:    v.(ipQuota),
+				isAdm:    isAdm,
 			}
 			c.managerKFs.Store(udbName+infoK, ui.managerKF)
 		}
@@ -206,8 +215,8 @@ func (c *conf) initGroupIPMs() (e error) {
 		gipm := new(groupIPM)
 		e = gipm.fromMap(i)
 		if e == nil {
-			gipm.ipGroup.ipUser = c.iu
-			gipm.ipGroup.userGroup = c.userGroup
+			gipm.ipgs.ipUser = c.iu.get
+			gipm.ipgs.userGroup = c.userGroup
 			c.managerKFs.Store(gipm.name, gipm.managerKF)
 			c.mappers.Store(gipm.name, gipm.toMap)
 			c.matchers.Store(gipm.name, gipm.match)
@@ -246,7 +255,7 @@ func (c *conf) initConnMng() (e error) {
 	c.cm = new(connMng)
 	v := viper.Get(connMngK)
 	e = c.cm.fromMap(v)
-	c.cm.direct = newDialer(
+	dl := newDialer(
 		func(name string) (cr *consR, ok bool) {
 			v, ok := c.consRs.Load(name)
 			if ok {
@@ -256,16 +265,17 @@ func (c *conf) initConnMng() (e error) {
 		},
 		c.lg,
 	)
-	c.cm.ctxVal = func(ctx context.Context, meth, ürl, addr,
-		t time.Time) (nctx context.Context) {
-		spec := c.rules.match(meth, ürl, addr, t)
-		nctx = context.WithValue(ctx, specK, &specV{spec: spec})
+	c.cm.direct = dl.dialContext
+	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
+		addr string, t time.Time) (nctx context.Context) {
+		spec := c.rls.match(meth, ürl, addr, t)
+		nctx = context.WithValue(ctx, specK, spec)
 		return
 	}
 	c.cm.proxyF = func(meth, ürl, addr string,
 		t time.Time) (r *url.URL, e error) {
-		spec := c.rules.match(meth, ürl, addr, t)
-		r = spec.ProxyURL
+		spec := c.rls.match(meth, ürl, addr, t)
+		r = spec.proxyURL
 		return
 	}
 	c.mappers.Store(connMngK, c.cm.toMap)
@@ -276,7 +286,7 @@ func (c *conf) manager(m *cmd) {
 	v, ok := c.managerKFs.Load(m.Manager)
 	var kf []kFunc
 	if ok {
-		kf = v.(managerKF)(cmd)
+		kf = v.(managerKF)(m)
 		kf = append(kf,
 			kFunc{skip, func() {}},
 			kFunc{
@@ -290,12 +300,12 @@ func (c *conf) manager(m *cmd) {
 							return
 						},
 					)
-					cmd.bs, cmd.e = json.Marshal(&mngs)
+					m.bs, m.e = json.Marshal(&mngs)
 				},
 			},
 		)
 	}
-	exF(kf, c.Cmd, func(d error) { m.e = d })
+	exF(kf, m.Cmd, func(d error) { m.e = d })
 	return
 }
 

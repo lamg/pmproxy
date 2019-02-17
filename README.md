@@ -24,12 +24,13 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 The file hierarchy is the following:
 
 - serve
-  - handlers
-    - conf
+  - handlers (TODO compatibility layer)
+    - conf (TODO setDefaults)
         - userInfo (TODO)
         - dwnConsR (TODO)
         - sessionIPM (TODO)
         - groupIPM (TODO)
+        - userDB (TODO)
         - rules
         - connMng (TODO)
         - dialer (TODO manager interface)

@@ -23,7 +23,12 @@ const (
 	userDBK     = "userDB"
 	adminsK     = "admins"
 	srvConfK    = "srvConf"
+	connMngK    = "connMng"
 )
+
+type specKT string
+
+var specK = specKT("spec")
 
 // handlers.go
 const (
@@ -62,6 +67,7 @@ const (
 	del     = "del"
 	clöse   = "close"
 	showAll = "showAll"
+	skip    = "skip"
 )
 
 const (

@@ -3,22 +3,21 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/lamg/proxy"
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
+	"strings"
 	"time"
 )
 
 type handlerConf struct {
-	sh   *srvHandler
-	sc   *srvConf
-	conf []func() interface{}
+	sh *srvHandler
+	sc *srvConf
 }
 
-func newHnds(c *conf) (hs []*handlerConf,
-	fs []func() interface{}, e error) {
+func newHnds(c *conf) (hs []*handlerConf, e error) {
 	var sl []interface{}
-	var ac *connMng
-	fs = []func(){
+	fs := []func(){
 		func() {
 			sl, e = c.sliceE(srvConfK)
 		},
@@ -28,6 +27,7 @@ func newHnds(c *conf) (hs []*handlerConf,
 			}
 		},
 		func() {
+			hs = make([]*handlerConf, len(sl))
 			ib := func(i int) (b bool) {
 				hs[i], e = readSrvConf(sl[i])
 				b = e == nil
@@ -36,14 +36,10 @@ func newHnds(c *conf) (hs []*handlerConf,
 			trueForall(ib, len(sl))
 		},
 		func() {
-			ac, e = newConnMng(c)
-		},
-		func() {
-			readHnd(hs, ac, c)
+			readHnd(hs, c)
 			forall(func(i int) {
-				fs = append(fs, hs[i].sc.toStringMap)
+				c.mappers.Store(hs[i].sc.name, hs[i].sc.toMap)
 			}, len(hs))
-			fs = append(fs, ac.confs...)
 		},
 	}
 	trueFF(fs, func() bool { return e == nil })
@@ -56,12 +52,13 @@ func readHnd(hcs []*handlerConf, c *conf) {
 			// consumers, matchers determine context values
 			// dialer and proxy process context values
 			if hcs[i].sc.fastOrStd {
-				hcs[i].reqHnd = proxy.NewFastProxy(ac.direct,
-					ac.ctxVal, ac.proxyF, time.Now).FastHandler
+				hcs[i].sh.reqHnd = proxy.NewFastProxy(c.cm.direct,
+					c.cm.ctxVal, c.cm.proxyF, time.Now)
 			} else {
-				hcs[i].serveHTTP = proxy.NewProxy(ac.direct,
-					ac.ctxVal, ac.proxyF, ac.maxIdle, ac.idleT,
-					ac.tlsHT, ac.expCT).ServeHTTP
+				hcs[i].sh.serveHTTP = proxy.NewProxy(c.cm.direct,
+					c.cm.ctxVal, c.cm.proxyF, c.cm.maxIdle,
+					c.cm.idleT, c.cm.tlsHT, c.cm.expCT,
+					time.Now).ServeHTTP
 			}
 		} else {
 			// administration, and serializer are part of the
@@ -70,9 +67,10 @@ func readHnd(hcs []*handlerConf, c *conf) {
 			comp02 := c.böol(compatible02K)
 			staticFPath := c.strïng(staticFilesPathK)
 			if hcs[i].sc.fastOrStd {
-				hcs[i].reqHnd = fastIface(c, comp02, staticFPath)
+				hcs[i].sh.reqHnd = fastIface(c, comp02, staticFPath)
 			} else {
-				hcs[i].serveHTTP = stdIface(c, comp02, staticFPath)
+				hcs[i].sh.serveHTTP = stdIface(c, comp02,
+					staticFPath)
 			}
 		}
 	}
@@ -87,34 +85,40 @@ func fastIface(cf *conf, comp02 bool,
 	}
 	fsHnd := fs.NewRequestHandler()
 	hnd = func(ctx *fh.RequestCtx) {
+		var e error
+		m := new(cmd)
+		buff := new(bytes.Buffer)
+		var ok bool
 		if comp02 {
-			pth := string(ctx.Request.URI().Path)
-			meth := string(ctx.Method)
+			pth := string(ctx.Request.URI().Path())
+			meth := string(ctx.Method())
 			token := string(ctx.Request.Header.Peek(authHd))
+			ctx.Request.BodyWriteTo(buff)
 			if strings.HasPrefix(pth, apiPref) {
-				cmd, e = compatibleCmd(pth, meth, token)
+				m, e = compatibleCmd(pth, meth, token, buff)
 			} else {
 				// serve static files
 				pth = emptyPathIfLogin(pth)
 				fsHnd(ctx)
-				cmd = cmd{
+				m = &cmd{
 					Cmd: skip,
 				}
 			}
+			// TODO read Cred or NameVal
+		} else {
+			// TODO
+			fs := []func(){
+				func() { e = ctx.Request.BodyWriteTo(buff) },
+				func() { e = json.NewDecoder(buff).Decode(cmd) },
+				func() { cf.manager(cmd); e = cmd.e },
+				func() {
+					if cmd.bs != nil {
+						ctx.Response.SetBody(cmd.bs)
+					}
+				},
+			}
+			ok = trueFF(fs, func() bool { return e == nil })
 		}
-		buff, cmd := new(bytes.Buffer), new(cmd)
-		var e error
-		fs := []func(){
-			func() { e = ctx.Request.BodyWriteTo(buff) },
-			func() { e = json.NewDecoder(buff).Decode(cmd) },
-			func() { cf.manager(cmd); e = cmd.e },
-			func() {
-				if cmd.bs != nil {
-					ctx.Response.SetBody(cmd.bs)
-				}
-			},
-		}
-		ok := trueFF(fs, func() bool { return e == nil })
 		if !ok {
 			ctx.Response.SetStatusCode(h.StatusBadRequest)
 			ctx.Response.SetBodyString(e.Error())
@@ -172,7 +176,8 @@ func stdIface(cf *conf, comp02 bool,
 	return
 }
 
-func compatibleCmd(pth, meth, rAddr, hd string) (c *cmd,
+func compatibleCmd(pth, meth, rAddr, hd string,
+	buff *bytes.Buffer) (c *cmd,
 	e error) {
 	ip, _, e := net.SplitHostPort(rAddr)
 	c = &cmd{
@@ -236,6 +241,7 @@ type srvHandler struct {
 }
 
 type srvConf struct {
+	name         string
 	proxyOrIface bool
 	fastOrStd    bool
 	readTimeout  time.Duration
@@ -258,6 +264,11 @@ func readSrvConf(i interface{}) (h *handlerConf,
 			proxyOrIfaceK,
 			func(i interface{}) {
 				h.sc.proxyOrIface = boolE(i, fe)
+				if h.sc.proxyOrIface {
+					h.sc.name = "proxy"
+				} else {
+					h.sc.name = "api"
+				}
 			},
 		},
 		{
@@ -314,8 +325,9 @@ func readSrvConf(i interface{}) (h *handlerConf,
 	return
 }
 
-func (p *srvConf) toStringMap() (i interface{}) {
+func (p *srvConf) toMap() (i interface{}) {
 	i = map[string]interface{}{
+		nameK:         p.name,
 		proxyOrIfaceK: p.proxyOrIface,
 		fastOrStdK:    p.fastOrStd,
 		readTimeoutK:  p.readTimeout.String(),
