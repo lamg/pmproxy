@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"crypto/tls"
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
 )
@@ -8,50 +9,59 @@ import (
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
 func Serve() (e error) {
-	c := newConf()
-	hcs, e := newHnds(c)
-	if e == nil {
-		fes := make([]func() error, len(hcs))
-		forall(func(i int) {
-			fes[i] = serveFunc(c, hcs[i].sc, hcs[i].sh)
+	var c *conf
+	var hcs []*handlerConf
+	fs := []func(){
+		func() { c, e = newConf() },
+		func() { hcs, e = newHnds(c) },
+		func() {
+			fes := make([]func() error, len(hcs))
+			forall(
+				func(i int) {
+					fes[i] = serveFunc(c, hcs[i])
+				},
+				len(fes),
+			)
+			e = runConcurr(fes)
 		},
-			len(fes),
-		)
-		e = runConcurr(fes)
 	}
+	trueFF(fs, func() bool { return e == nil })
 	return
 }
 
-func serveFunc(cf *conf, c *srvConf,
-	sh *srvHandler) (fe func() error) {
+func serveFunc(cf *conf, hc *handlerConf) (fe func() error) {
 	var listenAndServe func() error
 	var listenAndServeTLS func(string, string) error
+	c := hc.sc
 	srvChs := []choice{
 		{
 			guard: func() bool { return c.fastOrStd },
 			runf: func() (e error) {
-				fast = &fh.Server{
+				fast := &fh.Server{
 					ReadTimeout:        c.readTimeout,
 					WriteTimeout:       c.writeTimeout,
-					Addr:               c.addr,
-					Handler:            sh.reqHnd,
+					Handler:            hc.sh.reqHnd,
 					MaxConnsPerIP:      c.maxConnIP,
 					MaxRequestsPerConn: c.maxReqConn,
 				}
-				listenAndServe = fast.ListenAndServe
-				listenAndServeTLS = fast.ListenAndServeTLS
+				listenAndServe = func() error {
+					return fast.ListenAndServe(c.addr)
+				}
+				listenAndServeTLS = func(cert, key string) (e error) {
+					return fast.ListenAndServeTLS(c.addr, cert, key)
+				}
 				return
 			},
 		},
 		{
 			guard: func() bool { return !c.fastOrStd },
 			runf: func() (e error) {
-				std = &h.Server{
+				std := &h.Server{
 					ReadTimeout:  c.readTimeout,
 					WriteTimeout: c.writeTimeout,
 					IdleTimeout:  0,
 					Addr:         c.addr,
-					Handler:      sh.serveHTTP,
+					Handler:      hc.sh.serveHTTP,
 					TLSNextProto: make(map[string]func(*h.Server,
 						*tls.Conn, h.Handler)),
 				}
@@ -66,6 +76,7 @@ func serveFunc(cf *conf, c *srvConf,
 			guard: func() bool { return c.proxyOrIface },
 			runf: func() (e error) {
 				fe = listenAndServe
+				return
 			},
 		},
 		{

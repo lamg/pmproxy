@@ -20,7 +20,7 @@ const (
 
 func newDialer(consRF func(string) (*consR, bool),
 	lg *logger) (d *dialer) {
-	dl := &dialer{
+	d = &dialer{
 		timeout: viper.GetDuration(timeoutK),
 		lg:      lg,
 		consRF:  consRF,

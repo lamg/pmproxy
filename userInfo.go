@@ -23,7 +23,7 @@ func (u *userInfo) managerKF(c *cmd) (kf []kFunc) {
 		{
 			get,
 			func() {
-				user := u.iu(c.RemoteAddr)
+				user, _ := u.iu(c.RemoteAddr)
 				inf := &cmdInfo{
 					UserName:   user,
 					IsAdmin:    u.isAdm(user),

@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"github.com/lamg/proxy"
 	fh "github.com/valyala/fasthttp"
+	"io/ioutil"
+	"net"
 	h "net/http"
+	"path"
 	"strings"
 	"time"
 )
@@ -64,13 +67,10 @@ func readHnd(hcs []*handlerConf, c *conf) {
 			// administration, and serializer are part of the
 			// control interface, and also have consumers and
 			// matchers
-			comp02 := c.böol(compatible02K)
-			staticFPath := c.strïng(staticFilesPathK)
 			if hcs[i].sc.fastOrStd {
-				hcs[i].sh.reqHnd = fastIface(c, comp02, staticFPath)
+				hcs[i].sh.reqHnd = fastIface(c)
 			} else {
-				hcs[i].sh.serveHTTP = stdIface(c, comp02,
-					staticFPath)
+				hcs[i].sh.serveHTTP = stdIface(c)
 			}
 		}
 	}
@@ -78,50 +78,171 @@ func readHnd(hcs []*handlerConf, c *conf) {
 	return
 }
 
-func fastIface(cf *conf, comp02 bool,
-	staticFPath string) (hnd fh.RequestHandler) {
-	fs := &fh.FS{
-		Root: staticFPath,
-	}
-	fsHnd := fs.NewRequestHandler()
+func fastIface(cf *conf) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
-		var e error
-		m := new(cmd)
-		buff := new(bytes.Buffer)
-		var ok bool
-		if comp02 {
-			pth := string(ctx.Request.URI().Path())
-			meth := string(ctx.Method())
-			token := string(ctx.Request.Header.Peek(authHd))
-			ctx.Request.BodyWriteTo(buff)
-			if strings.HasPrefix(pth, apiPref) {
-				m, e = compatibleCmd(pth, meth, token, buff)
-			} else {
-				// serve static files
-				pth = emptyPathIfLogin(pth)
-				fsHnd(ctx)
-				m = &cmd{
-					Cmd: skip,
-				}
-			}
-			// TODO read Cred or NameVal
-		} else {
-			// TODO
-			fs := []func(){
-				func() { e = ctx.Request.BodyWriteTo(buff) },
-				func() { e = json.NewDecoder(buff).Decode(cmd) },
-				func() { cf.manager(cmd); e = cmd.e },
-				func() {
-					if cmd.bs != nil {
-						ctx.Response.SetBody(cmd.bs)
-					}
-				},
-			}
-			ok = trueFF(fs, func() bool { return e == nil })
+		fs := &fh.FS{
+			Root: cf.staticFPath,
 		}
-		if !ok {
-			ctx.Response.SetStatusCode(h.StatusBadRequest)
-			ctx.Response.SetBodyString(e.Error())
+		fsHnd := fs.NewRequestHandler()
+		compatibleIface(
+			cf,
+			string(ctx.Request.URI().Path()),
+			string(ctx.Method()),
+			string(ctx.Request.Header.Peek(authHd)),
+			ctx.RemoteAddr().String(),
+			func() (bs []byte, e error) {
+				buff := new(bytes.Buffer)
+				e = ctx.Request.BodyWriteTo(buff)
+				bs = buff.Bytes()
+				return
+			},
+			func(bs []byte) {
+				ctx.Response.SetBody(bs)
+			},
+			func(file string) {
+				ctx.URI().SetPath(file)
+				fsHnd(ctx)
+			},
+			func(err string) {
+				ctx.Response.SetStatusCode(h.StatusBadRequest)
+				ctx.Response.SetBodyString(err)
+			},
+		)
+	}
+	return
+}
+
+func stdIface(cf *conf) (hnd h.HandlerFunc) {
+	hnd = func(w h.ResponseWriter, r *h.Request) {
+		compatibleIface(
+			cf,
+			r.URL.Path,
+			r.Method,
+			r.Header.Get(authHd),
+			r.RemoteAddr,
+			func() (bs []byte, e error) {
+				bs, e = ioutil.ReadAll(r.Body)
+				r.Body.Close()
+				return
+			},
+			func(bs []byte) {
+				w.Write(bs)
+			},
+			func(file string) {
+				h.ServeFile(w, r, path.Join(cf.staticFPath, file))
+			},
+			func(err string) {
+				h.Error(w, err, h.StatusBadRequest)
+			},
+		)
+	}
+	return
+}
+
+func compatibleIface(cf *conf, path, method, header,
+	rAddr string, body func() ([]byte, error),
+	resp func([]byte), fileSrv, writeErr func(string)) {
+	var m *cmd
+	var e error
+	var bs []byte
+	fs := []func(){
+		func() {
+			bs, e = body()
+		},
+		func() {
+			m, e = compatibleCmd(cf, path, method, bs, fileSrv)
+		},
+		func() {
+			if !m.comp02 {
+				e = json.Unmarshal(bs, m)
+			} else {
+				m.Secret = header
+			}
+		},
+		func() {
+			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
+		},
+		func() { cf.manager(m); e = m.e },
+		func() {
+			if m.bs != nil {
+				resp(m.bs)
+			}
+		},
+	}
+	if !trueFF(fs, func() bool { return e == nil }) {
+		writeErr(e.Error())
+	}
+}
+
+func compatibleCmd(cf *conf, pth, meth string,
+	body []byte, fileSrv func(string)) (c *cmd,
+	e error) {
+	c = &cmd{
+		comp02: cf.böol(compatible02K),
+	}
+
+	kf := []kFunc{
+		{
+			apiAuth + h.MethodPost,
+			func() {
+				c.Cmd = open
+				c.Manager = defaultSessionIPM
+				c.Cred = new(credentials)
+				e = json.Unmarshal(body, c.Cred)
+			},
+		},
+		{
+			apiAuth + h.MethodDelete,
+			func() {
+				c.Cmd = clöse
+				c.Manager = defaultSessionIPM
+			},
+		},
+		{
+			apiUserStatus + h.MethodGet,
+			func() {
+				c.Cmd = get
+				c.Manager = defaultDwnConsR
+			},
+		},
+		{
+			apiUserStatus + h.MethodPut,
+			func() {
+				c.Cmd = set
+				c.Manager = defaultDwnConsR
+				nv := &struct {
+					Name  string `json: "name"`
+					Value uint64 `json: "value"`
+				}{}
+				e = json.Unmarshal(body, nv)
+				if e == nil {
+					c.User = nv.Name
+					c.Uint64 = nv.Value
+				}
+			},
+		},
+		{
+			apiCheckUser + h.MethodGet,
+			func() {
+				c.Cmd = check
+				c.Manager = defaultSessionIPM
+			},
+		},
+		{
+			apiUserInfo + h.MethodGet,
+			func() {
+				c.Cmd = get
+				c.Manager = defaultUserDBInfo
+			},
+		},
+	}
+	if e == nil && c.comp02 {
+		if strings.HasPrefix(pth, apiPref) {
+			exF(kf, pth+meth, func(d error) { e = d })
+		} else {
+			pth = emptyPathIfLogin(pth)
+			fileSrv(pth)
+			c.Cmd = skip
 		}
 	}
 	return
@@ -131,106 +252,6 @@ func emptyPathIfLogin(pth string) (r string) {
 	r = pth
 	if pth == loginPref || pth == loginPrefSlash {
 		r = ""
-	}
-	return
-}
-
-func stdIface(cf *conf, comp02 bool,
-	staticFPath string) (hnd h.HandlerFunc) {
-	hnd = func(w h.ResponseWriter, r *h.Request) {
-		var cmd *cmd
-		var e error
-		if comp02 {
-			pth := r.URL.Path
-			if strings.HasPrefix(pth, apiPref) {
-				cmd, e = compatibleCmd(pth, r.Method,
-					r.Header.Get(authHd))
-			} else {
-				pth = emptyPathIfLogin(pth)
-				// serve static
-				h.ServeFile(w, r, path.Join(staticFPath, pth))
-				cmd := &cmd{
-					Cmd: skip,
-				}
-			}
-		} else {
-			cmd = new(cmd)
-		}
-
-		fs := []func(){
-			func() {
-				e = json.NewDecoder(r.Body).Decode(cmd)
-			},
-			func() { cf.manager(cmd); e = cmd.e },
-			func() {
-				if cmd.bs != nil {
-					_, e = w.Write(cmd.bs)
-				}
-			},
-		}
-		ok := trueFF(fs, func() bool { return e == nil })
-		if !ok {
-			h.Error(w, e.Error())
-		}
-	}
-	return
-}
-
-func compatibleCmd(pth, meth, rAddr, hd string,
-	buff *bytes.Buffer) (c *cmd,
-	e error) {
-	ip, _, e := net.SplitHostPort(rAddr)
-	c = &cmd{
-		RemoteAddr: ip,
-		Secret:     hd,
-	}
-
-	kf := []kFunc{
-		{
-			apiAuth + h.MethodPost,
-			func() {
-				c.Cmd = open
-				c.Adm = defaultSessionIPM
-			},
-		},
-		{
-			apiAuth + h.MethodDelete,
-			func() {
-				c.Cmd = clöse
-				c.Adm = defaultSessionIPM
-			},
-		},
-		{
-			apiUserStatus + h.MethodGet,
-			func() {
-				c.Cmd = get
-				c.Adm = defaultDwnConsR
-			},
-		},
-		{
-			apiUserStatus + h.MethodPut,
-			func() {
-				c.Cmd = set
-				c.Adm = defaultDwnConsR
-			},
-		},
-		{
-			apiCheckUser + h.MethodGet,
-			func() {
-				c.Cmd = check
-				c.Adm = defaultSessionIPM
-			},
-		},
-		{
-			apiUserInfo + h.MethodGet,
-			func() {
-				c.Cmd = get
-				c.Adm = defaultUserDBInfo
-			},
-		},
-	}
-	if e == nil {
-		exF(kf, pth+meth, func(d error) { e = d })
 	}
 	return
 }
@@ -321,7 +342,6 @@ func readSrvConf(i interface{}) (h *handlerConf,
 		},
 	}
 	mapKF(kf, i, fe, func() bool { return e == nil })
-	h.conf = append(h.sc.toStringMap)
 	return
 }
 

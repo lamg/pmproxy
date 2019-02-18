@@ -1,8 +1,9 @@
 package pmproxy
 
 type groupIPM struct {
-	ipgs *ipGroupS
-	name string
+	ipg      ipGroup
+	ipGroupN string
+	name     string
 }
 
 func (m *groupIPM) fromMap(i interface{}) (e error) {

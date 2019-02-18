@@ -24,13 +24,13 @@ func toMapSpan(s *rt.RSpan) (m map[string]interface{}) {
 	return
 }
 
-func fromMapSpan(s *rt.RSpan) (e error) {
+func fromMapSpan(s *rt.RSpan, i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
 			activeK,
 			func(i interface{}) {
-				s.Active = stringDurationE(i, fe)
+				s.Active = durationE(i, fe)
 			},
 		},
 		{
@@ -54,7 +54,7 @@ func fromMapSpan(s *rt.RSpan) (e error) {
 		{
 			totalK,
 			func(i interface{}) {
-				s.Total = stringDurationE(i, fe)
+				s.Total = durationE(i, fe)
 			},
 		},
 	}

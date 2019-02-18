@@ -62,15 +62,35 @@ const (
 
 // sessionIPM.go, dwnConsR.go and other managerKFs
 const (
+	open    = "open"
 	get     = "get"
 	set     = "set"
 	del     = "del"
 	clöse   = "close"
 	showAll = "showAll"
 	skip    = "skip"
+	check   = "check"
+	add     = "add"
 )
 
 const (
 	posK = "pos"
 	reqK = "requestMatcher"
+)
+
+const (
+	quotaMapK = "quotaMap"
+	ifaceK    = "iface"
+	proxyURLK = "proxyURL"
+	consRK    = "consR"
+	unitK     = "unit"
+	urlmK     = "urlm"
+	spanK     = "span"
+	ipmK      = "ipm"
+)
+
+// dwnConsR.go
+const (
+	lastResetK  = "lastReset"
+	resetCycleK = "resetCycle"
 )

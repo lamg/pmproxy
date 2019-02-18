@@ -20,9 +20,9 @@ func (p *ipGroupS) get(ip string) (gs []string, e error) {
 	} else {
 		user, ok := p.ipUser(ip)
 		if ok {
-			grp, ok := p.usrGroup(p.userGroupN)
+			grp, ok := p.userGroup(p.userGroupN)
 			if ok {
-				gs, e = grp(usr)
+				gs, e = grp(user)
 			} else {
 				e = noKey(p.userGroupN)
 			}

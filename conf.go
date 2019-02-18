@@ -15,32 +15,45 @@ type manager func(*cmd)
 type managerKF func(*cmd) []kFunc
 
 type cmd struct {
-	Cmd        string
-	Prop       string
-	Manager    string
-	RemoteAddr string
-	Secret     string
+	Cmd        string          `json: "cmd"`
+	Prop       string          `json: "prop"`
+	Manager    string          `json: "manager"`
+	RemoteAddr string          `json: "remoteAddr"`
+	Secret     string          `json: "secret"`
+	Cred       *credentials    `json: "cred"`
+	User       string          `json: "user"`
+	Uint64     uint64          `json: "uint64"`
+	ReqM       *requestMatcher `json:"reqM"`
+	Pos        []int           `json:"pos"`
+	comp02     bool            //compatible with v0.2
 	bs         []byte
 	e          error
+}
+
+type credentials struct {
+	User string `json:"user"`
+	Pass string `json:"pass"`
 }
 
 type ipMatcher func(string) bool
 
 type conf struct {
-	admins     []string
-	iu         *ipUserS
-	managerKFs *sync.Map
-	matchers   *sync.Map
-	consRs     *sync.Map
-	mappers    *sync.Map
-	userDBs    *sync.Map
-	ipQuotas   *sync.Map
-	lg         *logger
-	rls        *rules
-	cm         *connMng
+	admins      []string
+	staticFPath string
+	iu          *ipUserS
+	managerKFs  *sync.Map
+	ipGroups    *sync.Map
+	matchers    *sync.Map
+	consRs      *sync.Map
+	mappers     *sync.Map
+	userDBs     *sync.Map
+	ipQuotas    *sync.Map
+	lg          *logger
+	rls         *rules
+	cm          *connMng
 }
 
-func newConf(iu *ipUserS) (c *conf, e error) {
+func newConf() (c *conf, e error) {
 	// read ip matchers
 	// read user information provider
 	// read consumption restrictors
@@ -55,7 +68,7 @@ func newConf(iu *ipUserS) (c *conf, e error) {
 
 	c = &conf{
 		admins:     viper.GetStringSlice(adminsK),
-		iu:         iu,
+		iu:         &ipUserS{mäp: new(sync.Map)},
 		managerKFs: new(sync.Map),
 		matchers:   new(sync.Map),
 		consRs:     new(sync.Map),
@@ -136,8 +149,14 @@ func (c *conf) initIPQuotas() (e error) {
 		ipq := new(ipQuotaS)
 		e = ipq.fromMap(i)
 		if e == nil {
-			ipq.ipGroup.ipUser = c.iu.get
-			ipq.ipGroup.userGroup = c.userGroup
+			ipg := &ipGroupS{
+				ipUser:     c.iu.get,
+				userGroup:  c.userGroup,
+				groupCache: new(sync.Map),
+				userGroupN: ipq.name,
+			}
+			c.ipGroups.Store(ipg.userGroupN, ipg)
+			ipq.ipg = ipg.get
 			c.managerKFs.Store(ipq.name, ipq.managerKF)
 			c.ipQuotas.Store(ipq.name, ipq.get)
 			c.mappers.Store(ipq.name, ipq.toMap)
@@ -149,7 +168,6 @@ func (c *conf) initIPQuotas() (e error) {
 
 func (c *conf) initDwnConsRs() (e error) {
 	// c.initIPQuotas() /\ def.(maps in c)
-	dws := make([]*dwnConsR, 0)
 	fm := func(i interface{}) {
 		dw := new(dwnConsR)
 		e = dw.fromMap(i)
@@ -158,9 +176,12 @@ func (c *conf) initDwnConsRs() (e error) {
 			if ok {
 				dw.ipq = v.(*ipQuotaS).get
 			}
-			c.managerKFs.Store(dw.name, dw.managerKF)
-			c.consRs.Store(dw.name, dw.consR())
-			c.mappers.Store(dw.name, dw.toMap)
+			dw.mapWriter = func(mp map[string]uint64) {
+				// TODO
+			}
+			c.managerKFs.Store(dw.Name, dw.managerKF)
+			c.consRs.Store(dw.Name, dw.consR())
+			c.mappers.Store(dw.Name, dw.toMap)
 		}
 	}
 	e = c.sliceMap(dwnConsRK, fm,
@@ -189,6 +210,7 @@ func (c *conf) initUserInfos() (e error) {
 		},
 			len(c.admins),
 		)
+		return
 	}
 	c.ipQuotas.Range(func(k, v interface{}) (ok bool) {
 		udbName := k.(string)
@@ -215,11 +237,15 @@ func (c *conf) initGroupIPMs() (e error) {
 		gipm := new(groupIPM)
 		e = gipm.fromMap(i)
 		if e == nil {
-			gipm.ipgs.ipUser = c.iu.get
-			gipm.ipgs.userGroup = c.userGroup
-			c.managerKFs.Store(gipm.name, gipm.managerKF)
-			c.mappers.Store(gipm.name, gipm.toMap)
-			c.matchers.Store(gipm.name, gipm.match)
+			v, ok := c.ipGroups.Load(gipm.ipGroupN)
+			if ok {
+				gipm.ipg = v.(*ipGroupS).get
+				c.managerKFs.Store(gipm.name, gipm.managerKF)
+				c.mappers.Store(gipm.name, gipm.toMap)
+				c.matchers.Store(gipm.name, gipm.match)
+			} else {
+				e = noKey(gipm.ipGroupN)
+			}
 		}
 	}
 	c.sliceMap(groupIPMK, fm,

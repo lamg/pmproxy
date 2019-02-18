@@ -8,7 +8,7 @@ import (
 
 type ipQuotaS struct {
 	name        string
-	ipGroup     *ipGroupS
+	ipg         ipGroup
 	quotaCache  *sync.Map
 	groupQuotaM *sync.Map
 }
@@ -39,7 +39,7 @@ func (p *ipQuotaS) get(ip string) (n uint64) {
 	if ok {
 		n = v.(uint64)
 	} else {
-		gs, e := p.ipGroup(ip)
+		gs, e := p.ipg(ip)
 		if e == nil {
 			inf := func(i int) {
 				q := p.groupQuota(gs[i])
@@ -49,6 +49,7 @@ func (p *ipQuotaS) get(ip string) (n uint64) {
 			p.quotaCache.Store(ip, n)
 		}
 	}
+	return
 }
 
 func (p *ipQuotaS) del(ip string) {
@@ -66,16 +67,6 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 			},
 		},
 		{
-			nameK,
-			func(i interface{}) {
-				p.ipGroup = &ipGroup{
-					groupCache: new(sync.Map),
-					groupQuota: new(sync.Map),
-				}
-				p.ipGroup.userGroupN = p.name
-			},
-		},
-		{
 			quotaMapK,
 			func(i interface{}) {
 				m = stringMapUint64E(i, fe)
@@ -84,8 +75,9 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 		{
 			quotaMapK,
 			func(i interface{}) {
+				p.groupQuotaM = new(sync.Map)
 				for k, v := range m {
-					p.groupQuota.Store(k, v)
+					p.groupQuotaM.Store(k, v)
 				}
 			},
 		},
@@ -105,12 +97,12 @@ func (p *ipQuotaS) groupQuota(group string) (n uint64) {
 }
 
 func (p *ipQuotaS) set(group string, n uint64) {
-	p.groupQuota.Store(group, n)
+	p.groupQuotaM.Store(group, n)
 }
 
 func (p *ipQuotaS) show() (mp map[string]uint64) {
 	mp = make(map[string]uint64)
-	p.groupQuota.Range(func(k, v interface{}) (ok bool) {
+	p.groupQuotaM.Range(func(k, v interface{}) (ok bool) {
 		mp[k.(string)], ok = v.(uint64), true
 		return
 	})

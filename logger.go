@@ -30,8 +30,8 @@ func newLogger(addr string) (l *logger, e error) {
 func (l *logger) log(method, url, rAddr string,
 	d time.Time) (e error) {
 	clientIP, _, _ := net.SplitHostPort(rAddr)
-	user := l.iu(clientIP)
-	if user == "" {
+	user, ok := l.iu(clientIP)
+	if !ok {
 		e = noUserLogged(clientIP)
 		user = "-"
 	}
