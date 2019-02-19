@@ -62,15 +62,16 @@ const (
 
 // sessionIPM.go, dwnConsR.go and other managerKFs
 const (
-	open    = "open"
-	get     = "get"
-	set     = "set"
-	del     = "del"
-	clöse   = "close"
-	showAll = "showAll"
-	skip    = "skip"
-	check   = "check"
-	add     = "add"
+	open      = "open"
+	get       = "get"
+	set       = "set"
+	del       = "del"
+	clöse     = "close"
+	showAll   = "showAll"
+	skip      = "skip"
+	check     = "check"
+	add       = "add"
+	authNameK = "authName"
 )
 
 const (
@@ -93,4 +94,10 @@ const (
 const (
 	lastResetK  = "lastReset"
 	resetCycleK = "resetCycle"
+)
+
+// groupIPM.go
+const (
+	ipGroupNK = "ipGroupN"
+	groupK    = "group"
 )

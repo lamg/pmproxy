@@ -182,9 +182,10 @@ func (r *rules) managerKF(c *cmd) (kf []kFunc) {
 		{
 			add,
 			func() {
-				c.e = c.ReqM.init()
+				rm := new(requestMatcher)
+				c.e = rm.fromMap(c.Object)
 				if c.e == nil {
-					c.e = r.add(c.Pos, c.ReqM)
+					c.e = r.add(c.Pos, rm)
 				}
 			},
 		},

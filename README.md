@@ -25,11 +25,12 @@ The file hierarchy is the following:
 
 - serve
   - handlers
-    - conf (TODO setDefaults)
+    - conf (TODO setDefaults, add managers)
         - userInfo
         - dwnConsR
         - sessionIPM (TODO)
-        - groupIPM (TODO)
+        - groupIPM
+          - ipGroup (TODO group cache update)
         - userDB (TODO)
         - rules
         - connMng

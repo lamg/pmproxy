@@ -23,6 +23,7 @@ func (p *ipGroupS) get(ip string) (gs []string, e error) {
 			grp, ok := p.userGroup(p.userGroupN)
 			if ok {
 				gs, e = grp(user)
+				// TODO store gs
 			} else {
 				e = noKey(p.userGroupN)
 			}

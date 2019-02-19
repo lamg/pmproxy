@@ -216,7 +216,7 @@ func compatibleCmd(cf *conf, pth, meth string,
 				}{}
 				e = json.Unmarshal(body, nv)
 				if e == nil {
-					c.User = nv.Name
+					c.String = nv.Name
 					c.Uint64 = nv.Value
 				}
 			},

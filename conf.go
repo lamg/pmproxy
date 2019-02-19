@@ -15,17 +15,18 @@ type manager func(*cmd)
 type managerKF func(*cmd) []kFunc
 
 type cmd struct {
-	Cmd        string          `json: "cmd"`
-	Prop       string          `json: "prop"`
-	Manager    string          `json: "manager"`
-	RemoteAddr string          `json: "remoteAddr"`
-	Secret     string          `json: "secret"`
-	Cred       *credentials    `json: "cred"`
-	User       string          `json: "user"`
-	Uint64     uint64          `json: "uint64"`
-	ReqM       *requestMatcher `json:"reqM"`
-	Pos        []int           `json:"pos"`
-	comp02     bool            //compatible with v0.2
+	Cmd        string                 `json: "cmd"`
+	Prop       string                 `json: "prop"`
+	Manager    string                 `json: "manager"`
+	RemoteAddr string                 `json: "remoteAddr"`
+	Secret     string                 `json: "secret"`
+	IsAdmin    bool                   `json: "isAdmin"`
+	Cred       *credentials           `json: "cred"`
+	String     string                 `json: "string"`
+	Uint64     uint64                 `json: "uint64"`
+	Pos        []int                  `json: "pos"`
+	Object     map[string]interface{} `json: "object"`
+	comp02     bool                   //compatible with v0.2
 	bs         []byte
 	e          error
 }
@@ -51,6 +52,7 @@ type conf struct {
 	lg          *logger
 	rls         *rules
 	cm          *connMng
+	cr          *crypt
 }
 
 func newConf() (c *conf, e error) {
@@ -119,8 +121,10 @@ func (c *conf) initSessionIPMs() (e error) {
 	// c.initUsrDBs() /\ def.(maps in c)
 	fm := func(i interface{}) {
 		sm := &sessionIPM{
-			ipUser: c.iu,
+			iu: c.iu,
+			cr: c.cr,
 		}
+		// TODO update group cache
 		e = sm.fromMap(i)
 		if e == nil {
 			sm.nameAuth = c.authenticator
@@ -309,7 +313,17 @@ func (c *conf) initConnMng() (e error) {
 }
 
 func (c *conf) manager(m *cmd) {
-	v, ok := c.managerKFs.Load(m.Manager)
+	musr, ok := c.iu.get(m.RemoteAddr)
+	m.IsAdmin, _ = bLnSrch(
+		func(i int) bool {
+			return c.admins[i] == musr
+		},
+		len(c.admins),
+	)
+	var v interface{}
+	if ok {
+		v, ok = c.managerKFs.Load(m.Manager)
+	}
 	var kf []kFunc
 	if ok {
 		kf = v.(managerKF)(m)
