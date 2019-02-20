@@ -6,14 +6,14 @@ import (
 )
 
 type dwnConsR struct {
-	Name     string `json: "name"`
+	name     string
 	ipQuotaN string
 	ipq      func(string) uint64
 	iu       ipUser
 
 	userCons   *sync.Map
-	LastReset  time.Time     `json:"lastReset"`
-	ResetCycle time.Duration `json:"resetCycle"`
+	lastReset  time.Time
+	resetCycle time.Duration
 	mapWriter  func(map[string]uint64)
 }
 
@@ -23,7 +23,7 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 		{
 			nameK,
 			func(i interface{}) {
-				d.Name = stringE(i, fe)
+				d.name = stringE(i, fe)
 			},
 		},
 		{
@@ -35,13 +35,13 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 		{
 			lastResetK,
 			func(i interface{}) {
-				d.LastReset = stringDateE(i, fe)
+				d.lastReset = stringDateE(i, fe)
 			},
 		},
 		{
 			resetCycleK,
 			func(i interface{}) {
-				d.ResetCycle = durationE(i, fe)
+				d.resetCycle = durationE(i, fe)
 			},
 		},
 	}
@@ -51,10 +51,10 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 
 func (d *dwnConsR) toMap() (i interface{}) {
 	i = map[string]interface{}{
-		nameK:       d.Name,
+		nameK:       d.name,
 		ipQuotaK:    d.ipQuotaN,
-		lastResetK:  d.LastReset.Format(time.RFC3339),
-		resetCycleK: d.ResetCycle.String(),
+		lastResetK:  d.lastReset.Format(time.RFC3339),
+		resetCycleK: d.resetCycle.String(),
 	}
 	mp := make(map[string]uint64)
 	d.userCons.Range(func(k, v interface{}) (b bool) {
@@ -108,12 +108,12 @@ func (d *dwnConsR) consR() (c *consR) {
 
 func (d *dwnConsR) keepResetCycle() {
 	// this method maintains the property that if the current
-	// time is greater or equal to d.LastReset + d.ResetCycle,
+	// time is greater or equal to d.lastReset + d.resetCycle,
 	// then all consumptions are set to 0
 	now := time.Now()
-	cy := now.Sub(d.LastReset)
-	if cy >= d.ResetCycle {
+	cy := now.Sub(d.lastReset)
+	if cy >= d.resetCycle {
 		d.userCons = new(sync.Map)
-		d.LastReset = d.LastReset.Add(d.ResetCycle)
+		d.lastReset = d.lastReset.Add(d.resetCycle)
 	}
 }

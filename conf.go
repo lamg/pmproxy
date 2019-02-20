@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
+	"io/ioutil"
 	"net/url"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -142,7 +144,7 @@ func (c *conf) authenticator(name string) (a auth,
 	ok bool) {
 	v, ok := c.userDBs.Load(name)
 	if ok {
-		a = v.(*userDB).auth
+		a = v.(*userDB).ath
 	}
 	return
 }
@@ -156,7 +158,6 @@ func (c *conf) initIPQuotas() (e error) {
 			ipg := &ipGroupS{
 				ipUser:     c.iu.get,
 				userGroup:  c.userGroup,
-				groupCache: new(sync.Map),
 				userGroupN: ipq.name,
 			}
 			c.ipGroups.Store(ipg.userGroupN, ipg)
@@ -181,11 +182,26 @@ func (c *conf) initDwnConsRs() (e error) {
 				dw.ipq = v.(*ipQuotaS).get
 			}
 			dw.mapWriter = func(mp map[string]uint64) {
-				// TODO
+				var ppath string
+				var bs []byte
+				var e error
+				fs := []func(){
+					func() { ppath = c.strïng(persistPathK) },
+					func() { bs, e = json.Marshal(mp) },
+					func() {
+						ioutil.WriteFile(
+							path.Join(ppath, dw.name+".json"),
+							bs,
+							os.ModePerm,
+						)
+					},
+				}
+				trueFF(fs,
+					func() bool { return ppath != "" && e == nil })
 			}
-			c.managerKFs.Store(dw.Name, dw.managerKF)
-			c.consRs.Store(dw.Name, dw.consR())
-			c.mappers.Store(dw.Name, dw.toMap)
+			c.managerKFs.Store(dw.name, dw.managerKF)
+			c.consRs.Store(dw.name, dw.consR())
+			c.mappers.Store(dw.name, dw.toMap)
 		}
 	}
 	e = c.sliceMap(dwnConsRK, fm,
@@ -197,7 +213,7 @@ func (c *conf) userGroup(name string) (g userGroup,
 	ok bool) {
 	v, ok := c.userDBs.Load(name)
 	if ok {
-		g = v.(*userDB).userGroup
+		g = v.(*userDB).grp
 	}
 	return
 }
@@ -223,7 +239,7 @@ func (c *conf) initUserInfos() (e error) {
 			udb := uv.(*userDB)
 			ui := &userInfo{
 				iu:       c.iu.get,
-				userName: udb.userName,
+				userName: udb.unm,
 				quota:    v.(ipQuota),
 				isAdm:    isAdm,
 			}

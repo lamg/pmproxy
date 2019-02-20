@@ -112,13 +112,11 @@ func (m *sessionIPM) open(c *credentials,
 
 func (m *sessionIPM) close(secret, ip string) (bs []byte,
 	e error) {
-	// TODO
 	user, e := m.cr.decrypt(secret)
 	if e == nil {
 		lusr, ok := m.iu.get(ip)
 		if ok && lusr == user {
 			m.iu.del(ip)
-			// m.closeIP(ip)
 		}
 	}
 	return
@@ -126,7 +124,6 @@ func (m *sessionIPM) close(secret, ip string) (bs []byte,
 
 func (m *sessionIPM) get(secret, ip string) (bs []byte,
 	e error) {
-	// TODO
 	mp := map[string]string{}
 	m.iu.mäp.Range(func(k, v interface{}) (cont bool) {
 		mp[k.(string)] = v.(string)

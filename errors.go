@@ -59,3 +59,7 @@ func invalidPos(pos []int) (e error) {
 	e = fmt.Errorf("Invalid positions %v", pos)
 	return
 }
+
+func incorrectPassword() error {
+	return fmt.Errorf("Incorrect password")
+}

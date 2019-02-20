@@ -1,12 +1,7 @@
 package pmproxy
 
-import (
-	"sync"
-)
-
 type ipGroupS struct {
 	ipUser     ipUser
-	groupCache *sync.Map
 	userGroupN string
 	userGroup  func(string) (userGroup, bool)
 }
@@ -14,26 +9,14 @@ type ipGroupS struct {
 type ipGroup func(string) ([]string, error)
 
 func (p *ipGroupS) get(ip string) (gs []string, e error) {
-	v, ok := p.groupCache.Load(ip)
-	if ok {
-		gs = v.([]string)
-	} else {
-		user, ok := p.ipUser(ip)
-		if ok {
-			grp, ok := p.userGroup(p.userGroupN)
-			if ok {
-				gs, e = grp(user)
-				// TODO store gs
-			} else {
-				e = noKey(p.userGroupN)
-			}
-		} else {
-			e = noKey(ip)
-		}
+	var user string
+	var ok bool
+	var grp userGroup
+	fs := []func(){
+		func() { user, ok = p.ipUser(ip) },
+		func() { grp, ok = p.userGroup(p.userGroupN) },
+		func() { gs, e = grp(user) },
 	}
+	trueFF(fs, func() bool { return ok && e == nil })
 	return
-}
-
-func (p *ipGroupS) del(ip string) {
-	p.groupCache.Delete(ip)
 }

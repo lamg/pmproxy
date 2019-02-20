@@ -11,19 +11,20 @@ const (
 
 // conf.go
 const (
-	nameK       = "name"
-	quotasK     = "quotas"
-	rulesK      = "rules"
-	loggerAddrK = "loggerAddr"
-	groupIPMK   = "groupIPM"
-	infoK       = "info"
-	dwnConsRK   = "dwnConsR"
-	ipQuotaK    = "ipQuota"
-	sessionIPMK = "sessionIPM"
-	userDBK     = "userDB"
-	adminsK     = "admins"
-	srvConfK    = "srvConf"
-	connMngK    = "connMng"
+	nameK        = "name"
+	quotasK      = "quotas"
+	rulesK       = "rules"
+	loggerAddrK  = "loggerAddr"
+	groupIPMK    = "groupIPM"
+	infoK        = "info"
+	dwnConsRK    = "dwnConsR"
+	ipQuotaK     = "ipQuota"
+	sessionIPMK  = "sessionIPM"
+	userDBK      = "userDB"
+	adminsK      = "admins"
+	srvConfK     = "srvConf"
+	connMngK     = "connMng"
+	persistPathK = "persistPath"
 )
 
 type specKT string
@@ -100,4 +101,15 @@ const (
 const (
 	ipGroupNK = "ipGroupN"
 	groupK    = "group"
+)
+
+// userDB.go
+const (
+	adOrMapK    = "adOrMap"
+	suffK       = "suff"
+	bdnK        = "bdn"
+	userK       = "user"
+	passK       = "pass"
+	userPassK   = "userPass"
+	userGroupsK = "groups"
 )

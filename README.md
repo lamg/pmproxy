@@ -28,10 +28,9 @@ The file hierarchy is the following:
     - conf (TODO setDefaults, add managers)
         - userInfo
         - dwnConsR
-        - sessionIPM (TODO)
+        - sessionIPM
         - groupIPM
-          - ipGroup (TODO group cache update)
-        - userDB (TODO)
+        - userDB (TODO, cache)
         - rules
         - connMng
         - dialer (TODO manager interface)
