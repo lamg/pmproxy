@@ -1,3 +1,23 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package pmproxy
 
 import (
@@ -65,13 +85,11 @@ func newConf() (c *conf, e error) {
 	// read admins
 	// read logger
 	// get searializers (c.mappers)
-	viper.SetConfigName("conf")
-	viper.AddConfigPath("/etc/pmproxy")
-	viper.AddConfigPath("$HOME/.config/pmproxy")
-	viper.ReadInConfig()
-
+	viper.SetConfigName("pmproxy")
+	viper.SetConfigType("toml")
+	viper.AddConfigPath("$HOME/.config")
+	viper.AddConfigPath("/etc")
 	c = &conf{
-		admins:     viper.GetStringSlice(adminsK),
 		iu:         &ipUserS{mäp: new(sync.Map)},
 		managerKFs: new(sync.Map),
 		matchers:   new(sync.Map),
@@ -80,9 +98,20 @@ func newConf() (c *conf, e error) {
 		userDBs:    new(sync.Map),
 		ipQuotas:   new(sync.Map),
 	}
-
 	fs := []func(){
-		func() { e = c.initUserDBs() },
+		func() {
+			e = viper.ReadInConfig()
+			if e != nil {
+				c.setDefaults()
+				home := os.Getenv("HOME")
+				e = viper.WriteConfigAs(
+					path.Join(home, ".config/pmproxy.toml"))
+			}
+		},
+		func() {
+			c.admins = viper.GetStringSlice(adminsK)
+			e = c.initUserDBs()
+		},
 		func() { e = c.initSessionIPMs() },
 		func() { e = c.initIPQuotas() },
 		func() { e = c.initDwnConsRs() },
@@ -98,9 +127,52 @@ func newConf() (c *conf, e error) {
 
 func (c *conf) setDefaults() {
 	// TODO
-	// set default timeout
+	// set default userDB
+	viper.Set(userDBK, []map[string]interface{}{
+		{
+			nameK:    defaultUserDB,
+			adOrMapK: false,
+			paramsK: map[string]interface{}{
+				userPassK: map[string]interface{}{
+					user0: pass0,
+				},
+				userGroupsK: map[string][]string{
+					user0: {group0},
+				},
+			},
+		},
+	})
 	// set default matchers
+	viper.Set(sessionIPMK, []map[string]interface{}{
+		{
+			nameK:     defaultSessionIPM,
+			authNameK: defaultUserDB,
+		},
+	})
 	// set default consR
+	viper.Set(dwnConsRK, []map[string]interface{}{
+		{
+			nameK:       defaultDwnConsR,
+			ipQuotaK:    defaultIPQuota,
+			lastResetK:  time.Now(),
+			resetCycleK: time.Duration(24 * time.Hour).String(),
+		},
+	})
+	// set default rules
+	viper.Set(rulesK, []map[string]interface{}{
+		{
+			posK: 0,
+			reqK: map[string]interface{}{
+				unitK: true,
+				ipmK:  defaultSessionIPM,
+				string(specK): map[string]interface{}{
+					ifaceK: defaultIface,
+					consRK: defaultDwnConsR,
+				},
+			},
+		},
+	})
+	viper.Set(adminsK, []string{user0})
 	// …
 }
 
@@ -126,7 +198,6 @@ func (c *conf) initSessionIPMs() (e error) {
 			iu: c.iu,
 			cr: c.cr,
 		}
-		// TODO update group cache
 		e = sm.fromMap(i)
 		if e == nil {
 			sm.nameAuth = c.authenticator

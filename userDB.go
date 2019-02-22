@@ -1,6 +1,27 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package pmproxy
 
 import (
+	"encoding/json"
 	ld "github.com/lamg/ldaputil"
 	"github.com/spf13/cast"
 )
@@ -12,6 +33,7 @@ type userName func(string) (string, error)
 type userDB struct {
 	name    string
 	adOrMap bool
+	params  map[string]interface{}
 	ath     auth
 	grp     userGroup
 	unm     userName
@@ -30,10 +52,18 @@ func (d *userDB) fromMap(i interface{}) (e error) {
 			adOrMapK,
 			func(i interface{}) {
 				d.adOrMap = boolE(i, fe)
-				if d.adOrMap {
-					fe(d.fromMapAD(i))
-				} else {
-					fe(d.fromMapMap(i))
+			},
+		},
+		{
+			paramsK,
+			func(i interface{}) {
+				d.params = stringMapE(i, fe)
+				if e == nil {
+					if d.adOrMap {
+						fe(d.fromMapAD(i))
+					} else {
+						fe(d.fromMapMap(i))
+					}
 				}
 			},
 		},
@@ -88,14 +118,17 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 	var gm map[string][]string
 	fs := []func(){
 		func() { mp, e = cast.ToStringMapE(i) },
-		func() { upm, e = cast.ToStringMapStringE(mp[userPassK]) },
+		func() {
+			upm, e = cast.ToStringMapStringE(mp[userPassK])
+		},
 		func() {
 			gm, e = cast.ToStringMapStringSliceE(mp[userGroupsK])
 		},
 	}
 	ok := trueFF(fs, func() bool { return e == nil })
 	if ok {
-		d.ath = func(user, pass string) (nuser string, e error) {
+		d.ath = func(user, pass string) (nuser string,
+			e error) {
 			nuser = user
 			p, ok := upm[user]
 			if !ok {
@@ -121,9 +154,22 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 }
 
 func (d *userDB) toMap() (i interface{}) {
+	i = map[string]interface{}{
+		nameK:    d.name,
+		adOrMapK: d.adOrMap,
+		paramsK:  d.params,
+	}
 	return
 }
 
-func (d *userDB) managerKF() (kf []kFunc) {
+func (d *userDB) managerKF(c *cmd) (kf []kFunc) {
+	kf = []kFunc{
+		{
+			get,
+			func() {
+				c.bs, c.e = json.Marshal(d.toMap())
+			},
+		},
+	}
 	return
 }

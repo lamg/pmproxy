@@ -1,3 +1,23 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package pmproxy
 
 import (
@@ -239,7 +259,7 @@ func (r *rules) fromMap(i interface{}) (e error) {
 		func() {
 			ib := func(i int) (ok bool) {
 				pr := new(posReq)
-				e = pr.fromMap(i)
+				e = pr.fromMap(ms[i])
 				ok = e == nil
 				if ok {
 					prs = append(prs, pr)
@@ -288,6 +308,7 @@ func (r *posReq) fromMap(i interface{}) (e error) {
 		},
 	}
 	mapKF(kf, i, fe, func() bool { return e == nil })
+	println(e == nil)
 	return
 }
 

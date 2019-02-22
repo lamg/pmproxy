@@ -24,17 +24,18 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 The file hierarchy is the following:
 
 - serve
+  - conf (TODO setDefaults, add managers)
+    - userInfo
+    - dwnConsR
+    - sessionIPM
+    - groupIPM
+    - userDB (TODO, cache)
+    - rules (requestMatcher.fromMap requires optional keys)
+    - connMng
+    - dialer (TODO manager interface)
+      - logger
+      - consR
+      - spec
   - handlers
-    - conf (TODO setDefaults, add managers)
-        - userInfo
-        - dwnConsR
-        - sessionIPM
-        - groupIPM
-        - userDB (TODO, cache)
-        - rules
-        - connMng
-        - dialer (TODO manager interface)
-          - logger
-          - consR
-          - spec
+    
       

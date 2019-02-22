@@ -1,3 +1,23 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later v
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package pmproxy
 
 // connMng.go
@@ -11,20 +31,26 @@ const (
 
 // conf.go
 const (
-	nameK        = "name"
-	quotasK      = "quotas"
-	rulesK       = "rules"
-	loggerAddrK  = "loggerAddr"
-	groupIPMK    = "groupIPM"
-	infoK        = "info"
-	dwnConsRK    = "dwnConsR"
-	ipQuotaK     = "ipQuota"
-	sessionIPMK  = "sessionIPM"
-	userDBK      = "userDB"
-	adminsK      = "admins"
-	srvConfK     = "srvConf"
-	connMngK     = "connMng"
-	persistPathK = "persistPath"
+	nameK          = "name"
+	quotasK        = "quotas"
+	rulesK         = "rules"
+	loggerAddrK    = "loggerAddr"
+	groupIPMK      = "groupIPM"
+	infoK          = "info"
+	dwnConsRK      = "dwnConsR"
+	ipQuotaK       = "ipQuota"
+	sessionIPMK    = "sessionIPM"
+	userDBK        = "userDB"
+	adminsK        = "admins"
+	srvConfK       = "srvConf"
+	connMngK       = "connMng"
+	persistPathK   = "persistPath"
+	defaultUserDB  = "mapDB"
+	user0          = "user0"
+	pass0          = "pass0"
+	group0         = "group0"
+	defaultIPQuota = "quotas"
+	defaultIface   = "eth0"
 )
 
 type specKT string
@@ -48,7 +74,7 @@ const (
 	apiCheckUser  = "/api/checkUser"
 	apiUserInfo   = "/api/userInfo"
 
-	defaultUserDBInfo = "defaultUserDBInfo"
+	defaultUserInfo   = "defaultUserInfo"
 	defaultSessionIPM = "sessions"
 	defaultDwnConsR   = "downloads"
 
@@ -112,4 +138,5 @@ const (
 	passK       = "pass"
 	userPassK   = "userPass"
 	userGroupsK = "groups"
+	paramsK     = "params"
 )
