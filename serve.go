@@ -30,18 +30,15 @@ import (
 // according parameters in configuration
 func Serve() (e error) {
 	var c *conf
-	var hcs []*handlerConf
+	var prh, ifh *srvHandler
 	fs := []func(){
 		func() { c, e = newConf() },
-		func() { hcs, e = newHnds(c) },
+		func() { prh, ifh, e = newHnds(c) },
 		func() {
-			fes := make([]func() error, len(hcs))
-			forall(
-				func(i int) {
-					fes[i] = serveFunc(c, hcs[i])
-				},
-				len(fes),
-			)
+			fes := []func() error{
+				serveFunc(c.proxy, true, prh),
+				serveFunc(c.iface, false, ifh),
+			}
 			e = runConcurr(fes)
 		},
 	}
@@ -49,72 +46,44 @@ func Serve() (e error) {
 	return
 }
 
-func serveFunc(cf *conf, hc *handlerConf) (fe func() error) {
+func serveFunc(c *srvConf, proxyOrIface bool,
+	sh *srvHandler) (fe func() error) {
 	var listenAndServe func() error
 	var listenAndServeTLS func(string, string) error
-	c := hc.sc
-	srvChs := []choice{
-		{
-			guard: func() bool { return c.fastOrStd },
-			runf: func() (e error) {
-				fast := &fh.Server{
-					ReadTimeout:        c.readTimeout,
-					WriteTimeout:       c.writeTimeout,
-					Handler:            hc.sh.reqHnd,
-					MaxConnsPerIP:      c.maxConnIP,
-					MaxRequestsPerConn: c.maxReqConn,
-				}
-				listenAndServe = func() error {
-					return fast.ListenAndServe(c.addr)
-				}
-				listenAndServeTLS = func(cert, key string) (e error) {
-					return fast.ListenAndServeTLS(c.addr, cert, key)
-				}
-				return
-			},
-		},
-		{
-			guard: func() bool { return !c.fastOrStd },
-			runf: func() (e error) {
-				std := &h.Server{
-					ReadTimeout:  c.readTimeout,
-					WriteTimeout: c.writeTimeout,
-					IdleTimeout:  0,
-					Addr:         c.addr,
-					Handler:      hc.sh.serveHTTP,
-					TLSNextProto: make(map[string]func(*h.Server,
-						*tls.Conn, h.Handler)),
-				}
-				listenAndServe = std.ListenAndServe
-				listenAndServeTLS = std.ListenAndServeTLS
-				return
-			},
-		},
+	if c.fastOrStd {
+		fast := &fh.Server{
+			ReadTimeout:        c.readTimeout,
+			WriteTimeout:       c.writeTimeout,
+			Handler:            sh.reqHnd,
+			MaxConnsPerIP:      c.maxConnIP,
+			MaxRequestsPerConn: c.maxReqConn,
+		}
+		listenAndServe = func() error {
+			return fast.ListenAndServe(c.addr)
+		}
+		listenAndServeTLS = func(cert,
+			key string) (e error) {
+			return fast.ListenAndServeTLS(c.addr, cert, key)
+		}
+	} else {
+		std := &h.Server{
+			ReadTimeout:  c.readTimeout,
+			WriteTimeout: c.writeTimeout,
+			IdleTimeout:  0,
+			Addr:         c.addr,
+			Handler:      sh.serveHTTP,
+			TLSNextProto: make(map[string]func(*h.Server,
+				*tls.Conn, h.Handler)),
+		}
+		listenAndServe = std.ListenAndServe
+		listenAndServeTLS = std.ListenAndServeTLS
 	}
-	ifacePrx := []choice{
-		{
-			guard: func() bool { return c.proxyOrIface },
-			runf: func() (e error) {
-				fe = listenAndServe
-				return
-			},
-		},
-		{
-			guard: func() bool { return !c.proxyOrIface },
-			runf: func() (e error) {
-				fe = func() error {
-					cert, key := cf.configPath(c.certFl),
-						cf.configPath(c.keyFl)
-					return listenAndServeTLS(cert, key)
-				}
-				return
-			},
-		},
+	if proxyOrIface {
+		fe = listenAndServe
+	} else {
+		fe = func() error {
+			return listenAndServeTLS(c.certFl, c.keyFl)
+		}
 	}
-	chs := [][]choice{srvChs, ifacePrx}
-	inf := func(i int) {
-		runChoice(chs[i])
-	}
-	forall(inf, len(chs))
 	return
 }

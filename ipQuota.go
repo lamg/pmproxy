@@ -22,7 +22,7 @@ package pmproxy
 
 import (
 	"fmt"
-
+	"github.com/c2h5oh/datasize"
 	"sync"
 )
 
@@ -78,7 +78,7 @@ func (p *ipQuotaS) del(ip string) {
 
 func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
-	var m map[string]uint64
+	var m map[string]string
 	kf := []kFuncI{
 		{
 			nameK,
@@ -89,7 +89,7 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 		{
 			quotaMapK,
 			func(i interface{}) {
-				m = stringMapUint64E(i, fe)
+				m = stringMapStringE(i, fe)
 			},
 		},
 		{
@@ -97,7 +97,12 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 			func(i interface{}) {
 				p.groupQuotaM = new(sync.Map)
 				for k, v := range m {
-					p.groupQuotaM.Store(k, v)
+					bts := new(datasize.ByteSize)
+					e = bts.UnmarshalText([]byte(v))
+					if e != nil {
+						break
+					}
+					p.groupQuotaM.Store(k, bts.Bytes)
 				}
 			},
 		},

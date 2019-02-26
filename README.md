@@ -24,9 +24,11 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 The file hierarchy is the following:
 
 - serve
-  - conf (TODO setDefaults, add managers)
+  - conf (TODO setDefaults, manage managers, generate self-signed certificates or try to get valid ones from letsencrypt, restructure server configurations)
+    - genCert (TODO proper copyright)
     - userInfo
     - dwnConsR
+      - ipQuota (TODO use "github.com/c2h5oh/datasize" for human readable data sizes)
     - sessionIPM
     - groupIPM
     - userDB (TODO, cache)

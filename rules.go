@@ -99,7 +99,9 @@ func (m *requestMatcher) init() (e error) {
 }
 
 func (m *requestMatcher) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
+	fe := optionalKeys(
+		func(d error) { e = d }, urlmK, spanK, ipmK,
+	)
 	kf := []kFuncI{
 		{
 			unitK,
@@ -308,7 +310,6 @@ func (r *posReq) fromMap(i interface{}) (e error) {
 		},
 	}
 	mapKF(kf, i, fe, func() bool { return e == nil })
-	println(e == nil)
 	return
 }
 

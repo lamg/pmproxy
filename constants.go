@@ -51,6 +51,17 @@ const (
 	group0         = "group0"
 	defaultIPQuota = "quotas"
 	defaultIface   = "eth0"
+	mainConfigDir  = "/etc/pmproxy"
+	homeConfigDir  = ".config/pmproxy"
+	configFile     = "conf.toml"
+	addrK          = "addr"
+	certK          = "cert"
+	keyK           = "key"
+	defaultSrvCert = "cert.pem"
+	defaultSrvKey  = "key.pem"
+	defaultHost    = "localhost"
+	ifaceConfK     = "apiSrv"
+	proxyConfK     = "proxySrv"
 )
 
 type specKT string
@@ -63,9 +74,6 @@ const (
 	fastOrStdK    = "fastOrStd"
 	readTimeoutK  = "readTimeout"
 	writeTimeoutK = "writeTimeout"
-	addrK         = "addr"
-	certK         = "cert"
-	keyK          = "key"
 	maxConnIPK    = "maxConnIP"
 	maxReqConnK   = "maxReqConn"
 

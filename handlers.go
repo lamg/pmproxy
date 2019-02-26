@@ -38,63 +38,27 @@ type handlerConf struct {
 	sc *srvConf
 }
 
-func newHnds(c *conf) (hs []*handlerConf, e error) {
-	var sl []interface{}
-	fs := []func(){
-		func() {
-			sl, e = c.sliceE(srvConfK)
-		},
-		func() {
-			if len(sl) != 2 {
-				e = needXServers(2, len(sl))
-			}
-		},
-		func() {
-			hs = make([]*handlerConf, len(sl))
-			ib := func(i int) (b bool) {
-				hs[i], e = readSrvConf(sl[i])
-				b = e == nil
-				return
-			}
-			trueForall(ib, len(sl))
-		},
-		func() {
-			readHnd(hs, c)
-			forall(func(i int) {
-				c.mappers.Store(hs[i].sc.name, hs[i].sc.toMap)
-			}, len(hs))
-		},
+func newHnds(c *conf) (prh, ifh *srvHandler,
+	e error) {
+	if c.proxy.fastOrStd {
+		// consumers, matchers determine context values
+		// dialer and proxy process context values
+		prh.reqHnd = proxy.NewFastProxy(c.cm.direct,
+			c.cm.ctxVal, c.cm.proxyF, time.Now)
+	} else {
+		prh.serveHTTP = proxy.NewProxy(c.cm.direct,
+			c.cm.ctxVal, c.cm.proxyF, c.cm.maxIdle,
+			c.cm.idleT, c.cm.tlsHT, c.cm.expCT,
+			time.Now).ServeHTTP
 	}
-	trueFF(fs, func() bool { return e == nil })
-	return
-}
-
-func readHnd(hcs []*handlerConf, c *conf) {
-	inf := func(i int) {
-		if hcs[i].sc.proxyOrIface {
-			// consumers, matchers determine context values
-			// dialer and proxy process context values
-			if hcs[i].sc.fastOrStd {
-				hcs[i].sh.reqHnd = proxy.NewFastProxy(c.cm.direct,
-					c.cm.ctxVal, c.cm.proxyF, time.Now)
-			} else {
-				hcs[i].sh.serveHTTP = proxy.NewProxy(c.cm.direct,
-					c.cm.ctxVal, c.cm.proxyF, c.cm.maxIdle,
-					c.cm.idleT, c.cm.tlsHT, c.cm.expCT,
-					time.Now).ServeHTTP
-			}
-		} else {
-			// administration, and serializer are part of the
-			// control interface, and also have consumers and
-			// matchers
-			if hcs[i].sc.fastOrStd {
-				hcs[i].sh.reqHnd = fastIface(c)
-			} else {
-				hcs[i].sh.serveHTTP = stdIface(c)
-			}
-		}
+	if c.iface.fastOrStd {
+		// administration, and serializer are part of the
+		// control interface, and also have consumers and
+		// matchers
+		ifh.reqHnd = fastIface(c)
+	} else {
+		ifh.serveHTTP = stdIface(c)
 	}
-	forall(inf, len(hcs))
 	return
 }
 
@@ -296,68 +260,56 @@ type srvConf struct {
 	maxReqConn int
 }
 
-func readSrvConf(i interface{}) (h *handlerConf,
-	e error) {
-	h = &handlerConf{sc: new(srvConf)}
+func readSrvConf(i interface{}) (sc *srvConf, e error) {
+	sc = new(srvConf)
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
-			proxyOrIfaceK,
-			func(i interface{}) {
-				h.sc.proxyOrIface = boolE(i, fe)
-				if h.sc.proxyOrIface {
-					h.sc.name = "proxy"
-				} else {
-					h.sc.name = "api"
-				}
-			},
-		},
-		{
 			fastOrStdK,
 			func(i interface{}) {
-				h.sc.fastOrStd = boolE(i, fe)
+				sc.fastOrStd = boolE(i, fe)
 			},
 		},
 		{
 			readTimeoutK,
 			func(i interface{}) {
-				h.sc.readTimeout = durationE(i, fe)
+				sc.readTimeout = durationE(i, fe)
 			},
 		},
 		{
 			writeTimeoutK,
 			func(i interface{}) {
-				h.sc.writeTimeout = durationE(i, fe)
+				sc.writeTimeout = durationE(i, fe)
 			},
 		},
 		{
 			addrK,
 			func(i interface{}) {
-				h.sc.addr = stringE(i, fe)
+				sc.addr = stringE(i, fe)
 			},
 		},
 		{
 			certK,
 			func(i interface{}) {
-				h.sc.certFl = stringE(i, fe)
+				sc.certFl = stringE(i, fe)
 			},
 		},
 		{
 			keyK,
 			func(i interface{}) {
-				h.sc.keyFl = stringE(i, fe)
+				sc.keyFl = stringE(i, fe)
 			},
 		},
 		{
 			maxConnIPK,
 			func(i interface{}) {
-				h.sc.maxConnIP = intE(i, fe)
+				sc.maxConnIP = intE(i, fe)
 			},
 		},
 		{
 			maxReqConnK,
 			func(i interface{}) {
-				h.sc.maxReqConn = intE(i, fe)
+				sc.maxReqConn = intE(i, fe)
 			},
 		},
 	}
@@ -367,8 +319,6 @@ func readSrvConf(i interface{}) (h *handlerConf,
 
 func (p *srvConf) toMap() (i interface{}) {
 	i = map[string]interface{}{
-		nameK:         p.name,
-		proxyOrIfaceK: p.proxyOrIface,
 		fastOrStdK:    p.fastOrStd,
 		readTimeoutK:  p.readTimeout.String(),
 		writeTimeoutK: p.writeTimeout.String(),

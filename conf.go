@@ -75,6 +75,9 @@ type conf struct {
 	rls         *rules
 	cm          *connMng
 	cr          *crypt
+
+	proxy *srvConf
+	iface *srvConf
 }
 
 func newConf() (c *conf, e error) {
@@ -85,10 +88,11 @@ func newConf() (c *conf, e error) {
 	// read admins
 	// read logger
 	// get searializers (c.mappers)
-	viper.SetConfigName("pmproxy")
-	viper.SetConfigType("toml")
-	viper.AddConfigPath("$HOME/.config")
-	viper.AddConfigPath("/etc")
+	viper.SetConfigFile(path.Base(configFile))
+	viper.SetConfigType(path.Ext(configFile))
+	viper.AddConfigPath(mainConfigDir)
+	viper.AddConfigPath("$HOME/" + homeConfigDir)
+
 	c = &conf{
 		iu:         &ipUserS{mäp: new(sync.Map)},
 		managerKFs: new(sync.Map),
@@ -97,17 +101,18 @@ func newConf() (c *conf, e error) {
 		mappers:    new(sync.Map),
 		userDBs:    new(sync.Map),
 		ipQuotas:   new(sync.Map),
+		ipGroups:   new(sync.Map),
 	}
 	fs := []func(){
 		func() {
+			c.setDefaults()
 			e = viper.ReadInConfig()
 			if e != nil {
-				c.setDefaults()
-				home := os.Getenv("HOME")
-				e = viper.WriteConfigAs(
-					path.Join(home, ".config/pmproxy.toml"))
+				e = c.genConfig()
 			}
 		},
+		func() { e = c.readProxyConf() },
+		func() { e = c.readIfaceConf() },
 		func() {
 			c.admins = viper.GetStringSlice(adminsK)
 			e = c.initUserDBs()
@@ -125,10 +130,49 @@ func newConf() (c *conf, e error) {
 	return
 }
 
+func (c *conf) genConfig() (e error) {
+	var dir string
+	fs := []func(){
+		func() {
+			dirs := []string{
+				mainConfigDir,
+				path.Join(os.Getenv("HOME"), homeConfigDir),
+			}
+			ib := func(i int) (b bool) {
+				e = os.MkdirAll(dirs[i], os.ModeDir|os.ModePerm)
+				b = e == nil
+				return
+			}
+			ok, n := bLnSrch(ib, len(dirs))
+			if ok {
+				dir = dirs[n]
+			}
+		},
+		func() {
+			e = viper.WriteConfigAs(path.Join(dir, configFile))
+		},
+		func() {
+			key := path.Join(dir, defaultSrvKey)
+			cert := path.Join(dir, defaultSrvCert)
+			viper.SetDefault(ifaceConfK, map[string]interface{}{
+				fastOrStdK:    false,
+				readTimeoutK:  10 * time.Second,
+				writeTimeoutK: 15 * time.Second,
+				addrK:         ":443",
+				certK:         cert,
+				keyK:          key,
+			})
+			e = genCert(defaultHost, key, cert)
+		},
+	}
+	trueFF(fs, func() bool { return e == nil })
+	return
+}
+
 func (c *conf) setDefaults() {
 	// TODO
 	// set default userDB
-	viper.Set(userDBK, []map[string]interface{}{
+	viper.SetDefault(userDBK, []map[string]interface{}{
 		{
 			nameK:    defaultUserDB,
 			adOrMapK: false,
@@ -143,14 +187,14 @@ func (c *conf) setDefaults() {
 		},
 	})
 	// set default matchers
-	viper.Set(sessionIPMK, []map[string]interface{}{
+	viper.SetDefault(sessionIPMK, []map[string]interface{}{
 		{
 			nameK:     defaultSessionIPM,
 			authNameK: defaultUserDB,
 		},
 	})
 	// set default consR
-	viper.Set(dwnConsRK, []map[string]interface{}{
+	viper.SetDefault(dwnConsRK, []map[string]interface{}{
 		{
 			nameK:       defaultDwnConsR,
 			ipQuotaK:    defaultIPQuota,
@@ -159,7 +203,7 @@ func (c *conf) setDefaults() {
 		},
 	})
 	// set default rules
-	viper.Set(rulesK, []map[string]interface{}{
+	viper.SetDefault(rulesK, []map[string]interface{}{
 		{
 			posK: 0,
 			reqK: map[string]interface{}{
@@ -172,8 +216,42 @@ func (c *conf) setDefaults() {
 			},
 		},
 	})
-	viper.Set(adminsK, []string{user0})
+	viper.SetDefault(ipQuotaK, []map[string]interface{}{
+		{
+			nameK: defaultIPQuota,
+			quotaMapK: map[string]string{
+				group0: "600MB",
+			},
+		},
+	})
+	viper.SetDefault(adminsK, []string{user0})
+	viper.SetDefault(proxyConfK, map[string]interface{}{
+		fastOrStdK:    false,
+		readTimeoutK:  30 * time.Second,
+		writeTimeoutK: 40 * time.Second,
+		addrK:         ":8080",
+	})
+	viper.SetDefault(ifaceConfK, map[string]interface{}{
+		fastOrStdK:    false,
+		readTimeoutK:  10 * time.Second,
+		writeTimeoutK: 15 * time.Second,
+		addrK:         ":443",
+		certK:         defaultSrvCert,
+		keyK:          defaultSrvKey,
+	})
 	// …
+}
+
+func (c *conf) readProxyConf() (e error) {
+	i := viper.Get(proxyConfK)
+	c.proxy, e = readSrvConf(i)
+	return
+}
+
+func (c *conf) readIfaceConf() (e error) {
+	i := viper.Get(ifaceConfK)
+	c.iface, e = readSrvConf(i)
+	return
 }
 
 func (c *conf) initUserDBs() (e error) {
@@ -238,7 +316,8 @@ func (c *conf) initIPQuotas() (e error) {
 			c.mappers.Store(ipq.name, ipq.toMap)
 		}
 	}
-	c.sliceMap(ipQuotaK, fm, func() bool { return e == nil })
+	e = c.sliceMap(ipQuotaK, fm,
+		func() bool { return e == nil })
 	return
 }
 

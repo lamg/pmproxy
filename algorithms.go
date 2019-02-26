@@ -122,6 +122,21 @@ type kFunc struct {
 	f func()
 }
 
+func optionalKeys(fe ferr, keys ...string) (fek ferr) {
+	fek = func(e error) {
+		ib := func(i int) (b bool) {
+			b = e != nil && e.Error() == noKey(keys[i]).Error()
+			return
+		}
+		optK, _ := bLnSrch(ib, len(keys))
+		if optK {
+			e = nil
+		}
+		fe(e)
+	}
+	return
+}
+
 func exF(kf []kFunc, cmd string, fe ferr) {
 	ok, _ := bLnSrch(
 		func(i int) (b bool) {
@@ -203,7 +218,7 @@ func stringMapUint64E(i interface{},
 	return
 }
 
-func stringMapString(i interface{},
+func stringMapStringE(i interface{},
 	fe ferr) (m map[string]string) {
 	m, e := cast.ToStringMapStringE(i)
 	fe(e)
