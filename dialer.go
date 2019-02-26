@@ -22,7 +22,7 @@ package pmproxy
 
 import (
 	"context"
-	"github.com/spf13/viper"
+	"github.com/lamg/viper"
 	"net"
 	"time"
 )

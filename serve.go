@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
+	"path"
 )
 
 // Serve starts the control interface and proxy servers,
@@ -35,9 +36,10 @@ func Serve() (e error) {
 		func() { c, e = newConf() },
 		func() { prh, ifh, e = newHnds(c) },
 		func() {
+			cp := c.configPath()
 			fes := []func() error{
-				serveFunc(c.proxy, true, prh),
-				serveFunc(c.iface, false, ifh),
+				serveFunc(c.proxy, cp, true, prh),
+				serveFunc(c.iface, cp, false, ifh),
 			}
 			e = runConcurr(fes)
 		},
@@ -46,8 +48,10 @@ func Serve() (e error) {
 	return
 }
 
-func serveFunc(c *srvConf, proxyOrIface bool,
+func serveFunc(c *srvConf, dir string, proxyOrIface bool,
 	sh *srvHandler) (fe func() error) {
+	cert := path.Join(dir, c.certFl)
+	key := path.Join(dir, c.keyFl)
 	var listenAndServe func() error
 	var listenAndServeTLS func(string, string) error
 	if c.fastOrStd {
@@ -82,7 +86,7 @@ func serveFunc(c *srvConf, proxyOrIface bool,
 		fe = listenAndServe
 	} else {
 		fe = func() error {
-			return listenAndServeTLS(c.certFl, c.keyFl)
+			return listenAndServeTLS(cert, key)
 		}
 	}
 	return

@@ -23,8 +23,8 @@ package pmproxy
 import (
 	"context"
 	"encoding/json"
+	"github.com/lamg/viper"
 	"github.com/spf13/cast"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -154,14 +154,6 @@ func (c *conf) genConfig() (e error) {
 		func() {
 			key := path.Join(dir, defaultSrvKey)
 			cert := path.Join(dir, defaultSrvCert)
-			viper.SetDefault(ifaceConfK, map[string]interface{}{
-				fastOrStdK:    false,
-				readTimeoutK:  10 * time.Second,
-				writeTimeoutK: 15 * time.Second,
-				addrK:         ":443",
-				certK:         cert,
-				keyK:          key,
-			})
 			e = genCert(defaultHost, key, cert)
 		},
 	}
@@ -170,6 +162,7 @@ func (c *conf) genConfig() (e error) {
 }
 
 func (c *conf) setDefaults() {
+	viper.SetKeysCaseSensitive(true)
 	// TODO
 	// set default userDB
 	viper.SetDefault(userDBK, []map[string]interface{}{
@@ -245,12 +238,24 @@ func (c *conf) setDefaults() {
 func (c *conf) readProxyConf() (e error) {
 	i := viper.Get(proxyConfK)
 	c.proxy, e = readSrvConf(i)
+	if e != nil {
+		s := e.Error()
+		if s == noKey(certK).Error() || s == noKey(keyK).Error() {
+			e = nil
+		}
+	}
 	return
 }
 
 func (c *conf) readIfaceConf() (e error) {
 	i := viper.Get(ifaceConfK)
 	c.iface, e = readSrvConf(i)
+	if e != nil {
+		s := e.Error()
+		if s == noKey(maxConnIPK).Error() && !c.iface.fastOrStd {
+			e = nil
+		}
+	}
 	return
 }
 
@@ -536,9 +541,8 @@ func (c *conf) strïng(key string) (s string) {
 	return
 }
 
-func (c *conf) configPath(file string) (fpath string) {
-	cfl := viper.ConfigFileUsed()
-	fpath = path.Join(path.Dir(cfl), file)
+func (c *conf) configPath() (dir string) {
+	dir = path.Dir(viper.ConfigFileUsed())
 	return
 }
 
