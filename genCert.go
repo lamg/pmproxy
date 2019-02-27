@@ -66,7 +66,7 @@ func genCert(host, srvKeyFl, srvCertFl string) (e error) {
 		},
 		func() {
 			// Generate server certificate
-			e = keyToFile(srvCertFl, serverKey)
+			e = keyToFile(srvKeyFl, serverKey)
 		},
 		func() {
 			serialNumber, e = rand.Int(rand.Reader,

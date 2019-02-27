@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 *.go~
 *.org~
 *.out
 .vscode/launch.json
 *.test
-=======
-*.test
-.vscode
-cover.out
->>>>>>> better_design
+*.swp

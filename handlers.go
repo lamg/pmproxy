@@ -40,6 +40,7 @@ type handlerConf struct {
 
 func newHnds(c *conf) (prh, ifh *srvHandler,
 	e error) {
+	prh, ifh = new(srvHandler), new(srvHandler)
 	if c.proxy.fastOrStd {
 		// consumers, matchers determine context values
 		// dialer and proxy process context values
@@ -262,7 +263,17 @@ type srvConf struct {
 
 func readSrvConf(i interface{}) (sc *srvConf, e error) {
 	sc = new(srvConf)
-	fe := func(d error) { e = d }
+	fe := func(d error) {
+		if d != nil {
+			s := d.Error()
+			me := noKey(maxConnIPK).Error()
+			re := noKey(maxReqConnK).Error()
+			if s == me || s == re {
+				d = nil
+			}
+		}
+		e = d
+	}
 	kf := []kFuncI{
 		{
 			fastOrStdK,

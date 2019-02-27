@@ -24,7 +24,7 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 The file hierarchy is the following:
 
 - serve
-  - conf (TODO setDefaults, manage managers, generate self-signed certificates or try to get valid ones from letsencrypt, restructure server configurations)
+  - conf (TODO setDefaults, manage managers, try to get valid ones from letsencrypt, stop overwritting existing configuration)
     - genCert (TODO proper copyright)
     - userInfo
     - dwnConsR

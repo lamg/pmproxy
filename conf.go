@@ -88,11 +88,9 @@ func newConf() (c *conf, e error) {
 	// read admins
 	// read logger
 	// get searializers (c.mappers)
-	viper.SetConfigFile(path.Base(configFile))
-	viper.SetConfigType(path.Ext(configFile))
-	viper.AddConfigPath(mainConfigDir)
-	viper.AddConfigPath("$HOME/" + homeConfigDir)
-
+	viper.SetConfigFile(path.Join(os.Getenv("HOME"),
+		homeConfigDir, configFile))
+	// TODO solve mistery with config paths
 	c = &conf{
 		iu:         &ipUserS{mäp: new(sync.Map)},
 		managerKFs: new(sync.Map),
@@ -108,6 +106,7 @@ func newConf() (c *conf, e error) {
 			c.setDefaults()
 			e = viper.ReadInConfig()
 			if e != nil {
+				println(e.Error())
 				e = c.genConfig()
 			}
 		},
@@ -149,7 +148,9 @@ func (c *conf) genConfig() (e error) {
 			}
 		},
 		func() {
-			e = viper.WriteConfigAs(path.Join(dir, configFile))
+			fl := path.Join(dir, configFile)
+			e = viper.WriteConfigAs(fl)
+			viper.SetConfigFile(fl)
 		},
 		func() {
 			key := path.Join(dir, defaultSrvKey)
@@ -228,7 +229,7 @@ func (c *conf) setDefaults() {
 		fastOrStdK:    false,
 		readTimeoutK:  10 * time.Second,
 		writeTimeoutK: 15 * time.Second,
-		addrK:         ":443",
+		addrK:         ":4443",
 		certK:         defaultSrvCert,
 		keyK:          defaultSrvKey,
 	})
@@ -250,12 +251,6 @@ func (c *conf) readProxyConf() (e error) {
 func (c *conf) readIfaceConf() (e error) {
 	i := viper.Get(ifaceConfK)
 	c.iface, e = readSrvConf(i)
-	if e != nil {
-		s := e.Error()
-		if s == noKey(maxConnIPK).Error() && !c.iface.fastOrStd {
-			e = nil
-		}
-	}
 	return
 }
 
