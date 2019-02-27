@@ -23,16 +23,16 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 
 The file hierarchy is the following:
 
-- serve
-  - conf (TODO setDefaults, manage managers, try to get valid ones from letsencrypt, stop overwritting existing configuration)
+- serve (TODO correct login)
+  - conf (TODO manage managers, try to get valid ones from letsencrypt)
     - genCert (TODO proper copyright)
     - userInfo
     - dwnConsR
-      - ipQuota (TODO use "github.com/c2h5oh/datasize" for human readable data sizes)
+      - ipQuota 
     - sessionIPM
     - groupIPM
     - userDB (TODO, cache)
-    - rules (requestMatcher.fromMap requires optional keys)
+    - rules 
     - connMng
     - dialer (TODO manager interface)
       - logger
