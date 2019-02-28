@@ -21,40 +21,27 @@
 package pmproxy
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha512"
-	"hash"
+	"bytes"
+	"encoding/json"
+	"github.com/stretchr/testify/require"
+	h "net/http"
+	ht "net/http/httptest"
+	"testing"
 )
 
-type crypt struct {
-	key   *rsa.PrivateKey
-	hs    hash.Hash
-	label []byte
-}
-
-func newCrypt() (c *crypt, e error) {
-	c = new(crypt)
-	c.key, e = rsa.GenerateKey(rand.Reader, 2048)
-	if e == nil {
-		c.hs = sha512.New()
-		c.label = []byte("crypto")
-	}
-	return
-}
-
-func (c *crypt) encrypt(s string) (bs []byte, e error) {
-	bs, e = rsa.EncryptOAEP(c.hs, rand.Reader, &c.key.PublicKey,
-		[]byte(s), c.label)
-	return
-}
-
-func (c *crypt) decrypt(s string) (r string, e error) {
-	var bs []byte
-	bs, e = rsa.DecryptOAEP(c.hs, rand.Reader, c.key, []byte(s),
-		c.label)
-	if e == nil {
-		r = string(bs)
-	}
-	return
+func TestLogin(t *testing.T) {
+	c, e := newConf()
+	require.NoError(t, e)
+	_, ifh, e := newHnds(c)
+	require.NoError(t, e)
+	loginReq := &credentials{User: user0, Pass: pass0}
+	bs, e := json.Marshal(loginReq)
+	require.NoError(t, e)
+	w, r := ht.NewRecorder(),
+		ht.NewRequest(h.MethodPost, apiAuth, bytes.NewBuffer(bs))
+	ifh.serveHTTP(w, r)
+	require.Equal(t, h.StatusOK, w.Code)
+	secr := w.Body.String()
+	require.NotEmpty(t, secr)
+	t.Log(secr)
 }

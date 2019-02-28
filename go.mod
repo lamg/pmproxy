@@ -13,7 +13,7 @@ require (
 	github.com/lamg/viper v1.3.2
 	github.com/spf13/cast v1.3.0
 	github.com/stretchr/objx v0.1.1 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/stretchr/testify v1.3.0
 	github.com/urfave/cli v1.20.0
 	github.com/valyala/fasthttp v1.1.0
 	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd // indirect

@@ -23,7 +23,7 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 
 The file hierarchy is the following:
 
-- serve (TODO correct login)
+- serve
   - conf (TODO manage managers, try to get valid ones from letsencrypt)
     - genCert (TODO proper copyright)
     - userInfo
@@ -40,4 +40,7 @@ The file hierarchy is the following:
       - spec
   - handlers
     
-      
+### Tests
+
+- TestLogin: getting encrypted information with unexpected shape
+

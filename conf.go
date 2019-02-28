@@ -106,7 +106,6 @@ func newConf() (c *conf, e error) {
 			c.setDefaults()
 			e = viper.ReadInConfig()
 			if e != nil {
-				println(e.Error())
 				e = c.genConfig()
 			}
 		},
@@ -164,6 +163,7 @@ func (c *conf) genConfig() (e error) {
 
 func (c *conf) setDefaults() {
 	viper.SetKeysCaseSensitive(true)
+	viper.SetDefault(compatible02K, true)
 	// TODO
 	// set default userDB
 	viper.SetDefault(userDBK, []map[string]interface{}{
@@ -279,13 +279,16 @@ func (c *conf) initSessionIPMs() (e error) {
 		e = sm.fromMap(i)
 		if e == nil {
 			sm.nameAuth = c.authenticator
-			c.managerKFs.Store(sm.name, sm.managerKF)
+			c.managerKFs.Store(sm.name, managerKF(sm.managerKF))
 			c.matchers.Store(sm.name, sm.match)
 			c.mappers.Store(sm.name, sm.toMap)
 		}
 	}
-	e = c.sliceMap(sessionIPMK, fm,
-		func() bool { return e == nil })
+	c.cr, e = newCrypt()
+	if e == nil {
+		e = c.sliceMap(sessionIPMK, fm,
+			func() bool { return e == nil })
+	}
 	return
 }
 
@@ -479,20 +482,18 @@ func (c *conf) initConnMng() (e error) {
 }
 
 func (c *conf) manager(m *cmd) {
-	musr, ok := c.iu.get(m.RemoteAddr)
+	musr, _ := c.iu.get(m.RemoteAddr)
 	m.IsAdmin, _ = bLnSrch(
 		func(i int) bool {
 			return c.admins[i] == musr
 		},
 		len(c.admins),
 	)
-	var v interface{}
-	if ok {
-		v, ok = c.managerKFs.Load(m.Manager)
-	}
+	v, ok := c.managerKFs.Load(m.Manager)
 	var kf []kFunc
 	if ok {
-		kf = v.(managerKF)(m)
+		mkf := v.(managerKF)
+		kf = mkf(m)
 		kf = append(kf,
 			kFunc{skip, func() {}},
 			kFunc{
