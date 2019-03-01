@@ -83,6 +83,7 @@ func login(urls, user, pass string) (e error) {
 			r.Body.Close()
 		},
 		func() {
+			println(r.StatusCode)
 			if r.StatusCode == h.StatusOK {
 				e = ioutil.WriteFile("login.secret", bs, 0644)
 			} else {

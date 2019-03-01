@@ -74,6 +74,12 @@ func (m *sessionIPM) managerKF(c *cmd) (kf []kFunc) {
 				}
 			},
 		},
+		{
+			renew,
+			func() {
+				c.bs, c.e = m.renew(c.Secret, c.RemoteAddr)
+			},
+		},
 	}
 	return
 }
@@ -93,10 +99,6 @@ func (m *sessionIPM) toMap() (i interface{}) {
 
 func (m *sessionIPM) open(c *credentials,
 	ip string) (bs []byte, e error) {
-	// TODO investigate JWT convention
-	// a map of user - opened session date, and a token
-	// with user and opened session date should be sufficient
-	// for checking the authenticity of a request
 	var a auth
 	var user string
 	fs := []func(){
@@ -111,7 +113,9 @@ func (m *sessionIPM) open(c *credentials,
 			user, e = a(c.User, c.Pass)
 		},
 		func() {
-			bs, e = m.cr.encrypt(user)
+			var s string
+			s, e = m.cr.encrypt(user)
+			bs = []byte(s)
 		},
 		func() {
 			var oldIP string
@@ -143,12 +147,36 @@ func (m *sessionIPM) close(secret, ip string) (bs []byte,
 
 func (m *sessionIPM) get(secret, ip string) (bs []byte,
 	e error) {
-	mp := map[string]string{}
-	m.iu.mäp.Range(func(k, v interface{}) (cont bool) {
-		mp[k.(string)] = v.(string)
-		cont = true
-		return
-	})
-	bs, e = json.Marshal(mp)
+	_, e = m.check(secret, ip)
+	if e == nil {
+		mp := map[string]string{}
+		m.iu.mäp.Range(func(k, v interface{}) (cont bool) {
+			mp[k.(string)] = v.(string)
+			cont = true
+			return
+		})
+		bs, e = json.Marshal(mp)
+	}
+	return
+}
+
+func (m *sessionIPM) renew(secret, ip string) (bs []byte, e error) {
+	user, e := m.check(secret, ip)
+	if e == nil {
+		var s string
+		s, e = m.cr.encrypt(user)
+		bs = []byte(s)
+	}
+	return
+}
+
+func (m *sessionIPM) check(secret, ip string) (user string, e error) {
+	tkUser, e := m.cr.decrypt(secret)
+	user, ok := m.iu.get(ip)
+	if e == nil {
+		if !(ok && tkUser == user) {
+			e = userNotLoggedAt(tkUser, ip)
+		}
+	}
 	return
 }

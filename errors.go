@@ -34,6 +34,16 @@ func noUserLogged(ip string) (e error) {
 	return
 }
 
+func userNotLoggedAt(user, ip string) (e error) {
+	e = fmt.Errorf("User %s not logged at %s", user, ip)
+	return
+}
+
+func invalidClaims() (e error) {
+	e = fmt.Errorf("Invalid token")
+	return
+}
+
 func cannotConsume(raddr string) (e error) {
 	e = fmt.Errorf("Cannot consume %s", raddr)
 	return

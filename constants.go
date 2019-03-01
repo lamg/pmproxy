@@ -81,6 +81,7 @@ const (
 	apiUserStatus = "/api/userStatus"
 	apiCheckUser  = "/api/checkUser"
 	apiUserInfo   = "/api/userInfo"
+	apiCmd        = "/api/cmd"
 
 	defaultUserInfo   = "defaultUserInfo"
 	defaultSessionIPM = "sessions"
@@ -98,6 +99,7 @@ const (
 // sessionIPM.go, dwnConsR.go and other managerKFs
 const (
 	open      = "open"
+	renew     = "renew"
 	get       = "get"
 	set       = "set"
 	del       = "del"

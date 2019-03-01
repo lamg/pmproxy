@@ -23,38 +23,52 @@ package pmproxy
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha512"
-	"hash"
+	"github.com/dgrijalva/jwt-go"
+	"time"
 )
 
 type crypt struct {
-	key   *rsa.PrivateKey
-	hs    hash.Hash
-	label []byte
+	key *rsa.PrivateKey
 }
 
 func newCrypt() (c *crypt, e error) {
 	c = new(crypt)
-	c.key, e = rsa.GenerateKey(rand.Reader, 2048)
-	if e == nil {
-		c.hs = sha512.New()
-		c.label = []byte("crypto")
-	}
+	c.key, e = rsa.GenerateKey(rand.Reader, 1024)
 	return
 }
 
-func (c *crypt) encrypt(s string) (bs []byte, e error) {
-	bs, e = rsa.EncryptOAEP(c.hs, rand.Reader, &c.key.PublicKey,
-		[]byte(s), c.label)
+type userClaim struct {
+	User string `json: "user"`
+	jwt.StandardClaims
+}
+
+func (c *crypt) encrypt(user string) (s string, e error) {
+	expt := time.Now().Add(5 * time.Minute)
+	uc := &userClaim{
+		User: user,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expt.Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
+	s, e = token.SignedString(c.key)
 	return
 }
 
 func (c *crypt) decrypt(s string) (r string, e error) {
-	var bs []byte
-	bs, e = rsa.DecryptOAEP(c.hs, rand.Reader, c.key, []byte(s),
-		c.label)
+	token, e := jwt.ParseWithClaims(s, new(userClaim),
+		func(t *jwt.Token) (i interface{}, e error) {
+			i = &c.key.PublicKey
+			return
+		},
+	)
 	if e == nil {
-		r = string(bs)
+		ucl, ok := token.Claims.(*userClaim)
+		if ok {
+			r = ucl.User
+		} else {
+			e = invalidClaims()
+		}
 	}
 	return
 }

@@ -127,7 +127,7 @@ func stdIface(cf *conf) (hnd h.HandlerFunc) {
 func compatibleIface(cf *conf, path, method, header,
 	rAddr string, body func() ([]byte, error),
 	resp func([]byte), fileSrv, writeErr func(string)) {
-	var m *cmd
+	m := new(cmd)
 	var e error
 	var bs []byte
 	fs := []func(){
@@ -135,16 +135,14 @@ func compatibleIface(cf *conf, path, method, header,
 			bs, e = body()
 		},
 		func() {
-			m, e = compatibleCmd(cf, path, method, bs, fileSrv)
-		},
-		func() {
-			if !m.comp02 {
+			if path == apiCmd {
 				e = json.Unmarshal(bs, m)
 			} else {
-				m.Secret = header
+				m, e = compatibleCmd(cf, path, method, bs, fileSrv)
 			}
 		},
 		func() {
+			m.Secret = header
 			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
 		},
 		func() { cf.manager(m); e = m.e },
@@ -163,7 +161,7 @@ func compatibleCmd(cf *conf, pth, meth string,
 	body []byte, fileSrv func(string)) (c *cmd,
 	e error) {
 	c = &cmd{
-		comp02: cf.böol(compatible02K),
+		comp02: true,
 	}
 
 	kf := []kFunc{

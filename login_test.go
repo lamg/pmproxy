@@ -29,19 +29,78 @@ import (
 	"testing"
 )
 
+type testReq struct {
+	obj    interface{}
+	rAddr  string
+	meth   string
+	path   string
+	code   int
+	bodyOK func([]byte)
+}
+
 func TestLogin(t *testing.T) {
 	c, e := newConf()
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
-	loginReq := &credentials{User: user0, Pass: pass0}
-	bs, e := json.Marshal(loginReq)
-	require.NoError(t, e)
-	w, r := ht.NewRecorder(),
-		ht.NewRequest(h.MethodPost, apiAuth, bytes.NewBuffer(bs))
-	ifh.serveHTTP(w, r)
-	require.Equal(t, h.StatusOK, w.Code)
-	secr := w.Body.String()
-	require.NotEmpty(t, secr)
-	t.Log(secr)
+	loginIP := "192.168.1.1"
+	loginAddr := loginIP + ":1982"
+	mapHasUser0 := func(bs []byte) (ok bool) {
+		var ui map[string]string
+		e := json.Unmarshal(bs, &ui)
+		ok = e == nil
+		if ok {
+			u, oku := ui[loginIP]
+			ok = oku && u == user0
+		}
+		return
+	}
+	u0Cmd := testReq{
+		obj:    &cmd{Manager: defaultSessionIPM, Cmd: get},
+		meth:   h.MethodPost,
+		rAddr:  loginAddr,
+		path:   apiCmd,
+		code:   h.StatusOK,
+		bodyOK: func(bs []byte) { require.True(t, mapHasUser0(bs)) },
+	}
+	noU0Cmd := u0Cmd
+	noU0Cmd.bodyOK = func(bs []byte) {
+		require.False(t, mapHasUser0(bs))
+	}
+	var secr string
+	ts := []testReq{
+		{
+			obj:   &credentials{User: user0, Pass: pass0},
+			meth:  h.MethodPost,
+			rAddr: loginAddr,
+			path:  apiAuth,
+			code:  h.StatusOK,
+			bodyOK: func(bs []byte) {
+				require.NotEqual(t, 0, len(bs))
+				secr = string(bs)
+			},
+		},
+		u0Cmd,
+		{
+			obj:    "",
+			meth:   h.MethodDelete,
+			rAddr:  loginAddr,
+			path:   apiAuth,
+			code:   h.StatusOK,
+			bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
+		},
+		noU0Cmd,
+	}
+	inf := func(i int) {
+		bs, e := json.Marshal(ts[i].obj)
+		require.NoError(t, e)
+		w, r := ht.NewRecorder(),
+			ht.NewRequest(ts[i].meth, ts[i].path, bytes.NewBuffer(bs))
+		r.Header.Set(authHd, secr)
+		r.RemoteAddr = loginAddr
+		ifh.serveHTTP(w, r)
+		require.Equal(t, ts[i].code, w.Code, "At %d", i)
+		ts[i].bodyOK(w.Body.Bytes())
+	}
+	forall(inf, len(ts))
 }
