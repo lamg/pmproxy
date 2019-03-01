@@ -42,5 +42,5 @@ The file hierarchy is the following:
     
 ### Tests
 
-- TestLogin: getting encrypted information with unexpected shape
+- TestLogin
 
