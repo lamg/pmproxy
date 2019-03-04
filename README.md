@@ -42,5 +42,6 @@ The file hierarchy is the following:
     
 ### Tests
 
+- Provide default configuration instead of reading from disk
 - TestLogin
 

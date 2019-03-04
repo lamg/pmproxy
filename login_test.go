@@ -39,7 +39,7 @@ type testReq struct {
 }
 
 func TestLogin(t *testing.T) {
-	c, e := newConf()
+	c, e := newConfWith(func() (e error) { return })
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
@@ -69,17 +69,7 @@ func TestLogin(t *testing.T) {
 	}
 	var secr string
 	ts := []testReq{
-		{
-			obj:   &credentials{User: user0, Pass: pass0},
-			meth:  h.MethodPost,
-			rAddr: loginAddr,
-			path:  apiAuth,
-			code:  h.StatusOK,
-			bodyOK: func(bs []byte) {
-				require.NotEqual(t, 0, len(bs))
-				secr = string(bs)
-			},
-		},
+		loginTR(t, func(s string) { secr = s }, loginAddr),
 		u0Cmd,
 		{
 			obj:    "",
@@ -91,15 +81,37 @@ func TestLogin(t *testing.T) {
 		},
 		noU0Cmd,
 	}
+	runReqTests(t, ts, ifh.serveHTTP, func() string { return secr })
+}
+
+func loginTR(t *testing.T, body func(string),
+	rAddr string) (r testReq) {
+	r = testReq{
+		obj:   &credentials{User: user0, Pass: pass0},
+		meth:  h.MethodPost,
+		rAddr: rAddr,
+		path:  apiAuth,
+		code:  h.StatusOK,
+		bodyOK: func(bs []byte) {
+			require.NotEqual(t, 0, len(bs))
+			body(string(bs))
+		},
+	}
+	return
+}
+
+func runReqTests(t *testing.T, ts []testReq, hf h.HandlerFunc,
+	secr func() string) {
 	inf := func(i int) {
 		bs, e := json.Marshal(ts[i].obj)
 		require.NoError(t, e)
 		w, r := ht.NewRecorder(),
 			ht.NewRequest(ts[i].meth, ts[i].path, bytes.NewBuffer(bs))
-		r.Header.Set(authHd, secr)
-		r.RemoteAddr = loginAddr
-		ifh.serveHTTP(w, r)
-		require.Equal(t, ts[i].code, w.Code, "At %d", i)
+		r.Header.Set(authHd, secr())
+		r.RemoteAddr = ts[i].rAddr
+		hf(w, r)
+		require.Equal(t, ts[i].code, w.Code, "At %d: %s", i,
+			w.Body.String())
 		ts[i].bodyOK(w.Body.Bytes())
 	}
 	forall(inf, len(ts))

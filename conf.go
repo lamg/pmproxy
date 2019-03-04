@@ -33,8 +33,8 @@ import (
 	"time"
 )
 
-type manager func(*cmd)
-type managerKF func(*cmd) []kFunc
+//type manager func(*cmd)
+//type managerKF func(*cmd) []kFunc
 
 type cmd struct {
 	Cmd        string                 `json: "cmd"`
@@ -81,6 +81,11 @@ type conf struct {
 }
 
 func newConf() (c *conf, e error) {
+	c, e = newConfWith(viperWithDisk)
+	return
+}
+
+func newConfWith(fileInit func() error) (c *conf, e error) {
 	// read ip matchers
 	// read user information provider
 	// read consumption restrictors
@@ -88,9 +93,6 @@ func newConf() (c *conf, e error) {
 	// read admins
 	// read logger
 	// get searializers (c.mappers)
-	viper.SetConfigFile(path.Join(os.Getenv("HOME"),
-		homeConfigDir, configFile))
-	// TODO solve mistery with config paths
 	c = &conf{
 		iu:         &ipUserS{mäp: new(sync.Map)},
 		managerKFs: new(sync.Map),
@@ -104,10 +106,7 @@ func newConf() (c *conf, e error) {
 	fs := []func(){
 		func() {
 			c.setDefaults()
-			e = viper.ReadInConfig()
-			if e != nil {
-				e = c.genConfig()
-			}
+			e = fileInit()
 		},
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
@@ -119,7 +118,7 @@ func newConf() (c *conf, e error) {
 		func() { e = c.initIPQuotas() },
 		func() { e = c.initDwnConsRs() },
 		func() { e = c.initUserInfos() },
-		func() { e = c.initGroupIPMs() },
+		func() { c.initGroupIPMs() },
 		func() { e = c.initLogger() },
 		func() { e = c.initRules() },
 		func() { e = c.initConnMng() },
@@ -128,7 +127,17 @@ func newConf() (c *conf, e error) {
 	return
 }
 
-func (c *conf) genConfig() (e error) {
+func viperWithDisk() (e error) {
+	viper.SetConfigFile(path.Join(os.Getenv("HOME"),
+		homeConfigDir, configFile))
+	e = viper.ReadInConfig()
+	if e != nil {
+		e = genConfig()
+	}
+	return
+}
+
+func genConfig() (e error) {
 	var dir string
 	fs := []func(){
 		func() {
@@ -191,8 +200,8 @@ func (c *conf) setDefaults() {
 	viper.SetDefault(dwnConsRK, []map[string]interface{}{
 		{
 			nameK:       defaultDwnConsR,
-			ipQuotaK:    defaultIPQuota,
-			lastResetK:  time.Now(),
+			ipQuotaK:    defaultUserDB,
+			lastResetK:  time.Now().Format(time.RFC3339),
 			resetCycleK: time.Duration(24 * time.Hour).String(),
 		},
 	})
@@ -210,11 +219,13 @@ func (c *conf) setDefaults() {
 			},
 		},
 	})
+	// for each userDB a correspondent ipQuota exists with the
+	// same name
 	viper.SetDefault(ipQuotaK, []map[string]interface{}{
 		{
-			nameK: defaultIPQuota,
+			nameK: defaultUserDB,
 			quotaMapK: map[string]string{
-				group0: "600MB",
+				group0: defaultQuota,
 			},
 		},
 	})
@@ -265,7 +276,8 @@ func (c *conf) initUserDBs() (e error) {
 			c.userDBs.Store(udb.name, udb)
 		}
 	}
-	c.sliceMap(userDBK, fm, func() bool { return e == nil })
+	c.sliceMap(userDBK, fm, func(d error) { e = d },
+		func() bool { return e == nil })
 	return
 }
 
@@ -279,14 +291,14 @@ func (c *conf) initSessionIPMs() (e error) {
 		e = sm.fromMap(i)
 		if e == nil {
 			sm.nameAuth = c.authenticator
-			c.managerKFs.Store(sm.name, managerKF(sm.managerKF))
+			c.managerKFs.Store(sm.name, sm.managerKF)
 			c.matchers.Store(sm.name, sm.match)
 			c.mappers.Store(sm.name, sm.toMap)
 		}
 	}
 	c.cr, e = newCrypt()
 	if e == nil {
-		e = c.sliceMap(sessionIPMK, fm,
+		c.sliceMap(sessionIPMK, fm, func(d error) { e = d },
 			func() bool { return e == nil })
 	}
 	return
@@ -315,49 +327,58 @@ func (c *conf) initIPQuotas() (e error) {
 			c.ipGroups.Store(ipg.userGroupN, ipg)
 			ipq.ipg = ipg.get
 			c.managerKFs.Store(ipq.name, ipq.managerKF)
-			c.ipQuotas.Store(ipq.name, ipq.get)
+			c.ipQuotas.Store(ipq.name, ipQuota(ipq.get))
 			c.mappers.Store(ipq.name, ipq.toMap)
 		}
 	}
-	e = c.sliceMap(ipQuotaK, fm,
+	c.sliceMap(ipQuotaK, fm, func(d error) { e = d },
 		func() bool { return e == nil })
 	return
 }
 
 func (c *conf) initDwnConsRs() (e error) {
 	// c.initIPQuotas() /\ def.(maps in c)
+	homeData := path.Join(os.Getenv("HOME"), dataDir)
 	fm := func(i interface{}) {
-		dw := new(dwnConsR)
+		dw := &dwnConsR{
+			iu: c.iu.get,
+			fileReader: func(file string) (bs []byte, d error) {
+				bs, d = ioutil.ReadFile(path.Join(homeData, file))
+				return
+			},
+		}
 		e = dw.fromMap(i)
 		if e == nil {
 			v, ok := c.ipQuotas.Load(dw.ipQuotaN)
 			if ok {
-				dw.ipq = v.(*ipQuotaS).get
+				dw.ipq = v.(ipQuota)
+			} else {
+				e = noKey(dw.ipQuotaN)
 			}
+		}
+		if e == nil {
 			dw.mapWriter = func(mp map[string]uint64) {
-				var ppath string
 				var bs []byte
-				var e error
+				var d error
 				fs := []func(){
-					func() { ppath = c.strïng(persistPathK) },
-					func() { bs, e = json.Marshal(mp) },
+					func() { bs, d = json.Marshal(mp) },
 					func() {
 						ioutil.WriteFile(
-							path.Join(ppath, dw.name+".json"),
+							path.Join(homeData, dw.name+".json"),
 							bs,
-							os.ModePerm,
+							0644,
 						)
 					},
 				}
 				trueFF(fs,
-					func() bool { return ppath != "" && e == nil })
+					func() bool { return d == nil })
 			}
 			c.managerKFs.Store(dw.name, dw.managerKF)
 			c.consRs.Store(dw.name, dw.consR())
 			c.mappers.Store(dw.name, dw.toMap)
 		}
 	}
-	e = c.sliceMap(dwnConsRK, fm,
+	c.sliceMap(dwnConsRK, fm, func(d error) { e = d },
 		func() bool { return e == nil })
 	return
 }
@@ -421,7 +442,7 @@ func (c *conf) initGroupIPMs() (e error) {
 			}
 		}
 	}
-	c.sliceMap(groupIPMK, fm,
+	c.sliceMap(groupIPMK, fm, func(d error) { e = d },
 		func() bool { return e == nil })
 	return
 }
@@ -492,7 +513,7 @@ func (c *conf) manager(m *cmd) {
 	v, ok := c.managerKFs.Load(m.Manager)
 	var kf []kFunc
 	if ok {
-		mkf := v.(managerKF)
+		mkf := v.(func(*cmd) []kFunc)
 		kf = mkf(m)
 		kf = append(kf,
 			kFunc{skip, func() {}},
@@ -523,7 +544,12 @@ func (c *conf) get(key string) (v interface{}) {
 
 func (c *conf) sliceE(key string) (sl []interface{},
 	e error) {
-	sl, e = cast.ToSliceE(c.get(key))
+	v := c.get(key)
+	if v != nil {
+		sl, e = cast.ToSliceE(v)
+	} else {
+		e = noKey(key)
+	}
 	return
 }
 
@@ -543,7 +569,7 @@ func (c *conf) configPath() (dir string) {
 }
 
 func (c *conf) sliceMap(key string, fm func(interface{}),
-	bf func() bool) (e error) {
+	fe func(error), bf func() bool) {
 	vs, e := c.sliceE(key)
 	if e == nil {
 		inf := func(i int) (b bool) {
@@ -552,6 +578,8 @@ func (c *conf) sliceMap(key string, fm func(interface{}),
 			return
 		}
 		trueForall(inf, len(vs))
+	} else {
+		fe(e)
 	}
 	return
 }

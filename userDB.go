@@ -140,6 +140,8 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 		}
 		d.grp = func(user string) (gs []string, e error) {
 			gs, ok := gm[user]
+			print("userDB.ok: ")
+			println(ok)
 			if !ok {
 				e = noKey(user)
 			}

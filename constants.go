@@ -50,9 +50,11 @@ const (
 	pass0          = "pass0"
 	group0         = "group0"
 	defaultIPQuota = "quotas"
+	defaultQuota   = "600MB"
 	defaultIface   = "eth0"
 	mainConfigDir  = "/etc/pmproxy"
 	homeConfigDir  = ".config/pmproxy"
+	dataDir        = ".local/pmproxy"
 	configFile     = "conf.toml"
 	addrK          = "addr"
 	certK          = "cert"
@@ -92,7 +94,7 @@ const (
 	loginPref      = "/login"
 	loginPrefSlash = "/login/"
 
-	compatible02K    = "compatible0.2"
+	compatible02K    = "compatible02"
 	staticFilesPathK = "staticFilesPath"
 )
 
@@ -109,6 +111,7 @@ const (
 	check     = "check"
 	add       = "add"
 	authNameK = "authName"
+	userConsK = "userCons"
 )
 
 const (

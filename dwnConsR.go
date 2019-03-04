@@ -21,6 +21,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -35,10 +36,11 @@ type dwnConsR struct {
 	lastReset  time.Time
 	resetCycle time.Duration
 	mapWriter  func(map[string]uint64)
+	fileReader func(string) ([]byte, error)
 }
 
 func (d *dwnConsR) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
+	fe := func(err error) { e = err }
 	kf := []kFuncI{
 		{
 			nameK,
@@ -62,6 +64,25 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 			resetCycleK,
 			func(i interface{}) {
 				d.resetCycle = durationE(i, fe)
+			},
+		},
+		{
+			resetCycleK,
+			func(i interface{}) {
+				d.userCons = new(sync.Map)
+				var mp map[string]uint64
+				var ne error
+				var bs []byte
+				fs := []func(){
+					func() { bs, ne = d.fileReader(d.name + ".json") },
+					func() { ne = json.Unmarshal(bs, &mp) },
+					func() {
+						for k, v := range mp {
+							d.userCons.Store(k, v)
+						}
+					},
+				}
+				trueFF(fs, func() bool { return ne == nil })
 			},
 		},
 	}
@@ -88,6 +109,25 @@ func (d *dwnConsR) toMap() (i interface{}) {
 
 func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 	// TODO
+	kf = []kFunc{
+		{
+			get,
+			func() {
+				qc := &qtCs{
+					Quota: d.ipq(c.RemoteAddr),
+				}
+				user, ok := d.iu(c.RemoteAddr)
+				var v interface{}
+				if ok {
+					v, ok = d.userCons.Load(user)
+				}
+				if ok {
+					qc.Cons = v.(uint64)
+				}
+				c.bs, c.e = json.Marshal(qc)
+			},
+		},
+	}
 	return
 }
 

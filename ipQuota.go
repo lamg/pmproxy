@@ -96,13 +96,14 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 			quotaMapK,
 			func(i interface{}) {
 				p.groupQuotaM = new(sync.Map)
+				p.quotaCache = new(sync.Map)
 				for k, v := range m {
 					bts := new(datasize.ByteSize)
 					e = bts.UnmarshalText([]byte(v))
 					if e != nil {
 						break
 					}
-					p.groupQuotaM.Store(k, bts.Bytes)
+					p.groupQuotaM.Store(k, bts.Bytes())
 				}
 			},
 		},
