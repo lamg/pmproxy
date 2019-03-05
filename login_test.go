@@ -23,6 +23,7 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/lamg/viper"
 	"github.com/stretchr/testify/require"
 	h "net/http"
 	ht "net/http/httptest"
@@ -39,7 +40,7 @@ type testReq struct {
 }
 
 func TestLogin(t *testing.T) {
-	c, e := newConfWith(func() (e error) { return })
+	c, e := newConfWith(initDefaultSessionIPM)
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
@@ -87,10 +88,14 @@ func TestLogin(t *testing.T) {
 func loginTR(t *testing.T, body func(string),
 	rAddr string) (r testReq) {
 	r = testReq{
-		obj:   &credentials{User: user0, Pass: pass0},
+		obj: &cmd{
+			Cmd:     open,
+			Manager: defaultSessionIPM,
+			Cred:    &credentials{User: user0, Pass: pass0},
+		},
 		meth:  h.MethodPost,
 		rAddr: rAddr,
-		path:  apiAuth,
+		path:  apiCmd,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
 			require.NotEqual(t, 0, len(bs))
@@ -115,4 +120,29 @@ func runReqTests(t *testing.T, ts []testReq, hf h.HandlerFunc,
 		ts[i].bodyOK(w.Body.Bytes())
 	}
 	forall(inf, len(ts))
+}
+
+func initDefaultSessionIPM() (e error) {
+	viper.SetDefault(userDBK, []map[string]interface{}{
+		{
+			nameK:    defaultUserDB,
+			adOrMapK: false,
+			paramsK: map[string]interface{}{
+				userPassK: map[string]interface{}{
+					user0: pass0,
+				},
+				userGroupsK: map[string][]string{
+					user0: {group0},
+				},
+			},
+		},
+	})
+	viper.SetDefault(adminsK, []string{user0})
+	viper.SetDefault(sessionIPMK, []map[string]interface{}{
+		{
+			nameK:     defaultSessionIPM,
+			authNameK: defaultUserDB,
+		},
+	})
+	return
 }

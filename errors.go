@@ -29,6 +29,16 @@ func noKey(k string) (e error) {
 	return
 }
 
+func ignoreNoKey(key string, f func(error)) (r func(error)) {
+	r = func(e error) {
+		if e != nil && e.Error() == noKey(key).Error() {
+			e = nil
+		}
+		f(e)
+	}
+	return
+}
+
 func noUserLogged(ip string) (e error) {
 	e = fmt.Errorf("No user logged at %s", ip)
 	return

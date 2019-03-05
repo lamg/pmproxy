@@ -47,7 +47,7 @@ func (u *userInfo) managerKF(c *cmd) (kf []kFunc) {
 				inf := &cmdInfo{
 					UserName:   user,
 					IsAdmin:    u.isAdm(user),
-					QuotaGroup: u.quota(user),
+					QuotaGroup: u.quota(c.RemoteAddr),
 				}
 				fs := []func(){
 					func() { inf.Name, c.e = u.userName(user) },

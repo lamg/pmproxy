@@ -107,24 +107,45 @@ func (d *dwnConsR) toMap() (i interface{}) {
 	return
 }
 
+type qtCs struct {
+	Quota       uint64 `json: "quota"`
+	Consumption uint64 `json: "consumption"`
+}
+
 func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
-	// TODO
 	kf = []kFunc{
 		{
 			get,
 			func() {
-				qc := &qtCs{
-					Quota: d.ipq(c.RemoteAddr),
+				if c.String != "" && c.IsAdmin {
+					v, ok := d.userCons.Load(c.String)
+					var n uint64
+					if ok {
+						n = v.(uint64)
+					}
+					c.bs, c.e = json.Marshal(n)
+				} else {
+					qc := &qtCs{
+						Quota: d.ipq(c.RemoteAddr),
+					}
+					user, ok := d.iu(c.RemoteAddr)
+					var v interface{}
+					if ok {
+						v, ok = d.userCons.Load(user)
+					}
+					if ok {
+						qc.Consumption = v.(uint64)
+					}
+					c.bs, c.e = json.Marshal(qc)
 				}
-				user, ok := d.iu(c.RemoteAddr)
-				var v interface{}
-				if ok {
-					v, ok = d.userCons.Load(user)
+			},
+		},
+		{
+			set,
+			func() {
+				if c.IsAdmin {
+					d.userCons.Store(c.String, c.Uint64)
 				}
-				if ok {
-					qc.Cons = v.(uint64)
-				}
-				c.bs, c.e = json.Marshal(qc)
 			},
 		},
 	}

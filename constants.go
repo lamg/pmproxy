@@ -20,6 +20,10 @@
 
 package pmproxy
 
+import (
+	"os"
+)
+
 // connMng.go
 const (
 	proxyTr  = "proxyTransport"
@@ -153,3 +157,12 @@ const (
 	userGroupsK = "groups"
 	paramsK     = "params"
 )
+
+const (
+	userGroupNK = "userGroupN"
+)
+
+func home() (s string) {
+	s = os.Getenv("HOME")
+	return
+}

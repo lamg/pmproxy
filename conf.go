@@ -33,9 +33,6 @@ import (
 	"time"
 )
 
-//type manager func(*cmd)
-//type managerKF func(*cmd) []kFunc
-
 type cmd struct {
 	Cmd        string                 `json: "cmd"`
 	Prop       string                 `json: "prop"`
@@ -118,7 +115,7 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 		func() { e = c.initIPQuotas() },
 		func() { e = c.initDwnConsRs() },
 		func() { e = c.initUserInfos() },
-		func() { c.initGroupIPMs() },
+		func() { e = c.initGroupIPMs() },
 		func() { e = c.initLogger() },
 		func() { e = c.initRules() },
 		func() { e = c.initConnMng() },
@@ -128,7 +125,7 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 }
 
 func viperWithDisk() (e error) {
-	viper.SetConfigFile(path.Join(os.Getenv("HOME"),
+	viper.SetConfigFile(path.Join(home(),
 		homeConfigDir, configFile))
 	e = viper.ReadInConfig()
 	if e != nil {
@@ -143,7 +140,7 @@ func genConfig() (e error) {
 		func() {
 			dirs := []string{
 				mainConfigDir,
-				path.Join(os.Getenv("HOME"), homeConfigDir),
+				path.Join(home(), homeConfigDir),
 			}
 			ib := func(i int) (b bool) {
 				e = os.MkdirAll(dirs[i], os.ModeDir|os.ModePerm)
@@ -173,63 +170,6 @@ func genConfig() (e error) {
 func (c *conf) setDefaults() {
 	viper.SetKeysCaseSensitive(true)
 	viper.SetDefault(compatible02K, true)
-	// TODO
-	// set default userDB
-	viper.SetDefault(userDBK, []map[string]interface{}{
-		{
-			nameK:    defaultUserDB,
-			adOrMapK: false,
-			paramsK: map[string]interface{}{
-				userPassK: map[string]interface{}{
-					user0: pass0,
-				},
-				userGroupsK: map[string][]string{
-					user0: {group0},
-				},
-			},
-		},
-	})
-	// set default matchers
-	viper.SetDefault(sessionIPMK, []map[string]interface{}{
-		{
-			nameK:     defaultSessionIPM,
-			authNameK: defaultUserDB,
-		},
-	})
-	// set default consR
-	viper.SetDefault(dwnConsRK, []map[string]interface{}{
-		{
-			nameK:       defaultDwnConsR,
-			ipQuotaK:    defaultUserDB,
-			lastResetK:  time.Now().Format(time.RFC3339),
-			resetCycleK: time.Duration(24 * time.Hour).String(),
-		},
-	})
-	// set default rules
-	viper.SetDefault(rulesK, []map[string]interface{}{
-		{
-			posK: 0,
-			reqK: map[string]interface{}{
-				unitK: true,
-				ipmK:  defaultSessionIPM,
-				string(specK): map[string]interface{}{
-					ifaceK: defaultIface,
-					consRK: defaultDwnConsR,
-				},
-			},
-		},
-	})
-	// for each userDB a correspondent ipQuota exists with the
-	// same name
-	viper.SetDefault(ipQuotaK, []map[string]interface{}{
-		{
-			nameK: defaultUserDB,
-			quotaMapK: map[string]string{
-				group0: defaultQuota,
-			},
-		},
-	})
-	viper.SetDefault(adminsK, []string{user0})
 	viper.SetDefault(proxyConfK, map[string]interface{}{
 		fastOrStdK:    false,
 		readTimeoutK:  30 * time.Second,
@@ -244,7 +184,6 @@ func (c *conf) setDefaults() {
 		certK:         defaultSrvCert,
 		keyK:          defaultSrvKey,
 	})
-	// …
 }
 
 func (c *conf) readProxyConf() (e error) {
@@ -298,8 +237,12 @@ func (c *conf) initSessionIPMs() (e error) {
 	}
 	c.cr, e = newCrypt()
 	if e == nil {
-		c.sliceMap(sessionIPMK, fm, func(d error) { e = d },
-			func() bool { return e == nil })
+		c.sliceMap(
+			sessionIPMK,
+			fm,
+			func(d error) { e = d },
+			func() bool { return e == nil },
+		)
 	}
 	return
 }
@@ -322,12 +265,12 @@ func (c *conf) initIPQuotas() (e error) {
 			ipg := &ipGroupS{
 				ipUser:     c.iu.get,
 				userGroup:  c.userGroup,
-				userGroupN: ipq.name,
+				userGroupN: ipq.userGroup,
 			}
 			c.ipGroups.Store(ipg.userGroupN, ipg)
 			ipq.ipg = ipg.get
 			c.managerKFs.Store(ipq.name, ipq.managerKF)
-			c.ipQuotas.Store(ipq.name, ipQuota(ipq.get))
+			c.ipQuotas.Store(ipq.name, ipq)
 			c.mappers.Store(ipq.name, ipq.toMap)
 		}
 	}
@@ -338,7 +281,7 @@ func (c *conf) initIPQuotas() (e error) {
 
 func (c *conf) initDwnConsRs() (e error) {
 	// c.initIPQuotas() /\ def.(maps in c)
-	homeData := path.Join(os.Getenv("HOME"), dataDir)
+	homeData := path.Join(home(), dataDir)
 	fm := func(i interface{}) {
 		dw := &dwnConsR{
 			iu: c.iu.get,
@@ -351,7 +294,7 @@ func (c *conf) initDwnConsRs() (e error) {
 		if e == nil {
 			v, ok := c.ipQuotas.Load(dw.ipQuotaN)
 			if ok {
-				dw.ipq = v.(ipQuota)
+				dw.ipq = v.(*ipQuotaS).get
 			} else {
 				e = noKey(dw.ipQuotaN)
 			}
@@ -407,17 +350,17 @@ func (c *conf) initUserInfos() (e error) {
 		return
 	}
 	c.ipQuotas.Range(func(k, v interface{}) (ok bool) {
-		udbName := k.(string)
-		uv, ok := c.userDBs.Load(udbName)
+		ipq := v.(*ipQuotaS)
+		uv, ok := c.userDBs.Load(ipq.userGroup)
 		if ok {
 			udb := uv.(*userDB)
 			ui := &userInfo{
 				iu:       c.iu.get,
 				userName: udb.unm,
-				quota:    v.(ipQuota),
+				quota:    ipq.get,
 				isAdm:    isAdm,
 			}
-			c.managerKFs.Store(udbName+infoK, ui.managerKF)
+			c.managerKFs.Store(ipq.userGroup+infoK, ui.managerKF)
 		}
 		ok = true
 		return
@@ -453,20 +396,20 @@ func (c *conf) initLogger() (e error) {
 }
 
 func (c *conf) initRules() (e error) {
-	// c.initSessionIPMs() /\ c.initGroupIPMs()
-	// /\ c.initDwnConsRs()
 	v := viper.Get(rulesK)
-	c.rls = new(rules)
-	e = c.rls.fromMap(v)
-	c.managerKFs.Store(rulesK, c.rls.managerKF)
-	c.rls.ipm = func(name string) (m ipMatcher, ok bool) {
-		v, ok := c.matchers.Load(name)
-		if ok {
-			m = v.(ipMatcher)
+	if v != nil {
+		c.rls = new(rules)
+		e = c.rls.fromMap(v)
+		c.managerKFs.Store(rulesK, c.rls.managerKF)
+		c.rls.ipm = func(name string) (m ipMatcher, ok bool) {
+			v, ok := c.matchers.Load(name)
+			if ok {
+				m = v.(ipMatcher)
+			}
+			return
 		}
-		return
+		c.mappers.Store(rulesK, c.rls.toMap)
 	}
-	c.mappers.Store(rulesK, c.rls.toMap)
 	return
 }
 
@@ -532,8 +475,10 @@ func (c *conf) manager(m *cmd) {
 				},
 			},
 		)
+		exF(kf, m.Cmd, func(d error) { m.e = d })
+	} else {
+		m.e = noKey(m.Manager)
 	}
-	exF(kf, m.Cmd, func(d error) { m.e = d })
 	return
 }
 
@@ -547,8 +492,6 @@ func (c *conf) sliceE(key string) (sl []interface{},
 	v := c.get(key)
 	if v != nil {
 		sl, e = cast.ToSliceE(v)
-	} else {
-		e = noKey(key)
 	}
 	return
 }

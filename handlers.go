@@ -148,6 +148,15 @@ func compatibleIface(cf *conf, path, method, header,
 		func() { cf.manager(m); e = m.e },
 		func() {
 			if m.bs != nil {
+				if path+method == apiAuth+h.MethodPost {
+					lr := &struct {
+						Scrt string `json: "scrt"`
+					}{
+						Scrt: string(m.bs),
+					}
+					m.bs, e = json.Marshal(lr)
+					// part of compatibility layer
+				}
 				resp(m.bs)
 			}
 		},
@@ -215,7 +224,7 @@ func compatibleCmd(cf *conf, pth, meth string,
 			apiUserInfo + h.MethodGet,
 			func() {
 				c.Cmd = get
-				c.Manager = defaultUserInfo
+				c.Manager = defaultUserDB + infoK
 			},
 		},
 	}

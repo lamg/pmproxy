@@ -28,6 +28,7 @@ import (
 
 type ipQuotaS struct {
 	name        string
+	userGroup   string
 	ipg         ipGroup
 	quotaCache  *sync.Map
 	groupQuotaM *sync.Map
@@ -105,6 +106,12 @@ func (p *ipQuotaS) fromMap(i interface{}) (e error) {
 					}
 					p.groupQuotaM.Store(k, bts.Bytes())
 				}
+			},
+		},
+		{
+			userGroupNK,
+			func(i interface{}) {
+				p.userGroup = stringE(i, fe)
 			},
 		},
 	}

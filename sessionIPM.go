@@ -80,6 +80,12 @@ func (m *sessionIPM) managerKF(c *cmd) (kf []kFunc) {
 				c.bs, c.e = m.renew(c.Secret, c.RemoteAddr)
 			},
 		},
+		{
+			check,
+			func() {
+				_, c.e = m.check(c.Secret, c.RemoteAddr)
+			},
+		},
 	}
 	return
 }
