@@ -28,6 +28,7 @@ import (
 	h "net/http"
 	ht "net/http/httptest"
 	"testing"
+	"time"
 )
 
 type testReq struct {
@@ -42,6 +43,7 @@ type testReq struct {
 func TestLogin(t *testing.T) {
 	c, e := newConfWith(initDefaultSessionIPM)
 	require.NoError(t, e)
+	c.cr.expiration = time.Second
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
 	loginIP := "192.168.1.1"
@@ -81,6 +83,35 @@ func TestLogin(t *testing.T) {
 			bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
 		},
 		noU0Cmd,
+		loginTR(
+			t,
+			func(s string) { secr = s; time.Sleep(2 * time.Second) },
+			loginAddr,
+		),
+		{
+			obj:   u0Cmd.obj,
+			meth:  u0Cmd.meth,
+			rAddr: u0Cmd.rAddr,
+			path:  u0Cmd.path,
+			code:  h.StatusBadRequest,
+			bodyOK: func(bs []byte) {
+				require.Equal(t, "token is expired by 1s\n", string(bs))
+			},
+		},
+		{
+			obj: &cmd{
+				Cmd:     renew,
+				Manager: defaultSessionIPM,
+			},
+			meth:  h.MethodPost,
+			rAddr: loginAddr,
+			path:  apiCmd,
+			code:  h.StatusOK,
+			bodyOK: func(bs []byte) {
+				secr = string(bs)
+			},
+		},
+		u0Cmd,
 	}
 	runReqTests(t, ts, ifh.serveHTTP, func() string { return secr })
 }

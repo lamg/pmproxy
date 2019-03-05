@@ -28,11 +28,14 @@ import (
 )
 
 type crypt struct {
-	key *rsa.PrivateKey
+	key        *rsa.PrivateKey
+	expiration time.Duration
 }
 
 func newCrypt() (c *crypt, e error) {
-	c = new(crypt)
+	c = &crypt{
+		expiration: 5 * time.Minute,
+	}
 	c.key, e = rsa.GenerateKey(rand.Reader, 1024)
 	return
 }
@@ -43,7 +46,7 @@ type userClaim struct {
 }
 
 func (c *crypt) encrypt(user string) (s string, e error) {
-	expt := time.Now().Add(5 * time.Minute)
+	expt := time.Now().Add(c.expiration)
 	uc := &userClaim{
 		User: user,
 		StandardClaims: jwt.StandardClaims{
@@ -62,7 +65,7 @@ func (c *crypt) decrypt(s string) (r string, e error) {
 			return
 		},
 	)
-	if e == nil {
+	if token != nil {
 		ucl, ok := token.Claims.(*userClaim)
 		if ok {
 			r = ucl.User

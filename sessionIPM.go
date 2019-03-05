@@ -168,7 +168,7 @@ func (m *sessionIPM) get(secret, ip string) (bs []byte,
 
 func (m *sessionIPM) renew(secret, ip string) (bs []byte, e error) {
 	user, e := m.check(secret, ip)
-	if e == nil {
+	if e != nil {
 		var s string
 		s, e = m.cr.encrypt(user)
 		bs = []byte(s)

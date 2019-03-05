@@ -1,4 +1,11 @@
-# PMProxy
+```
+ ____  __  __ ____                      
+|  _ \|  \/  |  _ \ _ __ _____  ___   _ 
+| |_) | |\/| | |_) | '__/ _ \ \/ / | | |
+|  __/| |  | |  __/| | | (_) >  <| |_| |
+|_|   |_|  |_|_|   |_|  \___/_/\_\\__, |
+                                  |___/ 
+```
 
 [![Build Status](https://travis-ci.com/lamg/pmproxy.svg?branch=master)](https://travis-ci.com/lamg/pmproxy) [![Coverage Status](https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master)](https://coveralls.io/github/lamg/pmproxy?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/lamg/pmproxy)](https://goreportcard.com/report/github.com/lamg/pmproxy)
 
@@ -42,6 +49,5 @@ The file hierarchy is the following:
     
 ### Tests
 
-- Provide default configuration instead of reading from disk
-- TestLogin
+- test renew command 
 
