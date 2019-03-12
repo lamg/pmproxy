@@ -22,30 +22,13 @@ package pmproxy
 
 import (
 	"context"
-	"github.com/lamg/viper"
 	"net"
 	"time"
 )
 
 type dialer struct {
 	timeout time.Duration
-	lg      *logger
 	consRF  func(string) (*consR, bool)
-}
-
-const (
-	timeoutK   = "timeout"
-	dialerName = "dialer"
-)
-
-func newDialer(consRF func(string) (*consR, bool),
-	lg *logger) (d *dialer) {
-	d = &dialer{
-		timeout: viper.GetDuration(timeoutK),
-		lg:      lg,
-		consRF:  consRF,
-	}
-	return
 }
 
 func (d *dialer) managerKF(c *cmd) (kf []kFunc) {
@@ -62,7 +45,7 @@ func (d *dialer) dialContext(ctx context.Context,
 	}
 	if e == nil {
 		if (s.Iface == "") == (s.proxyURL == nil) ||
-			len(s.ConsR) == 0 {
+			len(s.ConsRs) == 0 {
 			e = invalidSpec(s)
 		}
 	}
@@ -71,15 +54,14 @@ func (d *dialer) dialContext(ctx context.Context,
 		n, e = dialIface(s.Iface, addr, d.timeout)
 	}
 	if e == nil {
-		cr := make([]*consR, 0, len(s.ConsR))
-		inf := func(i int) {
-			cs, ok := d.consRF(s.ConsR[i])
+		cr := make([]*consR, 0, len(s.ConsRs))
+		for _, v := range s.ConsRs {
+			cs, ok := d.consRF(v)
 			if ok {
 				cr = append(cr, cs)
 			}
 		}
-		forall(inf, len(s.ConsR))
-		c, e = newRConn(cr, n)
+		c, e = newRConn(cr, s.ip, s.user, n)
 	}
 	return
 }
@@ -119,33 +101,31 @@ type rConn struct {
 	cr []*consR
 	net.Conn
 	raddr string
+	user  string
 }
 
-func newRConn(cr []*consR, c net.Conn) (r net.Conn,
-	e error) {
-	var raddr string
-	raddr, _, e = net.SplitHostPort(c.RemoteAddr().String())
+func newRConn(cr []*consR, ip, user string,
+	c net.Conn) (r net.Conn, e error) {
 	if e == nil {
 		ib := func(i int) (b bool) {
-			b = !cr[i].open(raddr)
+			b = !cr[i].open(ip, user)
 			return
 		}
 		b, _ := bLnSrch(ib, len(cr))
 		if !b {
 			// all cr[i].Open(raddr) return true
-			r = &rConn{cr: cr, Conn: c, raddr: raddr}
+			r = &rConn{cr: cr, Conn: c, raddr: ip, user: user}
 		} else {
 			c.Close()
-			e = cannotOpen(raddr)
+			e = cannotOpen(ip)
 		}
 	}
-
 	return
 }
 
 func (r *rConn) Read(bs []byte) (n int, e error) {
 	ib := func(i int) (b bool) {
-		b = !r.cr[i].can(r.raddr, len(bs))
+		b = !r.cr[i].can(r.raddr, r.user, len(bs))
 		return
 	}
 	b, _ := bLnSrch(ib, len(r.cr))
@@ -158,7 +138,7 @@ func (r *rConn) Read(bs []byte) (n int, e error) {
 	}
 	if n != 0 {
 		inf := func(i int) {
-			r.cr[i].update(r.raddr, n)
+			r.cr[i].update(r.raddr, r.user, n)
 		}
 		forall(inf, len(r.cr))
 	}
@@ -167,7 +147,7 @@ func (r *rConn) Read(bs []byte) (n int, e error) {
 
 func (r *rConn) Close() (e error) {
 	inf := func(i int) {
-		r.cr[i].close(r.raddr)
+		r.cr[i].close(r.raddr, r.user)
 	}
 	forall(inf, len(r.cr))
 	return

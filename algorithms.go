@@ -137,19 +137,16 @@ func optionalKeys(fe ferr, keys ...string) (fek ferr) {
 	return
 }
 
-func exF(kf []kFunc, cmd string, fe ferr) {
-	ok, _ := bLnSrch(
-		func(i int) (b bool) {
-			b = cmd == kf[i].k
-			if b {
-				kf[i].f()
-			}
-			return
-		},
-		len(kf),
-	)
-	if !ok {
-		fe(noKey(cmd))
+func exF(kf []kFunc, key string, fe ferr) {
+	ib := func(i int) (b bool) {
+		b = kf[i].k == key
+		return
+	}
+	ok, n := bLnSrch(ib, len(kf))
+	if ok {
+		kf[n].f()
+	} else {
+		fe(noKey(key))
 	}
 	return
 }
@@ -158,26 +155,6 @@ type cmdProp struct {
 	cmd  string
 	prop string
 	f    func()
-}
-
-func exCmdProp(cs []cmdProp, a *cmd, fe ferr) {
-	cmdf, propf := false, false
-	bLnSrch(
-		func(i int) (b bool) {
-			cmdf, propf = cs[i].cmd == a.Cmd, cs[i].prop == a.Prop
-			b = cmdf && propf
-			if b {
-				cs[i].f()
-			}
-			return
-		},
-		len(cs),
-	)
-	if !cmdf {
-		fe(noKey(a.Cmd))
-	} else if !propf {
-		fe(noKey(a.Prop))
-	}
 }
 
 func stringE(i interface{}, fe ferr) (s string) {

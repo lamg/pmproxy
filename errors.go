@@ -29,6 +29,16 @@ func noKey(k string) (e error) {
 	return
 }
 
+func checkArgExec(fe func() error, exp, act int) (e error) {
+	if exp == act {
+		e = fe()
+	} else {
+		e = fmt.Errorf("Invalid argument list length."+
+			"Expected %d, got %d", exp, act)
+	}
+	return
+}
+
 func ignoreNoKey(key string, f func(error)) (r func(error)) {
 	r = func(e error) {
 		if e != nil && e.Error() == noKey(key).Error() {

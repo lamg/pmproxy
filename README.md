@@ -49,5 +49,27 @@ The file hierarchy is the following:
     
 ### Tests
 
-- test renew command 
+- test discover command 
 
+### Dependencies
+
+- ipGroup: ipUser, userGroup
+- groupIPM: ipGroup
+- ipQuota: ipUser, userGroup
+- dwnConsR: ipQuota
+
+Simplified:
+
+- groupIPM: ipUser, userGroup
+- dwnConsR: ipUser, userQuota
+
+- now session manager must store the userDB that made possible the user to open the session, this way the user has the name of the managers that contain his resources
+- ipUser is a constant repeated at every consR and managerKF. The repetition can be eleminitade by lifting it to the root context where consR and managerKF exists.
+- Command `discover` that returns the matching consR and ip matchers is needed, with their types
+
+### TODO
+
+- rules.go
+	- get resources for request
+	- initialize rules
+	- create `*ipMatcher` type

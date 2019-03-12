@@ -34,21 +34,18 @@ func TestUserStatus(t *testing.T) {
 	c, e := newConfWith(initDefaultDwnConsR)
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
-	var secr string
+	var secr, sessionMng string
 	loginAddr := "192.168.1.1:1982"
 	ts := []testReq{
-		loginTR(t, func(s string) { secr = s }, loginAddr),
+		discoverTR(t, &sessionMng, loginAddr),
+		loginTR(t, &secr, sessionMng, loginAddr, 0),
 		checkConsTR(t, loginAddr, 0),
 		{
-			obj: &struct {
-				Name  string `json: "name"`
-				Value uint64 `json: "value"`
-			}{
-				Name:  user0,
-				Value: 1024,
+			command: &cmd{
+				Cmd:    defaultDwnConsR,
+				String: user0,
+				Uint64: 1024,
 			},
-			meth:  h.MethodPut,
-			path:  apiUserStatus,
 			rAddr: loginAddr,
 			code:  h.StatusOK,
 			bodyOK: func(bs []byte) {
@@ -57,7 +54,7 @@ func TestUserStatus(t *testing.T) {
 		},
 		checkConsTR(t, loginAddr, 1024),
 	}
-	runReqTests(t, ts, ifh.serveHTTP, func() string { return secr })
+	runReqTests(t, ts, ifh.serveHTTP, secr)
 }
 
 func checkConsTR(t *testing.T, loginAddr string,
@@ -67,9 +64,10 @@ func checkConsTR(t *testing.T, loginAddr string,
 	require.NoError(t, e)
 	defQt := bsz.Bytes()
 	tr = testReq{
-		obj:   "",
-		meth:  h.MethodGet,
-		path:  apiUserStatus,
+		command: &cmd{
+			Cmd:     get,
+			Manager: defaultDwnConsR,
+		},
 		rAddr: loginAddr,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
@@ -84,20 +82,11 @@ func checkConsTR(t *testing.T, loginAddr string,
 }
 
 func initDefaultDwnConsR() (e error) {
-	initDefaultSessionIPM()
-	viper.SetDefault(ipQuotaK, []map[string]interface{}{
-		{
-			nameK:       defaultIPQuota,
-			userGroupNK: defaultUserDB,
-			quotaMapK: map[string]string{
-				group0: defaultQuota,
-			},
-		},
-	})
+	initSessionRules()
 	viper.SetDefault(dwnConsRK, []map[string]interface{}{
 		{
 			nameK:       defaultDwnConsR,
-			ipQuotaK:    defaultIPQuota,
+			userQuotaK:  defaultUserDB,
 			lastResetK:  time.Now().Format(time.RFC3339),
 			resetCycleK: time.Duration(24 * time.Hour).String(),
 		},

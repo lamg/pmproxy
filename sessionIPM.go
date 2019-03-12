@@ -28,8 +28,9 @@ type sessionIPM struct {
 	name     string
 	iu       *ipUserS
 	authName string
-	nameAuth func(string) (auth, bool)
-	cr       *crypt
+	nameAuth func(string) (func(string, string) (string, error),
+		bool)
+	cr *crypt
 }
 
 func (m *sessionIPM) fromMap(i interface{}) (e error) {
@@ -105,7 +106,7 @@ func (m *sessionIPM) toMap() (i interface{}) {
 
 func (m *sessionIPM) open(c *credentials,
 	ip string) (bs []byte, e error) {
-	var a auth
+	var a func(string, string) (string, error)
 	var user string
 	fs := []func(){
 		func() {
@@ -120,7 +121,7 @@ func (m *sessionIPM) open(c *credentials,
 		},
 		func() {
 			var s string
-			s, e = m.cr.encrypt(user)
+			s, e = m.cr.encrypt(user, m.authName)
 			bs = []byte(s)
 		},
 		func() {
@@ -141,10 +142,10 @@ func (m *sessionIPM) open(c *credentials,
 
 func (m *sessionIPM) close(secret, ip string) (bs []byte,
 	e error) {
-	user, e := m.cr.decrypt(secret)
+	claim, e := m.cr.decrypt(secret)
 	if e == nil {
 		lusr, ok := m.iu.get(ip)
-		if ok && lusr == user {
+		if ok && lusr == claim.User {
 			m.iu.del(ip)
 		}
 	}
@@ -170,7 +171,7 @@ func (m *sessionIPM) renew(secret, ip string) (bs []byte, e error) {
 	user, e := m.check(secret, ip)
 	if e != nil {
 		var s string
-		s, e = m.cr.encrypt(user)
+		s, e = m.cr.encrypt(user, m.authName)
 		bs = []byte(s)
 	}
 	return
@@ -180,8 +181,8 @@ func (m *sessionIPM) check(secret, ip string) (user string, e error) {
 	tkUser, e := m.cr.decrypt(secret)
 	user, ok := m.iu.get(ip)
 	if e == nil {
-		if !(ok && tkUser == user) {
-			e = userNotLoggedAt(tkUser, ip)
+		if !(ok && tkUser.User == user) {
+			e = userNotLoggedAt(tkUser.User, ip)
 		}
 	}
 	return

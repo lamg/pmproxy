@@ -40,15 +40,17 @@ func newCrypt() (c *crypt, e error) {
 	return
 }
 
-type userClaim struct {
-	User string `json: "user"`
+type claim struct {
+	User string `json:"user"`
+	DB   string `json:"db"`
 	jwt.StandardClaims
 }
 
-func (c *crypt) encrypt(user string) (s string, e error) {
+func (c *crypt) encrypt(user, db string) (s string, e error) {
 	expt := time.Now().Add(c.expiration)
-	uc := &userClaim{
+	uc := &claim{
 		User: user,
+		DB:   db,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expt.Unix(),
 		},
@@ -58,18 +60,17 @@ func (c *crypt) encrypt(user string) (s string, e error) {
 	return
 }
 
-func (c *crypt) decrypt(s string) (r string, e error) {
-	token, e := jwt.ParseWithClaims(s, new(userClaim),
+func (c *crypt) decrypt(s string) (user *claim, e error) {
+	token, e := jwt.ParseWithClaims(s, new(claim),
 		func(t *jwt.Token) (i interface{}, e error) {
 			i = &c.key.PublicKey
 			return
 		},
 	)
 	if token != nil {
-		ucl, ok := token.Claims.(*userClaim)
-		if ok {
-			r = ucl.User
-		} else {
+		var ok bool
+		user, ok = token.Claims.(*claim)
+		if !ok {
 			e = invalidClaims()
 		}
 	}

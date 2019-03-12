@@ -6,7 +6,7 @@
 // modify it under the terms of the GNU Affero General
 // Public License as published by the Free Software
 // Foundation, either version 3 of the License, or (at your
-// option) any later v
+// option) any later version.
 
 // PMProxy is distributed in the hope that it will be
 // useful, but WITHOUT ANY WARRANTY; without even the
@@ -37,12 +37,12 @@ const (
 const (
 	nameK          = "name"
 	quotasK        = "quotas"
-	rulesK         = "rules"
+	resourcesK     = "resources"
 	loggerAddrK    = "loggerAddr"
 	groupIPMK      = "groupIPM"
 	infoK          = "info"
 	dwnConsRK      = "dwnConsR"
-	ipQuotaK       = "ipQuota"
+	userQuotaK     = "userQuota"
 	sessionIPMK    = "sessionIPM"
 	userDBK        = "userDB"
 	adminsK        = "admins"
@@ -116,6 +116,8 @@ const (
 	add       = "add"
 	authNameK = "authName"
 	userConsK = "userCons"
+	show      = "show"
+	discover  = "discover"
 )
 
 const (
@@ -142,8 +144,8 @@ const (
 
 // groupIPM.go
 const (
-	ipGroupNK = "ipGroupN"
-	groupK    = "group"
+	userGroupNK = "ipGroupN"
+	groupK      = "group"
 )
 
 // userDB.go
@@ -158,11 +160,17 @@ const (
 	paramsK     = "params"
 )
 
-const (
-	userGroupNK = "userGroupN"
-)
-
 func home() (s string) {
 	s = os.Getenv("HOME")
 	return
 }
+
+const (
+	loginSecretFile = "login.secret"
+)
+
+// dialer.go
+const (
+	timeoutK   = "timeout"
+	dialerName = "dialer"
+)

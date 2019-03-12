@@ -1,3 +1,23 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package pmproxy
 
 import (
@@ -7,30 +27,29 @@ import (
 )
 
 func TestCheckUser(t *testing.T) {
-	c, e := newConfWith(initDefaultSessionIPM)
+	c, e := newConfWith(initSessionRules)
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
 	loginAddr := "10.3.10.3:1984"
 	nLoggedIn := "10.2.1.1"
-	var secr string
+	var secr, sessionMng string
 	ts := []testReq{
-		loginTR(t, func(s string) { secr = s }, loginAddr),
+		discoverTR(t, &sessionMng, loginAddr),
+		loginTR(t, &secr, sessionMng, loginAddr, 0),
 		{
-			obj:   "",
-			meth:  h.MethodGet,
+			command: &cmd{Manager: sessionMng, Cmd: check,
+				Secret: secr},
 			rAddr: loginAddr,
-			path:  apiCheckUser,
 			code:  h.StatusOK,
 			bodyOK: func(bs []byte) {
 				require.Equal(t, 0, len(bs), "Body: %s", string(bs))
 			},
 		},
 		{
-			obj:   "",
-			meth:  h.MethodGet,
+			command: &cmd{Manager: sessionMng, Cmd: check,
+				Secret: secr},
 			rAddr: nLoggedIn + ":1919",
-			path:  apiCheckUser,
 			code:  h.StatusBadRequest,
 			bodyOK: func(bs []byte) {
 				withoutNewLine := string(bs[:len(bs)-1])
@@ -39,5 +58,5 @@ func TestCheckUser(t *testing.T) {
 			},
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP, func() string { return secr })
+	runReqTests(t, ts, ifh.serveHTTP, secr)
 }

@@ -32,118 +32,124 @@ import (
 )
 
 type testReq struct {
-	obj    interface{}
-	rAddr  string
-	meth   string
-	path   string
-	code   int
-	bodyOK func([]byte)
+	command *cmd
+	rAddr   string
+	code    int
+	bodyOK  func([]byte)
 }
 
 func TestLogin(t *testing.T) {
-	c, e := newConfWith(initDefaultSessionIPM)
+	c, e := newConfWith(initSessionRules)
 	require.NoError(t, e)
 	c.cr.expiration = time.Second
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
 	loginIP := "192.168.1.1"
 	loginAddr := loginIP + ":1982"
-	mapHasUser0 := func(bs []byte) (ok bool) {
-		var ui map[string]string
-		e := json.Unmarshal(bs, &ui)
+	mapHasUser0 := func(mäp []byte) (ok bool) {
+		var ipUsr map[string]string
+		e := json.Unmarshal(mäp, &ipUsr)
 		ok = e == nil
 		if ok {
-			u, oku := ui[loginIP]
+			u, oku := ipUsr[loginIP]
 			ok = oku && u == user0
 		}
 		return
 	}
+	var secr string
+	var sessionMng string
 	u0Cmd := testReq{
-		obj:    &cmd{Manager: defaultSessionIPM, Cmd: get},
-		meth:   h.MethodPost,
-		rAddr:  loginAddr,
-		path:   apiCmd,
-		code:   h.StatusOK,
-		bodyOK: func(bs []byte) { require.True(t, mapHasUser0(bs)) },
+		command: &cmd{Manager: sessionMng, Cmd: get, Secret: secr},
+		rAddr:   loginAddr,
+		code:    h.StatusOK,
+		bodyOK:  func(bs []byte) { require.True(t, mapHasUser0(bs)) },
 	}
 	noU0Cmd := u0Cmd
 	noU0Cmd.bodyOK = func(bs []byte) {
 		require.False(t, mapHasUser0(bs))
 	}
-	var secr string
 	ts := []testReq{
-		loginTR(t, func(s string) { secr = s }, loginAddr),
+		discoverTR(t, &sessionMng, loginAddr),
+		loginTR(t, &secr, sessionMng, loginAddr, 0),
 		u0Cmd,
 		{
-			obj:    "",
-			meth:   h.MethodDelete,
+			command: &cmd{Manager: sessionMng, Secret: secr,
+				Cmd: clöse},
 			rAddr:  loginAddr,
-			path:   apiAuth,
 			code:   h.StatusOK,
 			bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
 		},
 		noU0Cmd,
-		loginTR(
-			t,
-			func(s string) { secr = s; time.Sleep(2 * time.Second) },
-			loginAddr,
-		),
+		loginTR(t, &secr, sessionMng, loginAddr, 2*time.Second),
 		{
-			obj:   u0Cmd.obj,
-			meth:  u0Cmd.meth,
-			rAddr: u0Cmd.rAddr,
-			path:  u0Cmd.path,
-			code:  h.StatusBadRequest,
+			command: u0Cmd.command,
+			rAddr:   u0Cmd.rAddr,
+			code:    h.StatusBadRequest,
 			bodyOK: func(bs []byte) {
 				require.Equal(t, "token is expired by 1s\n", string(bs))
 			},
 		},
 		{
-			obj: &cmd{
-				Cmd:     renew,
-				Manager: defaultSessionIPM,
-			},
-			meth:  h.MethodPost,
-			rAddr: loginAddr,
-			path:  apiCmd,
-			code:  h.StatusOK,
+			command: &cmd{Cmd: renew, Manager: sessionMng},
+			rAddr:   loginAddr,
+			code:    h.StatusOK,
 			bodyOK: func(bs []byte) {
 				secr = string(bs)
 			},
 		},
 		u0Cmd,
 	}
-	runReqTests(t, ts, ifh.serveHTTP, func() string { return secr })
+	runReqTests(t, ts, ifh.serveHTTP, secr)
 }
 
-func loginTR(t *testing.T, body func(string),
-	rAddr string) (r testReq) {
+func discoverTR(t *testing.T, sessionMng *string,
+	addr string) (r testReq) {
 	r = testReq{
-		obj: &cmd{
+		command: &cmd{
+			Cmd: discover,
+		},
+		rAddr: addr,
+		code:  h.StatusOK,
+		bodyOK: func(bs []byte) {
+			//s := new(spec)
+			//e := json.Unmarshal(bs, s)
+			//require.NoError(t, e)
+			//sm, ok := s.IPMatchers[sessionIPMK]
+			//require.True(t, ok)
+			// TODO
+			*sessionMng = defaultSessionIPM
+		},
+	}
+	return
+}
+
+func loginTR(t *testing.T, body *string, sm,
+	rAddr string, sleepAft time.Duration) (r testReq) {
+	r = testReq{
+		command: &cmd{
 			Cmd:     open,
-			Manager: defaultSessionIPM,
+			Manager: sm,
 			Cred:    &credentials{User: user0, Pass: pass0},
 		},
-		meth:  h.MethodPost,
 		rAddr: rAddr,
-		path:  apiCmd,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
 			require.NotEqual(t, 0, len(bs))
-			body(string(bs))
+			*body = string(bs)
+			time.Sleep(sleepAft)
 		},
 	}
 	return
 }
 
 func runReqTests(t *testing.T, ts []testReq, hf h.HandlerFunc,
-	secr func() string) {
+	secr string) {
 	inf := func(i int) {
-		bs, e := json.Marshal(ts[i].obj)
+		ts[i].command.Secret = secr
+		bs, e := json.Marshal(ts[i].command)
 		require.NoError(t, e)
 		w, r := ht.NewRecorder(),
-			ht.NewRequest(ts[i].meth, ts[i].path, bytes.NewBuffer(bs))
-		r.Header.Set(authHd, secr())
+			ht.NewRequest(h.MethodPost, apiCmd, bytes.NewBuffer(bs))
 		r.RemoteAddr = ts[i].rAddr
 		hf(w, r)
 		require.Equal(t, ts[i].code, w.Code, "At %d: %s", i,
@@ -153,7 +159,7 @@ func runReqTests(t *testing.T, ts []testReq, hf h.HandlerFunc,
 	forall(inf, len(ts))
 }
 
-func initDefaultSessionIPM() (e error) {
+func initSessionRules() (e error) {
 	viper.SetDefault(userDBK, []map[string]interface{}{
 		{
 			nameK:    defaultUserDB,
@@ -166,6 +172,9 @@ func initDefaultSessionIPM() (e error) {
 					user0: {group0},
 				},
 			},
+			quotaMapK: map[string]string{
+				user0: defaultQuota,
+			},
 		},
 	})
 	viper.SetDefault(adminsK, []string{user0})
@@ -174,6 +183,12 @@ func initDefaultSessionIPM() (e error) {
 			nameK:     defaultSessionIPM,
 			authNameK: defaultUserDB,
 		},
+	})
+	viper.SetDefault(connMngK, map[string]interface{}{
+		maxIdleK: 0,
+		idleTK:   "0s",
+		tlsHTK:   "0s",
+		expCTK:   "0s",
 	})
 	return
 }

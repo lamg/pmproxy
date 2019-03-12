@@ -22,25 +22,27 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"github.com/c2h5oh/datasize"
 	ld "github.com/lamg/ldaputil"
 	"github.com/spf13/cast"
+	"sync"
 )
 
-type auth func(string, string) (string, error)
-type userGroup func(string) ([]string, error)
-type userName func(string) (string, error)
-
 type userDB struct {
-	name    string
-	adOrMap bool
-	params  map[string]interface{}
-	ath     auth
-	grp     userGroup
-	unm     userName
+	name       string
+	adOrMap    bool
+	params     map[string]interface{}
+	auth       func(string, string) (string, error)
+	userGroups func(string) ([]string, error)
+	userName   func(string) (string, error)
+
+	quotaCache  *sync.Map
+	groupQuotaM *sync.Map
 }
 
 func (d *userDB) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
+	var m map[string]string
 	kf := []kFuncI{
 		{
 			nameK,
@@ -64,6 +66,27 @@ func (d *userDB) fromMap(i interface{}) (e error) {
 					} else {
 						fe(d.fromMapMap(i))
 					}
+				}
+			},
+		},
+		{
+			quotaMapK,
+			func(i interface{}) {
+				m = stringMapStringE(i, fe)
+			},
+		},
+		{
+			quotaMapK,
+			func(i interface{}) {
+				d.groupQuotaM = new(sync.Map)
+				d.quotaCache = new(sync.Map)
+				for k, v := range m {
+					bts := new(datasize.ByteSize)
+					e = bts.UnmarshalText([]byte(v))
+					if e != nil {
+						break
+					}
+					d.groupQuotaM.Store(k, bts.Bytes())
 				}
 			},
 		},
@@ -93,15 +116,15 @@ func (d *userDB) fromMapAD(i interface{}) (e error) {
 	if ok {
 		ldap := ld.NewLdapWithAcc(addr.v, suff.v, bdn.v,
 			user.v, pass.v)
-		d.ath = ldap.AuthAndNorm
-		d.grp = func(user string) (gs []string, e error) {
+		d.auth = ldap.AuthAndNorm
+		d.userGroups = func(user string) (gs []string, e error) {
 			mp, e := ldap.FullRecordAcc(user)
 			if e == nil {
 				gs, e = ldap.MembershipCNs(mp)
 			}
 			return
 		}
-		d.unm = func(user string) (name string, e error) {
+		d.userName = func(user string) (name string, e error) {
 			mp, e := ldap.FullRecordAcc(user)
 			if e == nil {
 				name, e = ldap.FullName(mp)
@@ -127,7 +150,7 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 	}
 	ok := trueFF(fs, func() bool { return e == nil })
 	if ok {
-		d.ath = func(user, pass string) (nuser string,
+		d.auth = func(user, pass string) (nuser string,
 			e error) {
 			nuser = user
 			p, ok := upm[user]
@@ -138,14 +161,14 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 			}
 			return
 		}
-		d.grp = func(user string) (gs []string, e error) {
+		d.userGroups = func(user string) (gs []string, e error) {
 			gs, ok := gm[user]
 			if !ok {
 				e = noKey(user)
 			}
 			return
 		}
-		d.unm = func(user string) (name string, e error) {
+		d.userName = func(user string) (name string, e error) {
 			name = user
 			return
 		}
@@ -158,18 +181,89 @@ func (d *userDB) toMap() (i interface{}) {
 		nameK:    d.name,
 		adOrMapK: d.adOrMap,
 		paramsK:  d.params,
+		quotaMapK: func() (m map[string]string) {
+			d.groupQuotaM.Range(func(k, v interface{}) (ok bool) {
+				sz := datasize.ByteSize(v.(uint64))
+				m[k.(string)], ok = sz.HumanReadable(), true
+				return
+			})
+			return
+		}(),
 	}
 	return
+}
+
+type userInfo struct {
+	Quota    string   `json:"quota"`
+	Groups   []string `json:"groups"`
+	Name     string   `json:"name"`
+	UserName string   `json:"userName"`
 }
 
 func (d *userDB) managerKF(c *cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
-			get,
+			showAll,
 			func() {
 				c.bs, c.e = json.Marshal(d.toMap())
 			},
 		},
+		{
+			get,
+			func() {
+				var data *userInfo
+				if c.IsAdmin && c.String != "" {
+					data, c.e = d.info(c.String)
+				} else {
+					data, c.e = d.info(c.User)
+				}
+				if c.e == nil {
+					c.bs, c.e = json.Marshal(data)
+				}
+			},
+		},
 	}
 	return
+}
+
+func (d *userDB) info(user string) (ui *userInfo, e error) {
+	n := d.quota(user)
+	q := datasize.ByteSize(n).HumanReadable()
+	ui = &userInfo{
+		Quota:    q,
+		UserName: user,
+	}
+	ui.Groups, e = d.userGroups(user)
+	if e == nil {
+		ui.Name, e = d.userName(user)
+	}
+	return
+}
+
+func (d *userDB) quota(user string) (n uint64) {
+	v, ok := d.quotaCache.Load(user)
+	if ok {
+		n = v.(uint64)
+	} else {
+		gs, _ := d.userGroups(user)
+		inf := func(i int) {
+			q := d.groupQuota(gs[i])
+			n = n + q
+		}
+		forall(inf, len(gs))
+		d.quotaCache.Store(user, n)
+	}
+	return
+}
+
+func (d *userDB) groupQuota(g string) (q uint64) {
+	v, ok := d.groupQuotaM.Load(g)
+	if ok {
+		q = v.(uint64)
+	}
+	return
+}
+
+func (d *userDB) delCache(user string) {
+	d.quotaCache.Delete(user)
 }

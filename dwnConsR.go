@@ -27,10 +27,9 @@ import (
 )
 
 type dwnConsR struct {
-	name     string
-	ipQuotaN string
-	ipq      func(string) uint64
-	iu       ipUser
+	name       string
+	userQuotaN string
+	userQuota  func(string) uint64
 
 	userCons   *sync.Map
 	lastReset  time.Time
@@ -49,9 +48,9 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 			},
 		},
 		{
-			ipQuotaK,
+			userQuotaK,
 			func(i interface{}) {
-				d.ipQuotaN = stringE(i, fe)
+				d.userQuotaN = stringE(i, fe)
 			},
 		},
 		{
@@ -93,7 +92,7 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 func (d *dwnConsR) toMap() (i interface{}) {
 	i = map[string]interface{}{
 		nameK:       d.name,
-		ipQuotaK:    d.ipQuotaN,
+		userQuotaK:  d.userQuotaN,
 		lastResetK:  d.lastReset.Format(time.RFC3339),
 		resetCycleK: d.resetCycle.String(),
 	}
@@ -126,13 +125,9 @@ func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 					c.bs, c.e = json.Marshal(n)
 				} else {
 					qc := &qtCs{
-						Quota: d.ipq(c.RemoteAddr),
+						Quota: d.userQuota(c.User),
 					}
-					user, ok := d.iu(c.RemoteAddr)
-					var v interface{}
-					if ok {
-						v, ok = d.userCons.Load(user)
-					}
+					v, ok := d.userCons.Load(c.User)
 					if ok {
 						qc.Consumption = v.(uint64)
 					}
@@ -154,36 +149,26 @@ func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 
 func (d *dwnConsR) consR() (c *consR) {
 	c = &consR{
-		open: func(ip string) (ok bool) {
+		open: func(ip, user string) (ok bool) {
 			// the reset cycle property is maintained on demand,
 			// rather than at regular time lapses
 			d.keepResetCycle()
-
 			cons := uint64(0)
-			user, ok := d.iu(ip)
-			if ok {
-				d.userCons.LoadOrStore(user, cons)
-			}
+			d.userCons.LoadOrStore(user, cons)
 			return
 		},
-		can: func(ip string, down int) (ok bool) {
-			user, ok := d.iu(ip)
-			if ok {
-				cons, b := d.userCons.Load(user)
-				limit := d.ipq(ip)
-				ok = b && cons.(uint64) <= limit
-			}
+		can: func(ip, user string, down int) (ok bool) {
+			cons, b := d.userCons.Load(user)
+			limit := d.userQuota(user)
+			ok = b && cons.(uint64) <= limit
 			return
 		},
-		update: func(ip string, down int) {
-			user, ok := d.iu(ip)
-			if ok {
-				v, _ := d.userCons.Load(user)
-				cons := v.(uint64)
-				d.userCons.Store(user, cons+uint64(down))
-			}
+		update: func(ip, user string, down int) {
+			v, _ := d.userCons.Load(user)
+			cons := v.(uint64)
+			d.userCons.Store(user, cons+uint64(down))
 		},
-		close: func(ip string) {},
+		close: func(ip, user string) {},
 	}
 	return
 }

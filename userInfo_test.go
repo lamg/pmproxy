@@ -1,3 +1,23 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package pmproxy
 
 import (
@@ -13,25 +33,27 @@ func TestUserInfo(t *testing.T) {
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
 	loginAddr := "192.12.12.3:1919"
-	var secr string
+	var secr, sessionMng string
 	ts := []testReq{
-		loginTR(t, func(s string) { secr = s }, loginAddr),
+		discoverTR(t, &sessionMng, loginAddr),
+		loginTR(t, &secr, sessionMng, loginAddr, 0),
 		{
-			obj:   "",
-			meth:  h.MethodGet,
+			command: &cmd{
+				Manager: defaultUserDB,
+				Cmd:     get,
+				Secret:  secr,
+			},
 			rAddr: loginAddr,
-			path:  apiUserInfo,
 			code:  h.StatusOK,
 			bodyOK: func(bs []byte) {
-				info := new(cmdInfo)
+				info := new(userInfo)
 				e := json.Unmarshal(bs, info)
 				require.NoError(t, e)
 				require.Equal(t, user0, info.UserName)
 				require.Equal(t, user0, info.Name)
-				require.True(t, info.IsAdmin)
-				require.Equal(t, uint64(629145600), info.QuotaGroup)
+				require.Equal(t, "600MB", info.Quota)
 			},
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP, func() string { return secr })
+	runReqTests(t, ts, ifh.serveHTTP, secr)
 }

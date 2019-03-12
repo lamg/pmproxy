@@ -35,7 +35,7 @@ import (
 
 type cmd struct {
 	Cmd        string                 `json: "cmd"`
-	Prop       string                 `json: "prop"`
+	User       string                 `json: "user"`
 	Manager    string                 `json: "manager"`
 	RemoteAddr string                 `json: "remoteAddr"`
 	Secret     string                 `json: "secret"`
@@ -69,7 +69,7 @@ type conf struct {
 	userDBs     *sync.Map
 	ipQuotas    *sync.Map
 	lg          *logger
-	rls         *rules
+	res         *resources
 	cm          *connMng
 	cr          *crypt
 
@@ -112,12 +112,10 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 			e = c.initUserDBs()
 		},
 		func() { e = c.initSessionIPMs() },
-		func() { e = c.initIPQuotas() },
 		func() { e = c.initDwnConsRs() },
-		func() { e = c.initUserInfos() },
 		func() { e = c.initGroupIPMs() },
 		func() { e = c.initLogger() },
-		func() { e = c.initRules() },
+		func() { e = c.initResources() },
 		func() { e = c.initConnMng() },
 	}
 	trueFF(fs, func() bool { return e == nil })
@@ -247,44 +245,22 @@ func (c *conf) initSessionIPMs() (e error) {
 	return
 }
 
-func (c *conf) authenticator(name string) (a auth,
-	ok bool) {
+func (c *conf) authenticator(name string) (
+	a func(string, string) (string, error),
+	ok bool,
+) {
 	v, ok := c.userDBs.Load(name)
 	if ok {
-		a = v.(*userDB).ath
+		a = v.(*userDB).auth
 	}
-	return
-}
-
-func (c *conf) initIPQuotas() (e error) {
-	// def.(maps in c, c.iu) /\ c.initUserDBs()
-	fm := func(i interface{}) {
-		ipq := new(ipQuotaS)
-		e = ipq.fromMap(i)
-		if e == nil {
-			ipg := &ipGroupS{
-				ipUser:     c.iu.get,
-				userGroup:  c.userGroup,
-				userGroupN: ipq.userGroup,
-			}
-			c.ipGroups.Store(ipg.userGroupN, ipg)
-			ipq.ipg = ipg.get
-			c.managerKFs.Store(ipq.name, ipq.managerKF)
-			c.ipQuotas.Store(ipq.name, ipq)
-			c.mappers.Store(ipq.name, ipq.toMap)
-		}
-	}
-	c.sliceMap(ipQuotaK, fm, func(d error) { e = d },
-		func() bool { return e == nil })
 	return
 }
 
 func (c *conf) initDwnConsRs() (e error) {
-	// c.initIPQuotas() /\ def.(maps in c)
+	// c.initUserDBs()
 	homeData := path.Join(home(), dataDir)
 	fm := func(i interface{}) {
 		dw := &dwnConsR{
-			iu: c.iu.get,
 			fileReader: func(file string) (bs []byte, d error) {
 				bs, d = ioutil.ReadFile(path.Join(homeData, file))
 				return
@@ -292,11 +268,11 @@ func (c *conf) initDwnConsRs() (e error) {
 		}
 		e = dw.fromMap(i)
 		if e == nil {
-			v, ok := c.ipQuotas.Load(dw.ipQuotaN)
+			v, ok := c.userDBs.Load(dw.userQuotaN)
 			if ok {
-				dw.ipq = v.(*ipQuotaS).get
+				dw.userQuota = v.(*userDB).quota
 			} else {
-				e = noKey(dw.ipQuotaN)
+				e = noKey(dw.userQuotaN)
 			}
 		}
 		if e == nil {
@@ -326,62 +302,30 @@ func (c *conf) initDwnConsRs() (e error) {
 	return
 }
 
-func (c *conf) userGroup(name string) (g userGroup,
+func (c *conf) userGroups(name string) (
+	g func(string) ([]string, error),
 	ok bool) {
 	v, ok := c.userDBs.Load(name)
 	if ok {
-		g = v.(*userDB).grp
+		g = v.(*userDB).userGroups
 	}
-	return
-}
-
-func (c *conf) initUserInfos() (e error) {
-	// notice that there are several userDB
-	// forall of them a userInfo should exist
-	// for each userDB, for each ipQuota with the same
-	// userDB
-	// def.(c.admins, c.iu, maps in c) /\ c.initUserDBs()
-	isAdm := func(user string) (v bool) {
-		v, _ = bLnSrch(func(i int) bool {
-			return c.admins[i] == user
-		},
-			len(c.admins),
-		)
-		return
-	}
-	c.ipQuotas.Range(func(k, v interface{}) (ok bool) {
-		ipq := v.(*ipQuotaS)
-		uv, ok := c.userDBs.Load(ipq.userGroup)
-		if ok {
-			udb := uv.(*userDB)
-			ui := &userInfo{
-				iu:       c.iu.get,
-				userName: udb.unm,
-				quota:    ipq.get,
-				isAdm:    isAdm,
-			}
-			c.managerKFs.Store(ipq.userGroup+infoK, ui.managerKF)
-		}
-		ok = true
-		return
-	})
 	return
 }
 
 func (c *conf) initGroupIPMs() (e error) {
-	// def.(maps in c, c.iu) /\ c.initUserDBs()
+	// c.initUserDBs()
 	fm := func(i interface{}) {
 		gipm := new(groupIPM)
 		e = gipm.fromMap(i)
 		if e == nil {
-			v, ok := c.ipGroups.Load(gipm.ipGroupN)
+			v, ok := c.userDBs.Load(gipm.userGroupN)
 			if ok {
-				gipm.ipg = v.(*ipGroupS).get
+				gipm.userGroup = v.(*userDB).userGroups
 				c.managerKFs.Store(gipm.name, gipm.managerKF)
 				c.mappers.Store(gipm.name, gipm.toMap)
 				c.matchers.Store(gipm.name, gipm.match)
 			} else {
-				e = noKey(gipm.ipGroupN)
+				e = noKey(gipm.userGroupN)
 			}
 		}
 	}
@@ -395,20 +339,21 @@ func (c *conf) initLogger() (e error) {
 	return
 }
 
-func (c *conf) initRules() (e error) {
-	v := viper.Get(rulesK)
+func (c *conf) initResources() (e error) {
+	v := viper.Get(resourcesK)
 	if v != nil {
-		c.rls = new(rules)
-		e = c.rls.fromMap(v)
-		c.managerKFs.Store(rulesK, c.rls.managerKF)
-		c.rls.ipm = func(name string) (m ipMatcher, ok bool) {
-			v, ok := c.matchers.Load(name)
-			if ok {
-				m = v.(ipMatcher)
-			}
-			return
-		}
-		c.mappers.Store(rulesK, c.rls.toMap)
+		c.res = new(resources)
+		// TODO
+		//e = c.rls.fromMap(v)
+		//c.managerKFs.Store(rulesK, c.rls.managerKF)
+		//c.rls.ipm = func(name string) (m ipMatcher, ok bool) {
+		//	v, ok := c.matchers.Load(name)
+		//	if ok {
+		//		m = v.(ipMatcher)
+		//	}
+		//	return
+		//}
+		//c.mappers.Store(rulesK, c.rls.toMap)
 	}
 	return
 }
@@ -418,26 +363,27 @@ func (c *conf) initConnMng() (e error) {
 	c.cm = new(connMng)
 	v := viper.Get(connMngK)
 	e = c.cm.fromMap(v)
-	dl := newDialer(
-		func(name string) (cr *consR, ok bool) {
+	dl := &dialer{
+		consRF: func(name string) (cr *consR, ok bool) {
 			v, ok := c.consRs.Load(name)
 			if ok {
 				cr = v.(*consR)
 			}
 			return
 		},
-		c.lg,
-	)
+		timeout: viper.GetDuration(timeoutK),
+	}
 	c.cm.direct = dl.dialContext
 	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
 		addr string, t time.Time) (nctx context.Context) {
-		spec := c.rls.match(meth, ürl, addr, t)
+		spec := c.res.match(ürl, addr, t)
+		c.lg.log(meth, ürl, spec.ip, spec.user, t)
 		nctx = context.WithValue(ctx, specK, spec)
 		return
 	}
 	c.cm.proxyF = func(meth, ürl, addr string,
 		t time.Time) (r *url.URL, e error) {
-		spec := c.rls.match(meth, ürl, addr, t)
+		spec := c.res.match(ürl, addr, t)
 		r = spec.proxyURL
 		return
 	}
@@ -446,10 +392,10 @@ func (c *conf) initConnMng() (e error) {
 }
 
 func (c *conf) manager(m *cmd) {
-	musr, _ := c.iu.get(m.RemoteAddr)
+	m.User, _ = c.iu.get(m.RemoteAddr)
 	m.IsAdmin, _ = bLnSrch(
 		func(i int) bool {
-			return c.admins[i] == musr
+			return c.admins[i] == m.User
 		},
 		len(c.admins),
 	)

@@ -25,10 +25,11 @@ import (
 )
 
 type groupIPM struct {
-	ipg      ipGroup
-	ipGroupN string
-	name     string
-	group    string
+	userGroup  func(string) ([]string, error)
+	userGroupN string
+	ipUser     func(string) (string, bool)
+	name       string
+	group      string
 }
 
 func (m *groupIPM) fromMap(i interface{}) (e error) {
@@ -41,9 +42,9 @@ func (m *groupIPM) fromMap(i interface{}) (e error) {
 			},
 		},
 		{
-			ipGroupNK,
+			userGroupNK,
 			func(i interface{}) {
-				m.ipGroupN = stringE(i, fe)
+				m.userGroupN = stringE(i, fe)
 			},
 		},
 		{
@@ -77,15 +78,16 @@ func (m *groupIPM) managerKF(c *cmd) (kf []kFunc) {
 
 func (m *groupIPM) toMap() (i interface{}) {
 	i = map[string]interface{}{
-		groupK:    m.group,
-		nameK:     m.name,
-		ipGroupNK: m.ipGroupN,
+		groupK:      m.group,
+		nameK:       m.name,
+		userGroupNK: m.userGroupN,
 	}
 	return
 }
 
 func (m *groupIPM) match(ip string) (ok bool) {
-	gs, _ := m.ipg(ip)
+	user, _ := m.ipUser(ip)
+	gs, _ := m.userGroup(user)
 	ib := func(i int) (b bool) {
 		b = m.group == gs[i]
 		return

@@ -51,7 +51,7 @@ func (p *connMng) toMap() (i interface{}) {
 }
 
 func (p *connMng) fromMap(i interface{}) (e error) {
-	fe := func(d error) { d = e }
+	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
 			maxIdleK,

@@ -23,23 +23,18 @@ package pmproxy
 import (
 	"fmt"
 	"log/syslog"
-	"net"
 	h "net/http"
 	"time"
 )
 
 type logger struct {
-	sl   *syslog.Writer
-	iu   ipUser
-	Addr string `json:"addr"`
+	sl *syslog.Writer
 }
 
 func newLogger(addr string) (l *logger, e error) {
-	l = &logger{
-		Addr: addr,
-	}
-	if l.Addr != "" {
-		l.sl, e = syslog.Dial("tcp", l.Addr, syslog.LOG_INFO,
+	l = new(logger)
+	if addr != "" {
+		l.sl, e = syslog.Dial("tcp", addr, syslog.LOG_INFO,
 			"")
 	} else {
 		l.sl, e = syslog.New(syslog.LOG_INFO, "")
@@ -47,18 +42,12 @@ func newLogger(addr string) (l *logger, e error) {
 	return
 }
 
-func (l *logger) log(method, url, rAddr string,
+func (l *logger) log(method, url, ip, user string,
 	d time.Time) (e error) {
-	clientIP, _, _ := net.SplitHostPort(rAddr)
-	user, ok := l.iu(clientIP)
-	if !ok {
-		e = noUserLogged(clientIP)
-		user = "-"
-	}
 	// squid log format
 	m := fmt.Sprintf(
 		"%9d.000 %6d %s %s/%03d %d %s %s %s %s/%s %s",
-		d.Unix(), 0, clientIP, "TCP_MISS", h.StatusOK, 0,
+		d.Unix(), 0, ip, "TCP_MISS", h.StatusOK, 0,
 		method, url, user, "DIRECT", "-", "-")
 	if e == nil {
 		e = l.sl.Info(m)
