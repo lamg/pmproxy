@@ -140,6 +140,7 @@ const (
 const (
 	ipRangeMK = "ipRangeM"
 	regexpK   = "regexp"
+	specKS    = "spec"
 )
 
 // dwnConsR.go

@@ -9,7 +9,7 @@ require (
 	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68
 	github.com/lamg/ldaputil v0.1.0
-	github.com/lamg/predicate v0.0.1
+	github.com/lamg/predicate v0.0.4
 	github.com/lamg/proxy v0.0.0-20190207224526-bbb85102af9d
 	github.com/lamg/rtimespan v0.1.0
 	github.com/lamg/viper v1.3.2

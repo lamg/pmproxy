@@ -24,8 +24,11 @@ import (
 	"encoding/json"
 	pred "github.com/lamg/predicate"
 	rt "github.com/lamg/rtimespan"
+	"io/ioutil"
 	//"net"
+	"path"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -37,6 +40,9 @@ type resources struct {
 	managerKFs *sync.Map
 	consRs     *sync.Map
 	mappers    *sync.Map
+	userDBs    *sync.Map
+	iu         *ipUserS
+	cr         *crypt
 }
 
 func (r *resources) match(ürl, rAddr string,
@@ -55,6 +61,7 @@ func (r *resources) match(ürl, rAddr string,
 				v = matcher(ürl, rAddr, t)
 			}
 		}
+		return
 	}
 	s.Result = pred.Reduce(r.rules, interp)
 	return
@@ -71,7 +78,8 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 		{
 			set,
 			func() {
-				r.rules, c.e = pred.Parse(c.String, r.matchers)
+				rd := strings.NewReader(c.String)
+				r.rules, c.e = pred.Parse(rd)
 			},
 		},
 		{
@@ -99,8 +107,10 @@ func (r *resources) add(tÿpe string,
 		{ipRangeMK, func() { e = r.addRangeIPM(par) }},
 		{groupIPMK, func() {}},
 		{sessionIPMK, func() { e = r.addSessionIPM(par) }},
-		{specKT, func() { e = r.addSpec(par) }},
+		{specKS, func() { e = r.addSpec(par) }},
 	}
+	fe := func(d error) { e = d }
+	exF(kf, tÿpe, fe)
 	// TODO
 	return
 }
@@ -194,7 +204,7 @@ func (r *resources) addDwnConsR(
 			return
 		},
 	}
-	e = dw.fromMap(i)
+	e = dw.fromMap(m)
 	if e == nil {
 		v, ok := r.userDBs.Load(dw.userQuotaN)
 		if ok {
@@ -240,14 +250,15 @@ func (r *resources) authenticator(name string) (
 
 func (r *resources) addGroupIPM(
 	m map[string]interface{}) (e error) {
-
+	//TODO
+	return
 }
 
 func (r *resources) addSpec(m map[string]interface{}) (e error) {
 	sp := new(spec)
-	e = sp.fromMap(par)
+	e = sp.fromMap(m)
 	if e == nil {
-		r.specs.Store(sp.name, sp)
+		r.specs.Store(sp.Name, sp)
 	}
 	return
 }
