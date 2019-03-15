@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"github.com/lamg/viper"
 	"github.com/spf13/cast"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -67,7 +66,6 @@ type conf struct {
 	consRs      *sync.Map
 	mappers     *sync.Map
 	userDBs     *sync.Map
-	ipQuotas    *sync.Map
 	lg          *logger
 	res         *resources
 	cm          *connMng
@@ -90,6 +88,8 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 	// read admins
 	// read logger
 	// get searializers (c.mappers)
+	// TODO it will initialize resources and then every
+	// consR and ipMatcher will be passed to resources.add
 	c = &conf{
 		iu:         &ipUserS{mäp: new(sync.Map)},
 		managerKFs: new(sync.Map),
@@ -97,7 +97,6 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 		consRs:     new(sync.Map),
 		mappers:    new(sync.Map),
 		userDBs:    new(sync.Map),
-		ipQuotas:   new(sync.Map),
 		ipGroups:   new(sync.Map),
 	}
 	fs := []func(){
@@ -219,19 +218,8 @@ func (c *conf) initUserDBs() (e error) {
 }
 
 func (c *conf) initSessionIPMs() (e error) {
-	// c.initUsrDBs() /\ def.(maps in c)
+	// c.initUsrDBs()
 	fm := func(i interface{}) {
-		sm := &sessionIPM{
-			iu: c.iu,
-			cr: c.cr,
-		}
-		e = sm.fromMap(i)
-		if e == nil {
-			sm.nameAuth = c.authenticator
-			c.managerKFs.Store(sm.name, sm.managerKF)
-			c.matchers.Store(sm.name, sm.match)
-			c.mappers.Store(sm.name, sm.toMap)
-		}
 	}
 	c.cr, e = newCrypt()
 	if e == nil {
@@ -245,57 +233,9 @@ func (c *conf) initSessionIPMs() (e error) {
 	return
 }
 
-func (c *conf) authenticator(name string) (
-	a func(string, string) (string, error),
-	ok bool,
-) {
-	v, ok := c.userDBs.Load(name)
-	if ok {
-		a = v.(*userDB).auth
-	}
-	return
-}
-
 func (c *conf) initDwnConsRs() (e error) {
 	// c.initUserDBs()
-	homeData := path.Join(home(), dataDir)
 	fm := func(i interface{}) {
-		dw := &dwnConsR{
-			fileReader: func(file string) (bs []byte, d error) {
-				bs, d = ioutil.ReadFile(path.Join(homeData, file))
-				return
-			},
-		}
-		e = dw.fromMap(i)
-		if e == nil {
-			v, ok := c.userDBs.Load(dw.userQuotaN)
-			if ok {
-				dw.userQuota = v.(*userDB).quota
-			} else {
-				e = noKey(dw.userQuotaN)
-			}
-		}
-		if e == nil {
-			dw.mapWriter = func(mp map[string]uint64) {
-				var bs []byte
-				var d error
-				fs := []func(){
-					func() { bs, d = json.Marshal(mp) },
-					func() {
-						ioutil.WriteFile(
-							path.Join(homeData, dw.name+".json"),
-							bs,
-							0644,
-						)
-					},
-				}
-				trueFF(fs,
-					func() bool { return d == nil })
-			}
-			c.managerKFs.Store(dw.name, dw.managerKF)
-			c.consRs.Store(dw.name, dw.consR())
-			c.mappers.Store(dw.name, dw.toMap)
-		}
 	}
 	c.sliceMap(dwnConsRK, fm, func(d error) { e = d },
 		func() bool { return e == nil })

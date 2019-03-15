@@ -33,20 +33,26 @@ const (
 	allTimeK  = "allTime"
 )
 
-func toMapSpan(s *rt.RSpan) (m map[string]interface{}) {
+func toMapSpan(s *rt.RSpan,
+	name string) (m map[string]interface{}) {
 	m = map[string]interface{}{
 		startK:    s.Start.String(),
 		activeK:   s.Active.String(),
 		totalK:    s.Total.String(),
 		infiniteK: s.Infinite,
 		allTimeK:  s.AllTime,
+		nameK:     name,
 	}
 	return
 }
 
-func fromMapSpan(s *rt.RSpan, i interface{}) (e error) {
+func fromMapSpan(s *rt.RSpan,
+	i interface{}) (name string, e error) {
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
+		{
+			nameK, func(i interface{}) { name = stringE(i, fe) },
+		},
 		{
 			activeK,
 			func(i interface{}) {

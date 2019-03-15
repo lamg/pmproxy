@@ -136,6 +136,12 @@ const (
 	ipmK      = "ipm"
 )
 
+// rules.go
+const (
+	ipRangeMK = "ipRangeM"
+	regexpK   = "regexp"
+)
+
 // dwnConsR.go
 const (
 	lastResetK  = "lastReset"
@@ -146,6 +152,12 @@ const (
 const (
 	userGroupNK = "ipGroupN"
 	groupK      = "group"
+)
+
+// rangeIPM.go
+const (
+	cidrK     = "cidr"
+	rangeIPMT = "rangeIPM"
 )
 
 // userDB.go

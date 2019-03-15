@@ -23,41 +23,40 @@ package pmproxy
 import (
 	"encoding/json"
 	pred "github.com/lamg/predicate"
-	//rt "github.com/lamg/rtimespan"
-	//"github.com/spf13/cast"
+	rt "github.com/lamg/rtimespan"
 	//"net"
-	"net/url"
-	//"regexp"
+	"regexp"
+	"sync"
 	"time"
 )
 
-// type `rules` is an interface for matching HTTP requests
-// (rules.match), for managing at runtime those rules
-// (rules.managerKF), and for discovering rules available
-// for a client (rules.discover). It can be serialized
-// (rules.toMap) and deserialized (rules.fromMap).
 type resources struct {
-	rules     *pred.Predicate
-	sendURL   func(string)
-	sendAddr  func(string)
-	sendTime  func(time.Time)
-	sendUser  func(string)
-	sendGroup func(string)
-	receive   func() *spec
+	rules      *pred.Predicate
+	specs      *sync.Map
+	matchers   *sync.Map
+	managerKFs *sync.Map
+	consRs     *sync.Map
+	mappers    *sync.Map
 }
 
 func (r *resources) match(ürl, rAddr string,
 	t time.Time) (s *spec) {
-	r.sendURL(ürl)
-	r.sendAddr(rAddr)
-	r.sendTime(t)
-	pred.Reduce(r.rules) // TODO n :=
-	s = r.receive()
-	return
-}
-
-func (r *resources) discover(ip string) (s *spec) {
-	// TODO discovery of matchers
+	s = new(spec)
+	interp := func(name string) (v, ok bool) {
+		vsp, ok := r.specs.Load(name)
+		if ok {
+			join(s, vsp.(*spec))
+			v = true
+		} else {
+			var mt interface{}
+			mt, ok = r.matchers.Load(name)
+			if ok {
+				matcher := mt.(func(string, string, time.Time) bool)
+				v = matcher(ürl, rAddr, t)
+			}
+		}
+	}
+	s.Result = pred.Reduce(r.rules, interp)
 	return
 }
 
@@ -66,102 +65,198 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 		{
 			add,
 			func() {
+				c.e = r.add(c.String, c.Object)
 			},
 		},
 		{
-			del,
+			set,
 			func() {
+				r.rules, c.e = pred.Parse(c.String, r.matchers)
 			},
 		},
 		{
 			show,
 			func() {
-				c.bs, c.e = json.Marshal(r.rules)
+				c.bs = []byte(pred.String(r.rules))
 			},
 		},
 		{
-			get,
+			discover,
 			func() {
-				rs := r.discover(c.RemoteAddr)
-				c.bs, c.e = json.Marshal(rs)
+				r.match("", c.RemoteAddr, time.Now())
 			},
 		},
 	}
+	// TODO show, delete spec
 	return
 }
 
-type spec struct {
-	Iface    string `json:"iface"`
-	ProxyURL string `json:"proxyURL"`
-	proxyURL *url.URL
-	// ConsRs is a map from type to description.
-	// Only a ConsR of each type is assigned, as the
-	// map structure implicitly determines
-	ConsRs map[string]string `json:"consRs"`
-	ip     string
-	user   string
+func (r *resources) add(tÿpe string,
+	par map[string]interface{}) (e error) {
+	kf := []kFunc{
+		{urlmK, func() {}},
+		{spanK, func() { e = r.addSpan(par) }},
+		{ipRangeMK, func() { e = r.addRangeIPM(par) }},
+		{groupIPMK, func() {}},
+		{sessionIPMK, func() { e = r.addSessionIPM(par) }},
+		{specKT, func() { e = r.addSpec(par) }},
+	}
+	// TODO
+	return
 }
 
-func (s *spec) fromMap(i interface{}) (e error) {
+func (r *resources) addURLM(m map[string]interface{}) (e error) {
 	fe := func(d error) { e = d }
+	var name, urlReg string
+	var parReg *regexp.Regexp
 	kf := []kFuncI{
+		{nameK, func(i interface{}) { name = stringE(i, fe) }},
+		{regexpK, func(i interface{}) { urlReg = stringE(i, fe) }},
 		{
-			ifaceK,
-			func(i interface{}) {
-				s.Iface = stringE(i, fe)
-			},
+			regexpK,
+			func(i interface{}) { parReg, e = regexp.Compile(urlReg) },
 		},
 		{
-			proxyURLK,
+			regexpK,
 			func(i interface{}) {
-				s.ProxyURL = stringE(i, fe)
-			},
-		},
-		{
-			proxyURLK,
-			func(i interface{}) {
-				fe(s.init())
-			},
-		},
-		{
-			consRK,
-			func(i interface{}) {
-				s.ConsRs = stringMapStringE(i, fe)
+				r.matchers.Store(name,
+					func(ürl, ip string, t time.Time) bool {
+						return parReg.MatchString(ürl)
+					})
+				r.mappers.Store(name,
+					func() (m map[string]interface{}) {
+						m = map[string]interface{}{
+							nameK:   name,
+							regexpK: urlReg,
+						}
+						return
+					})
 			},
 		},
 	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
+	mapKF(kf, m, fe, func() bool { return e == nil })
 	return
 }
 
-func (s *spec) toMap() (i interface{}) {
-	i = map[string]interface{}{
-		ifaceK:    s.Iface,
-		proxyURLK: s.ProxyURL,
-		consRK:    s.ConsRs,
+func (r *resources) addSpan(m map[string]interface{}) (e error) {
+	sp := new(rt.RSpan)
+	name, e := fromMapSpan(sp, m)
+	if e == nil {
+		r.matchers.Store(name,
+			func(ürl, ip string, t time.Time) (ok bool) {
+				ok = sp.ContainsTime(t)
+				return
+			})
+		r.mappers.Store(name, func() (m map[string]interface{}) {
+			m = toMapSpan(sp, name)
+			return
+		})
 	}
 	return
 }
 
-func (s *spec) init() (e error) {
-	s.proxyURL, e = url.Parse(s.ProxyURL)
+func (r *resources) addRangeIPM(
+	m map[string]interface{}) (e error) {
+	rg := new(rangeIPM)
+	e = rg.fromMap(m)
+	if e == nil {
+		fm := wrapIPMatcher(rg.match)
+		r.matchers.Store(rg.name, fm)
+		r.managerKFs.Store(rg.name, rg.managerKF)
+		r.mappers.Store(rg.name, rg.toMap)
+	}
 	return
 }
 
-func join(s, t *spec) {
-	// the policy consists in replacing when empty
-	if s.ProxyURL == "" {
-		s.ProxyURL = t.ProxyURL
-		s.proxyURL = t.proxyURL
+func (r *resources) addSessionIPM(
+	m map[string]interface{},
+) (e error) {
+	sm := &sessionIPM{
+		iu: r.iu,
+		cr: r.cr,
 	}
-	if s.Iface == "" {
-		s.Iface = t.Iface
+	e = sm.fromMap(m)
+	if e == nil {
+		sm.nameAuth = r.authenticator
+		r.managerKFs.Store(sm.name, sm.managerKF)
+		r.matchers.Store(sm.name, wrapIPMatcher(sm.match))
+		r.mappers.Store(sm.name, sm.toMap)
 	}
-	for k, v := range t.ConsRs {
-		_, ok := s.ConsRs[k]
-		if !ok {
-			s.ConsRs[k] = v
+	return
+}
+
+func (r *resources) addDwnConsR(
+	m map[string]interface{}) (e error) {
+	homeData := path.Join(home(), dataDir)
+	dw := &dwnConsR{
+		fileReader: func(file string) (bs []byte, d error) {
+			bs, d = ioutil.ReadFile(path.Join(homeData, file))
+			return
+		},
+	}
+	e = dw.fromMap(i)
+	if e == nil {
+		v, ok := r.userDBs.Load(dw.userQuotaN)
+		if ok {
+			dw.userQuota = v.(*userDB).quota
+		} else {
+			e = noKey(dw.userQuotaN)
 		}
+	}
+	if e == nil {
+		dw.mapWriter = func(mp map[string]uint64) {
+			var bs []byte
+			var d error
+			fs := []func(){
+				func() { bs, d = json.Marshal(mp) },
+				func() {
+					ioutil.WriteFile(
+						path.Join(homeData, dw.name+".json"),
+						bs,
+						0644,
+					)
+				},
+			}
+			trueFF(fs,
+				func() bool { return d == nil })
+		}
+		r.managerKFs.Store(dw.name, dw.managerKF)
+		r.consRs.Store(dw.name, dw.consR())
+		r.mappers.Store(dw.name, dw.toMap)
+	}
+	return
+}
+
+func (r *resources) authenticator(name string) (
+	a func(string, string) (string, error),
+	ok bool,
+) {
+	v, ok := r.userDBs.Load(name)
+	if ok {
+		a = v.(*userDB).auth
+	}
+	return
+}
+
+func (r *resources) addGroupIPM(
+	m map[string]interface{}) (e error) {
+
+}
+
+func (r *resources) addSpec(m map[string]interface{}) (e error) {
+	sp := new(spec)
+	e = sp.fromMap(par)
+	if e == nil {
+		r.specs.Store(sp.name, sp)
+	}
+	return
+}
+
+func wrapIPMatcher(m func(string) bool) (
+	w func(string, string, time.Time) bool) {
+	w = func(ürl, ip string, t time.Time) (ok bool) {
+		ok = m(ip)
+		return
 	}
 	return
 }
