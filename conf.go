@@ -22,13 +22,13 @@ package pmproxy
 
 import (
 	"context"
-	"encoding/json"
+	pred "github.com/lamg/predicate"
 	"github.com/lamg/viper"
 	"github.com/spf13/cast"
 	"net/url"
 	"os"
 	"path"
-	"sync"
+	"strings"
 	"time"
 )
 
@@ -57,20 +57,11 @@ type credentials struct {
 type ipMatcher func(string) bool
 
 type conf struct {
-	admins      []string
 	staticFPath string
-	iu          *ipUserS
-	managerKFs  *sync.Map
-	ipGroups    *sync.Map
-	matchers    *sync.Map
-	consRs      *sync.Map
-	mappers     *sync.Map
-	userDBs     *sync.Map
-	lg          *logger
-	res         *resources
-	cm          *connMng
-	cr          *crypt
 
+	lg    *logger
+	res   *resources
+	cm    *connMng
 	proxy *srvConf
 	iface *srvConf
 }
@@ -81,24 +72,7 @@ func newConf() (c *conf, e error) {
 }
 
 func newConfWith(fileInit func() error) (c *conf, e error) {
-	// read ip matchers
-	// read user information provider
-	// read consumption restrictors
-	// read rules
-	// read admins
-	// read logger
-	// get searializers (c.mappers)
-	// TODO it will initialize resources and then every
-	// consR and ipMatcher will be passed to resources.add
-	c = &conf{
-		iu:         &ipUserS{mäp: new(sync.Map)},
-		managerKFs: new(sync.Map),
-		matchers:   new(sync.Map),
-		consRs:     new(sync.Map),
-		mappers:    new(sync.Map),
-		userDBs:    new(sync.Map),
-		ipGroups:   new(sync.Map),
-	}
+	c = &conf{}
 	fs := []func(){
 		func() {
 			c.setDefaults()
@@ -106,18 +80,44 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 		},
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
-		func() {
-			c.admins = viper.GetStringSlice(adminsK)
-			e = c.initUserDBs()
-		},
-		func() { e = c.initSessionIPMs() },
-		func() { e = c.initDwnConsRs() },
-		func() { e = c.initGroupIPMs() },
-		func() { e = c.initLogger() },
 		func() { e = c.initResources() },
+		func() { e = c.initLogger() },
 		func() { e = c.initConnMng() },
 	}
 	trueFF(fs, func() bool { return e == nil })
+	return
+}
+
+func (c *conf) initConnMng() (e error) {
+	// c.initRules()
+	c.cm = new(connMng)
+	v := viper.Get(connMngK)
+	e = c.cm.fromMap(v)
+	dl := &dialer{
+		consRF: func(name string) (cr *consR, ok bool) {
+			v, ok := c.res.consRs.Load(name)
+			if ok {
+				cr = v.(*consR)
+			}
+			return
+		},
+		timeout: viper.GetDuration(timeoutK),
+	}
+	c.cm.direct = dl.dialContext
+	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
+		addr string, t time.Time) (nctx context.Context) {
+		spec := c.res.match(ürl, addr, t)
+		c.lg.log(meth, ürl, spec.ip, spec.user, t)
+		nctx = context.WithValue(ctx, specK, spec)
+		return
+	}
+	c.cm.proxyF = func(meth, ürl, addr string,
+		t time.Time) (r *url.URL, e error) {
+		spec := c.res.match(ürl, addr, t)
+		r = spec.proxyURL
+		return
+	}
+	c.res.mappers.Store(connMngK, c.cm.toMap)
 	return
 }
 
@@ -201,170 +201,39 @@ func (c *conf) readIfaceConf() (e error) {
 	return
 }
 
-func (c *conf) initUserDBs() (e error) {
-	// def.(maps in c)
-	fm := func(i interface{}) {
-		udb := new(userDB)
-		e = udb.fromMap(i)
-		if e == nil {
-			c.managerKFs.Store(udb.name, udb.managerKF)
-			c.mappers.Store(udb.name, udb.toMap)
-			c.userDBs.Store(udb.name, udb)
-		}
-	}
-	c.sliceMap(userDBK, fm, func(d error) { e = d },
-		func() bool { return e == nil })
-	return
-}
-
-func (c *conf) initSessionIPMs() (e error) {
-	// c.initUsrDBs()
-	fm := func(i interface{}) {
-	}
-	c.cr, e = newCrypt()
-	if e == nil {
-		c.sliceMap(
-			sessionIPMK,
-			fm,
-			func(d error) { e = d },
-			func() bool { return e == nil },
-		)
-	}
-	return
-}
-
-func (c *conf) initDwnConsRs() (e error) {
-	// c.initUserDBs()
-	fm := func(i interface{}) {
-	}
-	c.sliceMap(dwnConsRK, fm, func(d error) { e = d },
-		func() bool { return e == nil })
-	return
-}
-
-func (c *conf) userGroups(name string) (
-	g func(string) ([]string, error),
-	ok bool) {
-	v, ok := c.userDBs.Load(name)
-	if ok {
-		g = v.(*userDB).userGroups
-	}
-	return
-}
-
-func (c *conf) initGroupIPMs() (e error) {
-	// c.initUserDBs()
-	fm := func(i interface{}) {
-		gipm := new(groupIPM)
-		e = gipm.fromMap(i)
-		if e == nil {
-			v, ok := c.userDBs.Load(gipm.userGroupN)
-			if ok {
-				gipm.userGroup = v.(*userDB).userGroups
-				c.managerKFs.Store(gipm.name, gipm.managerKF)
-				c.mappers.Store(gipm.name, gipm.toMap)
-				c.matchers.Store(gipm.name, gipm.match)
-			} else {
-				e = noKey(gipm.userGroupN)
-			}
-		}
-	}
-	c.sliceMap(groupIPMK, fm, func(d error) { e = d },
-		func() bool { return e == nil })
-	return
-}
-
 func (c *conf) initLogger() (e error) {
 	c.lg, e = newLogger(c.strïng(loggerAddrK))
 	return
 }
 
 func (c *conf) initResources() (e error) {
-	v := viper.Get(resourcesK)
-	if v != nil {
-		c.res = new(resources)
-		// TODO
-		//e = c.rls.fromMap(v)
-		//c.managerKFs.Store(rulesK, c.rls.managerKF)
-		//c.rls.ipm = func(name string) (m ipMatcher, ok bool) {
-		//	v, ok := c.matchers.Load(name)
-		//	if ok {
-		//		m = v.(ipMatcher)
-		//	}
-		//	return
-		//}
-		//c.mappers.Store(rulesK, c.rls.toMap)
-	}
-	return
-}
-
-func (c *conf) initConnMng() (e error) {
-	// c.initRules()
-	c.cm = new(connMng)
-	v := viper.Get(connMngK)
-	e = c.cm.fromMap(v)
-	dl := &dialer{
-		consRF: func(name string) (cr *consR, ok bool) {
-			v, ok := c.consRs.Load(name)
-			if ok {
-				cr = v.(*consR)
+	fe := func(d error) { e = d }
+	var predCf string
+	fs := []func(){
+		func() {
+			v := viper.Get(rulesK)
+			predCf = stringE(v, fe)
+		},
+		func() {
+			c.res = new(resources)
+			c.res.rules, e = pred.Parse(strings.NewReader(predCf))
+		},
+		func() {
+			c.res.admins = viper.GetStringSlice(adminsK)
+		},
+		func() {
+			rs := []string{userDBK, sessionIPMK, dwnConsRK, groupIPMK,
+				spanK, ipRangeMK, specKS, urlmK}
+			inf := func(i int) {
+				fm := func(m map[string]interface{}) {
+					c.res.add(rs[i], m)
+				}
+				c.sliceMap(rs[i], fm, fe, func() bool { return e == nil })
 			}
-			return
+			forall(inf, len(rs))
 		},
-		timeout: viper.GetDuration(timeoutK),
 	}
-	c.cm.direct = dl.dialContext
-	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
-		addr string, t time.Time) (nctx context.Context) {
-		spec := c.res.match(ürl, addr, t)
-		c.lg.log(meth, ürl, spec.ip, spec.user, t)
-		nctx = context.WithValue(ctx, specK, spec)
-		return
-	}
-	c.cm.proxyF = func(meth, ürl, addr string,
-		t time.Time) (r *url.URL, e error) {
-		spec := c.res.match(ürl, addr, t)
-		r = spec.proxyURL
-		return
-	}
-	c.mappers.Store(connMngK, c.cm.toMap)
-	return
-}
-
-func (c *conf) manager(m *cmd) {
-	m.User, _ = c.iu.get(m.RemoteAddr)
-	m.IsAdmin, _ = bLnSrch(
-		func(i int) bool {
-			return c.admins[i] == m.User
-		},
-		len(c.admins),
-	)
-	v, ok := c.managerKFs.Load(m.Manager)
-	var kf []kFunc
-	if ok {
-		mkf := v.(func(*cmd) []kFunc)
-		kf = mkf(m)
-		kf = append(kf,
-			kFunc{skip, func() {}},
-			kFunc{
-				showAll,
-				func() {
-					mngs := make([]string, 0)
-					c.managerKFs.Range(
-						func(k, v interface{}) (ok bool) {
-							mngs = append(mngs, k.(string))
-							ok = true
-							return
-						},
-					)
-					m.bs, m.e = json.Marshal(&mngs)
-				},
-			},
-		)
-		exF(kf, m.Cmd, func(d error) { m.e = d })
-	} else {
-		m.e = noKey(m.Manager)
-	}
+	trueFF(fs, func() bool { return e == nil })
 	return
 }
 
@@ -392,23 +261,27 @@ func (c *conf) strïng(key string) (s string) {
 	return
 }
 
-func (c *conf) configPath() (dir string) {
-	dir = path.Dir(viper.ConfigFileUsed())
-	return
-}
-
-func (c *conf) sliceMap(key string, fm func(interface{}),
+func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
 	fe func(error), bf func() bool) {
 	vs, e := c.sliceE(key)
 	if e == nil {
 		inf := func(i int) (b bool) {
-			fm(vs[i])
+			vi := stringMapE(vs[i], fe)
 			b = bf()
+			if b {
+				fm(vi)
+				b = bf()
+			}
 			return
 		}
 		trueForall(inf, len(vs))
 	} else {
 		fe(e)
 	}
+	return
+}
+
+func (c *conf) configPath() (dir string) {
+	dir = path.Dir(viper.ConfigFileUsed())
 	return
 }

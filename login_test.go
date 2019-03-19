@@ -41,7 +41,8 @@ type testReq struct {
 func TestLogin(t *testing.T) {
 	c, e := newConfWith(initSessionRules)
 	require.NoError(t, e)
-	c.cr.expiration = time.Second
+	res := c.res
+	res.cr.expiration = time.Second
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
 	loginIP := "192.168.1.1"

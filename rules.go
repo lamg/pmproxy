@@ -43,6 +43,7 @@ type resources struct {
 	userDBs    *sync.Map
 	iu         *ipUserS
 	cr         *crypt
+	admins     []string
 }
 
 func (r *resources) match(ürl, rAddr string,
@@ -101,17 +102,22 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 
 func (r *resources) add(tÿpe string,
 	par map[string]interface{}) (e error) {
-	kf := []kFunc{
-		{urlmK, func() {}},
-		{spanK, func() { e = r.addSpan(par) }},
-		{ipRangeMK, func() { e = r.addRangeIPM(par) }},
-		{groupIPMK, func() {}},
-		{sessionIPMK, func() { e = r.addSessionIPM(par) }},
-		{specKS, func() { e = r.addSpec(par) }},
+	fs := map[string]func(map[string]interface{}) error{
+		urlmK:       r.addURLM,
+		spanK:       r.addSpan,
+		ipRangeMK:   r.addRangeIPM,
+		groupIPMK:   r.addGroupIPM,
+		sessionIPMK: r.addSessionIPM,
+		specKS:      r.addSpec,
+		userDBK:     r.addUserDB,
+		dwnConsRK:   r.addDwnConsR,
 	}
-	fe := func(d error) { e = d }
-	exF(kf, tÿpe, fe)
-	// TODO
+	fm, ok := fs[tÿpe]
+	if ok {
+		e = fm(par)
+	} else {
+		e = noKey(tÿpe)
+	}
 	return
 }
 
@@ -250,7 +256,19 @@ func (r *resources) authenticator(name string) (
 
 func (r *resources) addGroupIPM(
 	m map[string]interface{}) (e error) {
-	//TODO
+	gipm := new(groupIPM)
+	e = gipm.fromMap(m)
+	if e == nil {
+		v, ok := r.userDBs.Load(gipm.userGroupN)
+		if ok {
+			gipm.userGroup = v.(*userDB).userGroups
+			r.managerKFs.Store(gipm.name, gipm.managerKF)
+			r.mappers.Store(gipm.name, gipm.toMap)
+			r.matchers.Store(gipm.name, gipm.match)
+		} else {
+			e = noKey(gipm.userGroupN)
+		}
+	}
 	return
 }
 
@@ -263,11 +281,59 @@ func (r *resources) addSpec(m map[string]interface{}) (e error) {
 	return
 }
 
+func (r *resources) addUserDB(m map[string]interface{}) (e error) {
+	udb := new(userDB)
+	e = udb.fromMap(m)
+	if e == nil {
+		r.managerKFs.Store(udb.name, udb.managerKF)
+		r.mappers.Store(udb.name, udb.toMap)
+		r.userDBs.Store(udb.name, udb)
+	}
+	return
+}
+
 func wrapIPMatcher(m func(string) bool) (
 	w func(string, string, time.Time) bool) {
 	w = func(ürl, ip string, t time.Time) (ok bool) {
 		ok = m(ip)
 		return
+	}
+	return
+}
+
+func (r *resources) manager(m *cmd) {
+	m.User, _ = r.iu.get(m.RemoteAddr)
+	m.IsAdmin, _ = bLnSrch(
+		func(i int) bool {
+			return r.admins[i] == m.User
+		},
+		len(r.admins),
+	)
+	v, ok := r.managerKFs.Load(m.Manager)
+	var kf []kFunc
+	if ok {
+		mkf := v.(func(*cmd) []kFunc)
+		kf = mkf(m)
+		kf = append(kf,
+			kFunc{skip, func() {}},
+			kFunc{
+				showAll,
+				func() {
+					mngs := make([]string, 0)
+					r.managerKFs.Range(
+						func(k, v interface{}) (ok bool) {
+							mngs = append(mngs, k.(string))
+							ok = true
+							return
+						},
+					)
+					m.bs, m.e = json.Marshal(&mngs)
+				},
+			},
+		)
+		exF(kf, m.Cmd, func(d error) { m.e = d })
+	} else {
+		m.e = noKey(m.Manager)
 	}
 	return
 }

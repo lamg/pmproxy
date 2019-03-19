@@ -145,7 +145,7 @@ func compatibleIface(cf *conf, path, method, header,
 			m.Secret = header
 			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
 		},
-		func() { cf.manager(m); e = m.e },
+		func() { cf.res.manager(m); e = m.e },
 		func() {
 			if m.bs != nil {
 				if path+method == apiAuth+h.MethodPost {
