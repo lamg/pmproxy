@@ -22,13 +22,11 @@ package pmproxy
 
 import (
 	"context"
-	pred "github.com/lamg/predicate"
 	"github.com/lamg/viper"
 	"github.com/spf13/cast"
 	"net/url"
 	"os"
 	"path"
-	"strings"
 	"time"
 )
 
@@ -215,11 +213,9 @@ func (c *conf) initResources() (e error) {
 			predCf = stringE(v, fe)
 		},
 		func() {
-			c.res = new(resources)
-			c.res.rules, e = pred.Parse(strings.NewReader(predCf))
+			c.res, e = newResources(predCf, viper.GetStringSlice(adminsK))
 		},
 		func() {
-			c.res.admins = viper.GetStringSlice(adminsK)
 		},
 		func() {
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, groupIPMK,

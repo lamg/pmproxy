@@ -33,15 +33,15 @@ func TestUserInfo(t *testing.T) {
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)
 	loginAddr := "192.12.12.3:1919"
-	var secr, sessionMng string
+	trp := new(testResp)
 	ts := []testReq{
-		discoverTR(t, &sessionMng, loginAddr),
-		loginTR(t, &secr, sessionMng, loginAddr, 0),
+		discoverTR(t, trp, loginAddr),
+		loginTR(t, trp, loginAddr, 0),
 		{
 			command: &cmd{
 				Manager: defaultUserDB,
 				Cmd:     get,
-				Secret:  secr,
+				Secret:  trp.secr,
 			},
 			rAddr: loginAddr,
 			code:  h.StatusOK,
@@ -55,5 +55,5 @@ func TestUserInfo(t *testing.T) {
 			},
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP, secr)
+	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
 }

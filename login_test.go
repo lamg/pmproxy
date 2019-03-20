@@ -38,6 +38,10 @@ type testReq struct {
 	bodyOK  func([]byte)
 }
 
+type testResp struct {
+	sessionMng, secr, body string
+}
+
 func TestLogin(t *testing.T) {
 	c, e := newConfWith(initSessionRules)
 	require.NoError(t, e)
@@ -57,10 +61,9 @@ func TestLogin(t *testing.T) {
 		}
 		return
 	}
-	var secr string
-	var sessionMng string
+	trp := new(testResp)
 	u0Cmd := testReq{
-		command: &cmd{Manager: sessionMng, Cmd: get, Secret: secr},
+		command: &cmd{Manager: trp.sessionMng, Cmd: get, Secret: trp.secr},
 		rAddr:   loginAddr,
 		code:    h.StatusOK,
 		bodyOK:  func(bs []byte) { require.True(t, mapHasUser0(bs)) },
@@ -70,18 +73,18 @@ func TestLogin(t *testing.T) {
 		require.False(t, mapHasUser0(bs))
 	}
 	ts := []testReq{
-		discoverTR(t, &sessionMng, loginAddr),
-		loginTR(t, &secr, sessionMng, loginAddr, 0),
+		discoverTR(t, trp, loginAddr),
+		loginTR(t, trp, loginAddr, 0),
 		u0Cmd,
 		{
-			command: &cmd{Manager: sessionMng, Secret: secr,
+			command: &cmd{Manager: trp.sessionMng, Secret: trp.secr,
 				Cmd: clöse},
 			rAddr:  loginAddr,
 			code:   h.StatusOK,
 			bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
 		},
 		noU0Cmd,
-		loginTR(t, &secr, sessionMng, loginAddr, 2*time.Second),
+		loginTR(t, trp, loginAddr, 2*time.Second),
 		{
 			command: u0Cmd.command,
 			rAddr:   u0Cmd.rAddr,
@@ -91,52 +94,52 @@ func TestLogin(t *testing.T) {
 			},
 		},
 		{
-			command: &cmd{Cmd: renew, Manager: sessionMng},
+			command: &cmd{Cmd: renew, Manager: trp.sessionMng},
 			rAddr:   loginAddr,
 			code:    h.StatusOK,
 			bodyOK: func(bs []byte) {
-				secr = string(bs)
+				trp.secr = string(bs)
 			},
 		},
 		u0Cmd,
 	}
-	runReqTests(t, ts, ifh.serveHTTP, secr)
+	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
 }
 
-func discoverTR(t *testing.T, sessionMng *string,
+func discoverTR(t *testing.T, trp *testResp,
 	addr string) (r testReq) {
 	r = testReq{
 		command: &cmd{
-			Cmd: discover,
+			Cmd:     discover,
+			Manager: resourcesK,
 		},
 		rAddr: addr,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
-			//s := new(spec)
-			//e := json.Unmarshal(bs, s)
-			//require.NoError(t, e)
-			//sm, ok := s.IPMatchers[sessionIPMK]
-			//require.True(t, ok)
-			// TODO
-			*sessionMng = defaultSessionIPM
+			s := new(spec)
+			e := json.Unmarshal(bs, s)
+			require.NoError(t, e)
+			trp.sessionMng = s.Result.String
+			t.Logf("sm: '%s'", trp.sessionMng)
 		},
 	}
 	return
 }
 
-func loginTR(t *testing.T, body *string, sm,
+func loginTR(t *testing.T, trp *testResp,
 	rAddr string, sleepAft time.Duration) (r testReq) {
+	t.Logf("sm: '%s'", trp.sessionMng)
 	r = testReq{
 		command: &cmd{
 			Cmd:     open,
-			Manager: sm,
+			Manager: trp.sessionMng,
 			Cred:    &credentials{User: user0, Pass: pass0},
 		},
 		rAddr: rAddr,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
 			require.NotEqual(t, 0, len(bs))
-			*body = string(bs)
+			trp.body = string(bs)
 			time.Sleep(sleepAft)
 		},
 	}
@@ -161,6 +164,7 @@ func runReqTests(t *testing.T, ts []testReq, hf h.HandlerFunc,
 }
 
 func initSessionRules() (e error) {
+	viper.SetDefault(rulesK, defaultSessionIPM)
 	viper.SetDefault(userDBK, []map[string]interface{}{
 		{
 			nameK:    defaultUserDB,

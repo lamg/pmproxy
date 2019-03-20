@@ -34,11 +34,11 @@ func TestUserStatus(t *testing.T) {
 	c, e := newConfWith(initDefaultDwnConsR)
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
-	var secr, sessionMng string
+	trp := new(testResp)
 	loginAddr := "192.168.1.1:1982"
 	ts := []testReq{
-		discoverTR(t, &sessionMng, loginAddr),
-		loginTR(t, &secr, sessionMng, loginAddr, 0),
+		discoverTR(t, trp, loginAddr),
+		loginTR(t, trp, loginAddr, 0),
 		checkConsTR(t, loginAddr, 0),
 		{
 			command: &cmd{
@@ -54,7 +54,7 @@ func TestUserStatus(t *testing.T) {
 		},
 		checkConsTR(t, loginAddr, 1024),
 	}
-	runReqTests(t, ts, ifh.serveHTTP, secr)
+	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
 }
 
 func checkConsTR(t *testing.T, loginAddr string,

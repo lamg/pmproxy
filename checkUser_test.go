@@ -34,9 +34,10 @@ func TestCheckUser(t *testing.T) {
 	loginAddr := "10.3.10.3:1984"
 	nLoggedIn := "10.2.1.1"
 	var secr, sessionMng string
+	trp := new(testResp)
 	ts := []testReq{
-		discoverTR(t, &sessionMng, loginAddr),
-		loginTR(t, &secr, sessionMng, loginAddr, 0),
+		discoverTR(t, trp, loginAddr),
+		loginTR(t, trp, loginAddr, 0),
 		{
 			command: &cmd{Manager: sessionMng, Cmd: check,
 				Secret: secr},

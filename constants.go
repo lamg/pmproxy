@@ -37,7 +37,6 @@ const (
 const (
 	nameK          = "name"
 	quotasK        = "quotas"
-	resourcesK     = "resources"
 	loggerAddrK    = "loggerAddr"
 	groupIPMK      = "groupIPM"
 	infoK          = "info"
@@ -138,10 +137,11 @@ const (
 
 // rules.go
 const (
-	ipRangeMK = "ipRangeM"
-	regexpK   = "regexp"
-	specKS    = "spec"
-	rulesK    = "rules"
+	ipRangeMK  = "ipRangeM"
+	regexpK    = "regexp"
+	specKS     = "spec"
+	rulesK     = "rules"
+	resourcesK = "resources"
 )
 
 // dwnConsR.go

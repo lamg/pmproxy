@@ -68,6 +68,26 @@ func (r *resources) match(ürl, rAddr string,
 	return
 }
 
+func newResources(predicate string, admins []string) (r *resources,
+	e error) {
+	r = &resources{
+		specs:      new(sync.Map),
+		matchers:   new(sync.Map),
+		managerKFs: new(sync.Map),
+		consRs:     new(sync.Map),
+		mappers:    new(sync.Map),
+		userDBs:    new(sync.Map),
+		iu:         newIPuserS(),
+		admins:     admins,
+	}
+	r.managerKFs.Store(resourcesK, r.managerKF)
+	r.rules, e = pred.Parse(strings.NewReader(predicate))
+	if e == nil {
+		r.cr, e = newCrypt()
+	}
+	return
+}
+
 func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
@@ -92,7 +112,8 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 		{
 			discover,
 			func() {
-				r.match("", c.RemoteAddr, time.Now())
+				sp := r.match("", c.RemoteAddr, time.Now())
+				c.bs, c.e = json.Marshal(sp)
 			},
 		},
 	}
