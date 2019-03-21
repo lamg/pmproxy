@@ -61,48 +61,72 @@ func TestLogin(t *testing.T) {
 		}
 		return
 	}
-	trp := new(testResp)
-	u0Cmd := testReq{
-		command: &cmd{Manager: trp.sessionMng, Cmd: get, Secret: trp.secr},
-		rAddr:   loginAddr,
-		code:    h.StatusOK,
-		bodyOK:  func(bs []byte) { require.True(t, mapHasUser0(bs)) },
-	}
-	noU0Cmd := u0Cmd
-	noU0Cmd.bodyOK = func(bs []byte) {
-		require.False(t, mapHasUser0(bs))
-	}
-	ts := []testReq{
-		discoverTR(t, trp, loginAddr),
-		loginTR(t, trp, loginAddr, 0),
-		u0Cmd,
-		{
-			command: &cmd{Manager: trp.sessionMng, Secret: trp.secr,
-				Cmd: clöse},
+	u0Cmd := func(p *testResp) testReq {
+		return testReq{
+			command: &cmd{
+				Manager: p.sessionMng,
+				Cmd:     get,
+				Secret:  p.secr,
+			},
 			rAddr:  loginAddr,
 			code:   h.StatusOK,
-			bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
+			bodyOK: func(bs []byte) { require.True(t, mapHasUser0(bs)) },
+		}
+	}
+	noU0Cmd := func(p *testResp) testReq {
+		return testReq{
+			command: &cmd{
+				Manager: p.sessionMng,
+				Cmd:     get,
+				Secret:  p.secr,
+			},
+			rAddr: loginAddr,
+			code:  h.StatusOK,
+			bodyOK: func(bs []byte) {
+				require.False(t, mapHasUser0(bs))
+			},
+		}
+	}
+	ts := []func(*testResp) testReq{
+		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
+		func(p *testResp) testReq { return loginTR(t, p, loginAddr, 0) },
+		u0Cmd,
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{Manager: p.sessionMng, Secret: p.secr,
+					Cmd: clöse},
+				rAddr:  loginAddr,
+				code:   h.StatusOK,
+				bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
+			}
 		},
 		noU0Cmd,
-		loginTR(t, trp, loginAddr, 2*time.Second),
-		{
-			command: u0Cmd.command,
-			rAddr:   u0Cmd.rAddr,
-			code:    h.StatusBadRequest,
-			bodyOK: func(bs []byte) {
-				require.Equal(t, "token is expired by 1s\n", string(bs))
-			},
+		func(p *testResp) testReq {
+			return loginTR(t, trp, loginAddr, 2*time.Second)
 		},
-		{
-			command: &cmd{Cmd: renew, Manager: trp.sessionMng},
-			rAddr:   loginAddr,
-			code:    h.StatusOK,
-			bodyOK: func(bs []byte) {
-				trp.secr = string(bs)
-			},
+		func(p *testResp) testReq {
+			return testReq{
+				command: u0Cmd.command,
+				rAddr:   u0Cmd.rAddr,
+				code:    h.StatusBadRequest,
+				bodyOK: func(bs []byte) {
+					require.Equal(t, "token is expired by 1s\n", string(bs))
+				},
+			}
+		},
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{Cmd: renew, Manager: trp.sessionMng},
+				rAddr:   loginAddr,
+				code:    h.StatusOK,
+				bodyOK: func(bs []byte) {
+					trp.secr = string(bs)
+				},
+			}
 		},
 		u0Cmd,
 	}
+
 	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
 }
 
@@ -139,18 +163,20 @@ func loginTR(t *testing.T, trp *testResp,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
 			require.NotEqual(t, 0, len(bs))
-			trp.body = string(bs)
+			trp.secr = string(bs)
 			time.Sleep(sleepAft)
 		},
 	}
 	return
 }
 
-func runReqTests(t *testing.T, ts []testReq, hf h.HandlerFunc,
-	secr string) {
+func runReqTests(t *testing.T, ts []func(*testResp) testReq,
+	hf h.HandlerFunc) {
+	trp := new(testResp)
 	inf := func(i int) {
-		ts[i].command.Secret = secr
-		bs, e := json.Marshal(ts[i].command)
+		req := ts[i](trp)
+		req.command.secr = trp.secr
+		bs, e := json.Marshal(req.command)
 		require.NoError(t, e)
 		w, r := ht.NewRecorder(),
 			ht.NewRequest(h.MethodPost, apiCmd, bytes.NewBuffer(bs))

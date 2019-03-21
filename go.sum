@@ -43,6 +43,10 @@ github.com/lamg/predicate v0.0.5-0.20190320194938-abb2f7344b40 h1:PM5ZsAeX57IhH2
 github.com/lamg/predicate v0.0.5-0.20190320194938-abb2f7344b40/go.mod h1:xAugcbdmD+63uiQuD8m7hP8z8Tkc8yG7BVTdUmqVKD4=
 github.com/lamg/predicate v0.0.5-0.20190320200523-c06a570cbf3e h1:t0P3fidd3VJNuWZdBWEDPIye1NuPB6M13KvZyAYINX8=
 github.com/lamg/predicate v0.0.5-0.20190320200523-c06a570cbf3e/go.mod h1:xAugcbdmD+63uiQuD8m7hP8z8Tkc8yG7BVTdUmqVKD4=
+github.com/lamg/predicate v0.0.5-0.20190321220643-c5ba475022a3 h1:sex/Af0vns6nwoM7WPR+9yztC30Sh0vP3R5oddEefHk=
+github.com/lamg/predicate v0.0.5-0.20190321220643-c5ba475022a3/go.mod h1:xAugcbdmD+63uiQuD8m7hP8z8Tkc8yG7BVTdUmqVKD4=
+github.com/lamg/predicate v0.0.5-0.20190321230131-c4fa4f31ad5d h1:Jei/gQlo+Gmf4ulJh0yPk7N7FHLDk+cZnACKPzRhcRw=
+github.com/lamg/predicate v0.0.5-0.20190321230131-c4fa4f31ad5d/go.mod h1:xAugcbdmD+63uiQuD8m7hP8z8Tkc8yG7BVTdUmqVKD4=
 github.com/lamg/proxy v0.0.0-20190202022709-43fafc18873a h1:tMh6lK15q9dZrdArnKS6GEk4YOSz673QoNpCBnZArrc=
 github.com/lamg/proxy v0.0.0-20190202022709-43fafc18873a/go.mod h1:LzVd3ii7yrPFmElAcs/YiXpOAaNPYQK7HfbD0ZEQ4xk=
 github.com/lamg/proxy v0.0.0-20190207224526-bbb85102af9d h1:a4Acp/6DBpK4n/IPUpnGDE72DU55gCUuobuJeN1j8tg=
