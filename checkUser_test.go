@@ -33,31 +33,33 @@ func TestCheckUser(t *testing.T) {
 	require.NoError(t, e)
 	loginAddr := "10.3.10.3:1984"
 	nLoggedIn := "10.2.1.1"
-	var secr, sessionMng string
-	trp := new(testResp)
-	ts := []testReq{
-		discoverTR(t, trp, loginAddr),
-		loginTR(t, trp, loginAddr, 0),
-		{
-			command: &cmd{Manager: sessionMng, Cmd: check,
-				Secret: secr},
-			rAddr: loginAddr,
-			code:  h.StatusOK,
-			bodyOK: func(bs []byte) {
-				require.Equal(t, 0, len(bs), "Body: %s", string(bs))
-			},
+	ts := []func(*testResp) testReq{
+		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
+		func(p *testResp) testReq { return loginTR(t, p, loginAddr, 0) },
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{Manager: p.sessionMng, Cmd: check,
+					Secret: p.secr},
+				rAddr: loginAddr,
+				code:  h.StatusOK,
+				bodyOK: func(bs []byte) {
+					require.Equal(t, 0, len(bs), "Body: %s", string(bs))
+				},
+			}
 		},
-		{
-			command: &cmd{Manager: sessionMng, Cmd: check,
-				Secret: secr},
-			rAddr: nLoggedIn + ":1919",
-			code:  h.StatusBadRequest,
-			bodyOK: func(bs []byte) {
-				withoutNewLine := string(bs[:len(bs)-1])
-				require.Equal(t, userNotLoggedAt(user0, nLoggedIn).Error(),
-					withoutNewLine)
-			},
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{Manager: p.sessionMng, Cmd: check,
+					Secret: p.secr},
+				rAddr: nLoggedIn + ":1919",
+				code:  h.StatusBadRequest,
+				bodyOK: func(bs []byte) {
+					withoutNewLine := string(bs[:len(bs)-1])
+					require.Equal(t, userNotLoggedAt(user0, nLoggedIn).Error(),
+						withoutNewLine)
+				},
+			}
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP, secr)
+	runReqTests(t, ts, ifh.serveHTTP)
 }

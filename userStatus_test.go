@@ -34,27 +34,30 @@ func TestUserStatus(t *testing.T) {
 	c, e := newConfWith(initDefaultDwnConsR)
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
-	trp := new(testResp)
 	loginAddr := "192.168.1.1:1982"
-	ts := []testReq{
-		discoverTR(t, trp, loginAddr),
-		loginTR(t, trp, loginAddr, 0),
-		checkConsTR(t, loginAddr, 0),
-		{
-			command: &cmd{
-				Cmd:    defaultDwnConsR,
-				String: user0,
-				Uint64: 1024,
-			},
-			rAddr: loginAddr,
-			code:  h.StatusOK,
-			bodyOK: func(bs []byte) {
-				require.Equal(t, 0, len(bs), "Body: %s", string(bs))
-			},
+	ts := []func(p *testResp) testReq{
+		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
+		func(p *testResp) testReq { return loginTR(t, p, loginAddr, 0) },
+		func(p *testResp) testReq { return checkConsTR(t, loginAddr, 0) },
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{
+					Cmd:    defaultDwnConsR,
+					String: user0,
+					Uint64: 1024,
+				},
+				rAddr: loginAddr,
+				code:  h.StatusOK,
+				bodyOK: func(bs []byte) {
+					require.Equal(t, 0, len(bs), "Body: %s", string(bs))
+				},
+			}
 		},
-		checkConsTR(t, loginAddr, 1024),
+		func(p *testResp) testReq {
+			return checkConsTR(t, loginAddr, 1024)
+		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
+	runReqTests(t, ts, ifh.serveHTTP)
 }
 
 func checkConsTR(t *testing.T, loginAddr string,

@@ -34,26 +34,28 @@ func TestUserInfo(t *testing.T) {
 	require.NoError(t, e)
 	loginAddr := "192.12.12.3:1919"
 	trp := new(testResp)
-	ts := []testReq{
-		discoverTR(t, trp, loginAddr),
-		loginTR(t, trp, loginAddr, 0),
-		{
-			command: &cmd{
-				Manager: defaultUserDB,
-				Cmd:     get,
-				Secret:  trp.secr,
-			},
-			rAddr: loginAddr,
-			code:  h.StatusOK,
-			bodyOK: func(bs []byte) {
-				info := new(userInfo)
-				e := json.Unmarshal(bs, info)
-				require.NoError(t, e)
-				require.Equal(t, user0, info.UserName)
-				require.Equal(t, user0, info.Name)
-				require.Equal(t, "600MB", info.Quota)
-			},
+	ts := []func(p *testResp) testReq{
+		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
+		func(p *testResp) testReq { return loginTR(t, p, loginAddr, 0) },
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{
+					Manager: defaultUserDB,
+					Cmd:     get,
+					Secret:  trp.secr,
+				},
+				rAddr: loginAddr,
+				code:  h.StatusOK,
+				bodyOK: func(bs []byte) {
+					info := new(userInfo)
+					e := json.Unmarshal(bs, info)
+					require.NoError(t, e)
+					require.Equal(t, user0, info.UserName)
+					require.Equal(t, user0, info.Name)
+					require.Equal(t, "600MB", info.Quota)
+				},
+			}
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
+	runReqTests(t, ts, ifh.serveHTTP)
 }

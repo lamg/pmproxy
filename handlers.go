@@ -142,7 +142,9 @@ func compatibleIface(cf *conf, path, method, header,
 			}
 		},
 		func() {
-			m.Secret = header
+			if path != apiCmd {
+				m.Secret = header
+			}
 			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
 		},
 		func() { cf.res.manager(m); e = m.e },

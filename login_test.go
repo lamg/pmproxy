@@ -102,13 +102,17 @@ func TestLogin(t *testing.T) {
 		},
 		noU0Cmd,
 		func(p *testResp) testReq {
-			return loginTR(t, trp, loginAddr, 2*time.Second)
+			return loginTR(t, p, loginAddr, 2*time.Second)
 		},
 		func(p *testResp) testReq {
 			return testReq{
-				command: u0Cmd.command,
-				rAddr:   u0Cmd.rAddr,
-				code:    h.StatusBadRequest,
+				command: &cmd{
+					Manager: p.sessionMng,
+					Cmd:     get,
+					Secret:  p.secr,
+				},
+				rAddr: loginAddr,
+				code:  h.StatusBadRequest,
 				bodyOK: func(bs []byte) {
 					require.Equal(t, "token is expired by 1s\n", string(bs))
 				},
@@ -116,18 +120,18 @@ func TestLogin(t *testing.T) {
 		},
 		func(p *testResp) testReq {
 			return testReq{
-				command: &cmd{Cmd: renew, Manager: trp.sessionMng},
+				command: &cmd{Cmd: renew, Manager: p.sessionMng},
 				rAddr:   loginAddr,
 				code:    h.StatusOK,
 				bodyOK: func(bs []byte) {
-					trp.secr = string(bs)
+					p.secr = string(bs)
 				},
 			}
 		},
 		u0Cmd,
 	}
 
-	runReqTests(t, ts, ifh.serveHTTP, trp.secr)
+	runReqTests(t, ts, ifh.serveHTTP)
 }
 
 func discoverTR(t *testing.T, trp *testResp,
@@ -144,7 +148,6 @@ func discoverTR(t *testing.T, trp *testResp,
 			e := json.Unmarshal(bs, s)
 			require.NoError(t, e)
 			trp.sessionMng = s.Result.String
-			t.Logf("sm: '%s'", trp.sessionMng)
 		},
 	}
 	return
@@ -152,7 +155,6 @@ func discoverTR(t *testing.T, trp *testResp,
 
 func loginTR(t *testing.T, trp *testResp,
 	rAddr string, sleepAft time.Duration) (r testReq) {
-	t.Logf("sm: '%s'", trp.sessionMng)
 	r = testReq{
 		command: &cmd{
 			Cmd:     open,
@@ -175,16 +177,16 @@ func runReqTests(t *testing.T, ts []func(*testResp) testReq,
 	trp := new(testResp)
 	inf := func(i int) {
 		req := ts[i](trp)
-		req.command.secr = trp.secr
+		req.command.Secret = trp.secr
 		bs, e := json.Marshal(req.command)
 		require.NoError(t, e)
 		w, r := ht.NewRecorder(),
 			ht.NewRequest(h.MethodPost, apiCmd, bytes.NewBuffer(bs))
-		r.RemoteAddr = ts[i].rAddr
+		r.RemoteAddr = req.rAddr
 		hf(w, r)
-		require.Equal(t, ts[i].code, w.Code, "At %d: %s", i,
+		require.Equal(t, req.code, w.Code, "At %d: %s", i,
 			w.Body.String())
-		ts[i].bodyOK(w.Body.Bytes())
+		req.bodyOK(w.Body.Bytes())
 	}
 	forall(inf, len(ts))
 }
@@ -204,7 +206,7 @@ func initSessionRules() (e error) {
 				},
 			},
 			quotaMapK: map[string]string{
-				user0: defaultQuota,
+				group0: defaultQuota,
 			},
 		},
 	})
