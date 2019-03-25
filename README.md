@@ -7,7 +7,7 @@
                                   |___/ 
 ```
 
-[![License Badge](https://img.shields.io/badge/License-AGPL%203%2B-blue.svg)](LICENSE) [![Build Status](https://travis-ci.com/lamg/pmproxy.svg?branch=master)](https://travis-ci.com/lamg/pmproxy) [![Coverage Status](https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master)](https://coveralls.io/github/lamg/pmproxy?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/lamg/pmproxy)](https://goreportcard.com/report/github.com/lamg/pmproxy)
+[![License Badge][0]](LICENSE) [![Build Status][1]][2] [![Coverage Status][3]][4] [![Go Report Card][5]][6]
 
 PMProxy wraps an HTTP proxy server with procedures that process each HTTP request according information it carries and a set of rules.
 
@@ -25,3 +25,11 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 - The limit on data amount to be downloaded (quota).
 - The factor determining how fast the quota is reached, which is a float that is multiplied by the amount of downloaded bytes (consumption).
 - The connection delay.
+
+[0]: https://img.shields.io/badge/License-AGPL%203%2B-blue.svg
+[1]: https://travis-ci.com/lamg/pmproxy.svg?branch=master
+[2]: https://travis-ci.com/lamg/pmproxy
+[3]: https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master
+[4]: https://coveralls.io/github/lamg/pmproxy?branch=master
+[5]: https://goreportcard.com/badge/github.com/lamg/pmproxy
+[6]: https://goreportcard.com/report/github.com/lamg/pmproxy
