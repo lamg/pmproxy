@@ -52,7 +52,7 @@ func TestUserInfo(t *testing.T) {
 					require.NoError(t, e)
 					require.Equal(t, user0, info.UserName)
 					require.Equal(t, user0, info.Name)
-					require.Equal(t, "600MB", info.Quota)
+					require.Equal(t, "600.0 MB", info.Quota)
 				},
 			}
 		},

@@ -42,9 +42,10 @@ func TestUserStatus(t *testing.T) {
 		func(p *testResp) testReq {
 			return testReq{
 				command: &cmd{
-					Cmd:    defaultDwnConsR,
-					String: user0,
-					Uint64: 1024,
+					Manager: defaultDwnConsR,
+					Cmd:     set,
+					String:  user0,
+					Uint64:  1024,
 				},
 				rAddr: loginAddr,
 				code:  h.StatusOK,
