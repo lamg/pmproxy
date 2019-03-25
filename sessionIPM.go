@@ -96,7 +96,7 @@ func (m *sessionIPM) match(ip string) (ok bool) {
 	return
 }
 
-func (m *sessionIPM) toMap() (i interface{}) {
+func (m *sessionIPM) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:     m.name,
 		authNameK: m.authName,

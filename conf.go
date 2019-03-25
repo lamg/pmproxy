@@ -93,9 +93,10 @@ func (c *conf) initConnMng() (e error) {
 	e = c.cm.fromMap(v)
 	dl := &dialer{
 		consRF: func(name string) (cr *consR, ok bool) {
-			v, ok := c.res.consRs.Load(name)
+			v, ok := c.res.managers.Load(name)
 			if ok {
-				cr = v.(*consR)
+				cr = v.(*manager).consR
+				ok = cr != nil
 			}
 			return
 		},
@@ -115,7 +116,11 @@ func (c *conf) initConnMng() (e error) {
 		r = spec.proxyURL
 		return
 	}
-	c.res.mappers.Store(connMngK, c.cm.toMap)
+	mng := &manager{
+		tÿpe:   connMngK,
+		mapper: c.cm.toMap,
+	}
+	c.res.managers.Store(connMngK, mng)
 	return
 }
 

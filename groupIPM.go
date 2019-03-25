@@ -76,7 +76,7 @@ func (m *groupIPM) managerKF(c *cmd) (kf []kFunc) {
 	return
 }
 
-func (m *groupIPM) toMap() (i interface{}) {
+func (m *groupIPM) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		groupK:      m.group,
 		nameK:       m.name,

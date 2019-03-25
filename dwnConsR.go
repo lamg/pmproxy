@@ -89,7 +89,7 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 	return
 }
 
-func (d *dwnConsR) toMap() (i interface{}) {
+func (d *dwnConsR) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:       d.name,
 		userQuotaK:  d.userQuotaN,

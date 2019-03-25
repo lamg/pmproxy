@@ -39,7 +39,7 @@ type connMng struct {
 	ctxVal proxy.ContextValueF
 }
 
-func (p *connMng) toMap() (i interface{}) {
+func (p *connMng) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:    proxyTr,
 		maxIdleK: p.maxIdle,

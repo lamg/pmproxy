@@ -34,32 +34,28 @@ import (
 )
 
 type resources struct {
-	rules      *pred.Predicate
-	specs      *sync.Map
-	matchers   *sync.Map
-	managerKFs *sync.Map
-	consRs     *sync.Map
-	mappers    *sync.Map
-	userDBs    *sync.Map
-	iu         *ipUserS
-	cr         *crypt
-	admins     []string
+	rules    *pred.Predicate
+	managers *sync.Map
+	iu       *ipUserS
+	cr       *crypt
+	admins   []string
 }
 
 func (r *resources) match(ürl, rAddr string,
 	t time.Time) (s *spec) {
 	s = new(spec)
 	interp := func(name string) (v, ok bool) {
-		vsp, ok := r.specs.Load(name)
+		m, ok := r.managers.Load(name)
 		if ok {
-			join(s, vsp.(*spec))
-			v = true
-		} else {
-			var mt interface{}
-			mt, ok = r.matchers.Load(name)
-			if ok {
-				matcher := mt.(func(string, string, time.Time) bool)
-				v = matcher(ürl, rAddr, t)
+			mng := m.(*manager)
+			if mng.spec != nil {
+				join(s, mng.spec)
+				v = true
+			} else {
+				ok = mng.matcher != nil
+				if ok {
+					v = mng.matcher(ürl, rAddr, t)
+				}
 			}
 		}
 		return
@@ -68,19 +64,27 @@ func (r *resources) match(ürl, rAddr string,
 	return
 }
 
+type manager struct {
+	tÿpe      string
+	managerKF func(*cmd) []kFunc
+	mapper    func() map[string]interface{}
+	matcher   func(string, string, time.Time) bool
+	consR     *consR
+	udb       *userDB
+	spec      *spec
+}
+
 func newResources(predicate string, admins []string) (r *resources,
 	e error) {
 	r = &resources{
-		specs:      new(sync.Map),
-		matchers:   new(sync.Map),
-		managerKFs: new(sync.Map),
-		consRs:     new(sync.Map),
-		mappers:    new(sync.Map),
-		userDBs:    new(sync.Map),
-		iu:         newIPuserS(),
-		admins:     admins,
+		managers: new(sync.Map),
+		iu:       newIPuserS(),
+		admins:   admins,
 	}
-	r.managerKFs.Store(resourcesK, r.managerKF)
+	r.managers.Store(resourcesK, &manager{
+		tÿpe:      resourcesK,
+		managerKF: r.managerKF,
+	})
 	r.rules, e = pred.Parse(strings.NewReader(predicate))
 	if e == nil {
 		r.cr, e = newCrypt()
@@ -94,6 +98,17 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			add,
 			func() {
 				c.e = r.add(c.String, c.Object)
+			},
+		},
+		{
+			get,
+			func() {
+				v, ok := r.managers.Load(c.String)
+				if ok {
+					c.bs = []byte(v.(*manager).tÿpe)
+				} else {
+					c.e = noKey(c.String)
+				}
 			},
 		},
 		{
@@ -156,18 +171,20 @@ func (r *resources) addURLM(m map[string]interface{}) (e error) {
 		{
 			regexpK,
 			func(i interface{}) {
-				r.matchers.Store(name,
-					func(ürl, ip string, t time.Time) bool {
+				mng := &manager{
+					tÿpe: urlmK,
+					matcher: func(ürl, ip string, t time.Time) bool {
 						return parReg.MatchString(ürl)
-					})
-				r.mappers.Store(name,
-					func() (m map[string]interface{}) {
+					},
+					mapper: func() (m map[string]interface{}) {
 						m = map[string]interface{}{
 							nameK:   name,
 							regexpK: urlReg,
 						}
 						return
-					})
+					},
+				}
+				r.managers.Store(name, mng)
 			},
 		},
 	}
@@ -179,15 +196,18 @@ func (r *resources) addSpan(m map[string]interface{}) (e error) {
 	sp := new(rt.RSpan)
 	name, e := fromMapSpan(sp, m)
 	if e == nil {
-		r.matchers.Store(name,
-			func(ürl, ip string, t time.Time) (ok bool) {
+		mng := &manager{
+			tÿpe: spanK,
+			matcher: func(ürl, ip string, t time.Time) (ok bool) {
 				ok = sp.ContainsTime(t)
 				return
-			})
-		r.mappers.Store(name, func() (m map[string]interface{}) {
-			m = toMapSpan(sp, name)
-			return
-		})
+			},
+			mapper: func() (m map[string]interface{}) {
+				m = toMapSpan(sp, name)
+				return
+			},
+		}
+		r.managers.Store(name, mng)
 	}
 	return
 }
@@ -198,9 +218,13 @@ func (r *resources) addRangeIPM(
 	e = rg.fromMap(m)
 	if e == nil {
 		fm := wrapIPMatcher(rg.match)
-		r.matchers.Store(rg.name, fm)
-		r.managerKFs.Store(rg.name, rg.managerKF)
-		r.mappers.Store(rg.name, rg.toMap)
+		mng := &manager{
+			tÿpe:      rangeIPMT,
+			matcher:   fm,
+			managerKF: rg.managerKF,
+			mapper:    rg.toMap,
+		}
+		r.managers.Store(rg.name, mng)
 	}
 	return
 }
@@ -215,9 +239,13 @@ func (r *resources) addSessionIPM(
 	e = sm.fromMap(m)
 	if e == nil {
 		sm.nameAuth = r.authenticator
-		r.managerKFs.Store(sm.name, sm.managerKF)
-		r.matchers.Store(sm.name, wrapIPMatcher(sm.match))
-		r.mappers.Store(sm.name, sm.toMap)
+		mng := &manager{
+			tÿpe:      sessionIPMK,
+			managerKF: sm.managerKF,
+			matcher:   wrapIPMatcher(sm.match),
+			mapper:    sm.toMap,
+		}
+		r.managers.Store(sm.name, mng)
 	}
 	return
 }
@@ -233,9 +261,14 @@ func (r *resources) addDwnConsR(
 	}
 	e = dw.fromMap(m)
 	if e == nil {
-		v, ok := r.userDBs.Load(dw.userQuotaN)
+		v, ok := r.managers.Load(dw.userQuotaN)
+		var mng *manager
 		if ok {
-			dw.userQuota = v.(*userDB).quota
+			mng = v.(*manager)
+			ok = mng.udb != nil
+		}
+		if ok {
+			dw.userQuota = mng.udb.quota
 		} else {
 			e = noKey(dw.userQuotaN)
 		}
@@ -257,9 +290,13 @@ func (r *resources) addDwnConsR(
 			trueFF(fs,
 				func() bool { return d == nil })
 		}
-		r.managerKFs.Store(dw.name, dw.managerKF)
-		r.consRs.Store(dw.name, dw.consR())
-		r.mappers.Store(dw.name, dw.toMap)
+		mng := &manager{
+			tÿpe:      dwnConsRK,
+			managerKF: dw.managerKF,
+			consR:     dw.consR(),
+			mapper:    dw.toMap,
+		}
+		r.managers.Store(dw.name, mng)
 	}
 	return
 }
@@ -268,9 +305,14 @@ func (r *resources) authenticator(name string) (
 	a func(string, string) (string, error),
 	ok bool,
 ) {
-	v, ok := r.userDBs.Load(name)
+	v, ok := r.managers.Load(name)
+	var mng *manager
 	if ok {
-		a = v.(*userDB).auth
+		mng = v.(*manager)
+		ok = mng.udb != nil
+	}
+	if ok {
+		a = mng.udb.auth
 	}
 	return
 }
@@ -280,12 +322,21 @@ func (r *resources) addGroupIPM(
 	gipm := new(groupIPM)
 	e = gipm.fromMap(m)
 	if e == nil {
-		v, ok := r.userDBs.Load(gipm.userGroupN)
+		v, ok := r.managers.Load(gipm.userGroupN)
+		var mng *manager
 		if ok {
-			gipm.userGroup = v.(*userDB).userGroups
-			r.managerKFs.Store(gipm.name, gipm.managerKF)
-			r.mappers.Store(gipm.name, gipm.toMap)
-			r.matchers.Store(gipm.name, gipm.match)
+			mng = v.(*manager)
+			ok = mng.udb != nil
+		}
+		if ok {
+			gipm.userGroup = mng.udb.userGroups
+			mng := &manager{
+				tÿpe:      groupIPMK,
+				managerKF: gipm.managerKF,
+				mapper:    gipm.toMap,
+				matcher:   wrapIPMatcher(gipm.match),
+			}
+			r.managers.Store(gipm.name, mng)
 		} else {
 			e = noKey(gipm.userGroupN)
 		}
@@ -297,7 +348,12 @@ func (r *resources) addSpec(m map[string]interface{}) (e error) {
 	sp := new(spec)
 	e = sp.fromMap(m)
 	if e == nil {
-		r.specs.Store(sp.Name, sp)
+		mng := &manager{
+			tÿpe:   specKS,
+			mapper: sp.toMap,
+			spec:   sp,
+		}
+		r.managers.Store(sp.Name, mng)
 	}
 	return
 }
@@ -306,9 +362,13 @@ func (r *resources) addUserDB(m map[string]interface{}) (e error) {
 	udb := new(userDB)
 	e = udb.fromMap(m)
 	if e == nil {
-		r.managerKFs.Store(udb.name, udb.managerKF)
-		r.mappers.Store(udb.name, udb.toMap)
-		r.userDBs.Store(udb.name, udb)
+		mng := &manager{
+			tÿpe:      userDBK,
+			managerKF: udb.managerKF,
+			mapper:    udb.toMap,
+			udb:       udb,
+		}
+		r.managers.Store(udb.name, mng)
 	}
 	return
 }
@@ -330,18 +390,17 @@ func (r *resources) manager(m *cmd) {
 		},
 		len(r.admins),
 	)
-	v, ok := r.managerKFs.Load(m.Manager)
+	v, ok := r.managers.Load(m.Manager)
 	var kf []kFunc
 	if ok {
-		mkf := v.(func(*cmd) []kFunc)
-		kf = mkf(m)
+		kf = v.(*manager).managerKF(m) // calculated risk
 		kf = append(kf,
 			kFunc{skip, func() {}},
 			kFunc{
 				showAll,
 				func() {
 					mngs := make([]string, 0)
-					r.managerKFs.Range(
+					r.managers.Range(
 						func(k, v interface{}) (ok bool) {
 							mngs = append(mngs, k.(string))
 							ok = true

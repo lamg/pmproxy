@@ -53,7 +53,7 @@ func (r *rangeIPM) match(ip string) (ok bool) {
 	return
 }
 
-func (r *rangeIPM) toMap() (i interface{}) {
+func (r *rangeIPM) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK: r.name,
 		cidrK: r.cidr,

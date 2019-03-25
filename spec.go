@@ -77,7 +77,7 @@ func (s *spec) fromMap(i interface{}) (e error) {
 	return
 }
 
-func (s *spec) toMap() (i interface{}) {
+func (s *spec) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:     s.Name,
 		ifaceK:    s.Iface,

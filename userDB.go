@@ -176,7 +176,7 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 	return
 }
 
-func (d *userDB) toMap() (i interface{}) {
+func (d *userDB) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:    d.name,
 		adOrMapK: d.adOrMap,
