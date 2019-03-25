@@ -25,6 +25,7 @@ import (
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
 	"path"
+	"time"
 )
 
 // Serve starts the control interface and proxy servers,
@@ -40,6 +41,7 @@ func Serve() (e error) {
 			fes := []func() error{
 				serveFunc(c.proxy, cp, true, prh),
 				serveFunc(c.iface, cp, false, ifh),
+				func() error { time.Sleep(c.waitUpd); return c.update() },
 			}
 			e = runConcurr(fes)
 		},

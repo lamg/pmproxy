@@ -52,16 +52,15 @@ type credentials struct {
 	Pass string `json:"pass"`
 }
 
-type ipMatcher func(string) bool
-
 type conf struct {
 	staticFPath string
 
-	lg    *logger
-	res   *resources
-	cm    *connMng
-	proxy *srvConf
-	iface *srvConf
+	lg      *logger
+	res     *resources
+	cm      *connMng
+	proxy   *srvConf
+	iface   *srvConf
+	waitUpd time.Duration
 }
 
 func newConf() (c *conf, e error) {
@@ -83,6 +82,11 @@ func newConfWith(fileInit func() error) (c *conf, e error) {
 		func() { e = c.initConnMng() },
 	}
 	trueFF(fs, func() bool { return e == nil })
+	return
+}
+
+func (c *conf) update() (e error) {
+	// TODO get all configuration and write to disk
 	return
 }
 
