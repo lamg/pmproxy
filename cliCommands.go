@@ -32,6 +32,27 @@ import (
 	"strings"
 )
 
+func Discover() (m cli.Command) {
+	m = cli.Command{
+		Name:    "discover",
+		Aliases: []string{"d"},
+		Usage: "Discover the resources you have available at the" +
+			" proxy server",
+		Action: func(c *cli.Context) (e error) {
+			args := c.Args()
+			e = checkArgExec(
+				func() error {
+					return discoverC(args[0])
+				},
+				1,
+				len(args),
+			)
+			return
+		},
+	}
+	return
+}
+
 func Login() (m cli.Command) {
 	var sm string
 	m = cli.Command{
@@ -112,6 +133,23 @@ func UserInfo() (m cli.Command) {
 		Aliases: []string{"i"},
 		Usage:   "Retrieves user information",
 	}
+	return
+}
+
+func discoverC(url string) (e error) {
+	m := &cmd{
+		Cmd:     discover,
+		Manager: resourcesK,
+	}
+	var r *h.Response
+	var bs []byte
+	sp := new(spec)
+	fs := []func(){
+		func() { r, e = postCmd(url, m) },
+		func() { bs, e = ioutil.ReadAll(r.Body) },
+		func() { e = json.Unmarshal(bs, sp) },
+	}
+	trueFF(fs, func() bool { return e == nil })
 	return
 }
 
