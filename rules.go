@@ -22,6 +22,7 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"fmt"
 	pred "github.com/lamg/predicate"
 	rt "github.com/lamg/rtimespan"
 	"io/ioutil"
@@ -88,6 +89,8 @@ func newResources(predicate string, admins []string) (r *resources,
 	r.rules, e = pred.Parse(strings.NewReader(predicate))
 	if e == nil {
 		r.cr, e = newCrypt()
+	} else {
+		e = fmt.Errorf("Parsing predicate '%s': %s", predicate, e.Error())
 	}
 	return
 }

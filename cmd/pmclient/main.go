@@ -34,8 +34,11 @@ func main() {
 		&tls.Config{InsecureSkipVerify: true}
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
+		pmproxy.Discover(),
 		pmproxy.Login(),
 		pmproxy.Logout(),
+		pmproxy.UserStatus(),
+		pmproxy.ResetConsumption(),
 	}
 	e := app.Run(os.Args)
 	if e != nil {

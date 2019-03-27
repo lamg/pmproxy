@@ -22,6 +22,8 @@ package pmproxy
 
 import (
 	"context"
+	"fmt"
+	pred "github.com/lamg/predicate"
 	"github.com/lamg/viper"
 	"github.com/spf13/cast"
 	"net/url"
@@ -173,7 +175,6 @@ func genConfig() (e error) {
 
 func (c *conf) setDefaults() {
 	viper.SetKeysCaseSensitive(true)
-	viper.SetDefault(compatible02K, true)
 	viper.SetDefault(proxyConfK, map[string]interface{}{
 		fastOrStdK:    false,
 		readTimeoutK:  30 * time.Second,
@@ -188,6 +189,7 @@ func (c *conf) setDefaults() {
 		certK:         defaultSrvCert,
 		keyK:          defaultSrvKey,
 	})
+	viper.SetDefault(rulesK, pred.TrueStr)
 }
 
 func (c *conf) readProxyConf() (e error) {
@@ -269,9 +271,15 @@ func (c *conf) strïng(key string) (s string) {
 func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
 	fe func(error), bf func() bool) {
 	vs, e := c.sliceE(key)
+	nfe := func(d error) {
+		if d != nil {
+			e := fmt.Errorf("Reading '%s': %s", key, d.Error())
+			fe(e)
+		}
+	}
 	if e == nil {
 		inf := func(i int) (b bool) {
-			vi := stringMapE(vs[i], fe)
+			vi := stringMapE(vs[i], nfe)
 			b = bf()
 			if b {
 				fm(vi)
@@ -281,7 +289,7 @@ func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
 		}
 		trueForall(inf, len(vs))
 	} else {
-		fe(e)
+		nfe(e)
 	}
 	return
 }

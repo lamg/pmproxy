@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/c2h5oh/datasize"
+	pred "github.com/lamg/predicate"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	h "net/http"
@@ -148,9 +149,43 @@ func discoverC(url string) (e error) {
 		func() { r, e = postCmd(url, m) },
 		func() { bs, e = ioutil.ReadAll(r.Body) },
 		func() { e = json.Unmarshal(bs, sp) },
+		func() {
+			fmt.Printf("Network interface: %s\n", sp.Iface)
+			fmt.Printf("Parent proxy: %s\n", sp.ProxyURL)
+			fmt.Printf("Consumption restrictors: %v\n", sp.ConsRs)
+			fmt.Printf("Match result: %s\n", pred.String(sp.Result))
+			printTypes(url, sp.Result)
+		},
 	}
 	trueFF(fs, func() bool { return e == nil })
 	return
+}
+
+func printTypes(url string, p *pred.Predicate) {
+	ss := []string{"", pred.TrueStr, pred.FalseStr}
+	ib := func(i int) bool { return p.String == ss[i] }
+	ok, _ := bLnSrch(ib, len(ss))
+	if !ok {
+		m := &cmd{
+			Manager: resourcesK,
+			Cmd:     get,
+			String:  p.String,
+		}
+		r, e := postCmd(url, m)
+		var bs []byte
+		if e == nil {
+			bs, e = ioutil.ReadAll(r.Body)
+		}
+		if e == nil {
+			fmt.Printf("%s:%s\n", p.String, string(bs))
+			if p.A != nil {
+				printTypes(url, p.A)
+			}
+			if p.B != nil {
+				printTypes(url, p.B)
+			}
+		}
+	}
 }
 
 func reset(manager, user string) (e error) {
