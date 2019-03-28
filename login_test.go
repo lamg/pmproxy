@@ -23,10 +23,12 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/lamg/viper"
+	pred "github.com/lamg/predicate"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	h "net/http"
 	ht "net/http/httptest"
+	"path"
 	"testing"
 	"time"
 )
@@ -43,12 +45,7 @@ type testResp struct {
 }
 
 func TestLogin(t *testing.T) {
-	c, e := newConfWith(initSessionRules)
-	require.NoError(t, e)
-	res := c.res
-	res.cr.expiration = time.Second
-	_, ifh, e := newHnds(c)
-	require.NoError(t, e)
+	ifh := basicConf(t)
 	loginIP := "192.168.1.1"
 	loginAddr := loginIP + ":1982"
 	mapHasUser0 := func(mäp []byte) (ok bool) {
@@ -131,7 +128,7 @@ func TestLogin(t *testing.T) {
 		u0Cmd,
 	}
 
-	runReqTests(t, ts, ifh.serveHTTP)
+	runReqTests(t, ts, ifh)
 }
 
 func discoverTR(t *testing.T, trp *testResp,
@@ -147,7 +144,8 @@ func discoverTR(t *testing.T, trp *testResp,
 			s := new(spec)
 			e := json.Unmarshal(bs, s)
 			require.NoError(t, e)
-			trp.sessionMng = s.Result.String
+			t.Logf(pred.String(s.Result))
+			trp.sessionMng = s.Result.A.String
 		},
 	}
 	return
@@ -191,37 +189,45 @@ func runReqTests(t *testing.T, ts []func(*testResp) testReq,
 	forall(inf, len(ts))
 }
 
-func initSessionRules() (e error) {
-	viper.SetDefault(rulesK, defaultSessionIPM)
-	viper.SetDefault(userDBK, []map[string]interface{}{
-		{
-			nameK:    defaultUserDB,
-			adOrMapK: false,
-			paramsK: map[string]interface{}{
-				userPassK: map[string]interface{}{
-					user0: pass0,
-				},
-				userGroupsK: map[string][]string{
-					user0: {group0},
-				},
-			},
-			quotaMapK: map[string]string{
-				group0: defaultQuota,
-			},
-		},
-	})
-	viper.SetDefault(adminsK, []string{user0})
-	viper.SetDefault(sessionIPMK, []map[string]interface{}{
-		{
-			nameK:     defaultSessionIPM,
-			authNameK: defaultUserDB,
-		},
-	})
-	viper.SetDefault(connMngK, map[string]interface{}{
-		maxIdleK: 0,
-		idleTK:   "0s",
-		tlsHTK:   "0s",
-		expCTK:   "0s",
-	})
+func testConf() (fs afero.Fs) {
+	conf := `
+	admins = "user0"
+	rules = "sessions ∧ downloads"
+	
+	[[userDB]]
+		adOrMap = false
+		name = "mapDB"
+		[userDB.quotaMap]
+			group0 = "600MB"
+		[userDB.params]
+			[userDB.params.groups]
+				user0 = ["group0"]
+			[userDB.params.userPass]
+				user0 = "pass0"
+	
+	[[sessionIPM]]
+		authName = "mapDB"
+		name = "sessions"
+
+	[[dwnConsR]]
+		name = "downloads"
+		userQuota = "mapDB"
+		lastReset = "2019-03-04T12:58:32-05:00"
+		resetCycle = "24h0m0s"
+	`
+	fs = afero.NewMemMapFs()
+	afero.WriteFile(fs, path.Join(home(), homeConfigDir, configFile),
+		[]byte(conf), 0644)
+	return
+}
+
+func basicConf(t *testing.T) (hnd h.HandlerFunc) {
+	c, e := newConf(testConf())
+	require.NoError(t, e)
+	res := c.res
+	res.cr.expiration = time.Second
+	_, ifh, e := newHnds(c)
+	require.NoError(t, e)
+	hnd = ifh.serveHTTP
 	return
 }

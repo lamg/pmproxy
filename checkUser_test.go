@@ -27,10 +27,7 @@ import (
 )
 
 func TestCheckUser(t *testing.T) {
-	c, e := newConfWith(initSessionRules)
-	require.NoError(t, e)
-	_, ifh, e := newHnds(c)
-	require.NoError(t, e)
+	ifh := basicConf(t)
 	loginAddr := "10.3.10.3:1984"
 	nLoggedIn := "10.2.1.1"
 	ts := []func(*testResp) testReq{
@@ -61,5 +58,5 @@ func TestCheckUser(t *testing.T) {
 			}
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP)
+	runReqTests(t, ts, ifh)
 }

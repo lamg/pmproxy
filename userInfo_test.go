@@ -28,7 +28,7 @@ import (
 )
 
 func TestUserInfo(t *testing.T) {
-	c, e := newConfWith(initDefaultDwnConsR)
+	c, e := newConf(testConf())
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
 	require.NoError(t, e)

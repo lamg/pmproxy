@@ -220,7 +220,7 @@ func status(dwnMng string) (e error) {
 		}
 		return
 	}
-	fs = append(fs, doOK(okf, re, r)...)
+	fs = append(fs, doOK(okf, re, func() *h.Response { return r })...)
 	handleRenew(fs, func() error { return e }, re)
 	return
 }
@@ -264,7 +264,7 @@ func login(urls, sm, user, pass string) (e error) {
 		d = writeSecret(li)
 		return
 	}
-	fs = append(fs, doOK(okf, fe, r)...)
+	fs = append(fs, doOK(okf, fe, func() *h.Response { return r })...)
 	trueFF(fs, func() bool { return e == nil })
 	return
 }
@@ -290,7 +290,7 @@ func logout() (e error) {
 		d = os.Remove(loginSecretFile)
 		return
 	}
-	fs = append(fs, doOK(okf, fe, r)...)
+	fs = append(fs, doOK(okf, fe, func() *h.Response { return r })...)
 	handleRenew(fs, func() error { return e }, fe)
 	return
 }
@@ -324,7 +324,8 @@ func handleRenew(fs []func(), re func() error,
 				d = writeSecret(li)
 				return
 			}
-			fsn = append(fsn, doOK(okf, te, r)...)
+			fsn = append(fsn, doOK(okf, te,
+				func() *h.Response { return r })...)
 			fsn = append(fsn, fs...)
 			trueFF(fsn, func() bool { return re() == nil })
 		}
@@ -361,16 +362,18 @@ func postCmd(urls string, c *cmd) (r *h.Response, e error) {
 }
 
 func doOK(ok func([]byte) error, fe func(error),
-	r *h.Response) (fs []func()) {
+	fr func() *h.Response) (fs []func()) {
 	var bs []byte
 	var e error
 	fs = []func(){
 		func() {
+			r := fr()
 			bs, e = ioutil.ReadAll(r.Body)
 			r.Body.Close()
 			fe(e)
 		},
 		func() {
+			r := fr()
 			if r.StatusCode == h.StatusOK {
 				e = ok(bs)
 			} else {

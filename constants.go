@@ -67,6 +67,7 @@ const (
 	defaultHost    = "localhost"
 	ifaceConfK     = "apiSrv"
 	proxyConfK     = "proxySrv"
+	waitUpdateK    = "waitUpdate"
 )
 
 type specKT string

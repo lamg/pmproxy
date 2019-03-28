@@ -23,15 +23,13 @@ package pmproxy
 import (
 	"encoding/json"
 	"github.com/c2h5oh/datasize"
-	"github.com/lamg/viper"
 	"github.com/stretchr/testify/require"
 	h "net/http"
 	"testing"
-	"time"
 )
 
 func TestUserStatus(t *testing.T) {
-	c, e := newConfWith(initDefaultDwnConsR)
+	c, e := newConf(testConf())
 	require.NoError(t, e)
 	_, ifh, e := newHnds(c)
 	loginAddr := "192.168.1.1:1982"
@@ -82,18 +80,5 @@ func checkConsTR(t *testing.T, loginAddr string,
 			require.Equal(t, cons, qc.Consumption)
 		},
 	}
-	return
-}
-
-func initDefaultDwnConsR() (e error) {
-	initSessionRules()
-	viper.SetDefault(dwnConsRK, []map[string]interface{}{
-		{
-			nameK:       defaultDwnConsR,
-			userQuotaK:  defaultUserDB,
-			lastResetK:  time.Now().Format(time.RFC3339),
-			resetCycleK: time.Duration(24 * time.Hour).String(),
-		},
-	})
 	return
 }

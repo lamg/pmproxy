@@ -25,6 +25,7 @@ import (
 	"fmt"
 	pred "github.com/lamg/predicate"
 	"github.com/lamg/viper"
+	"github.com/spf13/afero"
 	"github.com/spf13/cast"
 	"net/url"
 	"os"
@@ -65,17 +66,21 @@ type conf struct {
 	waitUpd time.Duration
 }
 
-func newConf() (c *conf, e error) {
-	c, e = newConfWith(viperWithDisk)
-	return
-}
-
-func newConfWith(fileInit func() error) (c *conf, e error) {
+func newConf(fls afero.Fs) (c *conf, e error) {
 	c = &conf{}
 	fs := []func(){
 		func() {
+			viper.SetFs(fls)
+			viper.SetConfigFile(path.Join(home(),
+				homeConfigDir, configFile))
+			e = viper.ReadInConfig()
 			c.setDefaults()
-			e = fileInit()
+			if e != nil {
+				e = genConfig(fls)
+			}
+		},
+		func() {
+			c.waitUpd, e = time.ParseDuration(c.strïng(waitUpdateK))
 		},
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
@@ -130,17 +135,7 @@ func (c *conf) initConnMng() (e error) {
 	return
 }
 
-func viperWithDisk() (e error) {
-	viper.SetConfigFile(path.Join(home(),
-		homeConfigDir, configFile))
-	e = viper.ReadInConfig()
-	if e != nil {
-		e = genConfig()
-	}
-	return
-}
-
-func genConfig() (e error) {
+func genConfig(fls afero.Fs) (e error) {
 	var dir string
 	fs := []func(){
 		func() {
@@ -149,7 +144,7 @@ func genConfig() (e error) {
 				path.Join(home(), homeConfigDir),
 			}
 			ib := func(i int) (b bool) {
-				e = os.MkdirAll(dirs[i], os.ModeDir|os.ModePerm)
+				e = fls.MkdirAll(dirs[i], os.ModeDir|os.ModePerm)
 				b = e == nil
 				return
 			}
@@ -166,7 +161,7 @@ func genConfig() (e error) {
 		func() {
 			key := path.Join(dir, defaultSrvKey)
 			cert := path.Join(dir, defaultSrvCert)
-			e = genCert(defaultHost, key, cert)
+			e = genCert(defaultHost, key, cert, fls)
 		},
 	}
 	trueFF(fs, func() bool { return e == nil })
@@ -190,6 +185,13 @@ func (c *conf) setDefaults() {
 		keyK:          defaultSrvKey,
 	})
 	viper.SetDefault(rulesK, pred.TrueStr)
+	viper.SetDefault(connMngK, map[string]interface{}{
+		maxIdleK: 0,
+		idleTK:   "0s",
+		tlsHTK:   "0s",
+		expCTK:   "0s",
+	})
+	viper.SetDefault(waitUpdateK, "5m")
 }
 
 func (c *conf) readProxyConf() (e error) {
@@ -222,11 +224,10 @@ func (c *conf) initResources() (e error) {
 		func() {
 			v := viper.Get(rulesK)
 			predCf = stringE(v, fe)
+			println(predCf)
 		},
 		func() {
 			c.res, e = newResources(predCf, viper.GetStringSlice(adminsK))
-		},
-		func() {
 		},
 		func() {
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, groupIPMK,

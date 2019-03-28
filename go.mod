@@ -13,6 +13,7 @@ require (
 	github.com/lamg/proxy v0.0.0-20190207224526-bbb85102af9d
 	github.com/lamg/rtimespan v0.1.0
 	github.com/lamg/viper v1.3.2
+	github.com/spf13/afero v1.1.2
 	github.com/spf13/cast v1.3.0
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.3.0

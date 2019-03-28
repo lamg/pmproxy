@@ -32,14 +32,15 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"github.com/spf13/afero"
 	"math/big"
 	"net"
-	"os"
 	"time"
 )
 
 // generate self-signed certificate for host
-func genCert(host, srvKeyFl, srvCertFl string) (e error) {
+func genCert(host, srvKeyFl, srvCertFl string,
+	fls afero.Fs) (e error) {
 	validFor := 365 * 24 * time.Hour
 	notBefore := time.Now()
 	notAfter := notBefore.Add(validFor)
@@ -66,7 +67,7 @@ func genCert(host, srvKeyFl, srvCertFl string) (e error) {
 		},
 		func() {
 			// Generate server certificate
-			e = keyToFile(srvKeyFl, serverKey)
+			e = keyToFile(srvKeyFl, serverKey, fls)
 		},
 		func() {
 			serialNumber, e = rand.Int(rand.Reader,
@@ -119,7 +120,7 @@ func genCert(host, srvKeyFl, srvCertFl string) (e error) {
 				&serverKey.PublicKey, rootKey)
 		},
 		func() {
-			e = certToFile(srvCertFl, certBytes)
+			e = certToFile(srvCertFl, certBytes, fls)
 		},
 	}
 	trueFF(fs, func() bool { return e == nil })
@@ -129,10 +130,10 @@ func genCert(host, srvKeyFl, srvCertFl string) (e error) {
 // certToFile writes a PEM serialization of |certBytes|
 // to a new file called |fileName|.
 func certToFile(fileName string,
-	certBytes []byte) (e error) {
-	var file *os.File
+	certBytes []byte, fls afero.Fs) (e error) {
+	var file afero.File
 	fs := []func(){
-		func() { file, e = os.Create(fileName) },
+		func() { file, e = fls.Create(fileName) },
 		func() {
 			e = pem.Encode(file, &pem.Block{
 				Type:  "CERTIFICATE",
@@ -147,11 +148,11 @@ func certToFile(fileName string,
 // keyToFile writes a PEM serialization of |key| to a new
 // file called |fileName|.
 func keyToFile(fileName string,
-	key *ecdsa.PrivateKey) (e error) {
-	var file *os.File
+	key *ecdsa.PrivateKey, fls afero.Fs) (e error) {
+	var file afero.File
 	var bs []byte
 	fs := []func(){
-		func() { file, e = os.Create(fileName) },
+		func() { file, e = fls.Create(fileName) },
 		func() {
 			bs, e = x509.MarshalECPrivateKey(key)
 		},

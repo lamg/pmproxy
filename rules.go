@@ -47,6 +47,8 @@ func (r *resources) match(ürl, rAddr string,
 	s = new(spec)
 	interp := func(name string) (v, ok bool) {
 		m, ok := r.managers.Load(name)
+		print(name + ": ")
+		println(ok)
 		if ok {
 			mng := m.(*manager)
 			if mng.spec != nil {
@@ -131,6 +133,8 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			discover,
 			func() {
 				sp := r.match("", c.RemoteAddr, time.Now())
+				print(sp.Result.Operator + " ")
+				println(sp.Result.String)
 				c.bs, c.e = json.Marshal(sp)
 			},
 		},

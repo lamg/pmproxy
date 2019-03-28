@@ -22,6 +22,7 @@ package pmproxy
 
 import (
 	"crypto/tls"
+	"github.com/spf13/afero"
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
 	"path"
@@ -34,14 +35,20 @@ func Serve() (e error) {
 	var c *conf
 	var prh, ifh *srvHandler
 	fs := []func(){
-		func() { c, e = newConf() },
+		func() { c, e = newConf(afero.NewOsFs()) },
 		func() { prh, ifh, e = newHnds(c) },
 		func() {
 			cp := c.configPath()
 			fes := []func() error{
 				serveFunc(c.proxy, cp, true, prh),
 				serveFunc(c.iface, cp, false, ifh),
-				func() error { time.Sleep(c.waitUpd); return c.update() },
+				func() (e error) {
+					for {
+						time.Sleep(c.waitUpd)
+						c.update()
+					}
+					return
+				},
 			}
 			e = runConcurr(fes)
 		},
