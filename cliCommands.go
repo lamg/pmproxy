@@ -38,16 +38,16 @@ func Discover() (m cli.Command) {
 		Name:    "discover",
 		Aliases: []string{"d"},
 		Usage: "Discover the resources you have available at the" +
-			" proxy server",
+			" proxy server, for some url (optional)",
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
-			e = checkArgExec(
-				func() error {
-					return discoverC(args[0])
-				},
-				1,
-				len(args),
-			)
+			if len(args) == 2 {
+				e = discoverC(args[0], args[1])
+			} else if len(args) == 1 {
+				e = discoverC(args[0], "")
+			} else {
+				e = checkArgExec(func() error { return nil }, 1, len(args))
+			}
 			return
 		},
 	}
@@ -71,6 +71,9 @@ func Login() (m cli.Command) {
 				3,
 				len(args),
 			)
+			if e != nil && e.Error() == noKey(sm).Error() {
+				filterSMs(args[0], sm)
+			}
 			return
 		},
 	}
@@ -117,7 +120,7 @@ func ResetConsumption() (m cli.Command) {
 		Flags:   managerFlag(&dwn, defaultDwnConsR),
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
-			checkArgExec(
+			e = checkArgExec(
 				func() error { return reset(dwn, args[0]) },
 				1,
 				len(args),
@@ -137,10 +140,11 @@ func UserInfo() (m cli.Command) {
 	return
 }
 
-func discoverC(url string) (e error) {
+func discoverC(url, remote string) (e error) {
 	m := &cmd{
 		Cmd:     discover,
 		Manager: resourcesK,
+		String:  remote,
 	}
 	var r *h.Response
 	var bs []byte
@@ -269,6 +273,31 @@ func login(urls, sm, user, pass string) (e error) {
 	return
 }
 
+func filterSMs(urls, sm string) (e error) {
+	m := &cmd{
+		Manager: resourcesK,
+		Cmd:     filterSessionIPMs,
+	}
+	var r *h.Response
+	fe := func(d error) { e = d }
+	fs := []func(){
+		func() {
+			r, e = postCmd(urls, m)
+		},
+	}
+	okf := func(bs []byte) (e error) {
+		var ss []string
+		e = json.Unmarshal(bs, &ss)
+		if e == nil {
+			fmt.Printf("'%s' not available, use one of %v\n", sm, ss)
+		}
+		return
+	}
+	fs = append(fs, doOK(okf, fe, func() *h.Response { return r })...)
+	trueFF(fs, func() bool { return e == nil })
+	return
+}
+
 func logout() (e error) {
 	m := &cmd{
 		Cmd: clöse,
@@ -377,7 +406,7 @@ func doOK(ok func([]byte) error, fe func(error),
 			if r.StatusCode == h.StatusOK {
 				e = ok(bs)
 			} else {
-				e = fmt.Errorf("%s", string(bs))
+				e = fmt.Errorf("%s", string(bs[:len(bs)-1])) //excluding EOL
 			}
 			fe(e)
 		},

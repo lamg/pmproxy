@@ -138,11 +138,12 @@ const (
 
 // rules.go
 const (
-	ipRangeMK  = "ipRangeM"
-	regexpK    = "regexp"
-	specKS     = "spec"
-	rulesK     = "rules"
-	resourcesK = "resources"
+	ipRangeMK         = "ipRangeM"
+	regexpK           = "regexp"
+	specKS            = "spec"
+	rulesK            = "rules"
+	resourcesK        = "resources"
+	filterSessionIPMs = "filterSessionIPMs"
 )
 
 // dwnConsR.go

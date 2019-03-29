@@ -132,7 +132,7 @@ func discoverTR(t *testing.T, trp *testResp,
 	addr string) (r testReq) {
 	r = testReq{
 		command: &cmd{
-			Cmd:     discover,
+			Cmd:     filterSessionIPMs,
 			Manager: resourcesK,
 		},
 		rAddr: addr,

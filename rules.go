@@ -128,10 +128,17 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			discover,
+			filterSessionIPMs,
 			func() {
 				ms := r.sessionIPMs(r.rules)
 				c.bs, c.e = json.Marshal(ms)
+			},
+		},
+		{
+			discover,
+			func() {
+				sp := r.match(c.String, c.RemoteAddr, time.Now())
+				c.bs, c.e = json.Marshal(sp)
 			},
 		},
 	}
