@@ -27,7 +27,7 @@ import (
 )
 
 func TestCheckUser(t *testing.T) {
-	ifh := basicConf(t)
+	ifh := basicConfT(t)
 	loginAddr := "10.3.10.3:1984"
 	nLoggedIn := "10.2.1.1"
 	ts := []func(*testResp) testReq{

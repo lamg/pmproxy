@@ -23,12 +23,9 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
-	pred "github.com/lamg/predicate"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	h "net/http"
 	ht "net/http/httptest"
-	"path"
 	"testing"
 	"time"
 )
@@ -45,7 +42,7 @@ type testResp struct {
 }
 
 func TestLogin(t *testing.T) {
-	ifh := basicConf(t)
+	ifh := basicConfT(t)
 	loginIP := "192.168.1.1"
 	loginAddr := loginIP + ":1982"
 	mapHasUser0 := func(mäp []byte) (ok bool) {
@@ -141,11 +138,11 @@ func discoverTR(t *testing.T, trp *testResp,
 		rAddr: addr,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
-			s := new(spec)
-			e := json.Unmarshal(bs, s)
+			var s []string
+			e := json.Unmarshal(bs, &s)
 			require.NoError(t, e)
-			t.Logf(pred.String(s.Result))
-			trp.sessionMng = s.Result.A.String
+			require.True(t, len(s) != 0)
+			trp.sessionMng = s[0]
 		},
 	}
 	return
@@ -187,47 +184,4 @@ func runReqTests(t *testing.T, ts []func(*testResp) testReq,
 		req.bodyOK(w.Body.Bytes())
 	}
 	forall(inf, len(ts))
-}
-
-func testConf() (fs afero.Fs) {
-	conf := `
-	admins = "user0"
-	rules = "sessions ∧ downloads"
-	
-	[[userDB]]
-		adOrMap = false
-		name = "mapDB"
-		[userDB.quotaMap]
-			group0 = "600MB"
-		[userDB.params]
-			[userDB.params.groups]
-				user0 = ["group0"]
-			[userDB.params.userPass]
-				user0 = "pass0"
-	
-	[[sessionIPM]]
-		authName = "mapDB"
-		name = "sessions"
-
-	[[dwnConsR]]
-		name = "downloads"
-		userQuota = "mapDB"
-		lastReset = "2019-03-04T12:58:32-05:00"
-		resetCycle = "24h0m0s"
-	`
-	fs = afero.NewMemMapFs()
-	afero.WriteFile(fs, path.Join(home(), homeConfigDir, configFile),
-		[]byte(conf), 0644)
-	return
-}
-
-func basicConf(t *testing.T) (hnd h.HandlerFunc) {
-	c, e := newConf(testConf())
-	require.NoError(t, e)
-	res := c.res
-	res.cr.expiration = time.Second
-	_, ifh, e := newHnds(c)
-	require.NoError(t, e)
-	hnd = ifh.serveHTTP
-	return
 }

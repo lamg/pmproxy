@@ -28,10 +28,7 @@ import (
 )
 
 func TestUserInfo(t *testing.T) {
-	c, e := newConf(testConf())
-	require.NoError(t, e)
-	_, ifh, e := newHnds(c)
-	require.NoError(t, e)
+	ifh := basicConfT(t)
 	loginAddr := "192.12.12.3:1919"
 	trp := new(testResp)
 	ts := []func(p *testResp) testReq{
@@ -57,5 +54,5 @@ func TestUserInfo(t *testing.T) {
 			}
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP)
+	runReqTests(t, ts, ifh)
 }

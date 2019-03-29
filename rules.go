@@ -47,8 +47,6 @@ func (r *resources) match(ürl, rAddr string,
 	s = new(spec)
 	interp := func(name string) (v, ok bool) {
 		m, ok := r.managers.Load(name)
-		print(name + ": ")
-		println(ok)
 		if ok {
 			mng := m.(*manager)
 			if mng.spec != nil {
@@ -132,14 +130,26 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 		{
 			discover,
 			func() {
-				sp := r.match("", c.RemoteAddr, time.Now())
-				print(sp.Result.Operator + " ")
-				println(sp.Result.String)
-				c.bs, c.e = json.Marshal(sp)
+				ms := r.sessionIPMs(r.rules)
+				c.bs, c.e = json.Marshal(ms)
 			},
 		},
 	}
 	// TODO show, delete spec
+	return
+}
+
+func (r *resources) sessionIPMs(p *pred.Predicate) (ms []string) {
+	if p != nil {
+		if p.Operator == pred.Term {
+			v, ok := r.managers.Load(p.String)
+			if ok && v.(*manager).tÿpe == sessionIPMK {
+				ms = []string{p.String}
+			}
+		} else {
+			ms = append(r.sessionIPMs(p.A), r.sessionIPMs(p.B)...)
+		}
+	}
 	return
 }
 

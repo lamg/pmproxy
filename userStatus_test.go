@@ -29,9 +29,7 @@ import (
 )
 
 func TestUserStatus(t *testing.T) {
-	c, e := newConf(testConf())
-	require.NoError(t, e)
-	_, ifh, e := newHnds(c)
+	ifh := basicConfT(t)
 	loginAddr := "192.168.1.1:1982"
 	ts := []func(p *testResp) testReq{
 		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
@@ -56,7 +54,7 @@ func TestUserStatus(t *testing.T) {
 			return checkConsTR(t, loginAddr, 1024)
 		},
 	}
-	runReqTests(t, ts, ifh.serveHTTP)
+	runReqTests(t, ts, ifh)
 }
 
 func checkConsTR(t *testing.T, loginAddr string,

@@ -189,3 +189,43 @@ const (
 	timeoutK   = "timeout"
 	dialerName = "dialer"
 )
+
+const basicConfText = `
+admins = ["user0"]
+rules = "sessions ∧ downloads"
+
+[apiSrv]
+	addr = ":4443"
+	cert = "cert.pem"
+	fastOrStd = false
+	key = "key.pem"
+	readTimeout = "10s"
+	writeTimeout = "15s"
+
+[proxySrv]
+	addr = ":8080"
+	fastOrStd = false
+	readTimeout = "30s"
+	writeTimeout = "40s"
+
+[[userDB]]
+	adOrMap = false
+	name = "mapDB"
+	[userDB.quotaMap]
+		group0 = "600MB"
+	[userDB.params]
+		[userDB.params.groups]
+			user0 = ["group0"]
+		[userDB.params.userPass]
+			user0 = "pass0"
+
+[[sessionIPM]]
+	authName = "mapDB"
+	name = "sessions"
+
+[[dwnConsR]]
+	name = "downloads"
+	userQuota = "mapDB"
+	lastReset = "2019-03-04T12:58:32-05:00"
+	resetCycle = "24h0m0s"
+`

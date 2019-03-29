@@ -38,7 +38,7 @@ func Serve() (e error) {
 		func() { c, e = newConf(afero.NewOsFs()) },
 		func() { prh, ifh, e = newHnds(c) },
 		func() {
-			cp := c.configPath()
+			cp := path.Dir(c.filePath)
 			fes := []func() error{
 				serveFunc(c.proxy, cp, true, prh),
 				serveFunc(c.iface, cp, false, ifh),

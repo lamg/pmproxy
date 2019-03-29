@@ -23,8 +23,8 @@ package pmproxy
 import (
 	"context"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	pred "github.com/lamg/predicate"
-	"github.com/lamg/viper"
 	"github.com/spf13/afero"
 	"github.com/spf13/cast"
 	"net/url"
@@ -64,23 +64,30 @@ type conf struct {
 	proxy   *srvConf
 	iface   *srvConf
 	waitUpd time.Duration
+
+	base     map[string]interface{}
+	filePath string
 }
 
 func newConf(fls afero.Fs) (c *conf, e error) {
 	c = &conf{}
+	var fl afero.File
 	fs := []func(){
 		func() {
-			viper.SetFs(fls)
-			viper.SetConfigFile(path.Join(home(),
-				homeConfigDir, configFile))
-			e = viper.ReadInConfig()
-			c.setDefaults()
+			c.filePath = confPath()
+			fl, e = fls.Open(c.filePath)
 			if e != nil {
 				e = genConfig(fls)
 			}
 		},
 		func() {
-			c.waitUpd, e = time.ParseDuration(c.strïng(waitUpdateK))
+			fl, e = fls.Open(c.filePath)
+		},
+		func() {
+			_, e = toml.DecodeReader(fl, &c.base)
+		},
+		func() {
+			c.waitUpd, e = time.ParseDuration(c.strïng(waitUpdateK, "5m"))
 		},
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
@@ -92,6 +99,11 @@ func newConf(fls afero.Fs) (c *conf, e error) {
 	return
 }
 
+func confPath() (p string) {
+	p = path.Join(home(), homeConfigDir, configFile)
+	return
+}
+
 func (c *conf) update() (e error) {
 	// TODO get all configuration and write to disk
 	return
@@ -100,7 +112,15 @@ func (c *conf) update() (e error) {
 func (c *conf) initConnMng() (e error) {
 	// c.initRules()
 	c.cm = new(connMng)
-	v := viper.Get(connMngK)
+	v, ok := c.base[connMngK]
+	if !ok {
+		v = map[string]interface{}{
+			maxIdleK: 0,
+			idleTK:   "0s",
+			tlsHTK:   "0s",
+			expCTK:   "0s",
+		}
+	}
 	e = c.cm.fromMap(v)
 	dl := &dialer{
 		consRF: func(name string) (cr *consR, ok bool) {
@@ -111,7 +131,7 @@ func (c *conf) initConnMng() (e error) {
 			}
 			return
 		},
-		timeout: viper.GetDuration(timeoutK),
+		timeout: c.duration(timeoutK, "15s"),
 	}
 	c.cm.direct = dl.dialContext
 	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
@@ -155,8 +175,7 @@ func genConfig(fls afero.Fs) (e error) {
 		},
 		func() {
 			fl := path.Join(dir, configFile)
-			e = viper.WriteConfigAs(fl)
-			viper.SetConfigFile(fl)
+			e = basicConf(fl, fls)
 		},
 		func() {
 			key := path.Join(dir, defaultSrvKey)
@@ -168,34 +187,16 @@ func genConfig(fls afero.Fs) (e error) {
 	return
 }
 
-func (c *conf) setDefaults() {
-	viper.SetKeysCaseSensitive(true)
-	viper.SetDefault(proxyConfK, map[string]interface{}{
-		fastOrStdK:    false,
-		readTimeoutK:  30 * time.Second,
-		writeTimeoutK: 40 * time.Second,
-		addrK:         ":8080",
-	})
-	viper.SetDefault(ifaceConfK, map[string]interface{}{
-		fastOrStdK:    false,
-		readTimeoutK:  10 * time.Second,
-		writeTimeoutK: 15 * time.Second,
-		addrK:         ":4443",
-		certK:         defaultSrvCert,
-		keyK:          defaultSrvKey,
-	})
-	viper.SetDefault(rulesK, pred.TrueStr)
-	viper.SetDefault(connMngK, map[string]interface{}{
-		maxIdleK: 0,
-		idleTK:   "0s",
-		tlsHTK:   "0s",
-		expCTK:   "0s",
-	})
-	viper.SetDefault(waitUpdateK, "5m")
-}
-
 func (c *conf) readProxyConf() (e error) {
-	i := viper.Get(proxyConfK)
+	i, ok := c.base[proxyConfK]
+	if !ok {
+		i = map[string]interface{}{
+			fastOrStdK:    false,
+			readTimeoutK:  30 * time.Second,
+			writeTimeoutK: 40 * time.Second,
+			addrK:         ":8080",
+		}
+	}
 	c.proxy, e = readSrvConf(i)
 	if e != nil {
 		s := e.Error()
@@ -207,13 +208,23 @@ func (c *conf) readProxyConf() (e error) {
 }
 
 func (c *conf) readIfaceConf() (e error) {
-	i := viper.Get(ifaceConfK)
+	i, ok := c.base[ifaceConfK]
+	if !ok {
+		i = map[string]interface{}{
+			fastOrStdK:    false,
+			readTimeoutK:  10 * time.Second,
+			writeTimeoutK: 15 * time.Second,
+			addrK:         ":4443",
+			certK:         defaultSrvCert,
+			keyK:          defaultSrvKey,
+		}
+	}
 	c.iface, e = readSrvConf(i)
 	return
 }
 
 func (c *conf) initLogger() (e error) {
-	c.lg, e = newLogger(c.strïng(loggerAddrK))
+	c.lg, e = newLogger(c.strïng(loggerAddrK, ""))
 	return
 }
 
@@ -222,12 +233,10 @@ func (c *conf) initResources() (e error) {
 	var predCf string
 	fs := []func(){
 		func() {
-			v := viper.Get(rulesK)
-			predCf = stringE(v, fe)
-			println(predCf)
+			predCf = c.strïng(rulesK, pred.TrueStr)
 		},
 		func() {
-			c.res, e = newResources(predCf, viper.GetStringSlice(adminsK))
+			c.res, e = newResources(predCf, c.stringSlice(adminsK))
 		},
 		func() {
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, groupIPMK,
@@ -245,27 +254,39 @@ func (c *conf) initResources() (e error) {
 	return
 }
 
-func (c *conf) get(key string) (v interface{}) {
-	v = viper.Get(key)
-	return
-}
-
 func (c *conf) sliceE(key string) (sl []interface{},
 	e error) {
-	v := c.get(key)
-	if v != nil {
+	v, ok := c.base[key]
+	if ok {
 		sl, e = cast.ToSliceE(v)
+	} else {
+		e = noKey(key)
 	}
 	return
 }
 
-func (c *conf) böol(key string) (b bool) {
-	b = viper.GetBool(key)
+func (c *conf) stringSlice(key string) (sl []string) {
+	sv, _ := c.sliceE(key)
+	inf := func(i int) {
+		sl = append(sl, cast.ToString(sv[i]))
+	}
+	forall(inf, len(sv))
 	return
 }
 
-func (c *conf) strïng(key string) (s string) {
-	s = viper.GetString(key)
+func (c *conf) strïng(key, def string) (s string) {
+	i, ok := c.base[key]
+	if !ok {
+		s = def
+	} else {
+		s = cast.ToString(i)
+	}
+	return
+}
+
+func (c *conf) duration(key, def string) (d time.Duration) {
+	s := c.strïng(key, def)
+	d, _ = time.ParseDuration(s)
 	return
 }
 
@@ -274,8 +295,8 @@ func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
 	vs, e := c.sliceE(key)
 	nfe := func(d error) {
 		if d != nil {
-			e := fmt.Errorf("Reading '%s': %s", key, d.Error())
-			fe(e)
+			nd := fmt.Errorf("Reading '%s': %s", key, d.Error())
+			fe(nd)
 		}
 	}
 	if e == nil {
@@ -289,13 +310,11 @@ func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
 			return
 		}
 		trueForall(inf, len(vs))
-	} else {
-		nfe(e)
 	}
 	return
 }
 
-func (c *conf) configPath() (dir string) {
-	dir = path.Dir(viper.ConfigFileUsed())
+func basicConf(pth string, fs afero.Fs) (e error) {
+	e = afero.WriteFile(fs, pth, []byte(basicConfText), 0644)
 	return
 }
