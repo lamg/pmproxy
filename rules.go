@@ -26,7 +26,6 @@ import (
 	pred "github.com/lamg/predicate"
 	rt "github.com/lamg/rtimespan"
 	"io/ioutil"
-	//"net"
 	"path"
 	"regexp"
 	"strings"
@@ -90,7 +89,8 @@ func newResources(predicate string, admins []string) (r *resources,
 	if e == nil {
 		r.cr, e = newCrypt()
 	} else {
-		e = fmt.Errorf("Parsing predicate '%s': %s", predicate, e.Error())
+		e = fmt.Errorf("Parsing predicate '%s': %s", predicate,
+			e.Error())
 	}
 	return
 }

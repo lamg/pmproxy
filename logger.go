@@ -28,11 +28,12 @@ import (
 )
 
 type logger struct {
-	sl *syslog.Writer
+	addr string
+	sl   *syslog.Writer
 }
 
 func newLogger(addr string) (l *logger, e error) {
-	l = new(logger)
+	l = &logger{addr: addr}
 	if addr != "" {
 		l.sl, e = syslog.Dial("tcp", addr, syslog.LOG_INFO,
 			"")

@@ -56,6 +56,7 @@ type credentials struct {
 }
 
 type conf struct {
+	fls         afero.Fs
 	staticFPath string
 
 	lg      *logger
@@ -70,7 +71,7 @@ type conf struct {
 }
 
 func newConf(fls afero.Fs) (c *conf, e error) {
-	c = &conf{}
+	c = &conf{fls: fls}
 	var fl afero.File
 	fs := []func(){
 		func() {
@@ -85,9 +86,11 @@ func newConf(fls afero.Fs) (c *conf, e error) {
 		},
 		func() {
 			_, e = toml.DecodeReader(fl, &c.base)
+			fl.Close()
 		},
 		func() {
-			c.waitUpd, e = time.ParseDuration(c.strïng(waitUpdateK, "5m"))
+			c.waitUpd, e = time.ParseDuration(
+				c.strïng(waitUpdateK, "5m"))
 		},
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
@@ -105,7 +108,34 @@ func confPath() (p string) {
 }
 
 func (c *conf) update() (e error) {
-	// TODO get all configuration and write to disk
+	var cf map[string]interface{}
+	c.res.managers.Range(func(k, v interface{}) (ok bool) {
+		mng := v.(*manager)
+		if mng.mapper != nil {
+			mp := mng.mapper()
+			v, ok := cf[mng.tÿpe]
+			if ok {
+				sv := v.([]interface{})
+				sv = append(sv, mp)
+				cf[mng.tÿpe] = sv
+			} else {
+				cf[mng.tÿpe] = []interface{}{mp}
+			}
+		}
+		return
+	})
+	cf[proxyConfK] = c.proxy.toMap()
+	cf[ifaceConfK] = c.iface.toMap()
+	cf[rulesK] = pred.String(c.res.rules)
+	cf[adminsK] = c.res.admins
+	cf[loggerAddrK] = c.lg.addr
+	cf[waitUpdateK] = c.waitUpd.String()
+	fl, e := c.fls.Open(c.filePath)
+	if e == nil {
+		enc := toml.NewEncoder(fl)
+		e = enc.Encode(&cf)
+	}
+	// all serializable components are in encoded
 	return
 }
 
