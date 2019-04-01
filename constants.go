@@ -229,4 +229,9 @@ rules = "sessions ∧ downloads"
 	userQuota = "mapDB"
 	lastReset = "2019-03-04T12:58:32-05:00"
 	resetCycle = "24h0m0s"
+
+[[spec]]
+	name = "main"
+	iface = "eth0"
+	consRs = "downloads"
 `
