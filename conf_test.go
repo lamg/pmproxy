@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"encoding/json"
 	"github.com/BurntSushi/toml"
 	"github.com/spf13/afero"
 	"github.com/spf13/cast"
@@ -10,7 +11,32 @@ import (
 	"time"
 )
 
-func TestConf(t *testing.T) {
+func TestShowMng(t *testing.T) {
+	hnd := basicConfT(t)
+	ts := []func(*testResp) testReq{
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{
+					Manager: resourcesK,
+					Cmd:     specKS,
+					String:  defaultDwnConsR,
+				},
+				rAddr: "192.168.1.2:1919",
+				code:  h.StatusOK,
+				bodyOK: func(bs []byte) {
+					require.True(t, len(bs) != 0)
+					sp := new(spec)
+					e := json.Unmarshal(bs, &sp)
+					require.NoError(t, e)
+					require.Equal(t, sp.ProxyURL, "http://proxy.com:8080")
+				},
+			}
+		},
+	}
+	runReqTests(t, ts, hnd)
+}
+
+func TestBasicConf(t *testing.T) {
 	pth := confPath()
 	fs := afero.NewMemMapFs()
 	e := basicConf(pth, fs)

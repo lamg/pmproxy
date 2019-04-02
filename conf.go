@@ -27,6 +27,7 @@ import (
 	pred "github.com/lamg/predicate"
 	"github.com/spf13/afero"
 	"github.com/spf13/cast"
+	"net"
 	"net/url"
 	"os"
 	"path"
@@ -108,7 +109,7 @@ func confPath() (p string) {
 }
 
 func (c *conf) update() (e error) {
-	var cf map[string]interface{}
+	cf := make(map[string]interface{})
 	c.res.managers.Range(func(k, v interface{}) (ok bool) {
 		mng := v.(*manager)
 		if mng.mapper != nil {
@@ -166,14 +167,16 @@ func (c *conf) initConnMng() (e error) {
 	c.cm.direct = dl.dialContext
 	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
 		addr string, t time.Time) (nctx context.Context) {
-		spec := c.res.match(ürl, addr, t)
+		ip, _, _ := net.SplitHostPort(addr)
+		spec := c.res.match(ürl, ip, t)
 		c.lg.log(meth, ürl, spec.ip, spec.user, t)
 		nctx = context.WithValue(ctx, specK, spec)
 		return
 	}
 	c.cm.proxyF = func(meth, ürl, addr string,
 		t time.Time) (r *url.URL, e error) {
-		spec := c.res.match(ürl, addr, t)
+		ip, _, _ := net.SplitHostPort(addr)
+		spec := c.res.match(ürl, ip, t)
 		r = spec.proxyURL
 		return
 	}
@@ -273,7 +276,10 @@ func (c *conf) initResources() (e error) {
 				spanK, ipRangeMK, specKS, urlmK}
 			inf := func(i int) {
 				fm := func(m map[string]interface{}) {
-					c.res.add(rs[i], m)
+					d := c.res.add(rs[i], m)
+					if d != nil {
+						println(d.Error())
+					}
 				}
 				c.sliceMap(rs[i], fm, fe, func() bool { return e == nil })
 			}

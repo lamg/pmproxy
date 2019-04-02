@@ -21,6 +21,7 @@
 package pmproxy
 
 import (
+	"fmt"
 	pred "github.com/lamg/predicate"
 	"net/url"
 )
@@ -30,50 +31,43 @@ type spec struct {
 	Iface    string `json:"iface"`
 	ProxyURL string `json:"proxyURL"`
 	proxyURL *url.URL
+
 	// ConsRs is a map from type to description.
 	// Only a ConsR of each type is assigned, as the
 	// map structure implicitly determines
-	ConsRs map[string]string `json:"consRs"`
-	Result *pred.Predicate   `json:"result"`
+	ConsRs []string        `json:"consRs"`
+	Result *pred.Predicate `json:"result"`
 	ip     string
 	user   string
 }
 
 func (s *spec) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
-	kf := []kFuncI{
-		{
-			nameK,
-			func(i interface{}) {
-				s.Name = stringE(i, fe)
-			},
-		},
-		{
-			ifaceK,
-			func(i interface{}) {
-				s.Iface = stringE(i, fe)
-			},
-		},
-		{
-			proxyURLK,
-			func(i interface{}) {
-				s.ProxyURL = stringE(i, fe)
-			},
-		},
-		{
-			proxyURLK,
-			func(i interface{}) {
-				fe(s.init())
-			},
-		},
-		{
-			consRK,
-			func(i interface{}) {
-				s.ConsRs = stringMapStringE(i, fe)
-			},
-		},
+	mp := stringMapE(i, fe)
+	if e == nil {
+		v := mp[nameK]
+		if v != nil {
+			s.Name = stringE(v, fe)
+		} else {
+			e = noKey(nameK)
+		}
 	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
+	if e == nil {
+		vp, vi := mp[proxyURLK], mp[ifaceK]
+		if vp != nil {
+			s.ProxyURL = vp.(string)
+		}
+		if vi != nil {
+			s.Iface = vi.(string)
+		}
+		if s.ProxyURL != "" {
+			fe(s.init())
+		}
+	}
+	if e == nil && (s.proxyURL == nil) == (s.Iface == "") {
+		e = fmt.Errorf("A proxy or an interface is needed at spec with "+
+			"name %s", s.Name)
+	}
 	return
 }
 
@@ -82,7 +76,6 @@ func (s *spec) toMap() (i map[string]interface{}) {
 		nameK:     s.Name,
 		ifaceK:    s.Iface,
 		proxyURLK: s.ProxyURL,
-		consRK:    s.ConsRs,
 	}
 	return
 }
@@ -92,7 +85,7 @@ func (s *spec) init() (e error) {
 	return
 }
 
-func join(s, t *spec) {
+func join(s, t *spec, consR string) {
 	// the policy consists in replacing when empty
 	if s.ProxyURL == "" {
 		s.ProxyURL = t.ProxyURL
@@ -101,11 +94,6 @@ func join(s, t *spec) {
 	if s.Iface == "" {
 		s.Iface = t.Iface
 	}
-	for k, v := range t.ConsRs {
-		_, ok := s.ConsRs[k]
-		if !ok {
-			s.ConsRs[k] = v
-		}
-	}
+	s.ConsRs = append(s.ConsRs, consR)
 	return
 }

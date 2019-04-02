@@ -55,12 +55,13 @@ func (d *dialer) dialContext(ctx context.Context,
 	}
 	if e == nil {
 		cr := make([]*consR, 0, len(s.ConsRs))
-		for _, v := range s.ConsRs {
-			cs, ok := d.consRF(v)
+		inf := func(i int) {
+			cs, ok := d.consRF(s.ConsRs[i])
 			if ok {
 				cr = append(cr, cs)
 			}
 		}
+		forall(inf, len(s.ConsRs))
 		c, e = newRConn(cr, s.ip, s.user, n)
 	}
 	return

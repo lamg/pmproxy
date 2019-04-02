@@ -144,6 +144,7 @@ const (
 	rulesK            = "rules"
 	resourcesK        = "resources"
 	filterSessionIPMs = "filterSessionIPMs"
+	object            = "object"
 )
 
 // dwnConsR.go
@@ -231,7 +232,6 @@ rules = "sessions ∧ downloads"
 	resetCycle = "24h0m0s"
 
 [[spec]]
-	name = "main"
-	iface = "eth0"
-	consRs = "downloads"
+	name = "downloads"
+	proxyURL = "http://proxy.com:8080"
 `

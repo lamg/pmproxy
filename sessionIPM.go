@@ -93,6 +93,7 @@ func (m *sessionIPM) managerKF(c *cmd) (kf []kFunc) {
 
 func (m *sessionIPM) match(ip string) (ok bool) {
 	_, ok = m.iu.get(ip)
+	println("match", ip, ok)
 	return
 }
 

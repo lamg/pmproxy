@@ -49,7 +49,7 @@ func (r *resources) match(ürl, rAddr string,
 		if ok {
 			mng := m.(*manager)
 			if mng.spec != nil {
-				join(s, mng.spec)
+				join(s, mng.spec, name)
 				v = true
 			} else {
 				ok = mng.matcher != nil
@@ -58,6 +58,7 @@ func (r *resources) match(ürl, rAddr string,
 				}
 			}
 		}
+		println("name v, ok: ", name, v, ok)
 		return
 	}
 	s.Result = pred.Reduce(r.rules, interp)
@@ -141,6 +142,23 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 				c.bs, c.e = json.Marshal(sp)
 			},
 		},
+		{
+			specKS,
+			func() {
+				v, ok := r.managers.Load(c.String)
+				var mng *manager
+				if ok {
+					mng = v.(*manager)
+					if mng.spec != nil {
+						c.bs, c.e = json.Marshal(mng.spec)
+					} else {
+						c.e = noKey(c.String + " with spec field")
+					}
+				} else {
+					c.e = noKey(c.String)
+				}
+			},
+		},
 	}
 	// TODO show, delete spec
 	return
@@ -168,9 +186,9 @@ func (r *resources) add(tÿpe string,
 		ipRangeMK:   r.addRangeIPM,
 		groupIPMK:   r.addGroupIPM,
 		sessionIPMK: r.addSessionIPM,
-		specKS:      r.addSpec,
 		userDBK:     r.addUserDB,
 		dwnConsRK:   r.addDwnConsR,
+		specKS:      r.addSpec,
 	}
 	fm, ok := fs[tÿpe]
 	if ok {
@@ -372,12 +390,11 @@ func (r *resources) addSpec(m map[string]interface{}) (e error) {
 	sp := new(spec)
 	e = sp.fromMap(m)
 	if e == nil {
-		mng := &manager{
-			tÿpe:   specKS,
-			mapper: sp.toMap,
-			spec:   sp,
+		v, ok := r.managers.Load(sp.Name)
+		if ok {
+			mng := v.(*manager)
+			mng.spec = sp
 		}
-		r.managers.Store(sp.Name, mng)
 	}
 	return
 }

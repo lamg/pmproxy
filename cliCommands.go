@@ -156,7 +156,6 @@ func discoverC(url, remote string) (e error) {
 		func() {
 			fmt.Printf("Network interface: %s\n", sp.Iface)
 			fmt.Printf("Parent proxy: %s\n", sp.ProxyURL)
-			fmt.Printf("Consumption restrictors: %v\n", sp.ConsRs)
 			fmt.Printf("Match result: %s\n", pred.String(sp.Result))
 			printTypes(url, sp.Result)
 		},
@@ -167,6 +166,7 @@ func discoverC(url, remote string) (e error) {
 
 func printTypes(url string, p *pred.Predicate) {
 	ss := []string{"", pred.TrueStr, pred.FalseStr}
+	println("p.String:", p.String)
 	ib := func(i int) bool { return p.String == ss[i] }
 	ok, _ := bLnSrch(ib, len(ss))
 	if !ok {
