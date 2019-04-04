@@ -64,8 +64,8 @@ func (s *spec) fromMap(i interface{}) (e error) {
 			fe(s.init())
 		}
 	}
-	if e == nil && (s.proxyURL == nil) == (s.Iface == "") {
-		e = fmt.Errorf("A proxy or an interface is needed at spec with "+
+	if e == nil && (s.proxyURL == nil || s.Iface == "") {
+		e = fmt.Errorf("A proxy and an interface is needed at spec with "+
 			"name %s", s.Name)
 	}
 	return

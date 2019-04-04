@@ -25,7 +25,8 @@ import (
 	"fmt"
 	pred "github.com/lamg/predicate"
 	rt "github.com/lamg/rtimespan"
-	"io/ioutil"
+	"github.com/spf13/afero"
+	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -39,6 +40,7 @@ type resources struct {
 	iu       *ipUserS
 	cr       *crypt
 	admins   []string
+	fls      afero.Fs
 }
 
 func (r *resources) match(ürl, rAddr string,
@@ -58,7 +60,6 @@ func (r *resources) match(ürl, rAddr string,
 				}
 			}
 		}
-		println("name v, ok: ", name, v, ok)
 		return
 	}
 	s.Result = pred.Reduce(r.rules, interp)
@@ -75,12 +76,13 @@ type manager struct {
 	spec      *spec
 }
 
-func newResources(predicate string, admins []string) (r *resources,
-	e error) {
+func newResources(predicate string, admins []string,
+	fls afero.Fs) (r *resources, e error) {
 	r = &resources{
 		managers: new(sync.Map),
 		iu:       newIPuserS(),
 		admins:   admins,
+		fls:      fls,
 	}
 	r.managers.Store(resourcesK, &manager{
 		tÿpe:      resourcesK,
@@ -297,7 +299,7 @@ func (r *resources) addDwnConsR(
 	homeData := path.Join(home(), dataDir)
 	dw := &dwnConsR{
 		fileReader: func(file string) (bs []byte, d error) {
-			bs, d = ioutil.ReadFile(path.Join(homeData, file))
+			bs, d = afero.ReadFile(r.fls, path.Join(homeData, file))
 			return
 		},
 	}
@@ -322,11 +324,9 @@ func (r *resources) addDwnConsR(
 			fs := []func(){
 				func() { bs, d = json.Marshal(mp) },
 				func() {
-					ioutil.WriteFile(
-						path.Join(homeData, dw.name+".json"),
-						bs,
-						0644,
-					)
+					r.fls.MkdirAll(homeData, os.ModeDir|os.ModePerm)
+					afero.WriteFile(r.fls, path.Join(homeData, dw.name+".json"),
+						bs, 0644)
 				},
 			}
 			trueFF(fs,

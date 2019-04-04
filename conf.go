@@ -21,14 +21,11 @@
 package pmproxy
 
 import (
-	"context"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	pred "github.com/lamg/predicate"
 	"github.com/spf13/afero"
 	"github.com/spf13/cast"
-	"net"
-	"net/url"
 	"os"
 	"path"
 	"time"
@@ -91,7 +88,7 @@ func newConf(fls afero.Fs) (c *conf, e error) {
 		},
 		func() {
 			c.waitUpd, e = time.ParseDuration(
-				c.strïng(waitUpdateK, "5m"))
+				c.strïng(waitUpdateK, "1m"))
 		},
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
@@ -131,11 +128,13 @@ func (c *conf) update() (e error) {
 	cf[adminsK] = c.res.admins
 	cf[loggerAddrK] = c.lg.addr
 	cf[waitUpdateK] = c.waitUpd.String()
-	fl, e := c.fls.Open(c.filePath)
-	if e == nil {
-		enc := toml.NewEncoder(fl)
-		e = enc.Encode(&cf)
-	}
+	// Not updating conf at this point
+	//fl, e := c.fls.Create(c.filePath)
+	//if e == nil {
+	//	enc := toml.NewEncoder(fl)
+	//	e = enc.Encode(&cf)
+	//	fl.Close()
+	//}
 	// all serializable components are in encoded
 	return
 }
@@ -150,36 +149,21 @@ func (c *conf) initConnMng() (e error) {
 			idleTK:   "0s",
 			tlsHTK:   "0s",
 			expCTK:   "0s",
+			timeoutK: "60s",
 		}
 	}
 	e = c.cm.fromMap(v)
-	dl := &dialer{
-		consRF: func(name string) (cr *consR, ok bool) {
-			v, ok := c.res.managers.Load(name)
-			if ok {
-				cr = v.(*manager).consR
-				ok = cr != nil
-			}
-			return
-		},
-		timeout: c.duration(timeoutK, "15s"),
-	}
-	c.cm.direct = dl.dialContext
-	c.cm.ctxVal = func(ctx context.Context, meth, ürl,
-		addr string, t time.Time) (nctx context.Context) {
-		ip, _, _ := net.SplitHostPort(addr)
-		spec := c.res.match(ürl, ip, t)
-		c.lg.log(meth, ürl, spec.ip, spec.user, t)
-		nctx = context.WithValue(ctx, specK, spec)
+	c.cm.consR = func(name string) (cr *consR, ok bool) {
+		v, ok := c.res.managers.Load(name)
+		if ok {
+			cr = v.(*manager).consR
+			ok = cr != nil
+		}
 		return
 	}
-	c.cm.proxyF = func(meth, ürl, addr string,
-		t time.Time) (r *url.URL, e error) {
-		ip, _, _ := net.SplitHostPort(addr)
-		spec := c.res.match(ürl, ip, t)
-		r = spec.proxyURL
-		return
-	}
+	c.cm.log = c.lg.log
+	c.cm.match = c.res.match
+	c.cm.user = c.res.iu.get
 	mng := &manager{
 		tÿpe:   connMngK,
 		mapper: c.cm.toMap,
@@ -269,7 +253,7 @@ func (c *conf) initResources() (e error) {
 			predCf = c.strïng(rulesK, pred.TrueStr)
 		},
 		func() {
-			c.res, e = newResources(predCf, c.stringSlice(adminsK))
+			c.res, e = newResources(predCf, c.stringSlice(adminsK), c.fls)
 		},
 		func() {
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, groupIPMK,

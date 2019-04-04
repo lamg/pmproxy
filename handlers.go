@@ -44,11 +44,11 @@ func newHnds(c *conf) (prh, ifh *srvHandler,
 	if c.proxy.fastOrStd {
 		// consumers, matchers determine context values
 		// dialer and proxy process context values
-		prh.reqHnd = proxy.NewFastProxy(c.cm.direct,
-			c.cm.ctxVal, c.cm.proxyF, time.Now)
+		prh.reqHnd = proxy.NewFastProxy(c.cm.set,
+			c.cm.params, c.cm.apply, c.cm.dialTimeout, time.Now)
 	} else {
-		prh.serveHTTP = proxy.NewProxy(c.cm.direct,
-			c.cm.ctxVal, c.cm.proxyF, c.cm.maxIdle,
+		prh.serveHTTP = proxy.NewProxy(c.cm.set,
+			c.cm.params, c.cm.apply, c.cm.dialTimeout, c.cm.maxIdle,
 			c.cm.idleT, c.cm.tlsHT, c.cm.expCT,
 			time.Now).ServeHTTP
 	}

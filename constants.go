@@ -234,4 +234,5 @@ rules = "sessions ∧ downloads"
 [[spec]]
 	name = "downloads"
 	proxyURL = "http://proxy.com:8080"
+	iface = "enp0s25"
 `

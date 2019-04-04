@@ -155,6 +155,7 @@ func (d *dwnConsR) consR() (c *consR) {
 			d.keepResetCycle()
 			cons := uint64(0)
 			d.userCons.LoadOrStore(user, cons)
+			ok = true
 			return
 		},
 		can: func(ip, user string, down int) (ok bool) {

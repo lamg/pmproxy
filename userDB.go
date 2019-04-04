@@ -182,6 +182,7 @@ func (d *userDB) toMap() (i map[string]interface{}) {
 		adOrMapK: d.adOrMap,
 		paramsK:  d.params,
 		quotaMapK: func() (m map[string]string) {
+			m = make(map[string]string)
 			d.groupQuotaM.Range(func(k, v interface{}) (ok bool) {
 				sz := datasize.ByteSize(v.(uint64))
 				m[k.(string)], ok = sz.HumanReadable(), true

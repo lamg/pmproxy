@@ -166,7 +166,6 @@ func discoverC(url, remote string) (e error) {
 
 func printTypes(url string, p *pred.Predicate) {
 	ss := []string{"", pred.TrueStr, pred.FalseStr}
-	println("p.String:", p.String)
 	ib := func(i int) bool { return p.String == ss[i] }
 	ok, _ := bLnSrch(ib, len(ss))
 	if !ok {

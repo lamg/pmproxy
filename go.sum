@@ -23,6 +23,12 @@ github.com/lamg/predicate v0.0.5-0.20190323035227-3fb098a9bb5e h1:pi4vO/KtKRoftk
 github.com/lamg/predicate v0.0.5-0.20190323035227-3fb098a9bb5e/go.mod h1:xAugcbdmD+63uiQuD8m7hP8z8Tkc8yG7BVTdUmqVKD4=
 github.com/lamg/proxy v0.0.0-20190207224526-bbb85102af9d h1:a4Acp/6DBpK4n/IPUpnGDE72DU55gCUuobuJeN1j8tg=
 github.com/lamg/proxy v0.0.0-20190207224526-bbb85102af9d/go.mod h1:LzVd3ii7yrPFmElAcs/YiXpOAaNPYQK7HfbD0ZEQ4xk=
+github.com/lamg/proxy v0.0.0-20190403223110-67edcf28c5a4 h1:xjubxp2kAn0yRWFUR/GU5rTsWwmmlFI87yem6S14lMo=
+github.com/lamg/proxy v0.0.0-20190403223110-67edcf28c5a4/go.mod h1:LzVd3ii7yrPFmElAcs/YiXpOAaNPYQK7HfbD0ZEQ4xk=
+github.com/lamg/proxy v0.0.0-20190404152249-64fde043a0fa h1:TpJDgVB3euAhd5enVnrE1u5CjgAqe/IbgpxgZu4ELvs=
+github.com/lamg/proxy v0.0.0-20190404152249-64fde043a0fa/go.mod h1:LzVd3ii7yrPFmElAcs/YiXpOAaNPYQK7HfbD0ZEQ4xk=
+github.com/lamg/proxy v0.0.0-20190404191104-42dbef145cb9 h1:RuYmIO9P+/xof31muKk+rb3Y3j+h+G/IXXn/IMItqIA=
+github.com/lamg/proxy v0.0.0-20190404191104-42dbef145cb9/go.mod h1:LzVd3ii7yrPFmElAcs/YiXpOAaNPYQK7HfbD0ZEQ4xk=
 github.com/lamg/rtimespan v0.1.0 h1:RWt5jUZDM6+TWc9LbYc6GyAgRWK6N0dBbJxUs9uTPa0=
 github.com/lamg/rtimespan v0.1.0/go.mod h1:qORt8iToRjuSeTY9w5/NFsAKUquviGcwYCpFBwic2Eg=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
