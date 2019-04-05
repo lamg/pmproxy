@@ -105,6 +105,9 @@ func UserStatus() (m cli.Command) {
 		Usage:   "Retrieves user status",
 		Action: func(c *cli.Context) (e error) {
 			e = status(dwn)
+			if e == nil {
+				e = assocUserInfo(dwn)
+			}
 			return
 		},
 	}
@@ -131,15 +134,6 @@ func ResetConsumption() (m cli.Command) {
 	return
 }
 
-func UserInfo() (m cli.Command) {
-	m = cli.Command{
-		Name:    "info",
-		Aliases: []string{"i"},
-		Usage:   "Retrieves user information",
-	}
-	return
-}
-
 func discoverC(url, remote string) (e error) {
 	m := &cmd{
 		Cmd:     discover,
@@ -148,16 +142,16 @@ func discoverC(url, remote string) (e error) {
 	}
 	var r *h.Response
 	var bs []byte
-	sp := new(spec)
+	dr := new(discoverRes)
 	fs := []func(){
 		func() { r, e = postCmd(url, m) },
 		func() { bs, e = ioutil.ReadAll(r.Body) },
-		func() { e = json.Unmarshal(bs, sp) },
+		func() { e = json.Unmarshal(bs, dr) },
 		func() {
-			fmt.Printf("Network interface: %s\n", sp.Iface)
-			fmt.Printf("Parent proxy: %s\n", sp.ProxyURL)
-			fmt.Printf("Match result: %s\n", pred.String(sp.Result))
-			printTypes(url, sp.Result)
+			fmt.Printf("Matching: %s\n", dr.Matching)
+			fmt.Printf("No matching: %s\n", dr.NoMatching)
+			fmt.Printf("Match result: %s\n", pred.String(dr.Result))
+			printTypes(url, dr.Result)
 		},
 	}
 	trueFF(fs, func() bool { return e == nil })
@@ -192,11 +186,71 @@ func printTypes(url string, p *pred.Predicate) {
 }
 
 func reset(manager, user string) (e error) {
-	// TODO
+	m := &cmd{
+		Manager: manager,
+		Cmd:     set,
+		String:  user,
+		Uint64:  1,
+	}
+	okf := func(bs []byte) (d error) { return }
+	e = sendRecv(m, okf)
 	return
 }
 
 func status(dwnMng string) (e error) {
+	m := &cmd{
+		Cmd:     get,
+		Manager: dwnMng,
+	}
+	okf := func(bs []byte) (d error) {
+		qc := new(qtCs)
+		d = json.Unmarshal(bs, qc)
+		if d == nil {
+			fmt.Printf("Quota: %s Consumption: %s\n",
+				datasize.ByteSize(qc.Quota).HumanReadable(),
+				datasize.ByteSize(qc.Consumption).HumanReadable())
+		}
+		return
+	}
+	e = sendRecv(m, okf)
+	return
+}
+
+func assocUserInfo(dwn string) (e error) {
+	udb, e := assocUserDB(dwn)
+	m := &cmd{
+		Manager: udb,
+		Cmd:     get,
+	}
+	okf := func(bs []byte) (d error) {
+		info := new(userInfo)
+		d = json.Unmarshal(bs, info)
+		if d == nil {
+			fmt.Printf("Name: %s\n", info.Name)
+			fmt.Printf("User: %s\n", info.UserName)
+		}
+		return
+	}
+	if e == nil {
+		e = sendRecv(m, okf)
+	}
+	return
+}
+
+func assocUserDB(dwn string) (udb string, e error) {
+	m := &cmd{
+		Manager: dwn,
+		Cmd:     userDBK,
+	}
+	okf := func(bs []byte) (d error) {
+		udb = string(bs)
+		return
+	}
+	e = sendRecv(m, okf)
+	return
+}
+
+func sendRecv(m *cmd, okf func([]byte) error) (e error) {
 	var li *loginInfo
 	var r *h.Response
 	fs := []func(){
@@ -204,26 +258,13 @@ func status(dwnMng string) (e error) {
 			li, e = readSecret()
 		},
 		func() {
-			m := &cmd{
-				Cmd:     get,
-				Manager: dwnMng,
-				Secret:  li.Secret,
-			}
+			m.Secret = li.Secret
 			r, e = postCmd(li.Server, m)
 		},
 	}
 	re := func(d error) { e = d }
-	okf := func(bs []byte) (d error) {
-		qc := new(qtCs)
-		d = json.Unmarshal(bs, qc)
-		if d == nil {
-			fmt.Sprintf("Quota: %s Consumption: %s\n",
-				datasize.ByteSize(qc.Quota).HumanReadable(),
-				datasize.ByteSize(qc.Consumption).HumanReadable())
-		}
-		return
-	}
-	fs = append(fs, doOK(okf, re, func() *h.Response { return r })...)
+	fs = append(fs, doOK(okf, re,
+		func() *h.Response { return r })...)
 	handleRenew(fs, func() error { return e }, re)
 	return
 }
@@ -267,7 +308,8 @@ func login(urls, sm, user, pass string) (e error) {
 		d = writeSecret(li)
 		return
 	}
-	fs = append(fs, doOK(okf, fe, func() *h.Response { return r })...)
+	fs = append(fs,
+		doOK(okf, fe, func() *h.Response { return r })...)
 	trueFF(fs, func() bool { return e == nil })
 	return
 }
@@ -275,7 +317,8 @@ func login(urls, sm, user, pass string) (e error) {
 func filterSMs(urls, sm string) (e error) {
 	m := &cmd{
 		Manager: resourcesK,
-		Cmd:     filterSessionIPMs,
+		Cmd:     filter,
+		String:  sessionIPMK,
 	}
 	var r *h.Response
 	fe := func(d error) { e = d }
@@ -292,7 +335,8 @@ func filterSMs(urls, sm string) (e error) {
 		}
 		return
 	}
-	fs = append(fs, doOK(okf, fe, func() *h.Response { return r })...)
+	fs = append(fs,
+		doOK(okf, fe, func() *h.Response { return r })...)
 	trueFF(fs, func() bool { return e == nil })
 	return
 }
@@ -318,7 +362,8 @@ func logout() (e error) {
 		d = os.Remove(loginSecretFile)
 		return
 	}
-	fs = append(fs, doOK(okf, fe, func() *h.Response { return r })...)
+	fs = append(fs,
+		doOK(okf, fe, func() *h.Response { return r })...)
 	handleRenew(fs, func() error { return e }, fe)
 	return
 }

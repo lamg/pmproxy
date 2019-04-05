@@ -3,6 +3,7 @@ package pmproxy
 import (
 	"encoding/json"
 	"github.com/BurntSushi/toml"
+	pred "github.com/lamg/predicate"
 	"github.com/spf13/afero"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,36 @@ import (
 	"testing"
 	"time"
 )
+
+func TestFilterMatch(t *testing.T) {
+	hnd := basicConfT(t)
+	loginAddr := "192.168.1.1:1919"
+	ts := []func(*testResp) testReq{
+		func(p *testResp) testReq {
+			return discoverTR(t, p, loginAddr)
+		},
+		func(p *testResp) testReq {
+			return loginTR(t, p, loginAddr, 0)
+		},
+		func(p *testResp) testReq {
+			return testReq{
+				command: &cmd{
+					Cmd:     discover,
+					Manager: resourcesK,
+				},
+				rAddr: loginAddr,
+				code:  h.StatusOK,
+				bodyOK: func(bs []byte) {
+					dr := new(discoverRes)
+					e := json.Unmarshal(bs, dr)
+					require.NoError(t, e)
+					require.Equal(t, dr.Result.String, pred.TrueStr)
+				},
+			}
+		},
+	}
+	runReqTests(t, ts, hnd)
+}
 
 func TestShowMng(t *testing.T) {
 	hnd := basicConfT(t)

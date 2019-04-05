@@ -32,8 +32,12 @@ func TestUserInfo(t *testing.T) {
 	loginAddr := "192.12.12.3:1919"
 	trp := new(testResp)
 	ts := []func(p *testResp) testReq{
-		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
-		func(p *testResp) testReq { return loginTR(t, p, loginAddr, 0) },
+		func(p *testResp) testReq {
+			return discoverTR(t, p, loginAddr)
+		},
+		func(p *testResp) testReq {
+			return loginTR(t, p, loginAddr, 0)
+		},
 		func(p *testResp) testReq {
 			return testReq{
 				command: &cmd{

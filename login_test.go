@@ -82,8 +82,12 @@ func TestLogin(t *testing.T) {
 		}
 	}
 	ts := []func(*testResp) testReq{
-		func(p *testResp) testReq { return discoverTR(t, p, loginAddr) },
-		func(p *testResp) testReq { return loginTR(t, p, loginAddr, 0) },
+		func(p *testResp) testReq {
+			return discoverTR(t, p, loginAddr)
+		},
+		func(p *testResp) testReq {
+			return loginTR(t, p, loginAddr, 0)
+		},
 		u0Cmd,
 		func(p *testResp) testReq {
 			return testReq{
@@ -132,17 +136,16 @@ func discoverTR(t *testing.T, trp *testResp,
 	addr string) (r testReq) {
 	r = testReq{
 		command: &cmd{
-			Cmd:     filterSessionIPMs,
+			Cmd:     discover,
 			Manager: resourcesK,
 		},
 		rAddr: addr,
 		code:  h.StatusOK,
 		bodyOK: func(bs []byte) {
-			var s []string
-			e := json.Unmarshal(bs, &s)
+			dr := new(discoverRes)
+			e := json.Unmarshal(bs, dr)
 			require.NoError(t, e)
-			require.True(t, len(s) != 0)
-			trp.sessionMng = s[0]
+			trp.sessionMng = dr.NoMatching[0]
 		},
 	}
 	return

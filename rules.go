@@ -66,6 +66,37 @@ func (r *resources) match(ürl, rAddr string,
 	return
 }
 
+type discoverRes struct {
+	Matching   []string        `json:"matching"`
+	NoMatching []string        `json:"noMatching"`
+	Result     *pred.Predicate `json:"result"`
+}
+
+func (r *resources) filterMatch(ürl, rAddr string,
+	t time.Time) (dr *discoverRes) {
+	dr = new(discoverRes)
+	interp := func(name string) (v, ok bool) {
+		m, ok := r.managers.Load(name)
+		if ok {
+			mng := m.(*manager)
+			v = mng.spec != nil
+			if !v && mng.matcher != nil {
+				v = mng.matcher(ürl, rAddr, t)
+			}
+		}
+		if ok {
+			if v {
+				dr.Matching = append(dr.Matching, name)
+			} else {
+				dr.NoMatching = append(dr.NoMatching, name)
+			}
+		}
+		return
+	}
+	dr.Result = pred.Reduce(r.rules, interp)
+	return
+}
+
 type manager struct {
 	tÿpe      string
 	managerKF func(*cmd) []kFunc
@@ -131,17 +162,17 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			filterSessionIPMs,
+			filter,
 			func() {
-				ms := r.sessionIPMs(r.rules)
+				ms := r.availableMng(r.rules, c.String)
 				c.bs, c.e = json.Marshal(ms)
 			},
 		},
 		{
 			discover,
 			func() {
-				sp := r.match(c.String, c.RemoteAddr, time.Now())
-				c.bs, c.e = json.Marshal(sp)
+				dr := r.filterMatch(c.String, c.RemoteAddr, time.Now())
+				c.bs, c.e = json.Marshal(dr)
 			},
 		},
 		{
@@ -166,15 +197,16 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 	return
 }
 
-func (r *resources) sessionIPMs(p *pred.Predicate) (ms []string) {
+func (r *resources) availableMng(p *pred.Predicate, tÿpe string) (ms []string) {
 	if p != nil {
 		if p.Operator == pred.Term {
 			v, ok := r.managers.Load(p.String)
-			if ok && v.(*manager).tÿpe == sessionIPMK {
+			if ok && v.(*manager).tÿpe == tÿpe {
 				ms = []string{p.String}
 			}
 		} else {
-			ms = append(r.sessionIPMs(p.A), r.sessionIPMs(p.B)...)
+			ms = append(r.availableMng(p.A, tÿpe),
+				r.availableMng(p.B, tÿpe)...)
 		}
 	}
 	return

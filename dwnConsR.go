@@ -143,6 +143,12 @@ func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 				}
 			},
 		},
+		{
+			userDBK,
+			func() {
+				c.bs = []byte(d.userQuotaN)
+			},
+		},
 	}
 	return
 }
