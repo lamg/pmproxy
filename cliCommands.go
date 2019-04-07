@@ -22,18 +22,23 @@ package pmproxy
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/c2h5oh/datasize"
 	pred "github.com/lamg/predicate"
+	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	h "net/http"
-	"os"
 	"strings"
 )
 
-func Discover() (m cli.Command) {
+type PMClient struct {
+	Fs      afero.Fs
+	PostCmd func(string, *cmd) (*h.Response, error)
+}
+
+func (p *PMClient) Discover() (m cli.Command) {
 	m = cli.Command{
 		Name:    "discover",
 		Aliases: []string{"d"},
@@ -41,12 +46,27 @@ func Discover() (m cli.Command) {
 			" proxy server, for some url (optional)",
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
+			var dr *discoverRes
 			if len(args) == 2 {
-				e = discoverC(args[0], args[1])
+				dr, e = p.discoverC(args[0], args[1])
 			} else if len(args) == 1 {
-				e = discoverC(args[0], "")
+				dr, e = p.discoverC(args[0], "")
 			} else {
-				e = checkArgExec(func() error { return nil }, 1, len(args))
+				e = checkArgExec(func() error { return nil }, 1,
+					len(args))
+			}
+			if dr != nil {
+				fmt.Printf("Match result: %s\n", pred.String(dr.Result))
+				for k, v := range dr.MatchMng {
+					var m string
+					if v.Match {
+						m = "✅"
+					} else {
+						m = "❌"
+					}
+					fmt.Printf("[%s] %s:%s", m, k, v.Type)
+				}
+
 			}
 			return
 		},
@@ -54,25 +74,25 @@ func Discover() (m cli.Command) {
 	return
 }
 
-func Login() (m cli.Command) {
+func (p *PMClient) Login() (m cli.Command) {
 	var sm string
 	m = cli.Command{
 		Name:    "login",
 		Aliases: []string{"l"},
 		Usage: "Open a session in PMProxy server, " +
 			"given PMProxy address, user and password",
-		Flags: managerFlag(&sm, defaultSessionIPM),
+		Flags: managerFlag(&sm, ""),
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
 			e = checkArgExec(
 				func() error {
-					return login(args[0], sm, args[1], args[2])
+					return p.login(args[0], sm, args[1], args[2])
 				},
 				3,
 				len(args),
 			)
 			if e != nil && e.Error() == noKey(sm).Error() {
-				filterSMs(args[0], sm)
+				p.filterSMs(args[0])
 			}
 			return
 		},
@@ -80,33 +100,38 @@ func Login() (m cli.Command) {
 	return
 }
 
-func Logout() (m cli.Command) {
+func (p *PMClient) Logout() (m cli.Command) {
 	var sm string
 	m = cli.Command{
 		Name:    "logout",
 		Aliases: []string{"o"},
 		Usage: "Closes the opened session in PMProxy server if" +
 			" login.secret is found",
-		Flags: managerFlag(&sm, defaultSessionIPM),
+		Flags: managerFlag(&sm, ""),
 		Action: func(c *cli.Context) (e error) {
-			e = logout()
+			// TODO another user could be specified when logged as adm
+			e = p.logout()
 			return
 		},
 	}
 	return
 }
 
-func UserStatus() (m cli.Command) {
+func (p *PMClient) UserStatus() (m cli.Command) {
 	var dwn string
 	m = cli.Command{
 		Name:    "status",
 		Aliases: []string{"s"},
-		Flags:   managerFlag(&dwn, defaultDwnConsR),
+		Flags:   managerFlag(&dwn, ""),
 		Usage:   "Retrieves user status",
 		Action: func(c *cli.Context) (e error) {
-			e = status(dwn)
+			ui, e := p.status(dwn)
 			if e == nil {
-				e = assocUserInfo(dwn)
+				fmt.Printf("User: %s\n", ui.UserName)
+				fmt.Printf("Name: %s\n", ui.Name)
+				fmt.Printf("Groups: %v\n", ui.Groups)
+				fmt.Printf("Quota: %s Consumption: %s\n", ui.Quota,
+					ui.Consumption)
 			}
 			return
 		},
@@ -114,7 +139,7 @@ func UserStatus() (m cli.Command) {
 	return
 }
 
-func ResetConsumption() (m cli.Command) {
+func (p *PMClient) ResetConsumption() (m cli.Command) {
 	var dwn string
 	m = cli.Command{
 		Name:    "reset",
@@ -124,7 +149,7 @@ func ResetConsumption() (m cli.Command) {
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
 			e = checkArgExec(
-				func() error { return reset(dwn, args[0]) },
+				func() error { return p.reset(dwn, args[0]) },
 				1,
 				len(args),
 			)
@@ -134,7 +159,8 @@ func ResetConsumption() (m cli.Command) {
 	return
 }
 
-func discoverC(url, remote string) (e error) {
+func (p *PMClient) discoverC(url,
+	remote string) (dr *discoverRes, e error) {
 	m := &cmd{
 		Cmd:     discover,
 		Manager: resourcesK,
@@ -142,50 +168,21 @@ func discoverC(url, remote string) (e error) {
 	}
 	var r *h.Response
 	var bs []byte
-	dr := new(discoverRes)
 	fs := []func(){
-		func() { r, e = postCmd(url, m) },
+		func() { r, e = p.PostCmd(url, m) },
 		func() { bs, e = ioutil.ReadAll(r.Body) },
-		func() { e = json.Unmarshal(bs, dr) },
 		func() {
-			fmt.Printf("Matching: %s\n", dr.Matching)
-			fmt.Printf("No matching: %s\n", dr.NoMatching)
-			fmt.Printf("Match result: %s\n", pred.String(dr.Result))
-			printTypes(url, dr.Result)
+			dr = new(discoverRes)
+			e = json.Unmarshal(bs, dr)
+		},
+		func() {
 		},
 	}
 	trueFF(fs, func() bool { return e == nil })
 	return
 }
 
-func printTypes(url string, p *pred.Predicate) {
-	ss := []string{"", pred.TrueStr, pred.FalseStr}
-	ib := func(i int) bool { return p.String == ss[i] }
-	ok, _ := bLnSrch(ib, len(ss))
-	if !ok {
-		m := &cmd{
-			Manager: resourcesK,
-			Cmd:     get,
-			String:  p.String,
-		}
-		r, e := postCmd(url, m)
-		var bs []byte
-		if e == nil {
-			bs, e = ioutil.ReadAll(r.Body)
-		}
-		if e == nil {
-			fmt.Printf("%s:%s\n", p.String, string(bs))
-			if p.A != nil {
-				printTypes(url, p.A)
-			}
-			if p.B != nil {
-				printTypes(url, p.B)
-			}
-		}
-	}
-}
-
-func reset(manager, user string) (e error) {
+func (p *PMClient) reset(manager, user string) (e error) {
 	m := &cmd{
 		Manager: manager,
 		Cmd:     set,
@@ -193,79 +190,49 @@ func reset(manager, user string) (e error) {
 		Uint64:  1,
 	}
 	okf := func(bs []byte) (d error) { return }
-	e = sendRecv(m, okf)
+	e = p.sendRecv(m, okf)
 	return
 }
 
-func status(dwnMng string) (e error) {
+func (p *PMClient) status(dwnMng string) (ui *userInfo, e error) {
+	if dwnMng == "" {
+		var li *loginInfo
+		li, e = p.readSecret()
+		if e == nil {
+			dwnMng = li.DwnConsR
+		}
+	}
+	println("dwnMng:", dwnMng)
 	m := &cmd{
 		Cmd:     get,
 		Manager: dwnMng,
 	}
 	okf := func(bs []byte) (d error) {
-		qc := new(qtCs)
-		d = json.Unmarshal(bs, qc)
-		if d == nil {
-			fmt.Printf("Quota: %s Consumption: %s\n",
-				datasize.ByteSize(qc.Quota).HumanReadable(),
-				datasize.ByteSize(qc.Consumption).HumanReadable())
-		}
+		ui = new(userInfo)
+		d = json.Unmarshal(bs, ui)
 		return
 	}
-	e = sendRecv(m, okf)
+	e = p.sendRecv(m, okf)
 	return
 }
 
-func assocUserInfo(dwn string) (e error) {
-	udb, e := assocUserDB(dwn)
-	m := &cmd{
-		Manager: udb,
-		Cmd:     get,
-	}
-	okf := func(bs []byte) (d error) {
-		info := new(userInfo)
-		d = json.Unmarshal(bs, info)
-		if d == nil {
-			fmt.Printf("Name: %s\n", info.Name)
-			fmt.Printf("User: %s\n", info.UserName)
-		}
-		return
-	}
-	if e == nil {
-		e = sendRecv(m, okf)
-	}
-	return
-}
-
-func assocUserDB(dwn string) (udb string, e error) {
-	m := &cmd{
-		Manager: dwn,
-		Cmd:     userDBK,
-	}
-	okf := func(bs []byte) (d error) {
-		udb = string(bs)
-		return
-	}
-	e = sendRecv(m, okf)
-	return
-}
-
-func sendRecv(m *cmd, okf func([]byte) error) (e error) {
+func (p *PMClient) sendRecv(m *cmd,
+	okf func([]byte) error) (e error) {
 	var li *loginInfo
 	var r *h.Response
 	fs := []func(){
 		func() {
-			li, e = readSecret()
+			li, e = p.readSecret()
 		},
 		func() {
 			m.Secret = li.Secret
-			r, e = postCmd(li.Server, m)
+			r, e = p.PostCmd(li.Server, m)
 		},
 	}
 	re := func(d error) { e = d }
 	fs = append(fs, doOK(okf, re,
 		func() *h.Response { return r })...)
-	handleRenew(fs, func() error { return e }, re)
+	p.handleRenew(fs, func() error { return e }, re)
 	return
 }
 
@@ -283,12 +250,70 @@ func managerFlag(mng *string,
 }
 
 type loginInfo struct {
-	Server   string `json: "server"`
-	SessionM string `json: "sessionM"`
-	Secret   string `json: "secret"`
+	Server     string `json:"server"`
+	SessionIPM string `json:"sessionIPM"`
+	DwnConsR   string `json:"dwnConsR"`
+	BwConsR    string `json:"bwConsR"`
+	Secret     string `json:"secret"`
 }
 
-func login(urls, sm, user, pass string) (e error) {
+func (p *PMClient) login(urls, sm, user, pass string) (e error) {
+	var li *loginInfo
+	if sm == "" {
+		ss := p.filterSMs(urls)
+		if len(ss) != 0 {
+			li, e = p.loginSM(urls, ss[0], user, pass)
+		}
+		if e != nil && len(ss) != 0 {
+			e = fmt.Errorf("%s .Try one of %v", e.Error(), ss[1:])
+		}
+		// try login at first
+	} else {
+		li, e = p.loginSM(urls, sm, user, pass)
+		// try login at sm
+	}
+	if e == nil {
+		e = p.fillConsR(li)
+	}
+	if e == nil {
+		e = p.writeSecret(li)
+	}
+	return
+}
+
+func (p *PMClient) fillConsR(li *loginInfo) (e error) {
+	dr := new(discoverRes)
+	var bs []byte
+	var r *h.Response
+	fs := []func(){
+		func() {
+			m := &cmd{Manager: resourcesK, Cmd: discover}
+			r, e = p.PostCmd(li.Server, m)
+		},
+		func() { bs, e = ioutil.ReadAll(r.Body) },
+		func() { e = json.Unmarshal(bs, dr) },
+		func() {
+			li.DwnConsR = matchMngType(dr, dwnConsRK)
+			li.BwConsR = matchMngType(dr, bwConsRK)
+		},
+	}
+	trueFF(fs, func() bool { return e == nil })
+	return
+}
+
+func matchMngType(dr *discoverRes, tÿpe string) (name string) {
+	for k, v := range dr.MatchMng {
+		if v.Match && v.Type == tÿpe {
+			name = k
+			break
+		}
+	}
+	return
+}
+
+func (p *PMClient) loginSM(urls, sm, user,
+	pass string) (li *loginInfo,
+	e error) {
 	m := &cmd{
 		Cred:    &credentials{User: user, Pass: pass},
 		Manager: sm,
@@ -297,15 +322,14 @@ func login(urls, sm, user, pass string) (e error) {
 	var r *h.Response
 	fs := []func(){
 		func() {
-			r, e = postCmd(urls, m)
+			r, e = p.PostCmd(urls, m)
 		},
 	}
 	fe := func(d error) { e = d }
 	okf := func(bs []byte) (d error) {
-		li := &loginInfo{
-			Server: urls, SessionM: sm, Secret: string(bs),
+		li = &loginInfo{
+			Server: urls, SessionIPM: sm, Secret: string(bs),
 		}
-		d = writeSecret(li)
 		return
 	}
 	fs = append(fs,
@@ -314,25 +338,23 @@ func login(urls, sm, user, pass string) (e error) {
 	return
 }
 
-func filterSMs(urls, sm string) (e error) {
+func (p *PMClient) filterSMs(ürl string) (ss []string) {
 	m := &cmd{
 		Manager: resourcesK,
 		Cmd:     filter,
 		String:  sessionIPMK,
 	}
 	var r *h.Response
+	var e error
 	fe := func(d error) { e = d }
 	fs := []func(){
 		func() {
-			r, e = postCmd(urls, m)
+			r, e = p.PostCmd(ürl, m)
 		},
 	}
+	ss = make([]string, 0)
 	okf := func(bs []byte) (e error) {
-		var ss []string
 		e = json.Unmarshal(bs, &ss)
-		if e == nil {
-			fmt.Printf("'%s' not available, use one of %v\n", sm, ss)
-		}
 		return
 	}
 	fs = append(fs,
@@ -341,7 +363,7 @@ func filterSMs(urls, sm string) (e error) {
 	return
 }
 
-func logout() (e error) {
+func (p *PMClient) logout() (e error) {
 	m := &cmd{
 		Cmd: clöse,
 	}
@@ -349,26 +371,26 @@ func logout() (e error) {
 	var li *loginInfo
 	fs := []func(){
 		func() {
-			li, e = readSecret()
+			li, e = p.readSecret()
 		},
 		func() {
-			m.Secret, m.Manager = li.Secret, li.SessionM
-			r, e = postCmd(li.Server, m)
+			m.Secret, m.Manager = li.Secret, li.SessionIPM
+			r, e = p.PostCmd(li.Server, m)
 		},
 	}
 	fe := func(d error) { e = d }
 	//only if error is "token exp..."
 	okf := func(bs []byte) (d error) {
-		d = os.Remove(loginSecretFile)
+		d = p.Fs.Remove(loginSecretFile)
 		return
 	}
 	fs = append(fs,
 		doOK(okf, fe, func() *h.Response { return r })...)
-	handleRenew(fs, func() error { return e }, fe)
+	p.handleRenew(fs, func() error { return e }, fe)
 	return
 }
 
-func handleRenew(fs []func(), re func() error,
+func (p *PMClient) handleRenew(fs []func(), re func() error,
 	te func(error)) {
 	rnw := func() {
 		if re() != nil &&
@@ -378,23 +400,23 @@ func handleRenew(fs []func(), re func() error,
 			fsn := []func(){
 				func() {
 					var e error
-					li, e = readSecret()
+					li, e = p.readSecret()
 					te(e)
 				},
 				func() {
 					m := &cmd{
 						Cmd:     renew,
-						Manager: li.SessionM,
+						Manager: li.SessionIPM,
 						Secret:  li.Secret,
 					}
 					var e error
-					r, e = postCmd(li.Server, m)
+					r, e = p.PostCmd(li.Server, m)
 					te(e)
 				},
 			}
 			okf := func(bs []byte) (d error) {
 				li.Secret = string(bs)
-				d = writeSecret(li)
+				d = p.writeSecret(li)
 				return
 			}
 			fsn = append(fsn, doOK(okf, te,
@@ -407,16 +429,16 @@ func handleRenew(fs []func(), re func() error,
 	return
 }
 
-func writeSecret(li *loginInfo) (e error) {
+func (p *PMClient) writeSecret(li *loginInfo) (e error) {
 	bs, e := json.Marshal(li)
 	if e == nil {
-		e = ioutil.WriteFile(loginSecretFile, bs, 0644)
+		e = afero.WriteFile(p.Fs, loginSecretFile, bs, 0644)
 	}
 	return
 }
 
-func readSecret() (li *loginInfo, e error) {
-	bs, e := ioutil.ReadFile(loginSecretFile)
+func (p *PMClient) readSecret() (li *loginInfo, e error) {
+	bs, e := afero.ReadFile(p.Fs, loginSecretFile)
 	if e == nil {
 		li = new(loginInfo)
 		e = json.Unmarshal(bs, li)
@@ -424,7 +446,10 @@ func readSecret() (li *loginInfo, e error) {
 	return
 }
 
-func postCmd(urls string, c *cmd) (r *h.Response, e error) {
+func PostCmd(urls string, c *cmd) (r *h.Response, e error) {
+	h.DefaultTransport.(*h.Transport).TLSClientConfig =
+		&tls.Config{InsecureSkipVerify: true}
+	// TODO find a better place for the previous line
 	bs, e := json.Marshal(c)
 	if e == nil {
 		buff := bytes.NewBuffer(bs)

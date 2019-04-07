@@ -40,8 +40,6 @@ const (
 	loggerAddrK    = "loggerAddr"
 	groupIPMK      = "groupIPM"
 	infoK          = "info"
-	dwnConsRK      = "dwnConsR"
-	userQuotaK     = "userQuota"
 	sessionIPMK    = "sessionIPM"
 	userDBK        = "userDB"
 	adminsK        = "admins"
@@ -149,13 +147,15 @@ const (
 
 // dwnConsR.go
 const (
+	dwnConsRK   = "dwnConsR"
+	userQuotaK  = "userQuota"
 	lastResetK  = "lastReset"
 	resetCycleK = "resetCycle"
 )
 
 // groupIPM.go
 const (
-	userGroupNK = "ipGroupN"
+	userGroupNK = "userGroup"
 	groupK      = "group"
 )
 
@@ -177,6 +177,12 @@ const (
 	paramsK     = "params"
 )
 
+// bwConsR.go
+const (
+	bwConsRK  = "bwConsR"
+	throttleK = "throttle"
+)
+
 func home() (s string) {
 	s = os.Getenv("HOME")
 	return
@@ -194,7 +200,7 @@ const (
 
 const basicConfText = `
 admins = ["user0"]
-rules = "sessions ∧ downloads"
+rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group0M ∧ bandWidth0) ∨ (group1M ∧ bandWidth1))"
 
 [apiSrv]
 	addr = ":4443"
@@ -213,26 +219,68 @@ rules = "sessions ∧ downloads"
 [[userDB]]
 	adOrMap = false
 	name = "mapDB"
-	[userDB.quotaMap]
-		group0 = "600MB"
 	[userDB.params]
 		[userDB.params.groups]
 			user0 = ["group0"]
+			user1 = ["group1"]
 		[userDB.params.userPass]
 			user0 = "pass0"
+			user1 = "pass1"
 
 [[sessionIPM]]
 	authName = "mapDB"
 	name = "sessions"
 
 [[dwnConsR]]
-	name = "downloads"
-	userQuota = "mapDB"
+	name = "downWeek"
+	userGroup = "mapDB"
+	[dwnConsR.quotaMap]
+		group0 = "600MB"
+		group1 = "1GB"
 	lastReset = "2019-03-04T12:58:32-05:00"
-	resetCycle = "24h0m0s"
+	resetCycle = "168h0m0s"
+	[dwnConsR.spec]
+		proxyURL = "http://proxy.com:8080"
+		iface = "enp0s25"
 
-[[spec]]
-	name = "downloads"
-	proxyURL = "http://proxy.com:8080"
-	iface = "enp0s25"
+[[dwnConsR]]
+	name = "downNight"
+	userGroup = "mapDB"
+	[dwnConsR.quotaMap]
+		group0 = "1GB"
+		group1 = "2GB"
+	lastReset = "2019-03-04T20:00:00-05:00"
+	resetCycle = "24h"
+	[dwnConsR.spec]
+		iface = "enp0s25"
+
+[[bwConsR]]
+	name = "bandWidth0"
+	throttle = 0.9
+
+[[bwConsR]]
+	name = "bandWidth1"
+	throttle = 1
+
+[[group]]
+	name = "group0M"
+	userGroup = "mapDB"
+	group = "group0"
+
+[[group]]
+	name = "group1M"
+	userGroup = "mapDB"
+	group = "group1"
+
+[[span]]
+	name = "day"
+	start = "2019-03-04T08:00:00-05:00"
+	active = "12h"
+	total = "24h"
+
+[[span]]
+	name = "night"
+	start = "2019-03-04T20:00:00-05:00"
+	active = "12h"
+	total = "24h"
 `

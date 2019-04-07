@@ -23,6 +23,7 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	h "net/http"
 	ht "net/http/httptest"
@@ -30,161 +31,60 @@ import (
 	"time"
 )
 
-type testReq struct {
-	command *cmd
-	rAddr   string
-	code    int
-	bodyOK  func([]byte)
-}
-
-type testResp struct {
-	sessionMng, secr, body string
-}
-
 func TestLogin(t *testing.T) {
-	ifh := basicConfT(t)
-	loginIP := "192.168.1.1"
-	loginAddr := loginIP + ":1982"
-	mapHasUser0 := func(mäp []byte) (ok bool) {
-		var ipUsr map[string]string
-		e := json.Unmarshal(mäp, &ipUsr)
-		ok = e == nil
-		if ok {
-			u, oku := ipUsr[loginIP]
-			ok = oku && u == user0
+	fs, ifh := basicConfT(t)
+	cl := &PMClient{
+		Fs:      fs,
+		PostCmd: testPostCmd("192.168.1.1", ifh),
+	}
+	e := cl.login("", "", user0, pass0)
+	ok, e := afero.Exists(fs, loginSecretFile)
+	require.True(t, e == nil && ok)
+	bs, e := afero.ReadFile(fs, loginSecretFile)
+	t.Log(string(bs))
+	require.NoError(t, e)
+	ui, e := cl.status("")
+	require.NoError(t, e)
+	xui := &userInfo{
+		UserName:    user0,
+		Name:        user0,
+		Groups:      []string{group0},
+		Quota:       "600 MB",
+		Consumption: "0 B",
+	}
+	require.Equal(t, ui, xui)
+}
+
+func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc) {
+	pth := confPath()
+	fs = afero.NewMemMapFs()
+	basicConf(pth, fs)
+	ok, e := afero.Exists(fs, pth)
+	require.True(t, ok && e == nil)
+	c, e := newConf(fs)
+	require.NoError(t, e)
+	res := c.res
+	res.cr.expiration = time.Second
+	_, ifh, e := newHnds(c)
+	require.NoError(t, e)
+	hnd = ifh.serveHTTP
+	return
+}
+
+func testPostCmd(addr string,
+	hnd h.HandlerFunc) func(string, *cmd) (*h.Response, error) {
+	return func(u string, m *cmd) (r *h.Response, e error) {
+		rec := ht.NewRecorder()
+		bs, e := json.Marshal(m)
+		if e == nil {
+			q := ht.NewRequest(h.MethodPost,
+				"https://pmproxy.org/api/cmd",
+				bytes.NewReader(bs))
+			q.RemoteAddr = addr + ":1919"
+			hnd(rec, q)
+			r = rec.Result()
 		}
 		return
 	}
-	u0Cmd := func(p *testResp) testReq {
-		return testReq{
-			command: &cmd{
-				Manager: p.sessionMng,
-				Cmd:     get,
-				Secret:  p.secr,
-			},
-			rAddr:  loginAddr,
-			code:   h.StatusOK,
-			bodyOK: func(bs []byte) { require.True(t, mapHasUser0(bs)) },
-		}
-	}
-	noU0Cmd := func(p *testResp) testReq {
-		return testReq{
-			command: &cmd{
-				Manager: p.sessionMng,
-				Cmd:     get,
-				Secret:  p.secr,
-			},
-			rAddr: loginAddr,
-			code:  h.StatusOK,
-			bodyOK: func(bs []byte) {
-				require.False(t, mapHasUser0(bs))
-			},
-		}
-	}
-	ts := []func(*testResp) testReq{
-		func(p *testResp) testReq {
-			return discoverTR(t, p, loginAddr)
-		},
-		func(p *testResp) testReq {
-			return loginTR(t, p, loginAddr, 0)
-		},
-		u0Cmd,
-		func(p *testResp) testReq {
-			return testReq{
-				command: &cmd{Manager: p.sessionMng, Secret: p.secr,
-					Cmd: clöse},
-				rAddr:  loginAddr,
-				code:   h.StatusOK,
-				bodyOK: func(bs []byte) { require.Equal(t, 0, len(bs)) },
-			}
-		},
-		noU0Cmd,
-		func(p *testResp) testReq {
-			return loginTR(t, p, loginAddr, 2*time.Second)
-		},
-		func(p *testResp) testReq {
-			return testReq{
-				command: &cmd{
-					Manager: p.sessionMng,
-					Cmd:     get,
-					Secret:  p.secr,
-				},
-				rAddr: loginAddr,
-				code:  h.StatusBadRequest,
-				bodyOK: func(bs []byte) {
-					require.Equal(t, "token is expired by 1s\n", string(bs))
-				},
-			}
-		},
-		func(p *testResp) testReq {
-			return testReq{
-				command: &cmd{Cmd: renew, Manager: p.sessionMng},
-				rAddr:   loginAddr,
-				code:    h.StatusOK,
-				bodyOK: func(bs []byte) {
-					p.secr = string(bs)
-				},
-			}
-		},
-		u0Cmd,
-	}
-
-	runReqTests(t, ts, ifh)
-}
-
-func discoverTR(t *testing.T, trp *testResp,
-	addr string) (r testReq) {
-	r = testReq{
-		command: &cmd{
-			Cmd:     discover,
-			Manager: resourcesK,
-		},
-		rAddr: addr,
-		code:  h.StatusOK,
-		bodyOK: func(bs []byte) {
-			dr := new(discoverRes)
-			e := json.Unmarshal(bs, dr)
-			require.NoError(t, e)
-			trp.sessionMng = dr.NoMatching[0]
-		},
-	}
-	return
-}
-
-func loginTR(t *testing.T, trp *testResp,
-	rAddr string, sleepAft time.Duration) (r testReq) {
-	r = testReq{
-		command: &cmd{
-			Cmd:     open,
-			Manager: trp.sessionMng,
-			Cred:    &credentials{User: user0, Pass: pass0},
-		},
-		rAddr: rAddr,
-		code:  h.StatusOK,
-		bodyOK: func(bs []byte) {
-			require.NotEqual(t, 0, len(bs))
-			trp.secr = string(bs)
-			time.Sleep(sleepAft)
-		},
-	}
-	return
-}
-
-func runReqTests(t *testing.T, ts []func(*testResp) testReq,
-	hf h.HandlerFunc) {
-	trp := new(testResp)
-	inf := func(i int) {
-		req := ts[i](trp)
-		req.command.Secret = trp.secr
-		bs, e := json.Marshal(req.command)
-		require.NoError(t, e)
-		w, r := ht.NewRecorder(),
-			ht.NewRequest(h.MethodPost, apiCmd, bytes.NewBuffer(bs))
-		r.RemoteAddr = req.rAddr
-		hf(w, r)
-		require.Equal(t, req.code, w.Code, "At %d: %s", i,
-			w.Body.String())
-		req.bodyOK(w.Body.Bytes())
-	}
-	forall(inf, len(ts))
+	// TODO
 }

@@ -73,7 +73,6 @@ func fastIface(cf *conf) (hnd fh.RequestHandler) {
 			cf,
 			string(ctx.Request.URI().Path()),
 			string(ctx.Method()),
-			string(ctx.Request.Header.Peek(authHd)),
 			ctx.RemoteAddr().String(),
 			func() (bs []byte, e error) {
 				buff := new(bytes.Buffer)
@@ -103,7 +102,6 @@ func stdIface(cf *conf) (hnd h.HandlerFunc) {
 			cf,
 			r.URL.Path,
 			r.Method,
-			r.Header.Get(authHd),
 			r.RemoteAddr,
 			func() (bs []byte, e error) {
 				bs, e = ioutil.ReadAll(r.Body)
@@ -114,7 +112,9 @@ func stdIface(cf *conf) (hnd h.HandlerFunc) {
 				w.Write(bs)
 			},
 			func(file string) {
-				h.ServeFile(w, r, path.Join(cf.staticFPath, file))
+				pth := path.Join(cf.staticFPath, file)
+				println(pth)
+				h.ServeFile(w, r, pth)
 			},
 			func(err string) {
 				h.Error(w, err, h.StatusBadRequest)
@@ -124,7 +124,7 @@ func stdIface(cf *conf) (hnd h.HandlerFunc) {
 	return
 }
 
-func compatibleIface(cf *conf, path, method, header,
+func compatibleIface(cf *conf, path, method,
 	rAddr string, body func() ([]byte, error),
 	resp func([]byte), fileSrv, writeErr func(string)) {
 	m := new(cmd)
@@ -135,30 +135,20 @@ func compatibleIface(cf *conf, path, method, header,
 			bs, e = body()
 		},
 		func() {
-			if path == apiCmd {
+			if path == apiCmd && method == h.MethodPost {
 				e = json.Unmarshal(bs, m)
 			} else {
-				m, e = compatibleCmd(cf, path, method, bs, fileSrv)
+				path = emptyPathIfLogin(path)
+				fileSrv(path)
+				m = &cmd{Cmd: skip}
 			}
 		},
 		func() {
-			if path != apiCmd {
-				m.Secret = header
-			}
 			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
 		},
 		func() { cf.res.manager(m); e = m.e },
 		func() {
 			if m.bs != nil {
-				if path+method == apiAuth+h.MethodPost {
-					lr := &struct {
-						Scrt string `json: "scrt"`
-					}{
-						Scrt: string(m.bs),
-					}
-					m.bs, e = json.Marshal(lr)
-					// part of compatibility layer
-				}
 				resp(m.bs)
 			}
 		},

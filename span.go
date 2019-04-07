@@ -22,6 +22,7 @@ package pmproxy
 
 import (
 	rt "github.com/lamg/rtimespan"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -62,13 +63,15 @@ func fromMapSpan(s *rt.RSpan,
 		{
 			allTimeK,
 			func(i interface{}) {
-				s.AllTime = boolE(i, fe)
+				s.AllTime, _ = cast.ToBoolE(i)
 			},
 		},
 		{
 			infiniteK,
 			func(i interface{}) {
-				s.Infinite = boolE(i, fe)
+				var d error
+				s.Infinite, d = cast.ToBoolE(i)
+				s.Infinite = s.Infinite || d != nil
 			},
 		},
 		{

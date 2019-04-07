@@ -23,6 +23,7 @@ package main
 import (
 	"crypto/tls"
 	"github.com/lamg/pmproxy"
+	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"log"
 	h "net/http"
@@ -30,15 +31,17 @@ import (
 )
 
 func main() {
-	h.DefaultTransport.(*h.Transport).TLSClientConfig =
-		&tls.Config{InsecureSkipVerify: true}
+	cl := pmproxy.PMClient{
+		Fs:      afero.NewOsFs(),
+		PostCmd: pmproxy.PostCmd,
+	}
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
-		pmproxy.Discover(),
-		pmproxy.Login(),
-		pmproxy.Logout(),
-		pmproxy.UserStatus(),
-		pmproxy.ResetConsumption(),
+		cl.Discover(),
+		cl.Login(),
+		cl.Logout(),
+		cl.UserStatus(),
+		cl.ResetConsumption(),
 	}
 	e := app.Run(os.Args)
 	if e != nil {

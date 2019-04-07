@@ -22,24 +22,31 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"github.com/c2h5oh/datasize"
 	"sync"
 	"time"
 )
 
 type dwnConsR struct {
-	name       string
-	userQuotaN string
-	userQuota  func(string) uint64
+	name        string
+	userDBN     string
+	userGroup   func(string) ([]string, error)
+	userName    func(string) (string, error)
+	spec        *spec
+	quotaCache  *sync.Map
+	groupQuotaM *sync.Map
 
 	userCons   *sync.Map
 	lastReset  time.Time
 	resetCycle time.Duration
 	mapWriter  func(map[string]uint64)
 	fileReader func(string) ([]byte, error)
+	warning    func(string) error
 }
 
 func (d *dwnConsR) fromMap(i interface{}) (e error) {
 	fe := func(err error) { e = err }
+	var m map[string]string
 	kf := []kFuncI{
 		{
 			nameK,
@@ -48,9 +55,9 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 			},
 		},
 		{
-			userQuotaK,
+			userDBK,
 			func(i interface{}) {
-				d.userQuotaN = stringE(i, fe)
+				d.userDBN = stringE(i, fe)
 			},
 		},
 		{
@@ -82,6 +89,37 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 					},
 				}
 				trueFF(fs, func() bool { return ne == nil })
+				if ne != nil {
+					d.warning("dwnConsR reading consumption:" + ne.Error())
+				}
+			},
+		},
+		{
+			specKS,
+			func(i interface{}) {
+				d.spec = new(spec)
+				d.spec.fromMap(i)
+			},
+		},
+		{
+			quotaMapK,
+			func(i interface{}) {
+				m = stringMapStringE(i, fe)
+			},
+		},
+		{
+			quotaMapK,
+			func(i interface{}) {
+				d.groupQuotaM = new(sync.Map)
+				d.quotaCache = new(sync.Map)
+				for k, v := range m {
+					bts := new(datasize.ByteSize)
+					e = bts.UnmarshalText([]byte(v))
+					if e != nil {
+						break
+					}
+					d.groupQuotaM.Store(k, bts.Bytes())
+				}
 			},
 		},
 	}
@@ -92,9 +130,18 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 func (d *dwnConsR) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:       d.name,
-		userQuotaK:  d.userQuotaN,
+		userDBK:     d.userDBN,
 		lastResetK:  d.lastReset.Format(time.RFC3339),
 		resetCycleK: d.resetCycle.String(),
+		quotaMapK: func() (m map[string]string) {
+			m = make(map[string]string)
+			d.groupQuotaM.Range(func(k, v interface{}) (ok bool) {
+				sz := datasize.ByteSize(v.(uint64))
+				m[k.(string)], ok = sz.HumanReadable(), true
+				return
+			})
+			return
+		}(),
 	}
 	mp := make(map[string]uint64)
 	d.userCons.Range(func(k, v interface{}) (b bool) {
@@ -106,32 +153,19 @@ func (d *dwnConsR) toMap() (i map[string]interface{}) {
 	return
 }
 
-type qtCs struct {
-	Quota       uint64 `json: "quota"`
-	Consumption uint64 `json: "consumption"`
-}
-
 func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
 			get,
 			func() {
-				if c.String != "" && c.IsAdmin {
-					v, ok := d.userCons.Load(c.String)
-					var n uint64
-					if ok {
-						n = v.(uint64)
-					}
-					c.bs, c.e = json.Marshal(n)
+				var data *userInfo
+				if c.IsAdmin && c.String != "" {
+					data, c.e = d.info(c.String)
 				} else {
-					qc := &qtCs{
-						Quota: d.userQuota(c.User),
-					}
-					v, ok := d.userCons.Load(c.User)
-					if ok {
-						qc.Consumption = v.(uint64)
-					}
-					c.bs, c.e = json.Marshal(qc)
+					data, c.e = d.info(c.User)
+				}
+				if c.e == nil {
+					c.bs, c.e = json.Marshal(data)
 				}
 			},
 		},
@@ -144,9 +178,9 @@ func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			userDBK,
+			show,
 			func() {
-				c.bs = []byte(d.userQuotaN)
+				c.bs, c.e = json.Marshal(d.toMap())
 			},
 		},
 	}
@@ -166,7 +200,7 @@ func (d *dwnConsR) consR() (c *consR) {
 		},
 		can: func(ip, user string, down int) (ok bool) {
 			cons, b := d.userCons.Load(user)
-			limit := d.userQuota(user)
+			limit := d.quota(user)
 			ok = b && cons.(uint64) <= limit
 			return
 		},
@@ -190,4 +224,54 @@ func (d *dwnConsR) keepResetCycle() {
 		d.userCons = new(sync.Map)
 		d.lastReset = d.lastReset.Add(d.resetCycle)
 	}
+}
+
+func (d *dwnConsR) quota(user string) (n uint64) {
+	v, ok := d.quotaCache.Load(user)
+	if ok {
+		n = v.(uint64)
+	} else {
+		gs, _ := d.userGroup(user)
+		inf := func(i int) {
+			q := d.groupQuota(gs[i])
+			n = n + q
+		}
+		forall(inf, len(gs))
+		d.quotaCache.Store(user, n)
+	}
+	return
+}
+
+func (d *dwnConsR) groupQuota(g string) (q uint64) {
+	v, ok := d.groupQuotaM.Load(g)
+	if ok {
+		q = v.(uint64)
+	}
+	return
+}
+
+type userInfo struct {
+	Quota       string   `json:"quota"`
+	Groups      []string `json:"groups"`
+	Name        string   `json:"name"`
+	UserName    string   `json:"userName"`
+	Consumption string   `json:"consumption"`
+}
+
+func (d *dwnConsR) info(user string) (ui *userInfo, e error) {
+	n := d.quota(user)
+	q := datasize.ByteSize(n).HumanReadable()
+	ui = &userInfo{
+		Quota:    q,
+		UserName: user,
+	}
+	ui.Groups, _ = d.userGroup(user)
+	ui.Name, e = d.userName(user)
+	v, ok := d.userCons.Load(user)
+	var cons datasize.ByteSize
+	if ok {
+		cons = datasize.ByteSize(v.(uint64))
+	}
+	ui.Consumption = cons.HumanReadable()
+	return
 }

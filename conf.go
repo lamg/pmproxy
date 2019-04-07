@@ -32,17 +32,17 @@ import (
 )
 
 type cmd struct {
-	Cmd        string                 `json: "cmd"`
-	User       string                 `json: "user"`
-	Manager    string                 `json: "manager"`
-	RemoteAddr string                 `json: "remoteAddr"`
-	Secret     string                 `json: "secret"`
-	IsAdmin    bool                   `json: "isAdmin"`
-	Cred       *credentials           `json: "cred"`
-	String     string                 `json: "string"`
-	Uint64     uint64                 `json: "uint64"`
-	Pos        []int                  `json: "pos"`
-	Object     map[string]interface{} `json: "object"`
+	Cmd        string                 `json:"cmd"`
+	User       string                 `json:"user"`
+	Manager    string                 `json:"manager"`
+	RemoteAddr string                 `json:"remoteAddr"`
+	Secret     string                 `json:"secret"`
+	IsAdmin    bool                   `json:"isAdmin"`
+	Cred       *credentials           `json:"cred"`
+	String     string                 `json:"string"`
+	Uint64     uint64                 `json:"uint64"`
+	Pos        []int                  `json:"pos"`
+	Object     map[string]interface{} `json:"object"`
 	comp02     bool                   //compatible with v0.2
 	bs         []byte
 	e          error
@@ -90,10 +90,10 @@ func newConf(fls afero.Fs) (c *conf, e error) {
 			c.waitUpd, e = time.ParseDuration(
 				c.strïng(waitUpdateK, "1m"))
 		},
+		func() { e = c.initLogger() },
 		func() { e = c.readProxyConf() },
 		func() { e = c.readIfaceConf() },
 		func() { e = c.initResources() },
-		func() { e = c.initLogger() },
 		func() { e = c.initConnMng() },
 	}
 	trueFF(fs, func() bool { return e == nil })
@@ -253,16 +253,17 @@ func (c *conf) initResources() (e error) {
 			predCf = c.strïng(rulesK, pred.TrueStr)
 		},
 		func() {
-			c.res, e = newResources(predCf, c.stringSlice(adminsK), c.fls)
+			c.res, e = newResources(predCf, c.stringSlice(adminsK),
+				c.fls, c.lg.warning)
 		},
 		func() {
-			rs := []string{userDBK, sessionIPMK, dwnConsRK, groupIPMK,
-				spanK, ipRangeMK, specKS, urlmK}
+			rs := []string{userDBK, sessionIPMK, dwnConsRK, bwConsRK,
+				groupIPMK, spanK, ipRangeMK, urlmK}
 			inf := func(i int) {
 				fm := func(m map[string]interface{}) {
 					d := c.res.add(rs[i], m)
 					if d != nil {
-						println(d.Error())
+						c.lg.warning(d.Error())
 					}
 				}
 				c.sliceMap(rs[i], fm, fe, func() bool { return e == nil })

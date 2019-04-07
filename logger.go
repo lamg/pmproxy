@@ -28,17 +28,17 @@ import (
 )
 
 type logger struct {
-	addr string
-	sl   *syslog.Writer
+	addr   string
+	writer *syslog.Writer
 }
 
 func newLogger(addr string) (l *logger, e error) {
 	l = &logger{addr: addr}
 	if addr != "" {
-		l.sl, e = syslog.Dial("tcp", addr, syslog.LOG_INFO,
+		l.writer, e = syslog.Dial("tcp", addr, syslog.LOG_INFO,
 			"")
 	} else {
-		l.sl, e = syslog.New(syslog.LOG_INFO, "")
+		l.writer, e = syslog.New(syslog.LOG_INFO, "")
 	}
 	return
 }
@@ -46,14 +46,14 @@ func newLogger(addr string) (l *logger, e error) {
 func (l *logger) log(method, url, ip, user string,
 	d time.Time) (e error) {
 	// squid log format
-	m := fmt.Sprintf(
+	_, e = fmt.Fprintf(l.writer,
 		"%9d.000 %6d %s %s/%03d %d %s %s %s %s/%s %s",
 		d.Unix(), 0, ip, "TCP_MISS", h.StatusOK, 0,
 		method, url, user, "DIRECT", "-", "-")
-	if e == nil {
-		e = l.sl.Info(m)
-	} else {
-		e = l.sl.Alert(m)
-	}
+	return
+}
+
+func (l *logger) warning(message string) (e error) {
+	e = l.writer.Warning(message)
 	return
 }

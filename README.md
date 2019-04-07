@@ -23,7 +23,6 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 - The parent proxy for making the request.
 - The network interface for making the connection.
 - The limit on data amount to be downloaded (quota).
-- The factor determining how fast the quota is reached, which is a float that is multiplied by the amount of downloaded bytes (consumption).
 - The connection delay.
 
 [0]: https://img.shields.io/badge/License-AGPL%203%2B-blue.svg

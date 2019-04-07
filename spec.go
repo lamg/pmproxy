@@ -27,7 +27,6 @@ import (
 )
 
 type spec struct {
-	Name     string `json:"name"`
 	Iface    string `json:"iface"`
 	ProxyURL string `json:"proxyURL"`
 	proxyURL *url.URL
@@ -45,14 +44,6 @@ func (s *spec) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	mp := stringMapE(i, fe)
 	if e == nil {
-		v := mp[nameK]
-		if v != nil {
-			s.Name = stringE(v, fe)
-		} else {
-			e = noKey(nameK)
-		}
-	}
-	if e == nil {
 		vp, vi := mp[proxyURLK], mp[ifaceK]
 		if vp != nil {
 			s.ProxyURL = vp.(string)
@@ -64,16 +55,14 @@ func (s *spec) fromMap(i interface{}) (e error) {
 			fe(s.init())
 		}
 	}
-	if e == nil && (s.proxyURL == nil || s.Iface == "") {
-		e = fmt.Errorf("A proxy and an interface is needed at spec with "+
-			"name %s", s.Name)
+	if e == nil && s.Iface == "" {
+		e = fmt.Errorf("spec without interface")
 	}
 	return
 }
 
 func (s *spec) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
-		nameK:     s.Name,
 		ifaceK:    s.Iface,
 		proxyURLK: s.ProxyURL,
 	}

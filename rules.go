@@ -41,6 +41,7 @@ type resources struct {
 	cr       *crypt
 	admins   []string
 	fls      afero.Fs
+	warning  func(string) error
 }
 
 func (r *resources) match(ürl, rAddr string,
@@ -51,6 +52,13 @@ func (r *resources) match(ürl, rAddr string,
 		if ok {
 			mng := m.(*manager)
 			if mng.spec != nil {
+				// every consR has a not nil spec, therefore matches
+				// everything. This is useful when combined with matchers
+				// appearing before in a conjunction:
+				// `sessions ∧ downloads` is a predicate where sessions
+				// has type sessionIPM and downloads dwnConsR. Once
+				// `sessions` matches the a logged IP, downloads matches
+				// and provides the spec.
 				join(s, mng.spec, name)
 				v = true
 			} else {
@@ -66,30 +74,33 @@ func (r *resources) match(ürl, rAddr string,
 	return
 }
 
+type matchType struct {
+	Match bool   `json:"match"`
+	Type  string `json:"type"`
+}
+
 type discoverRes struct {
-	Matching   []string        `json:"matching"`
-	NoMatching []string        `json:"noMatching"`
-	Result     *pred.Predicate `json:"result"`
+	MatchMng map[string]matchType `json:"matchMng"`
+	Result   *pred.Predicate      `json:"result"`
 }
 
 func (r *resources) filterMatch(ürl, rAddr string,
 	t time.Time) (dr *discoverRes) {
-	dr = new(discoverRes)
+	dr = &discoverRes{
+		MatchMng: make(map[string]matchType),
+	}
 	interp := func(name string) (v, ok bool) {
 		m, ok := r.managers.Load(name)
+		var mng *manager
 		if ok {
-			mng := m.(*manager)
+			mng = m.(*manager)
 			v = mng.spec != nil
 			if !v && mng.matcher != nil {
 				v = mng.matcher(ürl, rAddr, t)
 			}
 		}
 		if ok {
-			if v {
-				dr.Matching = append(dr.Matching, name)
-			} else {
-				dr.NoMatching = append(dr.NoMatching, name)
-			}
+			dr.MatchMng[name] = matchType{Match: v, Type: mng.tÿpe}
 		}
 		return
 	}
@@ -108,12 +119,14 @@ type manager struct {
 }
 
 func newResources(predicate string, admins []string,
-	fls afero.Fs) (r *resources, e error) {
+	fls afero.Fs, warning func(string) error) (r *resources,
+	e error) {
 	r = &resources{
 		managers: new(sync.Map),
 		iu:       newIPuserS(),
 		admins:   admins,
 		fls:      fls,
+		warning:  warning,
 	}
 	r.managers.Store(resourcesK, &manager{
 		tÿpe:      resourcesK,
@@ -197,7 +210,8 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 	return
 }
 
-func (r *resources) availableMng(p *pred.Predicate, tÿpe string) (ms []string) {
+func (r *resources) availableMng(p *pred.Predicate,
+	tÿpe string) (ms []string) {
 	if p != nil {
 		if p.Operator == pred.Term {
 			v, ok := r.managers.Load(p.String)
@@ -222,7 +236,7 @@ func (r *resources) add(tÿpe string,
 		sessionIPMK: r.addSessionIPM,
 		userDBK:     r.addUserDB,
 		dwnConsRK:   r.addDwnConsR,
-		specKS:      r.addSpec,
+		bwConsRK:    r.addBwConsR,
 	}
 	fm, ok := fs[tÿpe]
 	if ok {
@@ -334,19 +348,21 @@ func (r *resources) addDwnConsR(
 			bs, d = afero.ReadFile(r.fls, path.Join(homeData, file))
 			return
 		},
+		warning: r.warning,
 	}
 	e = dw.fromMap(m)
 	if e == nil {
-		v, ok := r.managers.Load(dw.userQuotaN)
+		v, ok := r.managers.Load(dw.userDBN)
 		var mng *manager
 		if ok {
 			mng = v.(*manager)
 			ok = mng.udb != nil
 		}
 		if ok {
-			dw.userQuota = mng.udb.quota
+			dw.userGroup = mng.udb.userGroups
+			dw.userName = mng.udb.userName
 		} else {
-			e = noKey(dw.userQuotaN)
+			e = noKey(dw.userDBN)
 		}
 	}
 	if e == nil {
@@ -369,6 +385,7 @@ func (r *resources) addDwnConsR(
 			managerKF: dw.managerKF,
 			consR:     dw.consR(),
 			mapper:    dw.toMap,
+			spec:      dw.spec,
 		}
 		r.managers.Store(dw.name, mng)
 	}
@@ -418,19 +435,6 @@ func (r *resources) addGroupIPM(
 	return
 }
 
-func (r *resources) addSpec(m map[string]interface{}) (e error) {
-	sp := new(spec)
-	e = sp.fromMap(m)
-	if e == nil {
-		v, ok := r.managers.Load(sp.Name)
-		if ok {
-			mng := v.(*manager)
-			mng.spec = sp
-		}
-	}
-	return
-}
-
 func (r *resources) addUserDB(m map[string]interface{}) (e error) {
 	udb := new(userDB)
 	e = udb.fromMap(m)
@@ -442,6 +446,23 @@ func (r *resources) addUserDB(m map[string]interface{}) (e error) {
 			udb:       udb,
 		}
 		r.managers.Store(udb.name, mng)
+	}
+	return
+}
+
+func (r *resources) addBwConsR(
+	m map[string]interface{}) (e error) {
+	bw := new(bwConsR)
+	e = bw.fromMap(m)
+	if e == nil {
+		mng := &manager{
+			tÿpe:      bwConsRK,
+			managerKF: bw.managerKF,
+			mapper:    bw.toMap,
+			consR:     bw.consR(),
+			spec:      bw.spec,
+		}
+		r.managers.Store(bw.name, mng)
 	}
 	return
 }
