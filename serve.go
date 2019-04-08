@@ -35,7 +35,7 @@ func Serve() (e error) {
 	var c *conf
 	var prh, ifh *srvHandler
 	fs := []func(){
-		func() { c, e = newConf(afero.NewOsFs()) },
+		func() { c, e = newConf(afero.NewOsFs(), time.Now) },
 		func() { prh, ifh, e = newHnds(c) },
 		func() {
 			cp := path.Dir(c.filePath)

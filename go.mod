@@ -7,7 +7,7 @@ require (
 	github.com/klauspost/compress v1.4.1 // indirect
 	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/lamg/ldaputil v0.1.0
-	github.com/lamg/predicate v0.0.5-0.20190405165455-3fad2eaf1b9a
+	github.com/lamg/predicate v0.0.5-0.20190407230330-d5f7796efde9
 	github.com/lamg/proxy v0.0.0-20190404191104-42dbef145cb9
 	github.com/lamg/rtimespan v0.1.0
 	github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f

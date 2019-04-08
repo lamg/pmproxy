@@ -36,6 +36,7 @@ type bwConsR struct {
 
 func (b *bwConsR) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
+	optFe := optionalKeys(fe, specKS)
 	kf := []kFuncI{
 		{
 			nameK,
@@ -60,7 +61,10 @@ func (b *bwConsR) fromMap(i interface{}) (e error) {
 			},
 		},
 	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
+	mapKF(kf, i, optFe, func() bool { return e == nil })
+	if b.spec == nil {
+		b.spec = new(spec)
+	}
 	return
 }
 

@@ -233,24 +233,28 @@ rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group
 
 [[dwnConsR]]
 	name = "downWeek"
-	userGroup = "mapDB"
+	userDB = "mapDB"
+	lastReset = "2019-03-04T12:58:32-05:00"
+	resetCycle = "168h0m0s"
+	
 	[dwnConsR.quotaMap]
 		group0 = "600MB"
 		group1 = "1GB"
-	lastReset = "2019-03-04T12:58:32-05:00"
-	resetCycle = "168h0m0s"
+	
 	[dwnConsR.spec]
 		proxyURL = "http://proxy.com:8080"
 		iface = "enp0s25"
 
 [[dwnConsR]]
 	name = "downNight"
-	userGroup = "mapDB"
+	userDB = "mapDB"
+	lastReset = "2019-03-04T20:00:00-05:00"
+	resetCycle = "24h"
+	
 	[dwnConsR.quotaMap]
 		group0 = "1GB"
 		group1 = "2GB"
-	lastReset = "2019-03-04T20:00:00-05:00"
-	resetCycle = "24h"
+	
 	[dwnConsR.spec]
 		iface = "enp0s25"
 
@@ -262,12 +266,12 @@ rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group
 	name = "bandWidth1"
 	throttle = 1
 
-[[group]]
+[[groupIPM]]
 	name = "group0M"
 	userGroup = "mapDB"
 	group = "group0"
 
-[[group]]
+[[groupIPM]]
 	name = "group1M"
 	userGroup = "mapDB"
 	group = "group1"
@@ -277,10 +281,12 @@ rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group
 	start = "2019-03-04T08:00:00-05:00"
 	active = "12h"
 	total = "24h"
+	infinite = true
 
 [[span]]
 	name = "night"
 	start = "2019-03-04T20:00:00-05:00"
 	active = "12h"
 	total = "24h"
+	infinite = true
 `

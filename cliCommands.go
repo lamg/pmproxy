@@ -51,27 +51,32 @@ func (p *PMClient) Discover() (m cli.Command) {
 				dr, e = p.discoverC(args[0], args[1])
 			} else if len(args) == 1 {
 				dr, e = p.discoverC(args[0], "")
+			} else if len(args) == 0 {
+				dr, e = p.discoverC("", "")
 			} else {
 				e = checkArgExec(func() error { return nil }, 1,
 					len(args))
 			}
 			if dr != nil {
-				fmt.Printf("Match result: %s\n", pred.String(dr.Result))
-				for k, v := range dr.MatchMng {
-					var m string
-					if v.Match {
-						m = "✅"
-					} else {
-						m = "❌"
-					}
-					fmt.Printf("[%s] %s:%s", m, k, v.Type)
-				}
-
+				printDR(dr)
 			}
 			return
 		},
 	}
 	return
+}
+
+func printDR(dr *discoverRes) {
+	fmt.Printf("Match result: %s\n", pred.String(dr.Result))
+	for k, v := range dr.MatchMng {
+		var m string
+		if v.Match {
+			m = "✅"
+		} else {
+			m = "❌"
+		}
+		fmt.Printf("[%s] %s:%s\n", m, k, v.Type)
+	}
 }
 
 func (p *PMClient) Login() (m cli.Command) {
@@ -168,7 +173,17 @@ func (p *PMClient) discoverC(url,
 	}
 	var r *h.Response
 	var bs []byte
+
 	fs := []func(){
+		func() {
+			if url == "" {
+				var li *loginInfo
+				li, e = p.readSecret()
+				if e == nil {
+					url = li.Server
+				}
+			}
+		},
 		func() { r, e = p.PostCmd(url, m) },
 		func() { bs, e = ioutil.ReadAll(r.Body) },
 		func() {
@@ -202,7 +217,6 @@ func (p *PMClient) status(dwnMng string) (ui *userInfo, e error) {
 			dwnMng = li.DwnConsR
 		}
 	}
-	println("dwnMng:", dwnMng)
 	m := &cmd{
 		Cmd:     get,
 		Manager: dwnMng,

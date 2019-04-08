@@ -66,10 +66,12 @@ type conf struct {
 
 	base     map[string]interface{}
 	filePath string
+	now      func() time.Time
 }
 
-func newConf(fls afero.Fs) (c *conf, e error) {
-	c = &conf{fls: fls}
+func newConf(fls afero.Fs, now func() time.Time) (c *conf,
+	e error) {
+	c = &conf{fls: fls, now: now}
 	var fl afero.File
 	fs := []func(){
 		func() {
@@ -254,7 +256,7 @@ func (c *conf) initResources() (e error) {
 		},
 		func() {
 			c.res, e = newResources(predCf, c.stringSlice(adminsK),
-				c.fls, c.lg.warning)
+				c.fls, c.lg.warning, c.now)
 		},
 		func() {
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, bwConsRK,
@@ -263,7 +265,8 @@ func (c *conf) initResources() (e error) {
 				fm := func(m map[string]interface{}) {
 					d := c.res.add(rs[i], m)
 					if d != nil {
-						c.lg.warning(d.Error())
+						ne := fmt.Sprintf("Reading %s: %s", rs[i], d.Error())
+						c.lg.warning(ne)
 					}
 				}
 				c.sliceMap(rs[i], fm, fe, func() bool { return e == nil })

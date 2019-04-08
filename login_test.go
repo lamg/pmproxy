@@ -35,21 +35,21 @@ func TestLogin(t *testing.T) {
 	fs, ifh := basicConfT(t)
 	cl := &PMClient{
 		Fs:      fs,
-		PostCmd: testPostCmd("192.168.1.1", ifh),
+		PostCmd: testPostCmd("193.168.1.1", ifh),
 	}
 	e := cl.login("", "", user0, pass0)
 	ok, e := afero.Exists(fs, loginSecretFile)
 	require.True(t, e == nil && ok)
-	bs, e := afero.ReadFile(fs, loginSecretFile)
-	t.Log(string(bs))
+	dr, e := cl.discoverC("", "")
 	require.NoError(t, e)
+	printDR(dr)
 	ui, e := cl.status("")
 	require.NoError(t, e)
 	xui := &userInfo{
 		UserName:    user0,
 		Name:        user0,
 		Groups:      []string{group0},
-		Quota:       "600 MB",
+		Quota:       "600.0 MB",
 		Consumption: "0 B",
 	}
 	require.Equal(t, ui, xui)
@@ -61,7 +61,9 @@ func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc) {
 	basicConf(pth, fs)
 	ok, e := afero.Exists(fs, pth)
 	require.True(t, ok && e == nil)
-	c, e := newConf(fs)
+	nt, e := time.Parse(time.RFC3339, "2019-03-04T19:00:00-05:00")
+	require.NoError(t, e)
+	c, e := newConf(fs, func() time.Time { return nt })
 	require.NoError(t, e)
 	res := c.res
 	res.cr.expiration = time.Second

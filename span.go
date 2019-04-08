@@ -42,6 +42,7 @@ func toMapSpan(s *rt.RSpan,
 		totalK:    s.Total.String(),
 		infiniteK: s.Infinite,
 		allTimeK:  s.AllTime,
+		timesK:    s.Times,
 		nameK:     name,
 	}
 	return
@@ -50,9 +51,16 @@ func toMapSpan(s *rt.RSpan,
 func fromMapSpan(s *rt.RSpan,
 	i interface{}) (name string, e error) {
 	fe := func(d error) { e = d }
+	optFe := optionalKeys(fe, allTimeK, infiniteK, timesK)
 	kf := []kFuncI{
 		{
 			nameK, func(i interface{}) { name = stringE(i, fe) },
+		},
+		{
+			timesK,
+			func(i interface{}) {
+				s.Times, _ = cast.ToIntE(i)
+			},
 		},
 		{
 			activeK,
@@ -69,9 +77,7 @@ func fromMapSpan(s *rt.RSpan,
 		{
 			infiniteK,
 			func(i interface{}) {
-				var d error
-				s.Infinite, d = cast.ToBoolE(i)
-				s.Infinite = s.Infinite || d != nil
+				s.Infinite, _ = cast.ToBoolE(i)
 			},
 		},
 		{
@@ -87,6 +93,6 @@ func fromMapSpan(s *rt.RSpan,
 			},
 		},
 	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
+	mapKF(kf, i, optFe, func() bool { return e == nil })
 	return
 }

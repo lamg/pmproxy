@@ -42,28 +42,24 @@ type resources struct {
 	admins   []string
 	fls      afero.Fs
 	warning  func(string) error
+	now      func() time.Time
 }
 
 func (r *resources) match(ürl, rAddr string,
 	t time.Time) (s *spec) {
 	s = new(spec)
 	interp := func(name string) (v, ok bool) {
-		m, ok := r.managers.Load(name)
-		if ok {
-			mng := m.(*manager)
-			if mng.spec != nil {
-				// every consR has a not nil spec, therefore matches
-				// everything. This is useful when combined with matchers
-				// appearing before in a conjunction:
-				// `sessions ∧ downloads` is a predicate where sessions
-				// has type sessionIPM and downloads dwnConsR. Once
-				// `sessions` matches the a logged IP, downloads matches
-				// and provides the spec.
-				join(s, mng.spec, name)
-				v = true
-			} else {
-				ok = mng.matcher != nil
-				if ok {
+		if name == pred.TrueStr || name == pred.FalseStr {
+			v, ok = name == pred.TrueStr, true
+		} else {
+			var m interface{}
+			m, ok = r.managers.Load(name)
+			if ok {
+				mng := m.(*manager)
+				v = mng.spec != nil
+				if v {
+					join(s, mng.spec, name)
+				} else if !v && mng.matcher != nil {
 					v = mng.matcher(ürl, rAddr, t)
 				}
 			}
@@ -90,17 +86,19 @@ func (r *resources) filterMatch(ürl, rAddr string,
 		MatchMng: make(map[string]matchType),
 	}
 	interp := func(name string) (v, ok bool) {
-		m, ok := r.managers.Load(name)
-		var mng *manager
-		if ok {
-			mng = m.(*manager)
-			v = mng.spec != nil
-			if !v && mng.matcher != nil {
-				v = mng.matcher(ürl, rAddr, t)
+		if name == pred.TrueStr || name == pred.FalseStr {
+			v, ok = name == pred.TrueStr, true
+		} else {
+			var m interface{}
+			m, ok = r.managers.Load(name)
+			if ok {
+				mng := m.(*manager)
+				v = mng.spec != nil
+				if !v && mng.matcher != nil {
+					v = mng.matcher(ürl, rAddr, t)
+				}
+				dr.MatchMng[name] = matchType{Match: v, Type: mng.tÿpe}
 			}
-		}
-		if ok {
-			dr.MatchMng[name] = matchType{Match: v, Type: mng.tÿpe}
 		}
 		return
 	}
@@ -119,7 +117,8 @@ type manager struct {
 }
 
 func newResources(predicate string, admins []string,
-	fls afero.Fs, warning func(string) error) (r *resources,
+	fls afero.Fs, warning func(string) error,
+	now func() time.Time) (r *resources,
 	e error) {
 	r = &resources{
 		managers: new(sync.Map),
@@ -127,6 +126,7 @@ func newResources(predicate string, admins []string,
 		admins:   admins,
 		fls:      fls,
 		warning:  warning,
+		now:      now,
 	}
 	r.managers.Store(resourcesK, &manager{
 		tÿpe:      resourcesK,
@@ -184,7 +184,7 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 		{
 			discover,
 			func() {
-				dr := r.filterMatch(c.String, c.RemoteAddr, time.Now())
+				dr := r.filterMatch(c.String, c.RemoteAddr, r.now())
 				c.bs, c.e = json.Marshal(dr)
 			},
 		},
@@ -421,6 +421,7 @@ func (r *resources) addGroupIPM(
 		}
 		if ok {
 			gipm.userGroup = mng.udb.userGroups
+			gipm.ipUser = r.iu.get
 			mng := &manager{
 				tÿpe:      groupIPMK,
 				managerKF: gipm.managerKF,

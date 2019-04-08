@@ -21,12 +21,10 @@
 package main
 
 import (
-	"crypto/tls"
 	"github.com/lamg/pmproxy"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"log"
-	h "net/http"
 	"os"
 )
 
