@@ -49,6 +49,7 @@ func (b *bwConsR) fromMap(i interface{}) (e error) {
 			func(i interface{}) {
 				var d error
 				b.thrFrac, d = cast.ToFloat64E(i)
+				b.connThr = throttle.NewThrottle(b.thrFrac, time.Millisecond)
 				fe(d)
 			},
 		},

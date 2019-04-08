@@ -75,6 +75,8 @@ func newConf(fls afero.Fs, now func() time.Time) (c *conf,
 	fs := []func(){
 		func() {
 			c.filePath = confPath()
+			c.staticFPath = c.strïng(staticFilesPathK,
+				path.Join(home(), homeConfigDir, staticFilesDir))
 			fl, e = fls.Open(c.filePath)
 			if e != nil {
 				e = genConfig(fls)
@@ -178,11 +180,14 @@ func genConfig(fls afero.Fs) (e error) {
 	fs := []func(){
 		func() {
 			dirs := []string{
-				mainConfigDir,
 				path.Join(home(), homeConfigDir),
 			}
 			ib := func(i int) (b bool) {
 				e = fls.MkdirAll(dirs[i], os.ModeDir|os.ModePerm)
+				stDir := path.Join(dirs[i], staticFilesDir)
+				fls.MkdirAll(stDir, os.ModeDir|os.ModePerm)
+				afero.WriteFile(fls, path.Join(stDir, "index.html"),
+					[]byte(indexHTML), 0644)
 				b = e == nil
 				return
 			}

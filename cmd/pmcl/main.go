@@ -38,6 +38,7 @@ func main() {
 		cl.Discover(),
 		cl.Login(),
 		cl.Logout(),
+		cl.LoggedUsers(),
 		cl.UserStatus(),
 		cl.ResetConsumption(),
 	}

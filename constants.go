@@ -98,6 +98,7 @@ const (
 
 	compatible02K    = "compatible02"
 	staticFilesPathK = "staticFilesPath"
+	staticFilesDir   = "staticFiles"
 )
 
 // sessionIPM.go, dwnConsR.go and other managerKFs
@@ -289,4 +290,13 @@ rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group
 	active = "12h"
 	total = "24h"
 	infinite = true
+`
+
+const indexHTML = `
+<html>
+	<head>
+		<title>PMProxy</title>
+	</head>
+	<body>Hola desde PMProxy</body>
+</html>
 `

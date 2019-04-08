@@ -113,7 +113,6 @@ func stdIface(cf *conf) (hnd h.HandlerFunc) {
 			},
 			func(file string) {
 				pth := path.Join(cf.staticFPath, file)
-				println(pth)
 				h.ServeFile(w, r, pth)
 			},
 			func(err string) {
@@ -140,7 +139,7 @@ func compatibleIface(cf *conf, path, method,
 			} else {
 				path = emptyPathIfLogin(path)
 				fileSrv(path)
-				m = &cmd{Cmd: skip}
+				m = &cmd{Cmd: skip, Manager: resourcesK}
 			}
 		},
 		func() {

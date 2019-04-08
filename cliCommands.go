@@ -149,16 +149,65 @@ func (p *PMClient) ResetConsumption() (m cli.Command) {
 		Name:    "reset",
 		Aliases: []string{"r"},
 		Usage:   "Resets an user's consumption",
-		Flags:   managerFlag(&dwn, defaultDwnConsR),
+		Flags:   managerFlag(&dwn, ""),
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
-			e = checkArgExec(
-				func() error { return p.reset(dwn, args[0]) },
-				1,
-				len(args),
-			)
+			li, e := p.readSecret()
+			if e == nil {
+				e = checkArgExec(
+					func() error { return p.reset(li.DwnConsR, args[0]) },
+					1,
+					len(args),
+				)
+			}
 			return
 		},
+	}
+	return
+}
+
+func (p *PMClient) LoggedUsers() (m cli.Command) {
+	var sm string
+	m = cli.Command{
+		Name:    "logged-users",
+		Aliases: []string{"lu"},
+		Flags:   managerFlag(&sm, ""),
+		Action: func(c *cli.Context) (e error) {
+			mp, e := p.loggedUsers(sm)
+			if e == nil {
+				fmt.Printf("ip - user\n")
+				for k, v := range mp {
+					fmt.Printf("%s - %s\n", k, v)
+				}
+			}
+			return
+		},
+	}
+	return
+}
+
+func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
+	e error) {
+	if sm == "" {
+		li, e := p.readSecret()
+		if e == nil {
+			sm = li.SessionIPM
+		}
+	}
+	if sm == "" {
+		e = fmt.Errorf("Unable to get sessionIPM")
+	}
+	if e == nil {
+		m := &cmd{
+			Cmd:     get,
+			Manager: sm,
+		}
+		okf := func(bs []byte) (d error) {
+			mp = make(map[string]string)
+			d = json.Unmarshal(bs, &mp)
+			return
+		}
+		e = p.sendRecv(m, okf)
 	}
 	return
 }
@@ -240,12 +289,33 @@ func (p *PMClient) sendRecv(m *cmd,
 		func() {
 			m.Secret = li.Secret
 			r, e = p.PostCmd(li.Server, m)
+			if e != nil && strings.HasPrefix(e.Error(),
+				"token is expired") {
+				nm := &cmd{
+					Cmd:     renew,
+					Manager: li.SessionIPM,
+					Secret:  li.Secret,
+				}
+				var nr *h.Response
+				var bs []byte
+				fs0 := []func(){
+					func() { nr, e = p.PostCmd(li.Server, nm) },
+					func() { bs, e = ioutil.ReadAll(nr.Body) },
+					func() {
+						li.Secret = string(bs)
+						m.Secret = li.Secret
+						e = p.writeSecret(li)
+					},
+					func() { r, e = p.PostCmd(li.Server, m) },
+				}
+				trueFF(fs0, func() bool { return e == nil })
+			}
 		},
 	}
 	re := func(d error) { e = d }
 	fs = append(fs, doOK(okf, re,
 		func() *h.Response { return r })...)
-	p.handleRenew(fs, func() error { return e }, re)
+	trueFF(fs, func() bool { return e == nil })
 	return
 }
 
@@ -380,65 +450,15 @@ func (p *PMClient) logout() (e error) {
 	m := &cmd{
 		Cmd: clöse,
 	}
-	var r *h.Response
-	var li *loginInfo
-	fs := []func(){
-		func() {
-			li, e = p.readSecret()
-		},
-		func() {
-			m.Secret, m.Manager = li.Secret, li.SessionIPM
-			r, e = p.PostCmd(li.Server, m)
-		},
-	}
-	fe := func(d error) { e = d }
-	//only if error is "token exp..."
-	okf := func(bs []byte) (d error) {
-		d = p.Fs.Remove(loginSecretFile)
-		return
-	}
-	fs = append(fs,
-		doOK(okf, fe, func() *h.Response { return r })...)
-	p.handleRenew(fs, func() error { return e }, fe)
-	return
-}
-
-func (p *PMClient) handleRenew(fs []func(), re func() error,
-	te func(error)) {
-	rnw := func() {
-		if re() != nil &&
-			strings.HasPrefix(re().Error(), "token expired") {
-			var li *loginInfo
-			var r *h.Response
-			fsn := []func(){
-				func() {
-					var e error
-					li, e = p.readSecret()
-					te(e)
-				},
-				func() {
-					m := &cmd{
-						Cmd:     renew,
-						Manager: li.SessionIPM,
-						Secret:  li.Secret,
-					}
-					var e error
-					r, e = p.PostCmd(li.Server, m)
-					te(e)
-				},
-			}
-			okf := func(bs []byte) (d error) {
-				li.Secret = string(bs)
-				d = p.writeSecret(li)
-				return
-			}
-			fsn = append(fsn, doOK(okf, te,
-				func() *h.Response { return r })...)
-			fsn = append(fsn, fs...)
-			trueFF(fsn, func() bool { return re() == nil })
+	li, e := p.readSecret()
+	if e == nil {
+		m.Manager = li.SessionIPM
+		okf := func(bs []byte) (d error) {
+			d = p.Fs.Remove(loginSecretFile)
+			return
 		}
+		e = p.sendRecv(m, okf)
 	}
-	trueFF(append(fs, rnw), func() bool { return re() == nil })
 	return
 }
 
@@ -468,6 +488,12 @@ func PostCmd(urls string, c *cmd) (r *h.Response, e error) {
 		buff := bytes.NewBuffer(bs)
 		u := urls + apiCmd
 		r, e = h.Post(u, "text/json", buff)
+		if e == nil && r.StatusCode == h.StatusBadRequest {
+			bs, e = ioutil.ReadAll(r.Body)
+			if e == nil {
+				e = fmt.Errorf("%s", string(bs))
+			}
+		}
 	}
 	return
 }

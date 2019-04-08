@@ -206,6 +206,7 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 				}
 			},
 		},
+		{skip, func() {}},
 	}
 	// TODO show, delete spec
 	return
