@@ -274,7 +274,8 @@ type loginInfo struct {
 func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 	var li *loginInfo
 	if sm == "" {
-		ss := p.filterSMs(urls)
+		var ss []string
+		ss, e = p.filterSMs(urls)
 		if len(ss) != 0 {
 			li, e = p.loginSM(urls, ss[0], user, pass)
 		}
@@ -352,14 +353,13 @@ func (p *PMClient) loginSM(urls, sm, user,
 	return
 }
 
-func (p *PMClient) filterSMs(ürl string) (ss []string) {
+func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
 	m := &cmd{
 		Manager: resourcesK,
 		Cmd:     filter,
 		String:  sessionIPMK,
 	}
 	var r *h.Response
-	var e error
 	fe := func(d error) { e = d }
 	fs := []func(){
 		func() {
