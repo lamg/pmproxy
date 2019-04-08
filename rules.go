@@ -77,7 +77,7 @@ type matchType struct {
 
 type discoverRes struct {
 	MatchMng map[string]matchType `json:"matchMng"`
-	Result   *pred.Predicate      `json:"result"`
+	Result   string               `json:"result"`
 }
 
 func (r *resources) filterMatch(ürl, rAddr string,
@@ -102,7 +102,8 @@ func (r *resources) filterMatch(ürl, rAddr string,
 		}
 		return
 	}
-	dr.Result = pred.Reduce(r.rules, interp)
+	res := pred.Reduce(r.rules, interp)
+	dr.Result = pred.String(res)
 	return
 }
 

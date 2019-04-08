@@ -25,7 +25,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	pred "github.com/lamg/predicate"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -67,7 +66,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 }
 
 func printDR(dr *discoverRes) {
-	fmt.Printf("Match result: %s\n", pred.String(dr.Result))
+	fmt.Printf("Match result: %s\n", dr.Result)
 	for k, v := range dr.MatchMng {
 		var m string
 		if v.Match {

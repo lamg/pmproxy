@@ -41,7 +41,6 @@ type cmd struct {
 	Cred       *credentials           `json:"cred"`
 	String     string                 `json:"string"`
 	Uint64     uint64                 `json:"uint64"`
-	Pos        []int                  `json:"pos"`
 	Object     map[string]interface{} `json:"object"`
 	comp02     bool                   //compatible with v0.2
 	bs         []byte
