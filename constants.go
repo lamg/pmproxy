@@ -137,7 +137,7 @@ const (
 
 // rules.go
 const (
-	ipRangeMK  = "ipRangeM"
+	rangeIPMK  = "rangeIPM"
 	regexpK    = "regexp"
 	specKS     = "spec"
 	rulesK     = "rules"
@@ -201,7 +201,7 @@ const (
 
 const basicConfText = `
 admins = ["user0"]
-rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group0M ∧ bandWidth0) ∨ (group1M ∧ bandWidth1))"
+rules = "campus ∧ sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group0M ∧ bandWidth0) ∨ (group1M ∧ bandWidth1))"
 
 [apiSrv]
 	addr = ":4443"
@@ -290,6 +290,10 @@ rules = "sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) ∧ ((group
 	active = "12h"
 	total = "24h"
 	infinite = true
+
+[[rangeIPM]]
+	name = "campus"
+	cidr = "192.168.0.0/16"
 `
 
 const indexHTML = `

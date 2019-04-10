@@ -22,6 +22,8 @@ package pmproxy
 
 import (
 	"context"
+	"fmt"
+	pred "github.com/lamg/predicate"
 	"github.com/lamg/proxy"
 	"net"
 	"time"
@@ -53,6 +55,10 @@ func (p *connMng) set(ctx context.Context, meth, ürl,
 		ParentProxy: spec.proxyURL,
 		Modifiers:   spec.ConsRs,
 		Error:       e,
+	}
+	if spec.Result.String != pred.TrueStr {
+		cp.Error = fmt.Errorf("Match result '%s'",
+			pred.String(spec.Result))
 	}
 	nctx = context.WithValue(ctx, specK, cp)
 	return

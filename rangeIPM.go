@@ -30,8 +30,8 @@ type rangeIPM struct {
 	name string
 }
 
-func (m *rangeIPM) init() (e error) {
-	_, m.rg, e = net.ParseCIDR(m.cidr)
+func (r *rangeIPM) init() (e error) {
+	_, r.rg, e = net.ParseCIDR(r.cidr)
 	return
 }
 
@@ -84,7 +84,7 @@ func (r *rangeIPM) fromMap(i interface{}) (e error) {
 			},
 		},
 	}
-	fb := func() bool { return e != nil }
+	fb := func() bool { return e == nil }
 	mapKF(kf, i, fe, fb)
 	return
 }

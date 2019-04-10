@@ -67,6 +67,7 @@ func (r *resources) match(ürl, rAddr string,
 		return
 	}
 	s.Result = pred.Reduce(r.rules, interp)
+	s.user, _ = r.iu.get(rAddr)
 	return
 }
 
@@ -233,7 +234,7 @@ func (r *resources) add(tÿpe string,
 	fs := map[string]func(map[string]interface{}) error{
 		urlmK:       r.addURLM,
 		spanK:       r.addSpan,
-		ipRangeMK:   r.addRangeIPM,
+		rangeIPMK:   r.addRangeIPM,
 		groupIPMK:   r.addGroupIPM,
 		sessionIPMK: r.addSessionIPM,
 		userDBK:     r.addUserDB,
@@ -265,8 +266,9 @@ func (r *resources) addURLM(m map[string]interface{}) (e error) {
 			func(i interface{}) {
 				mng := &manager{
 					tÿpe: urlmK,
-					matcher: func(ürl, ip string, t time.Time) bool {
-						return parReg.MatchString(ürl)
+					matcher: func(ürl, ip string, t time.Time) (ok bool) {
+						ok = parReg.MatchString(ürl)
+						return
 					},
 					mapper: func() (m map[string]interface{}) {
 						m = map[string]interface{}{
@@ -311,7 +313,7 @@ func (r *resources) addRangeIPM(
 	if e == nil {
 		fm := wrapIPMatcher(rg.match)
 		mng := &manager{
-			tÿpe:      rangeIPMT,
+			tÿpe:      rangeIPMK,
 			matcher:   fm,
 			managerKF: rg.managerKF,
 			mapper:    rg.toMap,

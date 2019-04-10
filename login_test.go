@@ -35,7 +35,7 @@ func TestLogin(t *testing.T) {
 	fs, ifh := basicConfT(t)
 	cl := &PMClient{
 		Fs:      fs,
-		PostCmd: testPostCmd("193.168.1.1", ifh),
+		PostCmd: testPostCmd("192.168.1.1", ifh),
 	}
 	e := cl.login("", "", user0, pass0)
 	ok, e := afero.Exists(fs, loginSecretFile)

@@ -482,6 +482,7 @@ func (p *PMClient) readSecret() (li *loginInfo, e error) {
 func PostCmd(urls string, c *cmd) (r *h.Response, e error) {
 	h.DefaultTransport.(*h.Transport).TLSClientConfig =
 		&tls.Config{InsecureSkipVerify: true}
+	h.DefaultTransport.(*h.Transport).Proxy = nil
 	// TODO find a better place for the previous line
 	bs, e := json.Marshal(c)
 	if e == nil {

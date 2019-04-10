@@ -138,7 +138,7 @@ func (c *conf) update() (e error) {
 	//	e = enc.Encode(&cf)
 	//	fl.Close()
 	//}
-	// all serializable components are in encoded
+	// all serializable components are encoded
 	return
 }
 
@@ -264,7 +264,7 @@ func (c *conf) initResources() (e error) {
 		},
 		func() {
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, bwConsRK,
-				groupIPMK, spanK, ipRangeMK, urlmK}
+				groupIPMK, spanK, rangeIPMK, urlmK}
 			inf := func(i int) {
 				fm := func(m map[string]interface{}) {
 					d := c.res.add(rs[i], m)
