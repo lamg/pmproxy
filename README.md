@@ -25,6 +25,8 @@ The rules are predicates (not, or, and) on the previous information, and they ha
 - The limit on data amount to be downloaded (quota).
 - The connection delay.
 
+[![asciicast](https://asciinema.org/a/IlGgXc8gaBBOBrSQy88ZdeLan.svg)](https://asciinema.org/a/IlGgXc8gaBBOBrSQy88ZdeLan)
+
 [0]: https://img.shields.io/badge/License-AGPL%203%2B-blue.svg
 [1]: https://travis-ci.com/lamg/pmproxy.svg?branch=master
 [2]: https://travis-ci.com/lamg/pmproxy

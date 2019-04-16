@@ -25,10 +25,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	h "net/http"
+	"os"
 	"strings"
 )
 
@@ -183,6 +185,45 @@ func (p *PMClient) LoggedUsers() (m cli.Command) {
 			return
 		},
 	}
+	return
+}
+
+func (p *PMClient) ShowMng() (m cli.Command) {
+	m = cli.Command{
+		Name:    "show",
+		Aliases: []string{"sh"},
+		Action: func(c *cli.Context) (e error) {
+			args := c.Args()
+			e = checkArgExec(
+				func() (d error) {
+					objT, d := p.showMng(args[0])
+					if d == nil {
+						enc := toml.NewEncoder(os.Stdout)
+						e = enc.Encode(objT)
+					}
+					return
+				},
+				1,
+				len(args),
+			)
+			return
+		},
+	}
+	return
+}
+
+func (p *PMClient) showMng(mng string) (objT *objType, e error) {
+	m := &cmd{
+		Manager: resourcesK,
+		Cmd:     get,
+		String:  mng,
+	}
+	okf := func(bs []byte) (d error) {
+		objT = new(objType)
+		d = json.Unmarshal(bs, objT)
+		return
+	}
+	e = p.sendRecv(m, okf)
 	return
 }
 

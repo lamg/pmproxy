@@ -90,7 +90,7 @@ func (p *connMng) apply(n net.Conn, clientIP string,
 func (p *connMng) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		nameK:    proxyTr,
-		timeoutK: p.dialTimeout,
+		timeoutK: p.dialTimeout.String(),
 		maxIdleK: p.maxIdle,
 		idleTK:   p.idleT,
 		tlsHTK:   p.tlsHT,

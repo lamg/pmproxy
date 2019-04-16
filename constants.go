@@ -235,7 +235,7 @@ rules = "campus ∧ sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) 
 [[dwnConsR]]
 	name = "downWeek"
 	userDB = "mapDB"
-	lastReset = "2019-03-04T12:58:32-05:00"
+	lastReset = "2019-04-13T20:00:00-04:00"
 	resetCycle = "168h0m0s"
 	
 	[dwnConsR.quotaMap]
@@ -249,7 +249,7 @@ rules = "campus ∧ sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) 
 [[dwnConsR]]
 	name = "downNight"
 	userDB = "mapDB"
-	lastReset = "2019-03-04T20:00:00-05:00"
+	lastReset = "2019-04-13T20:00:00-04:00"
 	resetCycle = "24h"
 	
 	[dwnConsR.quotaMap]
@@ -293,7 +293,7 @@ rules = "campus ∧ sessions ∧ ((day ∧ downWeek) ∨ (night ∧ downNight)) 
 
 [[rangeIPM]]
 	name = "campus"
-	cidr = "192.168.0.0/16"
+	cidr = "127.0.0.1/32"
 `
 
 const indexHTML = `

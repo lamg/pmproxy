@@ -144,6 +144,11 @@ func newResources(predicate string, admins []string,
 	return
 }
 
+type objType struct {
+	Object map[string]interface{} `json:"object"`
+	Type   string                 `json:"type"`
+}
+
 func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
@@ -157,7 +162,17 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			func() {
 				v, ok := r.managers.Load(c.String)
 				if ok {
-					c.bs = []byte(v.(*manager).tÿpe)
+					mng := v.(*manager)
+					if mng.mapper != nil {
+						mp := mng.mapper()
+						objectType := objType{
+							Object: mp,
+							Type:   mng.tÿpe,
+						}
+						c.bs, c.e = json.Marshal(&objectType)
+					} else {
+						c.e = fmt.Errorf("No manager.mapper available")
+					}
 				} else {
 					c.e = noKey(c.String)
 				}

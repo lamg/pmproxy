@@ -327,15 +327,20 @@ func readSrvConf(i interface{}) (sc *srvConf, e error) {
 }
 
 func (p *srvConf) toMap() (i interface{}) {
-	i = map[string]interface{}{
+	mp := map[string]interface{}{
 		fastOrStdK:    p.fastOrStd,
 		readTimeoutK:  p.readTimeout.String(),
 		writeTimeoutK: p.writeTimeout.String(),
 		addrK:         p.addr,
-		certK:         p.certFl,
-		keyK:          p.keyFl,
-		maxConnIPK:    p.maxConnIP,
-		maxReqConnK:   p.maxReqConn,
 	}
+	if p.fastOrStd {
+		mp[maxConnIPK] = p.maxConnIP
+		mp[maxReqConnK] = p.maxReqConn
+	}
+	if !p.proxyOrIface {
+		mp[certK] = p.certFl
+		mp[keyK] = p.keyFl
+	}
+	i = mp
 	return
 }

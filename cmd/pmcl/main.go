@@ -41,6 +41,7 @@ func main() {
 		cl.LoggedUsers(),
 		cl.UserStatus(),
 		cl.ResetConsumption(),
+		cl.ShowMng(),
 	}
 	e := app.Run(os.Args)
 	if e != nil {

@@ -123,21 +123,22 @@ func (c *conf) update() (e error) {
 				cf[mng.tÿpe] = []interface{}{mp}
 			}
 		}
+		ok = true
 		return
 	})
 	cf[proxyConfK] = c.proxy.toMap()
 	cf[ifaceConfK] = c.iface.toMap()
+	cf[connMngK] = c.cm.toMap()
 	cf[rulesK] = pred.String(c.res.rules)
 	cf[adminsK] = c.res.admins
 	cf[loggerAddrK] = c.lg.addr
 	cf[waitUpdateK] = c.waitUpd.String()
-	// Not updating conf at this point
-	//fl, e := c.fls.Create(c.filePath)
-	//if e == nil {
-	//	enc := toml.NewEncoder(fl)
-	//	e = enc.Encode(&cf)
-	//	fl.Close()
-	//}
+	fl, e := c.fls.Create(c.filePath)
+	if e == nil {
+		enc := toml.NewEncoder(fl)
+		e = enc.Encode(&cf)
+		fl.Close()
+	}
 	// all serializable components are encoded
 	return
 }
@@ -168,8 +169,7 @@ func (c *conf) initConnMng() (e error) {
 	c.cm.match = c.res.match
 	c.cm.user = c.res.iu.get
 	mng := &manager{
-		tÿpe:   connMngK,
-		mapper: c.cm.toMap,
+		tÿpe: connMngK,
 	}
 	c.res.managers.Store(connMngK, mng)
 	return
@@ -227,6 +227,9 @@ func (c *conf) readProxyConf() (e error) {
 			e = nil
 		}
 	}
+	if c.proxy != nil {
+		c.proxy.proxyOrIface = true
+	}
 	return
 }
 
@@ -243,6 +246,9 @@ func (c *conf) readIfaceConf() (e error) {
 		}
 	}
 	c.iface, e = readSrvConf(i)
+	if e == nil {
+		c.iface.proxyOrIface = false
+	}
 	return
 }
 

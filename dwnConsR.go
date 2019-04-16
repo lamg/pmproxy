@@ -133,6 +133,7 @@ func (d *dwnConsR) toMap() (i map[string]interface{}) {
 		userDBK:     d.userDBN,
 		lastResetK:  d.lastReset.Format(time.RFC3339),
 		resetCycleK: d.resetCycle.String(),
+		specKS:      d.spec.toMap(),
 		quotaMapK: func() (m map[string]string) {
 			m = make(map[string]string)
 			d.groupQuotaM.Range(func(k, v interface{}) (ok bool) {

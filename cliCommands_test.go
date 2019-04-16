@@ -32,17 +32,19 @@ import (
 )
 
 func TestLogin(t *testing.T) {
-	fs, ifh := basicConfT(t)
+	fs, ifh, _ := basicConfT(t)
 	cl := &PMClient{
 		Fs:      fs,
-		PostCmd: testPostCmd("192.168.1.1", ifh),
+		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
 	e := cl.login("", "", user0, pass0)
 	ok, e := afero.Exists(fs, loginSecretFile)
 	require.True(t, e == nil && ok)
 	dr, e := cl.discoverC("", "")
 	require.NoError(t, e)
-	printDR(dr)
+	if testing.Verbose() {
+		printDR(dr)
+	}
 	ui, e := cl.status("")
 	require.NoError(t, e)
 	xui := &userInfo{
@@ -55,7 +57,50 @@ func TestLogin(t *testing.T) {
 	require.Equal(t, ui, xui)
 }
 
-func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc) {
+func TestShowMng(t *testing.T) {
+	fs, ifh, _ := basicConfT(t)
+	cl := &PMClient{
+		Fs:      fs,
+		PostCmd: testPostCmd("192.168.1.1", ifh),
+	}
+	cl.login("", "", user0, pass0)
+	downWeek := "downWeek"
+	objT, e := cl.showMng(downWeek)
+	require.NoError(t, e)
+	require.Equal(t, dwnConsRK, objT.Type)
+	kvs := []struct {
+		key string
+		val interface{}
+	}{
+		{nameK, downWeek},
+		{lastResetK, "2019-04-13T20:00:00-04:00"},
+		{resetCycleK, "168h0m0s"},
+		{userDBK, "mapDB"},
+		{
+			quotaMapK,
+			map[string]interface{}{
+				"group0": "600.0 MB",
+				"group1": "1024.0 MB",
+			},
+		},
+	}
+	inf := func(i int) {
+		require.Equal(t, kvs[i].val, objT.Object[kvs[i].key])
+	}
+	forall(inf, len(kvs))
+}
+
+func TestConfUpdate(t *testing.T) {
+	fs, _, cf := basicConfT(t)
+	cf.update()
+	bs, e := afero.ReadFile(fs, confPath())
+	require.NoError(t, e)
+	t.Log(string(bs))
+	// FIXME some objects aren't written
+}
+
+func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc,
+	c *conf) {
 	pth := confPath()
 	fs = afero.NewMemMapFs()
 	basicConf(pth, fs)
@@ -63,7 +108,7 @@ func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc) {
 	require.True(t, ok && e == nil)
 	nt, e := time.Parse(time.RFC3339, "2019-03-04T19:00:00-05:00")
 	require.NoError(t, e)
-	c, e := newConf(fs, func() time.Time { return nt })
+	c, e = newConf(fs, func() time.Time { return nt })
 	require.NoError(t, e)
 	res := c.res
 	res.cr.expiration = time.Second
