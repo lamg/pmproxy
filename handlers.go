@@ -23,7 +23,9 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/AdhityaRamadhanus/fasthttpcors"
 	"github.com/lamg/proxy"
+	"github.com/rs/cors"
 	fh "github.com/valyala/fasthttp"
 	"io/ioutil"
 	"net"
@@ -56,9 +58,13 @@ func newHnds(c *conf) (prh, ifh *srvHandler,
 		// administration, and serializer are part of the
 		// control interface, and also have consumers and
 		// matchers
-		ifh.reqHnd = fastIface(c)
+		fhnd := fastIface(c)
+		cropt := fasthttpcors.DefaultHandler()
+		ifh.reqHnd = cropt.CorsMiddleware(fhnd)
 	} else {
-		ifh.serveHTTP = stdIface(c)
+		shnd := stdIface(c)
+		cropt := cors.AllowAll()
+		ifh.serveHTTP = cropt.Handler(shnd).ServeHTTP
 	}
 	return
 }

@@ -23,6 +23,7 @@ package pmproxy
 import (
 	rt "github.com/lamg/rtimespan"
 	"github.com/spf13/cast"
+	"time"
 )
 
 const (
@@ -37,7 +38,7 @@ const (
 func toMapSpan(s *rt.RSpan,
 	name string) (m map[string]interface{}) {
 	m = map[string]interface{}{
-		startK:    s.Start.String(),
+		startK:    s.Start.Format(time.RFC3339),
 		activeK:   s.Active.String(),
 		totalK:    s.Total.String(),
 		infiniteK: s.Infinite,

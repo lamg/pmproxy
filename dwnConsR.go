@@ -23,6 +23,7 @@ package pmproxy
 import (
 	"encoding/json"
 	"github.com/c2h5oh/datasize"
+	"strings"
 	"sync"
 	"time"
 )
@@ -114,7 +115,8 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 				d.quotaCache = new(sync.Map)
 				for k, v := range m {
 					bts := new(datasize.ByteSize)
-					e = bts.UnmarshalText([]byte(v))
+					nv := cleanHumanReadable(v)
+					e = bts.UnmarshalText([]byte(nv))
 					if e != nil {
 						break
 					}
@@ -274,5 +276,10 @@ func (d *dwnConsR) info(user string) (ui *userInfo, e error) {
 		cons = datasize.ByteSize(v.(uint64))
 	}
 	ui.Consumption = cons.HumanReadable()
+	return
+}
+
+func cleanHumanReadable(hr string) (cl string) {
+	cl = strings.Replace(hr, ".0", "", -1)
 	return
 }
