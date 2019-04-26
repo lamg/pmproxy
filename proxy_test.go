@@ -32,7 +32,7 @@ func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e error) {
 
 	var uc *ConsMap
 	if e == nil {
-		uc, e = NewCMFromR(bytes.NewBufferString(cons))
+		uc, e = NewCMFromR(bytes.NewBufferString(cons), cl)
 	}
 	qa = NewQAdm(sm, gq, uc, l, cl)
 	// rl initialization

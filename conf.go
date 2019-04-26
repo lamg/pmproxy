@@ -138,7 +138,7 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	// { c.Cons opened as f ≡ e = nil }
 	var uc *ConsMap
 	if e == nil {
-		uc, e = NewCMFromR(f)
+		uc, e = NewCMFromR(f, cl)
 		f.Close()
 	}
 	if e == nil {
