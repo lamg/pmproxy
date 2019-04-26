@@ -143,6 +143,9 @@ LimitNOFILE=49152
 WorkingDirectory=/etc/pmproxy
 ExecStart=$GOPATH/bin/pmproxy -c /etc/pmproxy/conf.json
 Restart=on-abort
+StandarOutput=syslog
+StandardOutput=syslog
+SyslogIdentifier=pmproxy
 
 [Install]
 WantedBy=multi-user.target
