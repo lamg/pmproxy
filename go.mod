@@ -9,7 +9,7 @@ require (
 	github.com/go-ldap/ldap v2.5.1+incompatible // indirect
 	github.com/lamg/clock v0.0.0-20171121192224-2d7688e38d68
 	github.com/lamg/filesystem v0.0.0-20180621205550-f10458386861
-	github.com/lamg/goproxy v0.0.0-20190425211738-5d4f1a32fda6
+	github.com/lamg/goproxy v0.0.0-20190426172008-70085d574b4a
 	github.com/lamg/ldaputil v0.0.0-20180322212749-08f7df8156d3
 	github.com/lamg/wfact v0.0.0-20180316155637-d4359c1edfb8
 	github.com/lucasb-eyer/go-colorful v0.0.0-20180709185858-c7842319cf3a // indirect
