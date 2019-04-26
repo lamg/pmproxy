@@ -4,7 +4,6 @@ import (
 	"io"
 	h "net/http"
 	"net/url"
-	"time"
 
 	"github.com/vinxi/ip"
 
@@ -124,15 +123,13 @@ func ParseConf(r io.Reader) (c *Conf, e error) {
 // ConfPMProxy uses supplied configuration to initialize
 // an instance of PMProxy
 func ConfPMProxy(c *Conf, dAuth bool,
-	fsm fs.FileSystem) (ph, lh h.Handler, e error) {
+	fsm fs.FileSystem) (ph, lh h.Handler, prs func(), e error) {
 	cl := new(clock.OSClock)
 	f, e := fsm.Open(c.Quota)
 	// { c.Quota opened as f ≡ e = nil }
 	var gq *QuotaMap
 	if e == nil {
-		gqp := NewPersister(wfact.NewTruncater(c.Quota, fsm),
-			time.Now(), 5*time.Minute, cl)
-		gq, e = NewQMFromR(f, gqp)
+		gq, e = NewQMFromR(f)
 		f.Close()
 	}
 	if e == nil {
@@ -141,10 +138,18 @@ func ConfPMProxy(c *Conf, dAuth bool,
 	// { c.Cons opened as f ≡ e = nil }
 	var uc *ConsMap
 	if e == nil {
-		ucp := NewPersister(wfact.NewTruncater(c.Cons, fsm),
-			time.Now(), 5*time.Minute, cl)
-		uc, e = NewCMFromR(f, ucp)
+		uc, e = NewCMFromR(f)
 		f.Close()
+	}
+	if e == nil {
+		prs = func() {
+			rd := uc.Persist()
+			fl, e := fsm.Create(c.Cons)
+			if e == nil {
+				io.Copy(fl, rd)
+				fl.Close()
+			}
+		}
 	}
 
 	if e == nil {

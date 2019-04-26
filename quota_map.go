@@ -1,9 +1,7 @@
 package pmproxy
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"sync"
 )
@@ -11,25 +9,18 @@ import (
 // QuotaMap is the object made for storing the quotas
 // associated to user groups
 type QuotaMap struct {
-	mp     *sync.Map
-	closed bool
-	bf     *bytes.Buffer
-	pr     *Persister
+	mp *sync.Map
 }
 
 // NewQMFromR creates a new QuotaMap from a serialized
 // JSON map[string]uint64
-func NewQMFromR(r io.Reader,
-	p *Persister) (qm *QuotaMap, e error) {
+func NewQMFromR(r io.Reader) (qm *QuotaMap, e error) {
 	dec, m := json.NewDecoder(r),
 		make(map[string]uint64)
 	e = dec.Decode(&m)
 	if e == nil {
 		qm = &QuotaMap{
-			mp:     new(sync.Map),
-			closed: true,
-			bf:     bytes.NewBufferString(""),
-			pr:     p,
+			mp: new(sync.Map),
 		}
 		for k, v := range m {
 			qm.mp.Store(k, v)
@@ -49,31 +40,4 @@ func (q *QuotaMap) Load(key string) (v uint64, ok bool) {
 		}
 	}
 	return
-}
-
-// Store stores a key value pair in the dictionary
-func (q *QuotaMap) Store(key string, val uint64) {
-	q.mp.Store(key, val)
-	q.bf.Reset()
-	enc := json.NewEncoder(q.bf)
-	m := make(map[string]uint64)
-	q.mp.Range(func(k, v interface{}) (ok bool) {
-		sk, oks := k.(string)
-		uv, oku := v.(uint64)
-		if !oks {
-			fmt.Printf("Assertion of %v as string failed\n", k)
-		}
-		if !oku {
-			fmt.Printf("Assertion of %v as uint64 failed\n", v)
-		}
-		ok = oks && oku
-		if ok {
-			m[sk] = uv
-		}
-		return
-	})
-	e := enc.Encode(m)
-	if e == nil {
-		q.pr.Persist(q.bf)
-	}
 }

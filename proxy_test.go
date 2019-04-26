@@ -27,16 +27,12 @@ func initQARL(cl clock.Clock) (qa *QAdm, rl *RLog, e error) {
 	var gq *QuotaMap
 	if e == nil {
 		cl = &clock.TClock{Intv: time.Second, Time: dtTime()}
-		gqp := NewPersister(w.NewDWF(), dtTime(), time.Second,
-			cl)
-		gq, e = NewQMFromR(bytes.NewBufferString(quota), gqp)
+		gq, e = NewQMFromR(bytes.NewBufferString(quota))
 	}
 
 	var uc *ConsMap
 	if e == nil {
-		ucp := NewPersister(w.NewDWF(), dtTime(), time.Second,
-			cl)
-		uc, e = NewCMFromR(bytes.NewBufferString(cons), ucp)
+		uc, e = NewCMFromR(bytes.NewBufferString(cons))
 	}
 	qa = NewQAdm(sm, gq, uc, l, cl)
 	// rl initialization

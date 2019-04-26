@@ -166,3 +166,44 @@ cat /proc/`pidof pmproxy`/limits|grep 'Max open files'
 - [ ] English grammar
 - [ ] Slow operations not in GUI's main thread
 - [ ] Add html template and parse it in NewPMProxy
+
+### Error
+
+```
+panic: runtime error: slice bounds out of range
+bytes.(*Buffer).Write(0xc000160570, 0xc013ffe000, 0xbfc5, 0x103ff, 0x81fbfe, 0x1, 0x0)
+        /home/lamg/golang/src/bytes/buffer.go:177 +0x108
+encoding/json.(*Encoder).Encode(0xc00c677af0, 0x782820, 0xc009b91fb0, 0x0, 0x0)
+        /home/lamg/golang/src/encoding/json/stream.go:225 +0x1cb
+github.com/lamg/pmproxy.Encode(0x89c600, 0xc000160570, 0x782820, 0xc009b91fb0, 0xc0053a7ba0, 0x40ad5b)
+        /home/lamg/proyectos/pmproxy/local_handler.go:239 +0xcf
+github.com/lamg/pmproxy.(*ConsMap).fillBuffer(0xc000066980)
+        /home/lamg/proyectos/pmproxy/cons_map.go:118 +0x10d
+github.com/lamg/pmproxy.(*ConsMap).Store(0xc000066980, 0xc006876dd0, 0xd, 0x731fd3b)
+        /home/lamg/proyectos/pmproxy/cons_map.go:92 +0x167
+github.com/lamg/pmproxy.(*QAdm).cons(0xc000066a80, 0xc0027b8ea0, 0x11, 0xc0044eaf67, 0x1a, 0x23, 0x0)
+        /home/lamg/proyectos/pmproxy/qadm.go:149 +0x22c
+github.com/lamg/pmproxy.(*conCount).Read(0xc006be3e00, 0xc00d6d6000, 0x8000, 0x8000, 0x5b8, 0x0, 0x0)
+        /home/lamg/proyectos/pmproxy/restr_conn.go:18 +0xd3
+github.com/lamg/pmproxy.(*thConn).Read(0xc00365fbc0, 0xc00d6d6000, 0x8000, 0x8000, 0x5b8, 0x0, 0x0)
+        /home/lamg/proyectos/pmproxy/req_conn_manager.go:191 +0x63
+io.copyBuffer(0x89d660, 0xc00016d000, 0x7efdc1a8ba00, 0xc00365fbc0, 0xc00d6d6000, 0x8000, 0x8000, 0xc0
+        /home/lamg/golang/src/io/io.go:402 +0x122
+io.Copy(...)
+        /home/lamg/golang/src/io/io.go:364
+net.genericReadFrom(...)
+        /home/lamg/golang/src/net/net.go:614
+net.(*TCPConn).readFrom(0xc00075ed88, 0x7efdc1a8ba00, 0xc00365fbc0, 0xc0027226b8, 0x40b28a, 0x7b96c0)
+        /home/lamg/golang/src/net/tcpsock_posix.go:54 +0x13d
+net.(*TCPConn).ReadFrom(0xc00075ed88, 0x7efdc1a8ba00, 0xc00365fbc0, 0x7efdc1a8ba40, 0xc00075ed88, 0x43
+        /home/lamg/golang/src/net/tcpsock.go:103 +0x4e
+io.copyBuffer(0x89cb60, 0xc00075ed88, 0x7efdc1a8ba00, 0xc00365fbc0, 0x0, 0x0, 0x0, 0xc009321640, 0x89c
+        /home/lamg/golang/src/io/io.go:388 +0x2fc
+io.Copy(...)
+        /home/lamg/golang/src/io/io.go:364
+github.com/lamg/goproxy.copyOrWarn(0xc00606fea0, 0x89cb60, 0xc00075ed88, 0x7efdc1a8ba00, 0xc00365fbc0,
+        /home/lamg/go/pkg/mod/github.com/lamg/goproxy@v0.0.0-20190426172008-70085d574b4a/https.go:290 
+created by github.com/lamg/goproxy.(*ProxyHttpServer).handleHttps.func1
+        /home/lamg/go/pkg/mod/github.com/lamg/goproxy@v0.0.0-20190426172008-70085d574b4a/https.go:115
+```
+

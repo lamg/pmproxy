@@ -36,7 +36,7 @@ func TestConfPMProxy(t *testing.T) {
 	c, e := ParseConf(f)
 	require.NoError(t, e)
 	require.True(t, pconf.Equal(c), "%v", c)
-	_, _, e = ConfPMProxy(c, true, bfs)
+	_, _, _, e = ConfPMProxy(c, true, bfs)
 	require.NoError(t, e)
 }
 

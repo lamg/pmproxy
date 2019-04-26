@@ -27,10 +27,18 @@ func main() {
 		c, e = pmproxy.ParseConf(f)
 	}
 	var lh, pm h.Handler
+	var persist func()
 	if e == nil {
-		pm, lh, e = pmproxy.ConfPMProxy(c, dAuth, os)
+		pm, lh, persist, e = pmproxy.ConfPMProxy(c, dAuth, os)
 	}
 	if e == nil {
+		ticker := time.Tick(5 * time.Minute)
+		go func() {
+			for {
+				<-ticker
+				persist()
+			}
+		}()
 		// Setting timeouts according
 		// https://blog.cloudflare.com/
 		// the-complete-guide-to-golang-net-http-timeouts/
