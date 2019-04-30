@@ -31,7 +31,7 @@ import (
 func main() {
 	cl := client.PMClient{
 		Fs:      afero.NewOsFs(),
-		PostCmd: pmproxy.PostCmd,
+		PostCmd: client.PostCmd,
 	}
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
