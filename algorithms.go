@@ -90,7 +90,7 @@ func mpErr(m map[string]interface{}, fi fin,
 		if ok {
 			fi(v)
 		} else {
-			fe(noKey(k))
+			fe(NoKey(k))
 		}
 	}
 	return
@@ -125,7 +125,7 @@ type kFunc struct {
 func optionalKeys(fe ferr, keys ...string) (fek ferr) {
 	fek = func(e error) {
 		ib := func(i int) (b bool) {
-			b = e != nil && e.Error() == noKey(keys[i]).Error()
+			b = e != nil && e.Error() == NoKey(keys[i]).Error()
 			return
 		}
 		optK, _ := bLnSrch(ib, len(keys))
@@ -146,7 +146,7 @@ func exF(kf []kFunc, key string, fe ferr) {
 	if ok {
 		kf[n].f()
 	} else {
-		fe(noKey(key))
+		fe(NoKey(key))
 	}
 	return
 }

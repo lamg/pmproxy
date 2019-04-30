@@ -39,7 +39,7 @@ func (d *userDB) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
-			nameK,
+			NameK,
 			func(i interface{}) {
 				d.name = stringE(i, fe)
 			},
@@ -128,7 +128,7 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 			nuser = user
 			p, ok := upm[user]
 			if !ok {
-				e = noKey(user)
+				e = NoKey(user)
 			} else if p != pass {
 				e = incorrectPassword()
 			}
@@ -137,7 +137,7 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 		d.userGroups = func(user string) (gs []string, e error) {
 			gs, ok := gm[user]
 			if !ok {
-				e = noKey(user)
+				e = NoKey(user)
 			}
 			return
 		}
@@ -151,14 +151,14 @@ func (d *userDB) fromMapMap(i interface{}) (e error) {
 
 func (d *userDB) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
-		nameK:    d.name,
+		NameK:    d.name,
 		adOrMapK: d.adOrMap,
 		paramsK:  d.params,
 	}
 	return
 }
 
-func (d *userDB) managerKF(c *cmd) (kf []kFunc) {
+func (d *userDB) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
 			showAll,

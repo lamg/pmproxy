@@ -31,25 +31,24 @@ import (
 	"net"
 	h "net/http"
 	"path"
-	"strings"
 	"time"
 )
 
 type handlerConf struct {
-	sh *srvHandler
+	sh *SrvHandler
 	sc *srvConf
 }
 
-func newHnds(c *conf) (prh, ifh *srvHandler,
+func NewHnds(c *Conf) (prh, ifh *SrvHandler,
 	e error) {
-	prh, ifh = new(srvHandler), new(srvHandler)
+	prh, ifh = new(SrvHandler), new(SrvHandler)
 	if c.proxy.fastOrStd {
 		// consumers, matchers determine context values
 		// dialer and proxy process context values
-		prh.reqHnd = proxy.NewFastProxy(c.cm.set,
+		prh.ReqHnd = proxy.NewFastProxy(c.cm.set,
 			c.cm.params, c.cm.apply, c.cm.dialTimeout, time.Now)
 	} else {
-		prh.serveHTTP = proxy.NewProxy(c.cm.set,
+		prh.ServeHTTP = proxy.NewProxy(c.cm.set,
 			c.cm.params, c.cm.apply, c.cm.dialTimeout, c.cm.maxIdle,
 			c.cm.idleT, c.cm.tlsHT, c.cm.expCT,
 			time.Now).ServeHTTP
@@ -60,16 +59,16 @@ func newHnds(c *conf) (prh, ifh *srvHandler,
 		// matchers
 		fhnd := fastIface(c)
 		cropt := fasthttpcors.DefaultHandler()
-		ifh.reqHnd = cropt.CorsMiddleware(fhnd)
+		ifh.ReqHnd = cropt.CorsMiddleware(fhnd)
 	} else {
 		shnd := stdIface(c)
 		cropt := cors.AllowAll()
-		ifh.serveHTTP = cropt.Handler(shnd).ServeHTTP
+		ifh.ServeHTTP = cropt.Handler(shnd).ServeHTTP
 	}
 	return
 }
 
-func fastIface(cf *conf) (hnd fh.RequestHandler) {
+func fastIface(cf *Conf) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
 			Root: cf.staticFPath,
@@ -102,7 +101,7 @@ func fastIface(cf *conf) (hnd fh.RequestHandler) {
 	return
 }
 
-func stdIface(cf *conf) (hnd h.HandlerFunc) {
+func stdIface(cf *Conf) (hnd h.HandlerFunc) {
 	hnd = func(w h.ResponseWriter, r *h.Request) {
 		compatibleIface(
 			cf,
@@ -129,10 +128,10 @@ func stdIface(cf *conf) (hnd h.HandlerFunc) {
 	return
 }
 
-func compatibleIface(cf *conf, path, method,
+func compatibleIface(cf *Conf, path, method,
 	rAddr string, body func() ([]byte, error),
 	resp func([]byte), fileSrv, writeErr func(string)) {
-	m := new(cmd)
+	m := new(Cmd)
 	var e error
 	var bs []byte
 	fs := []func(){
@@ -140,12 +139,12 @@ func compatibleIface(cf *conf, path, method,
 			bs, e = body()
 		},
 		func() {
-			if path == apiCmd && method == h.MethodPost {
+			if path == ApiCmd && method == h.MethodPost {
 				e = json.Unmarshal(bs, m)
 			} else {
 				path = emptyPathIfLogin(path)
 				fileSrv(path)
-				m = &cmd{Cmd: skip, Manager: resourcesK}
+				m = &Cmd{Cmd: skip, Manager: ResourcesK}
 			}
 		},
 		func() {
@@ -163,80 +162,6 @@ func compatibleIface(cf *conf, path, method,
 	}
 }
 
-func compatibleCmd(cf *conf, pth, meth string,
-	body []byte, fileSrv func(string)) (c *cmd,
-	e error) {
-	c = &cmd{
-		comp02: true,
-	}
-
-	kf := []kFunc{
-		{
-			apiAuth + h.MethodPost,
-			func() {
-				c.Cmd = open
-				c.Manager = defaultSessionIPM
-				c.Cred = new(credentials)
-				e = json.Unmarshal(body, c.Cred)
-			},
-		},
-		{
-			apiAuth + h.MethodDelete,
-			func() {
-				c.Cmd = clöse
-				c.Manager = defaultSessionIPM
-			},
-		},
-		{
-			apiUserStatus + h.MethodGet,
-			func() {
-				c.Cmd = get
-				c.Manager = defaultDwnConsR
-			},
-		},
-		{
-			apiUserStatus + h.MethodPut,
-			func() {
-				c.Cmd = set
-				c.Manager = defaultDwnConsR
-				nv := &struct {
-					Name  string `json: "name"`
-					Value uint64 `json: "value"`
-				}{}
-				e = json.Unmarshal(body, nv)
-				if e == nil {
-					c.String = nv.Name
-					c.Uint64 = nv.Value
-				}
-			},
-		},
-		{
-			apiCheckUser + h.MethodGet,
-			func() {
-				c.Cmd = check
-				c.Manager = defaultSessionIPM
-			},
-		},
-		{
-			apiUserInfo + h.MethodGet,
-			func() {
-				c.Cmd = get
-				c.Manager = defaultUserDB + infoK
-			},
-		},
-	}
-	if e == nil && c.comp02 {
-		if strings.HasPrefix(pth, apiPref) {
-			exF(kf, pth+meth, func(d error) { e = d })
-		} else {
-			pth = emptyPathIfLogin(pth)
-			fileSrv(pth)
-			c.Cmd = skip
-		}
-	}
-	return
-}
-
 func emptyPathIfLogin(pth string) (r string) {
 	r = pth
 	if pth == loginPref || pth == loginPrefSlash {
@@ -245,9 +170,9 @@ func emptyPathIfLogin(pth string) (r string) {
 	return
 }
 
-type srvHandler struct {
-	serveHTTP h.HandlerFunc
-	reqHnd    fh.RequestHandler
+type SrvHandler struct {
+	ServeHTTP h.HandlerFunc
+	ReqHnd    fh.RequestHandler
 }
 
 type srvConf struct {
@@ -270,8 +195,8 @@ func readSrvConf(i interface{}) (sc *srvConf, e error) {
 	fe := func(d error) {
 		if d != nil {
 			s := d.Error()
-			me := noKey(maxConnIPK).Error()
-			re := noKey(maxReqConnK).Error()
+			me := NoKey(maxConnIPK).Error()
+			re := NoKey(maxReqConnK).Error()
 			if s == me || s == re {
 				d = nil
 			}

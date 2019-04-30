@@ -8,6 +8,7 @@ require (
 	github.com/go-ldap/ldap v3.0.3+incompatible // indirect
 	github.com/klauspost/compress v1.5.0 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
+	github.com/lamg/algorithms v0.0.0-20190430214428-a157e553e28e
 	github.com/lamg/ldaputil v0.1.0
 	github.com/lamg/predicate v0.0.5-0.20190408010051-e1255993ca89
 	github.com/lamg/proxy v0.0.0-20190404191104-42dbef145cb9

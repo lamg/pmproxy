@@ -36,7 +36,7 @@ func (m *groupIPM) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
-			nameK,
+			NameK,
 			func(i interface{}) {
 				m.name = stringE(i, fe)
 			},
@@ -58,16 +58,16 @@ func (m *groupIPM) fromMap(i interface{}) (e error) {
 	return
 }
 
-func (m *groupIPM) managerKF(c *cmd) (kf []kFunc) {
+func (m *groupIPM) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
-			set,
+			Set,
 			func() {
 				m.group = c.String
 			},
 		},
 		{
-			get,
+			Get,
 			func() {
 				c.bs, c.e = json.Marshal(m.toMap())
 			},
@@ -79,7 +79,7 @@ func (m *groupIPM) managerKF(c *cmd) (kf []kFunc) {
 func (m *groupIPM) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		groupK:      m.group,
-		nameK:       m.name,
+		NameK:       m.name,
 		userGroupNK: m.userGroupN,
 	}
 	return

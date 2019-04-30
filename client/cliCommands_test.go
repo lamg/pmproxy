@@ -18,11 +18,13 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package client
 
 import (
 	"bytes"
 	"encoding/json"
+	alg "github.com/lamg/algorithms"
+	pm "github.com/lamg/pmproxy"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	h "net/http"
@@ -37,7 +39,7 @@ func TestLogin(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
-	e := cl.login("", "", user0, pass0)
+	e := cl.login("", "", pm.User0, pm.Pass0)
 	ok, e := afero.Exists(fs, loginSecretFile)
 	require.True(t, e == nil && ok)
 	dr, e := cl.discoverC("", "")
@@ -47,10 +49,10 @@ func TestLogin(t *testing.T) {
 	}
 	ui, e := cl.status("")
 	require.NoError(t, e)
-	xui := &userInfo{
-		UserName:    user0,
-		Name:        user0,
-		Groups:      []string{group0},
+	xui := &pm.UserInfo{
+		UserName:    pm.User0,
+		Name:        pm.User0,
+		Groups:      []string{pm.Group0},
 		Quota:       "600.0 MB",
 		Consumption: "0 B",
 	}
@@ -63,21 +65,21 @@ func TestShowMng(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("192.168.1.1", ifh),
 	}
-	cl.login("", "", user0, pass0)
+	cl.login("", "", pm.User0, pm.Pass0)
 	downWeek := "downWeek"
 	objT, e := cl.showMng(downWeek)
 	require.NoError(t, e)
-	require.Equal(t, dwnConsRK, objT.Type)
+	require.Equal(t, pm.DwnConsRK, objT.Type)
 	kvs := []struct {
 		key string
 		val interface{}
 	}{
-		{nameK, downWeek},
-		{lastResetK, "2019-04-13T20:00:00-04:00"},
-		{resetCycleK, "168h0m0s"},
-		{userDBK, "mapDB"},
+		{pm.NameK, downWeek},
+		{pm.LastResetK, "2019-04-13T20:00:00-04:00"},
+		{pm.ResetCycleK, "168h0m0s"},
+		{pm.UserDBK, "mapDB"},
 		{
-			quotaMapK,
+			pm.QuotaMapK,
 			map[string]interface{}{
 				"group0": "600.0 MB",
 				"group1": "1024.0 MB",
@@ -87,40 +89,38 @@ func TestShowMng(t *testing.T) {
 	inf := func(i int) {
 		require.Equal(t, kvs[i].val, objT.Object[kvs[i].key])
 	}
-	forall(inf, len(kvs))
+	alg.Forall(inf, len(kvs))
 }
 
 func TestConfUpdate(t *testing.T) {
 	fs, _, cf := basicConfT(t)
-	cf.update()
-	bs, e := afero.ReadFile(fs, confPath())
+	cf.Update()
+	bs, e := afero.ReadFile(fs, pm.ConfPath())
 	require.NoError(t, e)
 	t.Log(string(bs))
 	// FIXME some objects aren't written
 }
 
 func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc,
-	c *conf) {
-	pth := confPath()
+	c *pm.Conf) {
+	pth := pm.ConfPath()
 	fs = afero.NewMemMapFs()
-	basicConf(pth, fs)
+	pm.BasicConf(pth, fs)
 	ok, e := afero.Exists(fs, pth)
 	require.True(t, ok && e == nil)
 	nt, e := time.Parse(time.RFC3339, "2019-03-04T19:00:00-05:00")
 	require.NoError(t, e)
-	c, e = newConf(fs, func() time.Time { return nt })
+	c, e = pm.NewConf(fs, func() time.Time { return nt })
 	require.NoError(t, e)
-	res := c.res
-	res.cr.expiration = time.Second
-	_, ifh, e := newHnds(c)
+	_, ifh, e := pm.NewHnds(c)
 	require.NoError(t, e)
-	hnd = ifh.serveHTTP
+	hnd = ifh.ServeHTTP
 	return
 }
 
 func testPostCmd(addr string,
-	hnd h.HandlerFunc) func(string, *cmd) (*h.Response, error) {
-	return func(u string, m *cmd) (r *h.Response, e error) {
+	hnd h.HandlerFunc) func(string, *pm.Cmd) (*h.Response, error) {
+	return func(u string, m *pm.Cmd) (r *h.Response, e error) {
 		rec := ht.NewRecorder()
 		bs, e := json.Marshal(m)
 		if e == nil {

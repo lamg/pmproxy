@@ -21,6 +21,12 @@ github.com/klauspost/cpuid v0.0.0-20180405133222-e7e905edc00e h1:+lIPJOWl+jSiJOc
 github.com/klauspost/cpuid v0.0.0-20180405133222-e7e905edc00e/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
 github.com/klauspost/cpuid v1.2.1 h1:vJi+O/nMdFt0vqm8NZBI6wzALWdA2X+egi0ogNyrC/w=
 github.com/klauspost/cpuid v1.2.1/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
+github.com/lamg/algorithms v0.0.0-20190309180818-e1ac65bc2101 h1:vutVO/6U4wp8L3djOI/ymSgvPtFLVI2jdmnZs2Tbdyw=
+github.com/lamg/algorithms v0.0.0-20190309180818-e1ac65bc2101/go.mod h1:u5+jlrpBnP1V5wPssTWt/Wy3rUDs3m3sIDdXE2vpOZA=
+github.com/lamg/algorithms v0.0.0-20190430214202-40179de47213 h1:KhiMSP7KVlV3OwtQMXcZpOFReqb03kyNRuvNz7rd880=
+github.com/lamg/algorithms v0.0.0-20190430214202-40179de47213/go.mod h1:u5+jlrpBnP1V5wPssTWt/Wy3rUDs3m3sIDdXE2vpOZA=
+github.com/lamg/algorithms v0.0.0-20190430214428-a157e553e28e h1:0TAPoMimwgatt6CatSLrJVbUS9A3lwEUvVTog2l/zxI=
+github.com/lamg/algorithms v0.0.0-20190430214428-a157e553e28e/go.mod h1:u5+jlrpBnP1V5wPssTWt/Wy3rUDs3m3sIDdXE2vpOZA=
 github.com/lamg/ldaputil v0.1.0 h1:RRlvTehDJpRJkUNp/SgqxkXVXuWQgkUCb41L1VGAyFE=
 github.com/lamg/ldaputil v0.1.0/go.mod h1:vK75itx8r1akJnkYLx1AnHXANBquFGTUErMH0ViZNic=
 github.com/lamg/predicate v0.0.5-0.20190408010051-e1255993ca89 h1:asXpze9NsDp86bomiNgtcvlU2gd22+TV3r9Yot+hNDk=

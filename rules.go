@@ -82,14 +82,14 @@ type matchType struct {
 	Type  string `json:"type"`
 }
 
-type discoverRes struct {
+type DiscoverRes struct {
 	MatchMng map[string]matchType `json:"matchMng"`
 	Result   string               `json:"result"`
 }
 
 func (r *resources) filterMatch(ürl, rAddr string,
-	t time.Time) (dr *discoverRes) {
-	dr = &discoverRes{
+	t time.Time) (dr *DiscoverRes) {
+	dr = &DiscoverRes{
 		MatchMng: make(map[string]matchType),
 	}
 	interp := func(name string) (v, ok bool) {
@@ -121,7 +121,7 @@ func (r *resources) filterMatch(ürl, rAddr string,
 
 type manager struct {
 	tÿpe      string
-	managerKF func(*cmd) []kFunc
+	managerKF func(*Cmd) []kFunc
 	mapper    func() map[string]interface{}
 	matcher   func(string, string, time.Time) bool
 	consR     *consR
@@ -131,7 +131,7 @@ type manager struct {
 
 func newResources(predicate string, admins []string,
 	fls afero.Fs, warning func(string) error,
-	now func() time.Time) (r *resources,
+	now func() time.Time, exp time.Duration) (r *resources,
 	e error) {
 	r = &resources{
 		managers: new(sync.Map),
@@ -142,13 +142,13 @@ func newResources(predicate string, admins []string,
 		now:      now,
 		debug:    true,
 	}
-	r.managers.Store(resourcesK, &manager{
-		tÿpe:      resourcesK,
+	r.managers.Store(ResourcesK, &manager{
+		tÿpe:      ResourcesK,
 		managerKF: r.managerKF,
 	})
 	r.rules, e = pred.Parse(strings.NewReader(predicate))
 	if e == nil {
-		r.cr, e = newCrypt()
+		r.cr, e = newCrypt(exp)
 	} else {
 		e = fmt.Errorf("Parsing predicate '%s': %s", predicate,
 			e.Error())
@@ -156,12 +156,12 @@ func newResources(predicate string, admins []string,
 	return
 }
 
-type objType struct {
+type ObjType struct {
 	Object map[string]interface{} `json:"object"`
 	Type   string                 `json:"type"`
 }
 
-func (r *resources) managerKF(c *cmd) (kf []kFunc) {
+func (r *resources) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
 			add,
@@ -170,14 +170,14 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			get,
+			Get,
 			func() {
 				v, ok := r.managers.Load(c.String)
 				if ok {
 					mng := v.(*manager)
 					if mng.mapper != nil {
 						mp := mng.mapper()
-						objectType := objType{
+						objectType := ObjType{
 							Object: mp,
 							Type:   mng.tÿpe,
 						}
@@ -186,12 +186,12 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 						c.e = fmt.Errorf("No manager.mapper available")
 					}
 				} else {
-					c.e = noKey(c.String)
+					c.e = NoKey(c.String)
 				}
 			},
 		},
 		{
-			set,
+			Set,
 			func() {
 				rd := strings.NewReader(c.String)
 				r.rules, c.e = pred.Parse(rd)
@@ -204,14 +204,14 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			filter,
+			Filter,
 			func() {
 				ms := r.availableMng(r.rules, c.String)
 				c.bs, c.e = json.Marshal(ms)
 			},
 		},
 		{
-			discover,
+			Discover,
 			func() {
 				dr := r.filterMatch(c.String, c.RemoteAddr, r.now())
 				c.bs, c.e = json.Marshal(dr)
@@ -227,10 +227,10 @@ func (r *resources) managerKF(c *cmd) (kf []kFunc) {
 					if mng.spec != nil {
 						c.bs, c.e = json.Marshal(mng.spec)
 					} else {
-						c.e = noKey(c.String + " with spec field")
+						c.e = NoKey(c.String + " with spec field")
 					}
 				} else {
-					c.e = noKey(c.String)
+					c.e = NoKey(c.String)
 				}
 			},
 		},
@@ -263,16 +263,16 @@ func (r *resources) add(tÿpe string,
 		spanK:       r.addSpan,
 		rangeIPMK:   r.addRangeIPM,
 		groupIPMK:   r.addGroupIPM,
-		sessionIPMK: r.addSessionIPM,
-		userDBK:     r.addUserDB,
-		dwnConsRK:   r.addDwnConsR,
-		bwConsRK:    r.addBwConsR,
+		SessionIPMK: r.addSessionIPM,
+		UserDBK:     r.addUserDB,
+		DwnConsRK:   r.addDwnConsR,
+		BwConsRK:    r.addBwConsR,
 	}
 	fm, ok := fs[tÿpe]
 	if ok {
 		e = fm(par)
 	} else {
-		e = noKey(tÿpe)
+		e = NoKey(tÿpe)
 	}
 	return
 }
@@ -282,7 +282,7 @@ func (r *resources) addURLM(m map[string]interface{}) (e error) {
 	var name, urlReg string
 	var parReg *regexp.Regexp
 	kf := []kFuncI{
-		{nameK, func(i interface{}) { name = stringE(i, fe) }},
+		{NameK, func(i interface{}) { name = stringE(i, fe) }},
 		{regexpK, func(i interface{}) { urlReg = stringE(i, fe) }},
 		{
 			regexpK,
@@ -299,7 +299,7 @@ func (r *resources) addURLM(m map[string]interface{}) (e error) {
 					},
 					mapper: func() (m map[string]interface{}) {
 						m = map[string]interface{}{
-							nameK:   name,
+							NameK:   name,
 							regexpK: urlReg,
 						}
 						return
@@ -361,7 +361,7 @@ func (r *resources) addSessionIPM(
 	if e == nil {
 		sm.nameAuth = r.authenticator
 		mng := &manager{
-			tÿpe:      sessionIPMK,
+			tÿpe:      SessionIPMK,
 			managerKF: sm.managerKF,
 			matcher:   wrapIPMatcher(sm.match),
 			mapper:    sm.toMap,
@@ -393,7 +393,7 @@ func (r *resources) addDwnConsR(
 			dw.userGroup = mng.udb.userGroups
 			dw.userName = mng.udb.userName
 		} else {
-			e = noKey(dw.userDBN)
+			e = NoKey(dw.userDBN)
 		}
 	}
 	if e == nil {
@@ -412,7 +412,7 @@ func (r *resources) addDwnConsR(
 				func() bool { return d == nil })
 		}
 		mng := &manager{
-			tÿpe:      dwnConsRK,
+			tÿpe:      DwnConsRK,
 			managerKF: dw.managerKF,
 			consR:     dw.consR(),
 			mapper:    dw.toMap,
@@ -461,7 +461,7 @@ func (r *resources) addGroupIPM(
 			}
 			r.managers.Store(gipm.name, mng)
 		} else {
-			e = noKey(gipm.userGroupN)
+			e = NoKey(gipm.userGroupN)
 		}
 	}
 	return
@@ -472,7 +472,7 @@ func (r *resources) addUserDB(m map[string]interface{}) (e error) {
 	e = udb.fromMap(m)
 	if e == nil {
 		mng := &manager{
-			tÿpe:      userDBK,
+			tÿpe:      UserDBK,
 			managerKF: udb.managerKF,
 			mapper:    udb.toMap,
 			udb:       udb,
@@ -488,7 +488,7 @@ func (r *resources) addBwConsR(
 	e = bw.fromMap(m)
 	if e == nil {
 		mng := &manager{
-			tÿpe:      bwConsRK,
+			tÿpe:      BwConsRK,
 			managerKF: bw.managerKF,
 			mapper:    bw.toMap,
 			consR:     bw.consR(),
@@ -508,7 +508,7 @@ func wrapIPMatcher(m func(string) bool) (
 	return
 }
 
-func (r *resources) manager(m *cmd) {
+func (r *resources) manager(m *Cmd) {
 	m.User, _ = r.iu.get(m.RemoteAddr)
 	m.IsAdmin, _ = bLnSrch(
 		func(i int) bool {
@@ -539,7 +539,7 @@ func (r *resources) manager(m *cmd) {
 		)
 		exF(kf, m.Cmd, func(d error) { m.e = d })
 	} else {
-		m.e = noKey(m.Manager)
+		m.e = NoKey(m.Manager)
 	}
 	return
 }

@@ -50,31 +50,31 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 	var m map[string]string
 	kf := []kFuncI{
 		{
-			nameK,
+			NameK,
 			func(i interface{}) {
 				d.name = stringE(i, fe)
 			},
 		},
 		{
-			userDBK,
+			UserDBK,
 			func(i interface{}) {
 				d.userDBN = stringE(i, fe)
 			},
 		},
 		{
-			lastResetK,
+			LastResetK,
 			func(i interface{}) {
 				d.lastReset = stringDateE(i, fe)
 			},
 		},
 		{
-			resetCycleK,
+			ResetCycleK,
 			func(i interface{}) {
 				d.resetCycle = durationE(i, fe)
 			},
 		},
 		{
-			resetCycleK,
+			ResetCycleK,
 			func(i interface{}) {
 				d.userCons = new(sync.Map)
 				var mp map[string]uint64
@@ -103,13 +103,13 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 			},
 		},
 		{
-			quotaMapK,
+			QuotaMapK,
 			func(i interface{}) {
 				m = stringMapStringE(i, fe)
 			},
 		},
 		{
-			quotaMapK,
+			QuotaMapK,
 			func(i interface{}) {
 				d.groupQuotaM = new(sync.Map)
 				d.quotaCache = new(sync.Map)
@@ -131,12 +131,12 @@ func (d *dwnConsR) fromMap(i interface{}) (e error) {
 
 func (d *dwnConsR) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
-		nameK:       d.name,
-		userDBK:     d.userDBN,
-		lastResetK:  d.lastReset.Format(time.RFC3339),
-		resetCycleK: d.resetCycle.String(),
+		NameK:       d.name,
+		UserDBK:     d.userDBN,
+		LastResetK:  d.lastReset.Format(time.RFC3339),
+		ResetCycleK: d.resetCycle.String(),
 		specKS:      d.spec.toMap(),
-		quotaMapK: func() (m map[string]string) {
+		QuotaMapK: func() (m map[string]string) {
 			m = make(map[string]string)
 			d.groupQuotaM.Range(func(k, v interface{}) (ok bool) {
 				sz := datasize.ByteSize(v.(uint64))
@@ -156,12 +156,12 @@ func (d *dwnConsR) toMap() (i map[string]interface{}) {
 	return
 }
 
-func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
+func (d *dwnConsR) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
-			get,
+			Get,
 			func() {
-				var data *userInfo
+				var data *UserInfo
 				if c.IsAdmin && c.String != "" {
 					data, c.e = d.info(c.String)
 				} else {
@@ -173,7 +173,7 @@ func (d *dwnConsR) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			set,
+			Set,
 			func() {
 				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
@@ -253,7 +253,7 @@ func (d *dwnConsR) groupQuota(g string) (q uint64) {
 	return
 }
 
-type userInfo struct {
+type UserInfo struct {
 	Quota       string   `json:"quota"`
 	Groups      []string `json:"groups"`
 	Name        string   `json:"name"`
@@ -261,10 +261,10 @@ type userInfo struct {
 	Consumption string   `json:"consumption"`
 }
 
-func (d *dwnConsR) info(user string) (ui *userInfo, e error) {
+func (d *dwnConsR) info(user string) (ui *UserInfo, e error) {
 	n := d.quota(user)
 	q := datasize.ByteSize(n).HumanReadable()
-	ui = &userInfo{
+	ui = &UserInfo{
 		Quota:    q,
 		UserName: user,
 	}

@@ -35,21 +35,21 @@ const (
 
 // conf.go
 const (
-	nameK          = "name"
+	NameK          = "name"
 	quotasK        = "quotas"
 	loggerAddrK    = "loggerAddr"
 	groupIPMK      = "groupIPM"
 	infoK          = "info"
-	sessionIPMK    = "sessionIPM"
-	userDBK        = "userDB"
+	SessionIPMK    = "sessionIPM"
+	UserDBK        = "userDB"
 	adminsK        = "admins"
 	srvConfK       = "srvConf"
 	connMngK       = "connMng"
 	persistPathK   = "persistPath"
 	defaultUserDB  = "mapDB"
-	user0          = "user0"
-	pass0          = "pass0"
-	group0         = "group0"
+	User0          = "user0"
+	Pass0          = "pass0"
+	Group0         = "group0"
 	defaultIPQuota = "quotas"
 	defaultQuota   = "600MB"
 	defaultIface   = "eth0"
@@ -81,11 +81,7 @@ const (
 	maxConnIPK    = "maxConnIP"
 	maxReqConnK   = "maxReqConn"
 
-	apiAuth       = "/api/auth"
-	apiUserStatus = "/api/userStatus"
-	apiCheckUser  = "/api/checkUser"
-	apiUserInfo   = "/api/userInfo"
-	apiCmd        = "/api/cmd"
+	ApiCmd = "/api/cmd"
 
 	defaultUserInfo   = "defaultUserInfo"
 	defaultSessionIPM = "sessions"
@@ -103,12 +99,12 @@ const (
 
 // sessionIPM.go, dwnConsR.go and other managerKFs
 const (
-	open      = "open"
-	renew     = "renew"
-	get       = "get"
-	set       = "set"
+	Open      = "open"
+	Renew     = "renew"
+	Get       = "get"
+	Set       = "set"
 	del       = "del"
-	clöse     = "close"
+	Clöse     = "close"
 	showAll   = "showAll"
 	skip      = "skip"
 	check     = "check"
@@ -116,7 +112,7 @@ const (
 	authNameK = "authName"
 	userConsK = "userCons"
 	show      = "show"
-	discover  = "discover"
+	Discover  = "discover"
 )
 
 const (
@@ -125,7 +121,7 @@ const (
 )
 
 const (
-	quotaMapK = "quotaMap"
+	QuotaMapK = "quotaMap"
 	ifaceK    = "iface"
 	proxyURLK = "proxyURL"
 	consRK    = "consR"
@@ -135,24 +131,29 @@ const (
 	ipmK      = "ipm"
 )
 
+const (
+	expirationK       = "expiration"
+	defaultExpiration = "5m"
+)
+
 // rules.go
 const (
 	rangeIPMK  = "rangeIPM"
 	regexpK    = "regexp"
 	specKS     = "spec"
 	rulesK     = "rules"
-	resourcesK = "resources"
-	filter     = "filter"
+	ResourcesK = "resources"
+	Filter     = "filter"
 	object     = "object"
 	debugK     = "debug"
 )
 
 // dwnConsR.go
 const (
-	dwnConsRK   = "dwnConsR"
+	DwnConsRK   = "dwnConsR"
 	userQuotaK  = "userQuota"
-	lastResetK  = "lastReset"
-	resetCycleK = "resetCycle"
+	LastResetK  = "lastReset"
+	ResetCycleK = "resetCycle"
 )
 
 // groupIPM.go
@@ -181,7 +182,7 @@ const (
 
 // bwConsR.go
 const (
-	bwConsRK  = "bwConsR"
+	BwConsRK  = "bwConsR"
 	throttleK = "throttle"
 )
 
@@ -189,10 +190,6 @@ func home() (s string) {
 	s = os.Getenv("HOME")
 	return
 }
-
-const (
-	loginSecretFile = "login.secret"
-)
 
 // dialer.go
 const (

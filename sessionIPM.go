@@ -37,7 +37,7 @@ func (m *sessionIPM) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
-			nameK,
+			NameK,
 			func(i interface{}) {
 				m.name = stringE(i, fe)
 			},
@@ -53,22 +53,22 @@ func (m *sessionIPM) fromMap(i interface{}) (e error) {
 	return
 }
 
-func (m *sessionIPM) managerKF(c *cmd) (kf []kFunc) {
+func (m *sessionIPM) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
-			open,
+			Open,
 			func() {
 				c.bs, c.e = m.open(c.Cred, c.RemoteAddr)
 			},
 		},
 		{
-			clöse,
+			Clöse,
 			func() {
 				c.bs, c.e = m.close(c.Secret, c.RemoteAddr)
 			},
 		},
 		{
-			get,
+			Get,
 			func() {
 				if c.IsAdmin {
 					c.bs, c.e = m.get(c.Secret, c.RemoteAddr)
@@ -76,7 +76,7 @@ func (m *sessionIPM) managerKF(c *cmd) (kf []kFunc) {
 			},
 		},
 		{
-			renew,
+			Renew,
 			func() {
 				c.bs, c.e = m.renew(c.Secret, c.RemoteAddr)
 			},
@@ -98,13 +98,13 @@ func (m *sessionIPM) match(ip string) (ok bool) {
 
 func (m *sessionIPM) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
-		nameK:     m.name,
+		NameK:     m.name,
 		authNameK: m.authName,
 	}
 	return
 }
 
-func (m *sessionIPM) open(c *credentials,
+func (m *sessionIPM) open(c *Credentials,
 	ip string) (bs []byte, e error) {
 	var a func(string, string) (string, error)
 	var user string
@@ -113,7 +113,7 @@ func (m *sessionIPM) open(c *credentials,
 			var ok bool
 			a, ok = m.nameAuth(m.authName)
 			if !ok {
-				e = noKey(m.authName)
+				e = NoKey(m.authName)
 			}
 		},
 		func() {

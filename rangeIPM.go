@@ -35,10 +35,10 @@ func (r *rangeIPM) init() (e error) {
 	return
 }
 
-func (r *rangeIPM) managerKF(c *cmd) (kf []kFunc) {
+func (r *rangeIPM) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
-			get,
+			Get,
 			func() {
 				c.bs = []byte(r.cidr)
 			},
@@ -55,7 +55,7 @@ func (r *rangeIPM) match(ip string) (ok bool) {
 
 func (r *rangeIPM) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
-		nameK: r.name,
+		NameK: r.name,
 		cidrK: r.cidr,
 	}
 	return
@@ -65,7 +65,7 @@ func (r *rangeIPM) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	kf := []kFuncI{
 		{
-			nameK,
+			NameK,
 			func(i interface{}) {
 				r.name = stringE(i, fe)
 			},

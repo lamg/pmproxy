@@ -31,14 +31,14 @@ import (
 	"time"
 )
 
-type cmd struct {
+type Cmd struct {
 	Cmd        string                 `json:"cmd"`
 	User       string                 `json:"user"`
 	Manager    string                 `json:"manager"`
 	RemoteAddr string                 `json:"remoteAddr"`
 	Secret     string                 `json:"secret"`
 	IsAdmin    bool                   `json:"isAdmin"`
-	Cred       *credentials           `json:"cred"`
+	Cred       *Credentials           `json:"cred"`
 	String     string                 `json:"string"`
 	Uint64     uint64                 `json:"uint64"`
 	Object     map[string]interface{} `json:"object"`
@@ -47,12 +47,12 @@ type cmd struct {
 	e          error
 }
 
-type credentials struct {
+type Credentials struct {
 	User string `json:"user"`
 	Pass string `json:"pass"`
 }
 
-type conf struct {
+type Conf struct {
 	fls         afero.Fs
 	staticFPath string
 
@@ -68,13 +68,13 @@ type conf struct {
 	now      func() time.Time
 }
 
-func newConf(fls afero.Fs, now func() time.Time) (c *conf,
+func NewConf(fls afero.Fs, now func() time.Time) (c *Conf,
 	e error) {
-	c = &conf{fls: fls, now: now}
+	c = &Conf{fls: fls, now: now}
 	var fl afero.File
 	fs := []func(){
 		func() {
-			c.filePath = confPath()
+			c.filePath = ConfPath()
 			c.staticFPath = c.strïng(staticFilesPathK,
 				path.Join(home(), homeConfigDir, staticFilesDir))
 			fl, e = fls.Open(c.filePath)
@@ -103,12 +103,12 @@ func newConf(fls afero.Fs, now func() time.Time) (c *conf,
 	return
 }
 
-func confPath() (p string) {
+func ConfPath() (p string) {
 	p = path.Join(home(), homeConfigDir, configFile)
 	return
 }
 
-func (c *conf) update() (e error) {
+func (c *Conf) Update() (e error) {
 	cf := make(map[string]interface{})
 	c.res.managers.Range(func(k, v interface{}) (ok bool) {
 		mng := v.(*manager)
@@ -143,7 +143,7 @@ func (c *conf) update() (e error) {
 	return
 }
 
-func (c *conf) initConnMng() (e error) {
+func (c *Conf) initConnMng() (e error) {
 	// c.initRules()
 	c.cm = new(connMng)
 	v, ok := c.base[connMngK]
@@ -198,7 +198,7 @@ func genConfig(fls afero.Fs) (e error) {
 		},
 		func() {
 			fl := path.Join(dir, configFile)
-			e = basicConf(fl, fls)
+			e = BasicConf(fl, fls)
 		},
 		func() {
 			key := path.Join(dir, defaultSrvKey)
@@ -210,7 +210,7 @@ func genConfig(fls afero.Fs) (e error) {
 	return
 }
 
-func (c *conf) readProxyConf() (e error) {
+func (c *Conf) readProxyConf() (e error) {
 	i, ok := c.base[proxyConfK]
 	if !ok {
 		i = map[string]interface{}{
@@ -223,7 +223,7 @@ func (c *conf) readProxyConf() (e error) {
 	c.proxy, e = readSrvConf(i)
 	if e != nil {
 		s := e.Error()
-		if s == noKey(certK).Error() || s == noKey(keyK).Error() {
+		if s == NoKey(certK).Error() || s == NoKey(keyK).Error() {
 			e = nil
 		}
 	}
@@ -233,7 +233,7 @@ func (c *conf) readProxyConf() (e error) {
 	return
 }
 
-func (c *conf) readIfaceConf() (e error) {
+func (c *Conf) readIfaceConf() (e error) {
 	i, ok := c.base[ifaceConfK]
 	if !ok {
 		i = map[string]interface{}{
@@ -252,25 +252,29 @@ func (c *conf) readIfaceConf() (e error) {
 	return
 }
 
-func (c *conf) initLogger() (e error) {
+func (c *Conf) initLogger() (e error) {
 	c.lg, e = newLogger(c.strïng(loggerAddrK, ""))
 	return
 }
 
-func (c *conf) initResources() (e error) {
+func (c *Conf) initResources() (e error) {
 	fe := func(d error) { e = d }
 	var predCf string
+	var expiration time.Duration
 	fs := []func(){
 		func() {
 			predCf = c.strïng(rulesK, pred.TrueStr)
 		},
 		func() {
+			expiration = c.duration(expirationK, defaultExpiration)
+		},
+		func() {
 			c.res, e = newResources(predCf, c.stringSlice(adminsK),
-				c.fls, c.lg.warning, c.now)
+				c.fls, c.lg.warning, c.now, expiration)
 		},
 		func() {
 			c.res.debug = cast.ToBool(c.base[debugK])
-			rs := []string{userDBK, sessionIPMK, dwnConsRK, bwConsRK,
+			rs := []string{UserDBK, SessionIPMK, DwnConsRK, BwConsRK,
 				groupIPMK, spanK, rangeIPMK, urlmK}
 			inf := func(i int) {
 				fm := func(m map[string]interface{}) {
@@ -289,18 +293,18 @@ func (c *conf) initResources() (e error) {
 	return
 }
 
-func (c *conf) sliceE(key string) (sl []interface{},
+func (c *Conf) sliceE(key string) (sl []interface{},
 	e error) {
 	v, ok := c.base[key]
 	if ok {
 		sl, e = cast.ToSliceE(v)
 	} else {
-		e = noKey(key)
+		e = NoKey(key)
 	}
 	return
 }
 
-func (c *conf) stringSlice(key string) (sl []string) {
+func (c *Conf) stringSlice(key string) (sl []string) {
 	sv, _ := c.sliceE(key)
 	inf := func(i int) {
 		sl = append(sl, cast.ToString(sv[i]))
@@ -309,7 +313,7 @@ func (c *conf) stringSlice(key string) (sl []string) {
 	return
 }
 
-func (c *conf) strïng(key, def string) (s string) {
+func (c *Conf) strïng(key, def string) (s string) {
 	i, ok := c.base[key]
 	if !ok {
 		s = def
@@ -319,13 +323,13 @@ func (c *conf) strïng(key, def string) (s string) {
 	return
 }
 
-func (c *conf) duration(key, def string) (d time.Duration) {
+func (c *Conf) duration(key, def string) (d time.Duration) {
 	s := c.strïng(key, def)
 	d, _ = time.ParseDuration(s)
 	return
 }
 
-func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
+func (c *Conf) sliceMap(key string, fm func(map[string]interface{}),
 	fe func(error), bf func() bool) {
 	vs, e := c.sliceE(key)
 	nfe := func(d error) {
@@ -349,7 +353,7 @@ func (c *conf) sliceMap(key string, fm func(map[string]interface{}),
 	return
 }
 
-func basicConf(pth string, fs afero.Fs) (e error) {
+func BasicConf(pth string, fs afero.Fs) (e error) {
 	e = afero.WriteFile(fs, pth, []byte(basicConfText), 0644)
 	return
 }

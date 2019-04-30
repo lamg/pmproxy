@@ -32,9 +32,9 @@ type crypt struct {
 	expiration time.Duration
 }
 
-func newCrypt() (c *crypt, e error) {
+func newCrypt(exp time.Duration) (c *crypt, e error) {
 	c = &crypt{
-		expiration: 5 * time.Minute,
+		expiration: exp,
 	}
 	c.key, e = rsa.GenerateKey(rand.Reader, 1024)
 	return

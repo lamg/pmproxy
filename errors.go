@@ -24,24 +24,14 @@ import (
 	"fmt"
 )
 
-func noKey(k string) (e error) {
+func NoKey(k string) (e error) {
 	e = fmt.Errorf("No key %s", k)
-	return
-}
-
-func checkArgExec(fe func() error, exp, act int) (e error) {
-	if exp == act {
-		e = fe()
-	} else {
-		e = fmt.Errorf("Invalid argument list length."+
-			"Expected %d, got %d", exp, act)
-	}
 	return
 }
 
 func ignoreNoKey(key string, f func(error)) (r func(error)) {
 	r = func(e error) {
-		if e != nil && e.Error() == noKey(key).Error() {
+		if e != nil && e.Error() == NoKey(key).Error() {
 			e = nil
 		}
 		f(e)

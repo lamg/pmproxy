@@ -44,7 +44,7 @@ func toMapSpan(s *rt.RSpan,
 		infiniteK: s.Infinite,
 		allTimeK:  s.AllTime,
 		timesK:    s.Times,
-		nameK:     name,
+		NameK:     name,
 	}
 	return
 }
@@ -55,7 +55,7 @@ func fromMapSpan(s *rt.RSpan,
 	optFe := optionalKeys(fe, allTimeK, infiniteK, timesK)
 	kf := []kFuncI{
 		{
-			nameK, func(i interface{}) { name = stringE(i, fe) },
+			NameK, func(i interface{}) { name = stringE(i, fe) },
 		},
 		{
 			timesK,

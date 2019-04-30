@@ -32,11 +32,11 @@ import (
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
 func Serve() (e error) {
-	var c *conf
-	var prh, ifh *srvHandler
+	var c *Conf
+	var prh, ifh *SrvHandler
 	fs := []func(){
-		func() { c, e = newConf(afero.NewOsFs(), time.Now) },
-		func() { prh, ifh, e = newHnds(c) },
+		func() { c, e = NewConf(afero.NewOsFs(), time.Now) },
+		func() { prh, ifh, e = NewHnds(c) },
 		func() {
 			cp := path.Dir(c.filePath)
 			fes := []func() error{
@@ -45,7 +45,7 @@ func Serve() (e error) {
 				func() (e error) {
 					for {
 						time.Sleep(c.waitUpd)
-						c.update()
+						c.Update()
 					}
 					return
 				},
@@ -58,7 +58,7 @@ func Serve() (e error) {
 }
 
 func serveFunc(c *srvConf, dir string, proxyOrIface bool,
-	sh *srvHandler) (fe func() error) {
+	sh *SrvHandler) (fe func() error) {
 	cert := path.Join(dir, c.certFl)
 	key := path.Join(dir, c.keyFl)
 	var listenAndServe func() error
@@ -67,7 +67,7 @@ func serveFunc(c *srvConf, dir string, proxyOrIface bool,
 		fast := &fh.Server{
 			ReadTimeout:        c.readTimeout,
 			WriteTimeout:       c.writeTimeout,
-			Handler:            sh.reqHnd,
+			Handler:            sh.ReqHnd,
 			MaxConnsPerIP:      c.maxConnIP,
 			MaxRequestsPerConn: c.maxReqConn,
 		}
@@ -84,7 +84,7 @@ func serveFunc(c *srvConf, dir string, proxyOrIface bool,
 			WriteTimeout: c.writeTimeout,
 			IdleTimeout:  0,
 			Addr:         c.addr,
-			Handler:      sh.serveHTTP,
+			Handler:      sh.ServeHTTP,
 			TLSNextProto: make(map[string]func(*h.Server,
 				*tls.Conn, h.Handler)),
 		}

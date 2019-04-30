@@ -18,7 +18,7 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package client
 
 import (
 	"bytes"
@@ -26,6 +26,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/BurntSushi/toml"
+	alg "github.com/lamg/algorithms"
+	pm "github.com/lamg/pmproxy"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -36,7 +38,7 @@ import (
 
 type PMClient struct {
 	Fs      afero.Fs
-	PostCmd func(string, *cmd) (*h.Response, error)
+	PostCmd func(string, *pm.Cmd) (*h.Response, error)
 }
 
 func (p *PMClient) Discover() (m cli.Command) {
@@ -47,7 +49,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 			" proxy server, for some url (optional)",
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
-			var dr *discoverRes
+			var dr *pm.DiscoverRes
 			if len(args) == 2 {
 				dr, e = p.discoverC(args[0], args[1])
 			} else if len(args) == 1 {
@@ -67,7 +69,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 	return
 }
 
-func printDR(dr *discoverRes) {
+func printDR(dr *pm.DiscoverRes) {
 	fmt.Printf("Match result: %s\n", dr.Result)
 	for k, v := range dr.MatchMng {
 		var m string
@@ -97,7 +99,8 @@ func (p *PMClient) Login() (m cli.Command) {
 				3,
 				len(args),
 			)
-			if e != nil && e.Error() == noKey(sm).Error() {
+			if e != nil &&
+				e.Error() == pm.NoKey(sm).Error() {
 				p.filterSMs(args[0])
 			}
 			return
@@ -212,14 +215,14 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 	return
 }
 
-func (p *PMClient) showMng(mng string) (objT *objType, e error) {
-	m := &cmd{
-		Manager: resourcesK,
-		Cmd:     get,
+func (p *PMClient) showMng(mng string) (objT *pm.ObjType, e error) {
+	m := &pm.Cmd{
+		Manager: pm.ResourcesK,
+		Cmd:     pm.Get,
 		String:  mng,
 	}
 	okf := func(bs []byte) (d error) {
-		objT = new(objType)
+		objT = new(pm.ObjType)
 		d = json.Unmarshal(bs, objT)
 		return
 	}
@@ -239,8 +242,8 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 		e = fmt.Errorf("Unable to get sessionIPM")
 	}
 	if e == nil {
-		m := &cmd{
-			Cmd:     get,
+		m := &pm.Cmd{
+			Cmd:     pm.Get,
 			Manager: sm,
 		}
 		okf := func(bs []byte) (d error) {
@@ -254,10 +257,10 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 }
 
 func (p *PMClient) discoverC(url,
-	remote string) (dr *discoverRes, e error) {
-	m := &cmd{
-		Cmd:     discover,
-		Manager: resourcesK,
+	remote string) (dr *pm.DiscoverRes, e error) {
+	m := &pm.Cmd{
+		Cmd:     pm.Discover,
+		Manager: pm.ResourcesK,
 		String:  remote,
 	}
 	var r *h.Response
@@ -276,20 +279,20 @@ func (p *PMClient) discoverC(url,
 		func() { r, e = p.PostCmd(url, m) },
 		func() { bs, e = ioutil.ReadAll(r.Body) },
 		func() {
-			dr = new(discoverRes)
+			dr = new(pm.DiscoverRes)
 			e = json.Unmarshal(bs, dr)
 		},
 		func() {
 		},
 	}
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
 func (p *PMClient) reset(manager, user string) (e error) {
-	m := &cmd{
+	m := &pm.Cmd{
 		Manager: manager,
-		Cmd:     set,
+		Cmd:     pm.Set,
 		String:  user,
 		Uint64:  1,
 	}
@@ -298,7 +301,7 @@ func (p *PMClient) reset(manager, user string) (e error) {
 	return
 }
 
-func (p *PMClient) status(dwnMng string) (ui *userInfo, e error) {
+func (p *PMClient) status(dwnMng string) (ui *pm.UserInfo, e error) {
 	if dwnMng == "" {
 		var li *loginInfo
 		li, e = p.readSecret()
@@ -306,12 +309,12 @@ func (p *PMClient) status(dwnMng string) (ui *userInfo, e error) {
 			dwnMng = li.DwnConsR
 		}
 	}
-	m := &cmd{
-		Cmd:     get,
+	m := &pm.Cmd{
+		Cmd:     pm.Get,
 		Manager: dwnMng,
 	}
 	okf := func(bs []byte) (d error) {
-		ui = new(userInfo)
+		ui = new(pm.UserInfo)
 		d = json.Unmarshal(bs, ui)
 		return
 	}
@@ -319,7 +322,7 @@ func (p *PMClient) status(dwnMng string) (ui *userInfo, e error) {
 	return
 }
 
-func (p *PMClient) sendRecv(m *cmd,
+func (p *PMClient) sendRecv(m *pm.Cmd,
 	okf func([]byte) error) (e error) {
 	var li *loginInfo
 	var r *h.Response
@@ -332,8 +335,8 @@ func (p *PMClient) sendRecv(m *cmd,
 			r, e = p.PostCmd(li.Server, m)
 			if e != nil && strings.HasPrefix(e.Error(),
 				"token is expired") {
-				nm := &cmd{
-					Cmd:     renew,
+				nm := &pm.Cmd{
+					Cmd:     pm.Renew,
 					Manager: li.SessionIPM,
 					Secret:  li.Secret,
 				}
@@ -349,14 +352,14 @@ func (p *PMClient) sendRecv(m *cmd,
 					},
 					func() { r, e = p.PostCmd(li.Server, m) },
 				}
-				trueFF(fs0, func() bool { return e == nil })
+				alg.TrueFF(fs0, func() bool { return e == nil })
 			}
 		},
 	}
 	re := func(d error) { e = d }
 	fs = append(fs, doOK(okf, re,
 		func() *h.Response { return r })...)
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
@@ -407,26 +410,26 @@ func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 }
 
 func (p *PMClient) fillConsR(li *loginInfo) (e error) {
-	dr := new(discoverRes)
+	dr := new(pm.DiscoverRes)
 	var bs []byte
 	var r *h.Response
 	fs := []func(){
 		func() {
-			m := &cmd{Manager: resourcesK, Cmd: discover}
+			m := &pm.Cmd{Manager: pm.ResourcesK, Cmd: pm.Discover}
 			r, e = p.PostCmd(li.Server, m)
 		},
 		func() { bs, e = ioutil.ReadAll(r.Body) },
 		func() { e = json.Unmarshal(bs, dr) },
 		func() {
-			li.DwnConsR = matchMngType(dr, dwnConsRK)
-			li.BwConsR = matchMngType(dr, bwConsRK)
+			li.DwnConsR = matchMngType(dr, pm.DwnConsRK)
+			li.BwConsR = matchMngType(dr, pm.BwConsRK)
 		},
 	}
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
-func matchMngType(dr *discoverRes, tÿpe string) (name string) {
+func matchMngType(dr *pm.DiscoverRes, tÿpe string) (name string) {
 	for k, v := range dr.MatchMng {
 		if v.Match && v.Type == tÿpe {
 			name = k
@@ -439,10 +442,10 @@ func matchMngType(dr *discoverRes, tÿpe string) (name string) {
 func (p *PMClient) loginSM(urls, sm, user,
 	pass string) (li *loginInfo,
 	e error) {
-	m := &cmd{
-		Cred:    &credentials{User: user, Pass: pass},
+	m := &pm.Cmd{
+		Cred:    &pm.Credentials{User: user, Pass: pass},
 		Manager: sm,
-		Cmd:     open,
+		Cmd:     pm.Open,
 	}
 	var r *h.Response
 	fs := []func(){
@@ -459,15 +462,15 @@ func (p *PMClient) loginSM(urls, sm, user,
 	}
 	fs = append(fs,
 		doOK(okf, fe, func() *h.Response { return r })...)
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
 func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
-	m := &cmd{
-		Manager: resourcesK,
-		Cmd:     filter,
-		String:  sessionIPMK,
+	m := &pm.Cmd{
+		Manager: pm.ResourcesK,
+		Cmd:     pm.Filter,
+		String:  pm.SessionIPMK,
 	}
 	var r *h.Response
 	fe := func(d error) { e = d }
@@ -483,13 +486,13 @@ func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
 	}
 	fs = append(fs,
 		doOK(okf, fe, func() *h.Response { return r })...)
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
 func (p *PMClient) logout() (e error) {
-	m := &cmd{
-		Cmd: clöse,
+	m := &pm.Cmd{
+		Cmd: pm.Clöse,
 	}
 	li, e := p.readSecret()
 	if e == nil {
@@ -520,7 +523,7 @@ func (p *PMClient) readSecret() (li *loginInfo, e error) {
 	return
 }
 
-func PostCmd(urls string, c *cmd) (r *h.Response, e error) {
+func PostCmd(urls string, c *pm.Cmd) (r *h.Response, e error) {
 	h.DefaultTransport.(*h.Transport).TLSClientConfig =
 		&tls.Config{InsecureSkipVerify: true}
 	h.DefaultTransport.(*h.Transport).Proxy = nil
@@ -528,7 +531,7 @@ func PostCmd(urls string, c *cmd) (r *h.Response, e error) {
 	bs, e := json.Marshal(c)
 	if e == nil {
 		buff := bytes.NewBuffer(bs)
-		u := urls + apiCmd
+		u := urls + pm.ApiCmd
 		r, e = h.Post(u, "text/json", buff)
 		if e == nil && r.StatusCode == h.StatusBadRequest {
 			bs, e = ioutil.ReadAll(r.Body)
@@ -563,3 +566,17 @@ func doOK(ok func([]byte) error, fe func(error),
 	}
 	return
 }
+
+func checkArgExec(fe func() error, exp, act int) (e error) {
+	if exp == act {
+		e = fe()
+	} else {
+		e = fmt.Errorf("Invalid argument list length."+
+			"Expected %d, got %d", exp, act)
+	}
+	return
+}
+
+const (
+	loginSecretFile = "login.secret"
+)

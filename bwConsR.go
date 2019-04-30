@@ -39,7 +39,7 @@ func (b *bwConsR) fromMap(i interface{}) (e error) {
 	optFe := optionalKeys(fe, specKS)
 	kf := []kFuncI{
 		{
-			nameK,
+			NameK,
 			func(i interface{}) {
 				b.name = stringE(i, fe)
 			},
@@ -71,22 +71,22 @@ func (b *bwConsR) fromMap(i interface{}) (e error) {
 
 func (b *bwConsR) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
-		nameK:     b.name,
+		NameK:     b.name,
 		throttleK: fmt.Sprintf("%.2f", b.thrFrac),
 	}
 	return
 }
 
-func (b *bwConsR) managerKF(c *cmd) (kf []kFunc) {
+func (b *bwConsR) managerKF(c *Cmd) (kf []kFunc) {
 	kf = []kFunc{
 		{
-			get,
+			Get,
 			func() {
 				c.bs = []byte(fmt.Sprintf("%.2f", b.thrFrac))
 			},
 		},
 		{
-			set,
+			Set,
 			func() {
 				var nFrac float64
 				_, e := fmt.Scanf("%.2f", &nFrac)
