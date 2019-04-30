@@ -43,6 +43,7 @@ type resources struct {
 	fls      afero.Fs
 	warning  func(string) error
 	now      func() time.Time
+	debug    bool
 }
 
 func (r *resources) match(ürl, rAddr string,
@@ -63,6 +64,11 @@ func (r *resources) match(ürl, rAddr string,
 					v = mng.matcher(ürl, rAddr, t)
 				}
 			}
+		}
+		if r.debug {
+			println("url:", ürl, "addr:", rAddr, "time:",
+				t.Format(time.RFC3339), "found:", ok,
+				"match:", v)
 		}
 		return
 	}
@@ -101,6 +107,11 @@ func (r *resources) filterMatch(ürl, rAddr string,
 				dr.MatchMng[name] = matchType{Match: v, Type: mng.tÿpe}
 			}
 		}
+		if r.debug {
+			println("url:", ürl, "addr:", rAddr, "time:",
+				t.Format(time.RFC3339), "found:", ok,
+				"match:", v)
+		}
 		return
 	}
 	res := pred.Reduce(r.rules, interp)
@@ -129,6 +140,7 @@ func newResources(predicate string, admins []string,
 		fls:      fls,
 		warning:  warning,
 		now:      now,
+		debug:    true,
 	}
 	r.managers.Store(resourcesK, &manager{
 		tÿpe:      resourcesK,

@@ -144,6 +144,7 @@ const (
 	resourcesK = "resources"
 	filter     = "filter"
 	object     = "object"
+	debugK     = "debug"
 )
 
 // dwnConsR.go

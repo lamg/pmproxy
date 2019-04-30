@@ -269,6 +269,7 @@ func (c *conf) initResources() (e error) {
 				c.fls, c.lg.warning, c.now)
 		},
 		func() {
+			c.res.debug = cast.ToBool(c.base[debugK])
 			rs := []string{userDBK, sessionIPMK, dwnConsRK, bwConsRK,
 				groupIPMK, spanK, rangeIPMK, urlmK}
 			inf := func(i int) {
