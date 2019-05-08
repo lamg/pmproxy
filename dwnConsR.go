@@ -259,14 +259,17 @@ type UserInfo struct {
 	Name        string   `json:"name"`
 	UserName    string   `json:"userName"`
 	Consumption string   `json:"consumption"`
+	BytesQuota  uint64   `json:"bytesQuota"`
+	BytesCons   uint64   `json:"bytesCons"`
 }
 
 func (d *dwnConsR) info(user string) (ui *UserInfo, e error) {
 	n := d.quota(user)
 	q := datasize.ByteSize(n).HumanReadable()
 	ui = &UserInfo{
-		Quota:    q,
-		UserName: user,
+		Quota:      q,
+		UserName:   user,
+		BytesQuota: n,
 	}
 	ui.Groups, _ = d.userGroup(user)
 	ui.Name, e = d.userName(user)
@@ -276,6 +279,7 @@ func (d *dwnConsR) info(user string) (ui *UserInfo, e error) {
 		cons = datasize.ByteSize(v.(uint64))
 	}
 	ui.Consumption = cons.HumanReadable()
+	ui.BytesCons = uint64(cons)
 	return
 }
 

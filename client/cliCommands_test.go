@@ -55,8 +55,10 @@ func TestLogin(t *testing.T) {
 		Groups:      []string{pm.Group0},
 		Quota:       "600.0 MB",
 		Consumption: "0 B",
+		BytesQuota:  629145600,
+		BytesCons:   0,
 	}
-	require.Equal(t, ui, xui)
+	require.Equal(t, xui, ui)
 }
 
 func TestShowMng(t *testing.T) {

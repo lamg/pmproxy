@@ -56,6 +56,18 @@ En el diccionario discoverRes.MatchMng vienen los nombres de los administradores
 
 - dwnConsR
 
+```go
+type UserInfo struct {
+	Quota       string   `json:"quota"`
+	Groups      []string `json:"groups"`
+	Name        string   `json:"name"`
+	UserName    string   `json:"userName"`
+	Consumption string   `json:"consumption"`
+	BytesQuota  uint64   `json:"bytesQuota"`
+	BytesCons   uint64   `json:"bytesCons"`
+}
+```
+
 | comando                                      | respuesta |
 | -------------------------------------------- | --------- |
 | {Cmd:get,Secret:JWT,IsAdmin:true,String:user}| userInfo  |
