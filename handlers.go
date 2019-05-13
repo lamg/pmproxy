@@ -39,43 +39,43 @@ type handlerConf struct {
 	sc *srvConf
 }
 
-func NewHnds(c *Conf) (prh, ifh *SrvHandler,
+func NewHnds(cm *connMng, staticFPath string, prx, iface *srvConf, mng func(*Cmd)) (prh, ifh *SrvHandler,
 	e error) {
 	prh, ifh = new(SrvHandler), new(SrvHandler)
-	if c.proxy.fastOrStd {
+	if prx.fastOrStd {
 		// consumers, matchers determine context values
 		// dialer and proxy process context values
-		prh.ReqHnd = proxy.NewFastProxy(c.cm.set,
-			c.cm.params, c.cm.apply, c.cm.dialTimeout, time.Now)
+		prh.ReqHnd = proxy.NewFastProxy(cm.set,
+			cm.params, cm.apply, cm.dialTimeout, time.Now)
 	} else {
-		prh.ServeHTTP = proxy.NewProxy(c.cm.set,
-			c.cm.params, c.cm.apply, c.cm.dialTimeout, c.cm.maxIdle,
-			c.cm.idleT, c.cm.tlsHT, c.cm.expCT,
+		prh.ServeHTTP = proxy.NewProxy(cm.set,
+			cm.params, cm.apply, cm.dialTimeout, cm.maxIdle,
+			cm.idleT, cm.tlsHT, cm.expCT,
 			time.Now).ServeHTTP
 	}
-	if c.iface.fastOrStd {
+	if iface.fastOrStd {
 		// administration, and serializer are part of the
 		// control interface, and also have consumers and
 		// matchers
-		fhnd := fastIface(c)
+		fhnd := fastIface(staticFPath, mng)
 		cropt := fasthttpcors.DefaultHandler()
 		ifh.ReqHnd = cropt.CorsMiddleware(fhnd)
 	} else {
-		shnd := stdIface(c)
+		shnd := stdIface(staticFPath, mng)
 		cropt := cors.AllowAll()
 		ifh.ServeHTTP = cropt.Handler(shnd).ServeHTTP
 	}
 	return
 }
 
-func fastIface(cf *Conf) (hnd fh.RequestHandler) {
+func fastIface(staticFPath string, mng func(*Cmd)) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
-			Root: cf.staticFPath,
+			Root: staticFPath,
 		}
 		fsHnd := fs.NewRequestHandler()
 		compatibleIface(
-			cf,
+			mng,
 			string(ctx.Request.URI().Path()),
 			string(ctx.Method()),
 			ctx.RemoteAddr().String(),
@@ -101,10 +101,10 @@ func fastIface(cf *Conf) (hnd fh.RequestHandler) {
 	return
 }
 
-func stdIface(cf *Conf) (hnd h.HandlerFunc) {
+func stdIface(staticFPath string, mng func(*Cmd)) (hnd h.HandlerFunc) {
 	hnd = func(w h.ResponseWriter, r *h.Request) {
 		compatibleIface(
-			cf,
+			mng,
 			r.URL.Path,
 			r.Method,
 			r.RemoteAddr,
@@ -117,7 +117,7 @@ func stdIface(cf *Conf) (hnd h.HandlerFunc) {
 				w.Write(bs)
 			},
 			func(file string) {
-				pth := path.Join(cf.staticFPath, file)
+				pth := path.Join(staticFPath, file)
 				h.ServeFile(w, r, pth)
 			},
 			func(err string) {
@@ -128,7 +128,7 @@ func stdIface(cf *Conf) (hnd h.HandlerFunc) {
 	return
 }
 
-func compatibleIface(cf *Conf, path, method,
+func compatibleIface(mng func(*Cmd), path, method,
 	rAddr string, body func() ([]byte, error),
 	resp func([]byte), fileSrv, writeErr func(string)) {
 	m := new(Cmd)
@@ -150,7 +150,7 @@ func compatibleIface(cf *Conf, path, method,
 		func() {
 			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
 		},
-		func() { cf.res.manager(m); e = m.e },
+		func() { mng(m); e = m.e },
 		func() {
 			if m.bs != nil {
 				resp(m.bs)
