@@ -31,27 +31,6 @@ import (
 	"time"
 )
 
-type Cmd struct {
-	Cmd        string                 `json:"cmd"`
-	User       string                 `json:"user"`
-	Manager    string                 `json:"manager"`
-	RemoteAddr string                 `json:"remoteAddr"`
-	Secret     string                 `json:"secret"`
-	IsAdmin    bool                   `json:"isAdmin"`
-	Cred       *Credentials           `json:"cred"`
-	String     string                 `json:"string"`
-	Uint64     uint64                 `json:"uint64"`
-	Object     map[string]interface{} `json:"object"`
-	comp02     bool                   //compatible with v0.2
-	bs         []byte
-	e          error
-}
-
-type Credentials struct {
-	User string `json:"user"`
-	Pass string `json:"pass"`
-}
-
 type Conf struct {
 	fls         afero.Fs
 	staticFPath string

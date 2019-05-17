@@ -18,11 +18,12 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package managers
 
 import (
 	"encoding/json"
 	"github.com/c2h5oh/datasize"
+	"github.com/lamg/algorithms"
 	"strings"
 	"sync"
 	"time"
@@ -31,8 +32,6 @@ import (
 type dwnConsR struct {
 	name        string
 	userDBN     string
-	userGroup   func(string) ([]string, error)
-	userName    func(string) (string, error)
 	spec        *spec
 	quotaCache  *sync.Map
 	groupQuotaM *sync.Map
@@ -40,9 +39,6 @@ type dwnConsR struct {
 	userCons   *sync.Map
 	lastReset  time.Time
 	resetCycle time.Duration
-	mapWriter  func(map[string]uint64)
-	fileReader func(string) ([]byte, error)
-	warning    func(string) error
 }
 
 func (d *dwnConsR) fromMap(i interface{}) (e error) {
@@ -156,16 +152,20 @@ func (d *dwnConsR) toMap() (i map[string]interface{}) {
 	return
 }
 
-func (d *dwnConsR) managerKF(c *Cmd) (kf []kFunc) {
-	kf = []kFunc{
+func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
+	kf = []alg.KFunc{
 		{
 			Get,
 			func() {
+				v, ok := c.Object[groupsK]
 				var data *UserInfo
-				if c.IsAdmin && c.String != "" {
-					data, c.e = d.info(c.String)
+				if ok {
+					gs := v.([]string)
+					name := c.Object[nameK].(string)
+					user := c.Object[userK].(string)
+					data, c.e = d.info(user, name, gs)
 				} else {
-					data, c.e = d.info(c.User)
+					c.Manager = c.userDBN
 				}
 				if c.e == nil {
 					c.bs, c.e = json.Marshal(data)
@@ -187,6 +187,7 @@ func (d *dwnConsR) managerKF(c *Cmd) (kf []kFunc) {
 			},
 		},
 	}
+	alg.ExecKF(kf)
 	return
 }
 
@@ -263,16 +264,17 @@ type UserInfo struct {
 	BytesCons   uint64   `json:"bytesCons"`
 }
 
-func (d *dwnConsR) info(user string) (ui *UserInfo, e error) {
+func (d *dwnConsR) info(user, name string, gs []string) (
+	ui *UserInfo, e error) {
 	n := d.quota(user)
 	q := datasize.ByteSize(n).HumanReadable()
 	ui = &UserInfo{
 		Quota:      q,
 		UserName:   user,
 		BytesQuota: n,
+		Groups:     gs,
+		Name:       name,
 	}
-	ui.Groups, _ = d.userGroup(user)
-	ui.Name, e = d.userName(user)
 	v, ok := d.userCons.Load(user)
 	var cons datasize.ByteSize
 	if ok {

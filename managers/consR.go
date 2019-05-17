@@ -18,7 +18,7 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package managers
 
 // consR stands for consumption restrictor,
 // it restricts several aspects of a connection
