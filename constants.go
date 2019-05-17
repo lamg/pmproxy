@@ -143,7 +143,7 @@ const (
 	specKS     = "spec"
 	rulesK     = "rules"
 	ResourcesK = "resources"
-	isAdminK   = "isAdmin"
+	IsAdminK   = "isAdmin"
 	Filter     = "filter"
 	object     = "object"
 	debugK     = "debug"

@@ -235,7 +235,7 @@ func (r *resources) managerKF(c *Cmd) (kf []kFunc) {
 			},
 		},
 		{
-			isAdminK,
+			IsAdminK,
 			func() {
 				c.bs, c.e = json.Marshal(c.IsAdmin)
 			},

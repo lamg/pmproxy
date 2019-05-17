@@ -230,6 +230,34 @@ func (p *PMClient) ShowRules() (m cli.Command) {
 	return
 }
 
+func (p *PMClient) IsAdmin() (m cli.Command) {
+	m = cli.Command{
+		Name:    "isadm",
+		Aliases: []string{"adm"},
+		Action: func(c *cli.Context) (e error) {
+			ok, e := p.isAdmin()
+			if e == nil {
+				fmt.Println(ok)
+			}
+			return
+		},
+	}
+	return
+}
+
+func (p *PMClient) isAdmin() (ok bool, e error) {
+	n := &pm.Cmd{
+		Manager: pm.ResourcesK,
+		Cmd:     pm.IsAdminK,
+	}
+	okf := func(bs []byte) (d error) {
+		d = json.Unmarshal(bs, &ok)
+		return
+	}
+	e = p.sendRecv(n, okf)
+	return
+}
+
 func (p *PMClient) showRules() (s string, e error) {
 	n := &pm.Cmd{
 		Manager: pm.ResourcesK,

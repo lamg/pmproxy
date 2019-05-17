@@ -43,6 +43,7 @@ func main() {
 		cl.ResetConsumption(),
 		cl.ShowMng(),
 		cl.ShowRules(),
+		cl.IsAdmin(),
 	}
 	e := app.Run(os.Args)
 	if e != nil {

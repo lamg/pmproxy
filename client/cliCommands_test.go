@@ -106,6 +106,9 @@ func TestShowRules(t *testing.T) {
 	require.Equal(t, "campus ∧ sessions ∧ ((day ∧ downWeek) ∨ "+
 		"(night ∧ downNight)) ∧ ((group0M ∧ bandWidth0) ∨ "+
 		"(group1M ∧ bandWidth1))", s)
+	ok, e := cl.isAdmin()
+	require.NoError(t, e)
+	require.True(t, ok)
 }
 
 func TestConfUpdate(t *testing.T) {
