@@ -181,7 +181,7 @@ func (d *dwnConsR) managerKF(c *Cmd) (kf []kFunc) {
 			},
 		},
 		{
-			show,
+			Show,
 			func() {
 				c.bs, c.e = json.Marshal(d.toMap())
 			},

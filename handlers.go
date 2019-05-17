@@ -39,8 +39,10 @@ type handlerConf struct {
 	sc *srvConf
 }
 
-func NewHnds(cm *connMng, staticFPath string, prx, iface *srvConf, mng func(*Cmd)) (prh, ifh *SrvHandler,
+func NewHnds(c *Conf) (prh, ifh *SrvHandler,
 	e error) {
+	cm, staticFPath, prx, iface, mng := c.cm, c.staticFPath, c.proxy,
+		c.iface, c.res.manager
 	prh, ifh = new(SrvHandler), new(SrvHandler)
 	if prx.fastOrStd {
 		// consumers, matchers determine context values

@@ -111,7 +111,7 @@ const (
 	add       = "add"
 	authNameK = "authName"
 	userConsK = "userCons"
-	show      = "show"
+	Show      = "show"
 	Discover  = "discover"
 )
 
@@ -143,6 +143,7 @@ const (
 	specKS     = "spec"
 	rulesK     = "rules"
 	ResourcesK = "resources"
+	isAdminK   = "isAdmin"
 	Filter     = "filter"
 	object     = "object"
 	debugK     = "debug"

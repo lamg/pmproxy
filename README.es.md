@@ -74,3 +74,20 @@ type UserInfo struct {
 | {Cmd:get,Secret:JWT}                         | userInfo  |
 | {Cmd:set,Secret:JWT,IsAdmin:true,String:user,Uint64:cons} | ∅ |
 | {Cmd:show,Secret:JWT} | map[string]interface{}|
+
+- resources
+
+Este _manager_ es único, o sea no hay varias instancias de su mismo tipo. Por lo cual los comandos que se envían a él siempre tienen el mismo campo Cmd.Manager = "resources"
+
+```go
+type ObjType struct {
+	Object map[string]interface{} `json:"object"`
+	Type   string                 `json:"type"`
+}
+```
+
+| comando                             | respuesta         |
+| ------------------------------------| ----------------- |
+| {Cmd:show,Secret:JWT,IsAdmin:true}  | predicado: string | 
+| {Cmd:isAdmin,Secret:JWT}            | bool              |
+| {Cmd:get,Secret:JWT,String:manager} | ObjType           |

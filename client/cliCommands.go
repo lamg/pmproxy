@@ -215,6 +215,34 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 	return
 }
 
+func (p *PMClient) ShowRules() (m cli.Command) {
+	m = cli.Command{
+		Name:    "rules",
+		Aliases: []string{"rl"},
+		Action: func(c *cli.Context) (e error) {
+			s, e := p.showRules()
+			if e == nil {
+				fmt.Println(s)
+			}
+			return
+		},
+	}
+	return
+}
+
+func (p *PMClient) showRules() (s string, e error) {
+	n := &pm.Cmd{
+		Manager: pm.ResourcesK,
+		Cmd:     pm.Show,
+	}
+	okf := func(bs []byte) (d error) {
+		s = string(bs)
+		return
+	}
+	e = p.sendRecv(n, okf)
+	return
+}
+
 func (p *PMClient) showMng(mng string) (objT *pm.ObjType, e error) {
 	m := &pm.Cmd{
 		Manager: pm.ResourcesK,

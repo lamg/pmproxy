@@ -94,6 +94,20 @@ func TestShowMng(t *testing.T) {
 	alg.Forall(inf, len(kvs))
 }
 
+func TestShowRules(t *testing.T) {
+	fs, ifh, _ := basicConfT(t)
+	cl := &PMClient{
+		Fs:      fs,
+		PostCmd: testPostCmd("192.168.1.1", ifh),
+	}
+	cl.login("", "", pm.User0, pm.Pass0)
+	s, e := cl.showRules()
+	require.NoError(t, e)
+	require.Equal(t, "campus ∧ sessions ∧ ((day ∧ downWeek) ∨ "+
+		"(night ∧ downNight)) ∧ ((group0M ∧ bandWidth0) ∨ "+
+		"(group1M ∧ bandWidth1))", s)
+}
+
 func TestConfUpdate(t *testing.T) {
 	fs, _, cf := basicConfT(t)
 	cf.Update()

@@ -198,7 +198,7 @@ func (r *resources) managerKF(c *Cmd) (kf []kFunc) {
 			},
 		},
 		{
-			show,
+			Show,
 			func() {
 				c.bs = []byte(pred.String(r.rules))
 			},
@@ -232,6 +232,12 @@ func (r *resources) managerKF(c *Cmd) (kf []kFunc) {
 				} else {
 					c.e = NoKey(c.String)
 				}
+			},
+		},
+		{
+			isAdminK,
+			func() {
+				c.bs, c.e = json.Marshal(c.IsAdmin)
 			},
 		},
 		{skip, func() {}},
