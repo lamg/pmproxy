@@ -77,8 +77,8 @@ func (b *bwConsR) toMap() (i map[string]interface{}) {
 	return
 }
 
-func (b *bwConsR) managerKF(c *Cmd) (kf []kFunc) {
-	kf = []kFunc{
+func (b *bwConsR) exec(c *Cmd) (term bool) {
+	kf = []alg.KFunc{
 		{
 			Get,
 			func() {
@@ -96,23 +96,15 @@ func (b *bwConsR) managerKF(c *Cmd) (kf []kFunc) {
 				}
 			},
 		},
-	}
-	return
-}
-
-func (b *bwConsR) consR() (c *consR) {
-	c = &consR{
-		open: func(ip, user string) (ok bool) {
-			ok = true
-			return
+		{
+			Can,
+			func() {
+				b.connThr.Throttle()
+				c.Ok = true
+			},
 		},
-		can: func(ip, user string, dwn int) (ok bool) {
-			b.connThr.Throttle()
-			ok = true
-			return
-		},
-		update: func(ip, user string, dwn int) {},
-		close:  func(ip, user string) {},
 	}
+	term = true
+	c.Ok = alg.ExecF(kf, c.Cmd)
 	return
 }

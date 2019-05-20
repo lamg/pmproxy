@@ -22,14 +22,13 @@ package managers
 
 import (
 	"encoding/json"
+	alg "github.com/lamg/algorithms"
 )
 
 type groupIPM struct {
-	userGroup  func(string) ([]string, error)
-	userGroupN string
-	ipUser     func(string) (string, bool)
-	name       string
-	group      string
+	userDBN string
+	name    string
+	group   string
 }
 
 func (m *groupIPM) fromMap(i interface{}) (e error) {
@@ -42,7 +41,7 @@ func (m *groupIPM) fromMap(i interface{}) (e error) {
 			},
 		},
 		{
-			userGroupNK,
+			userDBNK,
 			func(i interface{}) {
 				m.userGroupN = stringE(i, fe)
 			},
@@ -58,7 +57,7 @@ func (m *groupIPM) fromMap(i interface{}) (e error) {
 	return
 }
 
-func (m *groupIPM) managerKF(c *Cmd) (kf []kFunc) {
+func (m *groupIPM) exec(c *Cmd) (term bool) {
 	kf = []kFunc{
 		{
 			Set,
@@ -72,6 +71,20 @@ func (m *groupIPM) managerKF(c *Cmd) (kf []kFunc) {
 				c.bs, c.e = json.Marshal(m.toMap())
 			},
 		},
+		{
+			Match,
+			func() {
+				if len(c.Groups) == 0 && c.e == nil {
+					c.Manager = m.userDBN
+					term = false
+				} else if len(c.Groups) != 0 {
+					c.Ok, _ = alg.BLnSrch(
+						func(i int) bool { return m.group == c.Groups[i] },
+						len(c.Groups))
+					term = true
+				}
+			},
+		},
 	}
 	return
 }
@@ -82,16 +95,5 @@ func (m *groupIPM) toMap() (i map[string]interface{}) {
 		NameK:       m.name,
 		userGroupNK: m.userGroupN,
 	}
-	return
-}
-
-func (m *groupIPM) match(ip string) (ok bool) {
-	user, _ := m.ipUser(ip)
-	gs, _ := m.userGroup(user)
-	ib := func(i int) (b bool) {
-		b = m.group == gs[i]
-		return
-	}
-	ok, _ = bLnSrch(ib, len(gs))
 	return
 }

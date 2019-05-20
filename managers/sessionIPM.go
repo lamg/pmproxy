@@ -26,11 +26,7 @@ import (
 
 type sessionIPM struct {
 	name     string
-	iu       *ipUserS
 	authName string
-	nameAuth func(string) (func(string, string) (string, error),
-		bool)
-	cr *crypt
 }
 
 func (m *sessionIPM) fromMap(i interface{}) (e error) {
@@ -53,46 +49,93 @@ func (m *sessionIPM) fromMap(i interface{}) (e error) {
 	return
 }
 
-func (m *sessionIPM) managerKF(c *Cmd) (kf []kFunc) {
+func (m *sessionIPM) exec(c *Cmd) (term bool) {
 	kf = []kFunc{
 		{
 			Open,
 			func() {
-				c.bs, c.e = m.open(c.Cred, c.RemoteAddr)
+				if c.User == "" {
+					c.Manager = m.authName
+					c.Cmd = authenticate
+				} else if c.e == nil && c.Secret == "" {
+					c.Manager = crypt
+					c.Cmd = encrypt
+				} else {
+					c.Manager = ipUserK
+					c.Cmd = Open
+					term = true
+				}
 			},
 		},
 		{
-			Clöse,
+			Close,
 			func() {
-				c.bs, c.e = m.close(c.Secret, c.RemoteAddr)
+				_, secretOk = c.Object[secretOkK]
+				if secretOk && c.e == nil {
+					c.Manager = crypt
+					c.Cmd = decrypt
+				} else if secretOk {
+					c.Manager = ipUser
+					c.Cmd = delete
+				}
 			},
 		},
 		{
 			Get,
 			func() {
-				if c.IsAdmin {
-					c.bs, c.e = m.get(c.Secret, c.RemoteAddr)
+				_, admDef := c.Object[isAdminK]
+				if admDef {
+					_, sessionsDef := c.Object[sessionsK]
+					if !sessionsDef {
+						if c.IsAdmin {
+							c.Manager = ipUser
+							term = false
+						}
+					}
+				} else {
+					c.Manager = admins
+					term = false
 				}
 			},
 		},
 		{
 			Renew,
 			func() {
-				c.bs, c.e = m.renew(c.Secret, c.RemoteAddr)
+				_, secretOk := c.Object[secretOkK]
+				if !secretOk {
+					c.Manager = crypt
+				}
 			},
 		},
 		{
 			check,
 			func() {
-				_, c.e = m.check(c.Secret, c.RemoteAddr)
+				v, secretOk := c.Object[secretOkK]
+				_, userOk := c.Object[userK]
+				if secretOk && userOk {
+					c.Ok = c.User == v.(string)
+				} else if !secretOk {
+					c.Cmd = decrypt
+					c.Manager = crypt
+				} else if !userOk {
+					c.Cmd = Get
+					c.Manager = ipUserK
+				}
+			},
+		},
+		{
+			Match,
+			func() {
+				_, userOk := c.Object[userK]
+				if !userOk {
+					c.Manager = ipUserK
+					c.Cmd = Get
+				} else {
+					c.Ok = c.User != ""
+				}
 			},
 		},
 	}
-	return
-}
-
-func (m *sessionIPM) match(ip string) (ok bool) {
-	_, ok = m.iu.get(ip)
 	return
 }
 
@@ -125,15 +168,6 @@ func (m *sessionIPM) open(c *Credentials,
 			bs = []byte(s)
 		},
 		func() {
-			var oldIP string
-			m.iu.mäp.Range(func(k, v interface{}) (cont bool) {
-				cont = v.(string) != user
-				return
-			})
-			if oldIP != "" {
-				m.iu.mäp.Delete(oldIP)
-			}
-			m.iu.mäp.Store(ip, user)
 		},
 	}
 	trueFF(fs, func() bool { return e == nil })
