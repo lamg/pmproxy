@@ -20,43 +20,12 @@
 
 package managers
 
-// consR stands for consumption restrictor,
-// it restricts several aspects of a connection
-type consR struct {
-	open   func(string, string) bool      // ip, user
-	can    func(string, string, int) bool // ip,user,requested bytes
-	update func(string, string, int)      // ip, user, read bytes
-	close  func(string, string)           // ip, user
-}
-
-func idConsR() (c *consR) {
-	c = &consR{
-		open: func(ip, user string) (ok bool) {
-			ok = true
-			return
-		},
-		can: func(ip, user string, down int) (ok bool) {
-			ok = true
-			return
-		},
-		update: func(ip, user string, down int) {},
-		close:  func(ip, user string) {},
-	}
+func idConsRExec(c *Cmd) (term bool) {
+	c.Ok, term = true, true
 	return
 }
 
-func negConsR() (c *consR) {
-	c = &consR{
-		open: func(ip, user string) (ok bool) {
-			ok = false
-			return
-		},
-		can: func(ip, user string, down int) (ok bool) {
-			ok = false
-			return
-		},
-		update: func(ip, user string, down int) {},
-		close:  func(ip, user string) {},
-	}
+func negConsRExec(c *Cmd) (term bool) {
+	c.Ok, term = false, true
 	return
 }

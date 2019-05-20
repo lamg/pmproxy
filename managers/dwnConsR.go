@@ -164,17 +164,22 @@ func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
 					name := c.Object[nameK].(string)
 					user := c.Object[userK].(string)
 					data, c.e = d.info(user, name, gs)
+					if c.e == nil {
+						c.bs, c.e = json.Marshal(data)
+					}
 				} else {
 					c.Manager = c.userDBN
 				}
-				if c.e == nil {
-					c.bs, c.e = json.Marshal(data)
-				}
+				term = ok
 			},
 		},
 		{
 			Set,
 			func() {
+				v, ok := c.Object[adminsK]
+				if !ok {
+					c.Manager = globalPar
+				}
 				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
 				}

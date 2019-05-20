@@ -24,20 +24,44 @@ import (
 	"sync"
 )
 
-type ipUserS struct {
+type ipUser struct {
 	mäp *sync.Map
 }
 
-type ipUser func(string) (string, bool)
-
-func newIPuserS() (s *ipUserS) {
-	s = &ipUserS{
+func newIPuser() (s *ipUser) {
+	s = &ipUser{
 		mäp: new(sync.Map),
 	}
 	return
 }
 
-func (p *ipUserS) get(ip string) (user string, ok bool) {
+func (p *ipUser) exec(c *Cmd) (term bool) {
+	kf := []alg.KFunc{
+		{
+			Get,
+			func() {
+				c.Object[userK] = true
+				c.User, _ = p.get(c.IP)
+				term = true
+			},
+		},
+	}
+	alg.ExecF(kf, c.Cmd)
+}
+
+func (p *ipUser) open(ip, user string) {
+	var oldIP string
+	p.mäp.Range(func(k, v interface{}) (cont bool) {
+		cont = v.(string) != user
+		return
+	})
+	if oldIP != "" {
+		p.mäp.Delete(oldIP)
+	}
+	p.mäp.Store(ip, user)
+}
+
+func (p *ipUser) get(ip string) (user string, ok bool) {
 	v, ok := p.mäp.Load(ip)
 	if ok {
 		user = v.(string)
@@ -45,11 +69,11 @@ func (p *ipUserS) get(ip string) (user string, ok bool) {
 	return
 }
 
-func (p *ipUserS) del(ip string) {
+func (p *ipUser) del(ip string) {
 	p.mäp.Delete(ip)
 	return
 }
 
-func (p *ipUserS) set(ip, user string) {
+func (p *ipUser) set(ip, user string) {
 	p.mäp.Store(ip, user)
 }

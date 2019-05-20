@@ -35,15 +35,23 @@ func (r *rangeIPM) init() (e error) {
 	return
 }
 
-func (r *rangeIPM) managerKF(c *Cmd) (kf []kFunc) {
-	kf = []kFunc{
+func (r *rangeIPM) exec(c *Cmd) (term bool) {
+	kf := []alg.KFunc{
 		{
 			Get,
 			func() {
 				c.bs = []byte(r.cidr)
 			},
 		},
+		{
+			Match,
+			func() {
+				c.Ok = r.match(c.IP)
+				term = true
+			},
+		},
 	}
+	alg.ExecF(kf, c.Cmd)
 	return
 }
 
