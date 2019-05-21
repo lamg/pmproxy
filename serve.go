@@ -50,10 +50,10 @@ func Serve() (e error) {
 					return
 				},
 			}
-			e = runConcurr(fes)
+			e = alg.RunConcurr(fes)
 		},
 	}
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 

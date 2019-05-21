@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/AdhityaRamadhanus/fasthttpcors"
+	"github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
 	"github.com/rs/cors"
 	fh "github.com/valyala/fasthttp"
@@ -148,7 +149,7 @@ func compatibleIface(mng func(*Cmd), path, method,
 			}
 		},
 		func() {
-			m.RemoteAddr, _, e = net.SplitHostPort(rAddr)
+			m.IP, _, e = net.SplitHostPort(rAddr)
 		},
 		func() { mng(m); e = m.e },
 		func() {
@@ -157,7 +158,7 @@ func compatibleIface(mng func(*Cmd), path, method,
 			}
 		},
 	}
-	if !trueFF(fs, func() bool { return e == nil }) {
+	if !alg.TrueFF(fs, func() bool { return e == nil }) {
 		writeErr(e.Error())
 	}
 }

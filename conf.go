@@ -44,7 +44,10 @@ type Conf struct {
 
 	base     map[string]interface{}
 	filePath string
-	now      func() time.Time
+}
+
+func controlConn(op *proxy.Operation) (r *proxy.Restult) {
+	return
 }
 
 func NewConf(fls afero.Fs, now func() time.Time) (c *Conf,
