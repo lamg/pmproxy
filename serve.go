@@ -32,20 +32,19 @@ import (
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
 func Serve() (e error) {
-	var c *Conf
-	var prh, ifh *SrvHandler
+	var c *conf
+	var prx, iface *srvConf
 	fs := []func(){
-		func() { c, e = NewConf(afero.NewOsFs(), time.Now) },
-		func() { prh, ifh, e = NewHnds(c.cm, c.staticFPath, c.proxy, c.iface, c.res.manager) },
+		func() { prx, iface, e = loadSrvConf(afero.NewOsFs()) },
 		func() {
-			cp := path.Dir(c.filePath)
+			prh, ifh := newHnds(prx, iface)
 			fes := []func() error{
-				serveFunc(c.proxy, cp, true, prh),
-				serveFunc(c.iface, cp, false, ifh),
+				serveFunc(prx, prh),
+				serveFunc(iface, ifh),
 				func() (e error) {
 					for {
-						time.Sleep(c.waitUpd)
-						c.Update()
+						time.Sleep(iface.iface.persistIntv)
+						iface.iface.persist()
 					}
 					return
 				},
@@ -57,13 +56,10 @@ func Serve() (e error) {
 	return
 }
 
-func serveFunc(c *srvConf, dir string, proxyOrIface bool,
-	sh *SrvHandler) (fe func() error) {
-	cert := path.Join(dir, c.certFl)
-	key := path.Join(dir, c.keyFl)
+func serveFunc(c *srvConf, sh *srvHandler) (fe func() error) {
 	var listenAndServe func() error
 	var listenAndServeTLS func(string, string) error
-	if c.fastOrStd {
+	if sh.ReqHnd != nil {
 		fast := &fh.Server{
 			ReadTimeout:        c.readTimeout,
 			WriteTimeout:       c.writeTimeout,
@@ -91,11 +87,11 @@ func serveFunc(c *srvConf, dir string, proxyOrIface bool,
 		listenAndServe = std.ListenAndServe
 		listenAndServeTLS = std.ListenAndServeTLS
 	}
-	if proxyOrIface {
+	if c.prx != nil {
 		fe = listenAndServe
 	} else {
 		fe = func() error {
-			return listenAndServeTLS(cert, key)
+			return listenAndServeTLS(c.iface.certFl, c.iface.keyFl)
 		}
 	}
 	return

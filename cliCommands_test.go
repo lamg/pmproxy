@@ -18,13 +18,12 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
 	"bytes"
 	"encoding/json"
 	alg "github.com/lamg/algorithms"
-	pm "github.com/lamg/pmproxy"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	h "net/http"
@@ -39,7 +38,7 @@ func TestLogin(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
-	e := cl.login("", "", pm.User0, pm.Pass0)
+	e := cl.login("", "", user0, pass0)
 	ok, e := afero.Exists(fs, loginSecretFile)
 	require.True(t, e == nil && ok)
 	dr, e := cl.discoverC("", "")
@@ -50,9 +49,9 @@ func TestLogin(t *testing.T) {
 	ui, e := cl.status("")
 	require.NoError(t, e)
 	xui := &pm.UserInfo{
-		UserName:    pm.User0,
-		Name:        pm.User0,
-		Groups:      []string{pm.Group0},
+		UserName:    user0,
+		Name:        user0,
+		Groups:      []string{group0},
 		Quota:       "600.0 MB",
 		Consumption: "0 B",
 		BytesQuota:  629145600,
@@ -67,11 +66,11 @@ func TestShowMng(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("192.168.1.1", ifh),
 	}
-	cl.login("", "", pm.User0, pm.Pass0)
+	cl.login("", "", user0, pass0)
 	downWeek := "downWeek"
 	objT, e := cl.showMng(downWeek)
 	require.NoError(t, e)
-	require.Equal(t, pm.DwnConsRK, objT.Type)
+	require.Equal(t, DwnConsRK, objT.Type)
 	kvs := []struct {
 		key string
 		val interface{}
@@ -104,7 +103,7 @@ func TestConfUpdate(t *testing.T) {
 }
 
 func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc,
-	c *pm.Conf) {
+	c *pm.conf) {
 	pth := pm.ConfPath()
 	fs = afero.NewMemMapFs()
 	pm.BasicConf(pth, fs)

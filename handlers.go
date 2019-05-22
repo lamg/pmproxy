@@ -35,41 +35,35 @@ import (
 	"time"
 )
 
-type handlerConf struct {
-	sh *SrvHandler
-	sc *srvConf
+type srvHandler struct {
+	ServeHTTP h.HandlerFunc
+	ReqHnd    fh.RequestHandler
 }
 
-func NewHnds(cm *connMng, staticFPath string, prx, iface *srvConf, mng func(*Cmd)) (prh, ifh *SrvHandler,
-	e error) {
-	prh, ifh = new(SrvHandler), new(SrvHandler)
-	if prx.fastOrStd {
-		// consumers, matchers determine context values
-		// dialer and proxy process context values
-		prh.ReqHnd = proxy.NewFastProxy(cm.set,
-			cm.params, cm.apply, cm.dialTimeout, time.Now)
+func newHnds(prx, iface *srvConf) (prh, ifh *srvHandler) {
+	prh, ifh = new(srvHandler), new(srvHandler)
+	if prx.fast != nil {
+		prh.ReqHnd = proxy.NewFastProxy(prx.ctl, prx.dialTimeout,
+			prx.now)
 	} else {
-		prh.ServeHTTP = proxy.NewProxy(cm.set,
-			cm.params, cm.apply, cm.dialTimeout, cm.maxIdle,
-			cm.idleT, cm.tlsHT, cm.expCT,
-			time.Now).ServeHTTP
+		prh.ServeHTTP = proxy.NewProxy(prx.ctl, prx.dialTimeout,
+			prx.std.maxIdle, prx.std.idleT, prx.std.tlsHT,
+			prx.std.expCT, prx.now).ServeHTTP
 	}
-	if iface.fastOrStd {
-		// administration, and serializer are part of the
-		// control interface, and also have consumers and
-		// matchers
-		fhnd := fastIface(staticFPath, mng)
+	if iface.fast != nil {
+		fhnd := fastIface(iface.staticFPath, iface.cmdChan)
 		cropt := fasthttpcors.DefaultHandler()
 		ifh.ReqHnd = cropt.CorsMiddleware(fhnd)
 	} else {
-		shnd := stdIface(staticFPath, mng)
+		shnd := stdIface(iface.staticFPath, iface.cmdChan)
 		cropt := cors.AllowAll()
 		ifh.ServeHTTP = cropt.Handler(shnd).ServeHTTP
 	}
 	return
 }
 
-func fastIface(staticFPath string, mng func(*Cmd)) (hnd fh.RequestHandler) {
+func fastIface(staticFPath string,
+	mng func(*Cmd)) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
 			Root: staticFPath,
@@ -168,111 +162,5 @@ func emptyPathIfLogin(pth string) (r string) {
 	if pth == loginPref || pth == loginPrefSlash {
 		r = ""
 	}
-	return
-}
-
-type SrvHandler struct {
-	ServeHTTP h.HandlerFunc
-	ReqHnd    fh.RequestHandler
-}
-
-type srvConf struct {
-	name         string
-	proxyOrIface bool
-	fastOrStd    bool
-	readTimeout  time.Duration
-	writeTimeout time.Duration
-	addr         string
-	certFl       string
-	keyFl        string
-
-	// fasthttp specific
-	maxConnIP  int
-	maxReqConn int
-}
-
-func readSrvConf(i interface{}) (sc *srvConf, e error) {
-	sc = new(srvConf)
-	fe := func(d error) {
-		if d != nil {
-			s := d.Error()
-			me := NoKey(maxConnIPK).Error()
-			re := NoKey(maxReqConnK).Error()
-			if s == me || s == re {
-				d = nil
-			}
-		}
-		e = d
-	}
-	kf := []kFuncI{
-		{
-			fastOrStdK,
-			func(i interface{}) {
-				sc.fastOrStd = boolE(i, fe)
-			},
-		},
-		{
-			readTimeoutK,
-			func(i interface{}) {
-				sc.readTimeout = durationE(i, fe)
-			},
-		},
-		{
-			writeTimeoutK,
-			func(i interface{}) {
-				sc.writeTimeout = durationE(i, fe)
-			},
-		},
-		{
-			addrK,
-			func(i interface{}) {
-				sc.addr = stringE(i, fe)
-			},
-		},
-		{
-			certK,
-			func(i interface{}) {
-				sc.certFl = stringE(i, fe)
-			},
-		},
-		{
-			keyK,
-			func(i interface{}) {
-				sc.keyFl = stringE(i, fe)
-			},
-		},
-		{
-			maxConnIPK,
-			func(i interface{}) {
-				sc.maxConnIP = intE(i, fe)
-			},
-		},
-		{
-			maxReqConnK,
-			func(i interface{}) {
-				sc.maxReqConn = intE(i, fe)
-			},
-		},
-	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
-	return
-}
-
-func (p *srvConf) toMap() (i interface{}) {
-	mp := map[string]interface{}{
-		fastOrStdK:    p.fastOrStd,
-		readTimeoutK:  p.readTimeout.String(),
-		writeTimeoutK: p.writeTimeout.String(),
-		addrK:         p.addr,
-	}
-	if p.fastOrStd {
-		mp[maxConnIPK] = p.maxConnIP
-		mp[maxReqConnK] = p.maxReqConn
-	}
-	if !p.proxyOrIface {
-		mp[certK] = p.certFl
-		mp[keyK] = p.keyFl
-	}
-	i = mp
 	return
 }
