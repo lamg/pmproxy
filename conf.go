@@ -15,7 +15,7 @@
 // License for more details.
 
 // You should have received a copy of the GNU Affero General
-// Public License along with PMProxy.  If not, see
+// Public License along with PMProxy. If not, see
 // <https://www.gnu.org/licenses/>.
 
 package pmproxy
@@ -24,131 +24,49 @@ import (
 	mng "github.com/lamg/pmproxy/managers"
 )
 
-func loadSrvConf(fs afero.Fs) (prx, iface *srvConf, e error) {
+func loadSrvConf(fs afero.Fs) (p *proxyConf, i *apiConf, e error) {
+	bs, e := afero.ReadFile(fs, "~/config/pmproxy/conf.toml")
+	if e == nil {
+		tr, e = toml.LoadBytes(bs)
+	}
+	if e == nil {
+		cmdChan, ctl, e := mng.Load(tr, fs)
+		if e == nil {
+			it := tr.Get("api").(*toml.Tree)
+			i = new(apiConf)
+			e = it.Unmarshal(i)
+		}
+		if e == nil {
+			pt := tr.Get("proxy").(*toml.Tree)
+			p = new(proxyConf)
+			e = pt.Unmarshal(p)
+		}
+	} else {
+
+	}
 	return
 }
 
-type srvConf struct {
-	name         string
-	iface        *ifaceConf
-	prx          *proxyConf
-	readTimeout  time.Duration
-	writeTimeout time.Duration
-	addr         string
-
-	fast *fastSrv
-	std  *stdSrv
-}
-
-type fastSrv struct {
-	maxConnIP  int
-	maxReqConn int
-}
-
-type stdSrv struct {
-	maxIdle time.Duration
-	idleT   time.Duration
-	tlsHT   time.Duration
-	expCT   time.Duration
-}
-
-type ifaceConf struct {
-	certFl      string
-	keyFl       string
-	cmdChan     mng.CmdF
-	staticFPath string
-	persistIntv time.Duration
-	persist     func() error
+type apiConf struct {
+	HTTPSCert         string        `toml:"httpsCert"`
+	HTTPSKey          string        `toml:"httpsKey"`
+	WebStaticFilesDir string        `toml:"webStaticFilesDir"`
+	PersistInterval   time.Duration `toml:"persistInterval"`
+	Server            *srvConf      `toml:"server"`
+	cmdChan           mng.CmdF
+	persist           func() error
 }
 
 type proxyConf struct {
+	DialTimeout time.Duration `toml:"dialTimeout"`
+	Server      *srvConf      `toml:"server"`
 	ctl         proxy.ControlConn
-	dialTimeout time.Duration
 	now         func() time.Time
 }
 
-func readSrvConf(i interface{}) (sc *srvConf, e error) {
-	sc = new(srvConf)
-	fe := func(d error) {
-		if d != nil {
-			s := d.Error()
-			me := NoKey(maxConnIPK).Error()
-			re := NoKey(maxReqConnK).Error()
-			if s == me || s == re {
-				d = nil
-			}
-		}
-		e = d
-	}
-	kf := []kFuncI{
-		{
-			fastOrStdK,
-			func(i interface{}) {
-				sc.fastOrStd = boolE(i, fe)
-			},
-		},
-		{
-			readTimeoutK,
-			func(i interface{}) {
-				sc.readTimeout = durationE(i, fe)
-			},
-		},
-		{
-			writeTimeoutK,
-			func(i interface{}) {
-				sc.writeTimeout = durationE(i, fe)
-			},
-		},
-		{
-			addrK,
-			func(i interface{}) {
-				sc.addr = stringE(i, fe)
-			},
-		},
-		{
-			certK,
-			func(i interface{}) {
-				sc.certFl = stringE(i, fe)
-			},
-		},
-		{
-			keyK,
-			func(i interface{}) {
-				sc.keyFl = stringE(i, fe)
-			},
-		},
-		{
-			maxConnIPK,
-			func(i interface{}) {
-				sc.maxConnIP = intE(i, fe)
-			},
-		},
-		{
-			maxReqConnK,
-			func(i interface{}) {
-				sc.maxReqConn = intE(i, fe)
-			},
-		},
-	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
-	return
-}
-
-func (p *srvConf) toMap() (i interface{}) {
-	mp := map[string]interface{}{
-		fastOrStdK:    p.fastOrStd,
-		readTimeoutK:  p.readTimeout.String(),
-		writeTimeoutK: p.writeTimeout.String(),
-		addrK:         p.addr,
-	}
-	if p.fastOrStd {
-		mp[maxConnIPK] = p.maxConnIP
-		mp[maxReqConnK] = p.maxReqConn
-	}
-	if !p.proxyOrIface {
-		mp[certK] = p.certFl
-		mp[keyK] = p.keyFl
-	}
-	i = mp
-	return
+type srvConf struct {
+	ReadTimeout  time.Duration `toml:"readTimeout"`
+	WriteTimeout time.Duration `toml:"writeTimeout"`
+	Addr         string        `toml:"addr"`
+	FastOrStd    bool          `toml:"fastOrStd"`
 }

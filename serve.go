@@ -32,67 +32,169 @@ import (
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
 func Serve() (e error) {
-	var c *conf
-	var prx, iface *srvConf
-	fs := []func(){
-		func() { prx, iface, e = loadSrvConf(afero.NewOsFs()) },
-		func() {
-			prh, ifh := newHnds(prx, iface)
-			fes := []func() error{
-				serveFunc(prx, prh),
-				serveFunc(iface, ifh),
-				func() (e error) {
-					for {
-						time.Sleep(iface.iface.persistIntv)
-						iface.iface.persist()
-					}
-					return
-				},
-			}
-			e = alg.RunConcurr(fes)
-		},
+	p, i, e := loadSrvConf(afero.NewOsFs())
+	if e == nil {
+		fes := []func() error{
+			serveAPI(i),
+			serveProxy(p),
+			func() (e error) {
+				for {
+					time.Sleep(i.PersistInterval)
+					i.persist()
+				}
+				return
+			},
+		}
+		e = alg.RunConcurr(fes)
 	}
-	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
-func serveFunc(c *srvConf, sh *srvHandler) (fe func() error) {
-	var listenAndServe func() error
-	var listenAndServeTLS func(string, string) error
-	if sh.ReqHnd != nil {
+func serveAPI(i *apiConf) (e error) {
+	if i.Server.FastOrStd {
+		fhnd := fastIface(i.WebStaticFilesDir, i.cmdChan)
+		cropt := fasthttpcors.DefaultHandler()
 		fast := &fh.Server{
-			ReadTimeout:        c.readTimeout,
-			WriteTimeout:       c.writeTimeout,
-			Handler:            sh.ReqHnd,
-			MaxConnsPerIP:      c.maxConnIP,
-			MaxRequestsPerConn: c.maxReqConn,
+			ReadTimeout:  i.Server.ReadTimeout,
+			WriteTimeout: i.Server.WriteTimeout,
+			Handler:      cropt.CorsMiddleware(fhnd),
 		}
-		listenAndServe = func() error {
-			return fast.ListenAndServe(c.addr)
-		}
-		listenAndServeTLS = func(cert,
-			key string) (e error) {
-			return fast.ListenAndServeTLS(c.addr, cert, key)
-		}
+		e = fast.ListenAndServeTLS(i.Server.Addr, i.HTTPSCert, i.HTTPSKey)
 	} else {
+		shnd := stdIface(i.WebStaticFilesDir, i.cmdChan)
+		cropt := cors.AllowAll()
 		std := &h.Server{
-			ReadTimeout:  c.readTimeout,
-			WriteTimeout: c.writeTimeout,
-			IdleTimeout:  0,
-			Addr:         c.addr,
-			Handler:      sh.ServeHTTP,
+			ReadTimeout:  i.Server.ReadTimeout,
+			WriteTimeout: i.Server.WriteTimeout,
+			Addr:         i.Server.Addr,
+			Handler:      cropt.Handler(shnd).ServeHTTP,
 			TLSNextProto: make(map[string]func(*h.Server,
 				*tls.Conn, h.Handler)),
 		}
-		listenAndServe = std.ListenAndServe
-		listenAndServeTLS = std.ListenAndServeTLS
+		e = std.ListenAndServeTLS(i.HTTPSCert, i.HTTPSKey)
 	}
-	if c.prx != nil {
-		fe = listenAndServe
-	} else {
-		fe = func() error {
-			return listenAndServeTLS(c.iface.certFl, c.iface.keyFl)
+	return
+}
+
+func serveProxy(p *proxyConf) (e error) {
+	if p.Server.FastOrStd {
+		fast := &fh.Server{
+			ReadTimeout:  p.Server.ReadTimeout,
+			WriteTimeout: p.Server.WriteTimeout,
+			Handler:      proxy.NewFastProxy(p.ctl, p.DialTimeout, p.now),
 		}
+		e = fast.ListenAndServe(p.Server.Addr)
+	} else {
+		std := &h.Server{
+			ReadTimeout:  i.Server.ReadTimeout,
+			WriteTimeout: i.Server.WriteTimeout,
+			Addr:         p.Server.Addr,
+			Handler:      proxy.NewProxy(p.ctl, p.DialTimeout, p.now),
+		}
+		e = std.ListenAndServe()
+	}
+	return
+}
+
+func fastIface(staticFPath string,
+	mng func(*Cmd)) (hnd fh.RequestHandler) {
+	hnd = func(ctx *fh.RequestCtx) {
+		fs := &fh.FS{
+			Root: staticFPath,
+		}
+		fsHnd := fs.NewRequestHandler()
+		compatibleIface(
+			mng,
+			string(ctx.Request.URI().Path()),
+			string(ctx.Method()),
+			ctx.RemoteAddr().String(),
+			func() (bs []byte, e error) {
+				buff := new(bytes.Buffer)
+				e = ctx.Request.BodyWriteTo(buff)
+				bs = buff.Bytes()
+				return
+			},
+			func(bs []byte) {
+				ctx.Response.SetBody(bs)
+			},
+			func(file string) {
+				ctx.URI().SetPath(file)
+				fsHnd(ctx)
+			},
+			func(err string) {
+				ctx.Response.SetStatusCode(h.StatusBadRequest)
+				ctx.Response.SetBodyString(err)
+			},
+		)
+	}
+	return
+}
+
+func stdIface(staticFPath string, mng func(*Cmd)) (hnd h.HandlerFunc) {
+	hnd = func(w h.ResponseWriter, r *h.Request) {
+		compatibleIface(
+			mng,
+			r.URL.Path,
+			r.Method,
+			r.RemoteAddr,
+			func() (bs []byte, e error) {
+				bs, e = ioutil.ReadAll(r.Body)
+				r.Body.Close()
+				return
+			},
+			func(bs []byte) {
+				w.Write(bs)
+			},
+			func(file string) {
+				pth := path.Join(staticFPath, file)
+				h.ServeFile(w, r, pth)
+			},
+			func(err string) {
+				h.Error(w, err, h.StatusBadRequest)
+			},
+		)
+	}
+	return
+}
+
+func compatibleIface(mng func(*Cmd), path, method,
+	rAddr string, body func() ([]byte, error),
+	resp func([]byte), fileSrv, writeErr func(string)) {
+	m := new(Cmd)
+	var e error
+	var bs []byte
+	fs := []func(){
+		func() {
+			bs, e = body()
+		},
+		func() {
+			if path == ApiCmd && method == h.MethodPost {
+				e = json.Unmarshal(bs, m)
+			} else {
+				path = emptyPathIfLogin(path)
+				fileSrv(path)
+				m = &Cmd{Cmd: skip, Manager: ResourcesK}
+			}
+		},
+		func() {
+			m.IP, _, e = net.SplitHostPort(rAddr)
+		},
+		func() { mng(m); e = m.e },
+		func() {
+			if m.bs != nil {
+				resp(m.bs)
+			}
+		},
+	}
+	if !alg.TrueFF(fs, func() bool { return e == nil }) {
+		writeErr(e.Error())
+	}
+}
+
+func emptyPathIfLogin(pth string) (r string) {
+	r = pth
+	if pth == loginPref || pth == loginPrefSlash {
+		r = ""
 	}
 	return
 }
