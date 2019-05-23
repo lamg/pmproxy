@@ -22,8 +22,8 @@ package managers
 
 import (
 	"fmt"
+	alg "github.com/lamg/algorithms"
 	"github.com/lamg/throttle"
-	"github.com/spf13/cast"
 	"time"
 )
 
@@ -34,55 +34,12 @@ type bwConsR struct {
 	spec    *spec
 }
 
-func (b *bwConsR) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
-	optFe := optionalKeys(fe, specKS)
-	kf := []kFuncI{
-		{
-			NameK,
-			func(i interface{}) {
-				b.name = stringE(i, fe)
-			},
-		},
-		{
-			throttleK,
-			func(i interface{}) {
-				var d error
-				b.thrFrac, d = cast.ToFloat64E(i)
-				b.connThr = throttle.NewThrottle(b.thrFrac, time.Millisecond)
-				fe(d)
-			},
-		},
-		{
-			specKS,
-			func(i interface{}) {
-				// optional field in map
-				b.spec = new(spec)
-				b.spec.fromMap(i)
-			},
-		},
-	}
-	mapKF(kf, i, optFe, func() bool { return e == nil })
-	if b.spec == nil {
-		b.spec = new(spec)
-	}
-	return
-}
-
-func (b *bwConsR) toMap() (i map[string]interface{}) {
-	i = map[string]interface{}{
-		NameK:     b.name,
-		throttleK: fmt.Sprintf("%.2f", b.thrFrac),
-	}
-	return
-}
-
 func (b *bwConsR) exec(c *Cmd) (term bool) {
-	kf = []alg.KFunc{
+	kf := []alg.KFunc{
 		{
 			Get,
 			func() {
-				c.bs = []byte(fmt.Sprintf("%.2f", b.thrFrac))
+				c.Data = []byte(fmt.Sprintf("%.2f", b.thrFrac))
 			},
 		},
 		{
@@ -97,7 +54,7 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			Can,
+			HandleConn,
 			func() {
 				b.connThr.Throttle()
 				c.Ok = true

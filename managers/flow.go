@@ -2,27 +2,32 @@ package managers
 
 import (
 	"fmt"
+	"github.com/lamg/proxy"
 	"sync"
+	"time"
 )
 
-type Manager struct {
+type manager struct {
 	mngs *sync.Map
 }
 
 type Cmd struct {
-	Cmd     string                 `json:"cmd"`
-	User    string                 `json:"user"`
-	Manager string                 `json:"manager"`
-	Secret  string                 `json:"secret"`
-	IsAdmin bool                   `json:"isAdmin"`
-	Cred    *Credentials           `json:"cred"`
-	String  string                 `json:"string"`
-	Uint64  uint64                 `json:"uint64"`
-	Object  map[string]interface{} `json:"object"`
-	Ok      bool                   `json:"ok"`
-	IP      string                 `json:"ip"`
-	Data    []byte                 `json:"-"`
-	Err     error                  `json:"-`
+	Cmd       string                 `json:"cmd"`
+	User      string                 `json:"user"`
+	Manager   string                 `json:"manager"`
+	Secret    string                 `json:"secret"`
+	IsAdmin   bool                   `json:"isAdmin"`
+	Cred      *Credentials           `json:"c.Errd"`
+	String    string                 `json:"string"`
+	Uint64    uint64                 `json:"uint64"`
+	Groups    []string               `json:"groups"`
+	Object    map[string]interface{} `json:"object"`
+	Ok        bool                   `json:"ok"`
+	IP        string                 `json:"ip"`
+	Data      []byte                 `json:"-"`
+	Err       error                  `json:"-"`
+	Operation *proxy.Operation       `json:"-"`
+	Result    *proxy.Result          `json:"-"`
 }
 
 type Credentials struct {
@@ -32,29 +37,33 @@ type Credentials struct {
 
 type CmdF func(*Cmd) bool
 
-func NewManager(exp time.Duration) (m *Manager, e error) {
-	m = &Manager{mngs: new(sync.Map)}
-	iu := newIPUser()
+func newmanager(exp time.Duration) (m *manager, e error) {
+	m = &manager{mngs: new(sync.Map)}
+	iu := newIpUser()
 	cr, e := newCrypt(exp)
 	if e == nil {
-		m.Add(ipUserK, iu.exec)
-		m.Add(cryptK, cr.exec)
+		m.add(ipUserMng, iu.exec)
+		m.add(cryptMng, cr.exec)
 	}
 	return
 }
 
-func (m *Manager) Add(name string, f CmdF) {
+func (m *manager) add(name string, f CmdF) {
 	m.mngs.Store(name, f)
 	return
 }
 
 const (
-	Skip = "skip"
+	Skip       = "skip"
+	Get        = "get"
+	Set        = "set"
+	HandleConn = "handleConn"
+	Show       = "show"
 )
 
 /*
 - each command when executed can be terminal or not. If not terminal,
-it means it must be executed by the manager now at Cmd.Manager. If
+it means it must be executed by the manager now at Cmd.manager. If
 terminal it most be executed by the manager who originated it. Each
 manager must deal correctly with incoming and outgoing commands,
 according information present in them. The field Cmd.Object support
@@ -66,14 +75,14 @@ type mngCmd struct {
 	cmd string
 }
 
-func (m *Manager) Exec(c *Cmd) {
-	mngs := []string{}
-	term, prev := m.exec(c)
+func (m *manager) exec(c *Cmd) {
+	var mngs []*mngCmd
+	term, prev := m.execStep(c)
 	if !term {
 		mngs = []*mngCmd{prev}
 	}
-	for len(mngs) != 0 && c.e == nil {
-		term, prev = m.exec(c)
+	for len(mngs) != 0 && c.Err == nil {
+		term, prev = m.execStep(c)
 		if term {
 			next := pop(mngs)
 			c.Manager = next.mng
@@ -91,18 +100,18 @@ func pop(stack []*mngCmd) (n *mngCmd) {
 	return
 }
 
-func (m *Manager) exec(c *Cmd) (term bool, prev *mngCmd) {
+func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {
 	v, ok := m.mngs.Load(c.Manager)
 	prev = &mngCmd{mng: c.Manager, cmd: c.Cmd}
 	if ok {
 		term = v.(CmdF)(c)
 	} else {
-		c.e = fmt.Errorf("Manager '%s' not found", c.Manager)
+		c.Err = fmt.Errorf("manager '%s' not found", c.Manager)
 	}
 	return
 }
 
-func (m *Manager) Delete(name string) (e error) {
+func (m *manager) delete(name string) (e error) {
 	m.mngs.Delete(name)
 	return
 }

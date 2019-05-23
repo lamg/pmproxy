@@ -31,34 +31,12 @@ type groupIPM struct {
 	group   string
 }
 
-func (m *groupIPM) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
-	kf := []kFuncI{
-		{
-			NameK,
-			func(i interface{}) {
-				m.name = stringE(i, fe)
-			},
-		},
-		{
-			userDBNK,
-			func(i interface{}) {
-				m.userGroupN = stringE(i, fe)
-			},
-		},
-		{
-			groupK,
-			func(i interface{}) {
-				m.group = stringE(i, fe)
-			},
-		},
-	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
-	return
-}
+const (
+	Match = "match"
+)
 
 func (m *groupIPM) exec(c *Cmd) (term bool) {
-	kf = []kFunc{
+	kf := []alg.KFunc{
 		{
 			Set,
 			func() {
@@ -68,13 +46,13 @@ func (m *groupIPM) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				c.bs, c.e = json.Marshal(m.toMap())
+				c.Data, c.Err = json.Marshal(m)
 			},
 		},
 		{
 			Match,
 			func() {
-				if len(c.Groups) == 0 && c.e == nil {
+				if len(c.Groups) == 0 && c.Err == nil {
 					c.Manager = m.userDBN
 					term = false
 				} else if len(c.Groups) != 0 {
@@ -86,14 +64,6 @@ func (m *groupIPM) exec(c *Cmd) (term bool) {
 			},
 		},
 	}
-	return
-}
-
-func (m *groupIPM) toMap() (i map[string]interface{}) {
-	i = map[string]interface{}{
-		groupK:      m.group,
-		NameK:       m.name,
-		userGroupNK: m.userGroupN,
-	}
+	alg.ExecF(kf, c.Cmd)
 	return
 }

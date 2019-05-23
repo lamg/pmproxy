@@ -22,6 +22,7 @@ package managers
 
 import (
 	"encoding/json"
+	alg "github.com/lamg/algorithms"
 )
 
 type sessionIPM struct {
@@ -29,39 +30,25 @@ type sessionIPM struct {
 	authName string
 }
 
-func (m *sessionIPM) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
-	kf := []kFuncI{
-		{
-			NameK,
-			func(i interface{}) {
-				m.name = stringE(i, fe)
-			},
-		},
-		{
-			authNameK,
-			func(i interface{}) {
-				m.authName = stringE(i, fe)
-			},
-		},
-	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
-	return
-}
+const (
+	Open         = "open"
+	Close        = "close"
+	authenticate = "authenticate"
+)
 
 func (m *sessionIPM) exec(c *Cmd) (term bool) {
-	kf = []kFunc{
+	kf := []alg.KFunc{
 		{
 			Open,
 			func() {
 				if c.User == "" {
 					c.Manager = m.authName
 					c.Cmd = authenticate
-				} else if c.e == nil && c.Secret == "" {
-					c.Manager = crypt
+				} else if c.Err == nil && c.Secret == "" {
+					c.Manager = cryptMng
 					c.Cmd = encrypt
 				} else {
-					c.Manager = ipUserK
+					c.Manager = ipUserMng
 					c.Cmd = Open
 					term = true
 				}
@@ -70,7 +57,7 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		{
 			Close,
 			func() {
-				_, secretOk = c.Object[secretOkK]
+				_, secretOk := c.Object[secretOkK]
 				if secretOk && c.e == nil {
 					c.Manager = crypt
 					c.Cmd = decrypt
@@ -101,7 +88,8 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		{
 			Renew,
 			func() {
-				_, secretOk := c.Object[secretOkK]
+				_, secretOk := c.Object[secretOkK] // FIXME a way to know
+				// defined fields
 				if !secretOk {
 					c.Manager = crypt
 				}
@@ -136,6 +124,7 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 			},
 		},
 	}
+	alg.ExecF(kf, c.Cmd)
 	return
 }
 

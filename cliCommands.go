@@ -18,7 +18,7 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
 	"bytes"
@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	alg "github.com/lamg/algorithms"
-	pm "github.com/lamg/pmproxy"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"

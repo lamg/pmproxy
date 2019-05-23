@@ -54,7 +54,15 @@ type apiConf struct {
 	PersistInterval   time.Duration `toml:"persistInterval"`
 	Server            *srvConf      `toml:"server"`
 	cmdChan           mng.CmdF
-	persist           func() error
+}
+
+func (a *apiConf) persist() (e error) {
+	c := &mng.Cmd{
+		Cmd: "persist",
+	}
+	a.cmdChan(c)
+	e = c.e
+	return
 }
 
 type proxyConf struct {

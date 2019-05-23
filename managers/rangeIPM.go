@@ -21,6 +21,7 @@
 package managers
 
 import (
+	alg "github.com/lamg/algorithms"
 	"net"
 )
 
@@ -40,7 +41,7 @@ func (r *rangeIPM) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				c.bs = []byte(r.cidr)
+				c.Data = []byte(r.cidr)
 			},
 		},
 		{
@@ -58,41 +59,5 @@ func (r *rangeIPM) exec(c *Cmd) (term bool) {
 func (r *rangeIPM) match(ip string) (ok bool) {
 	pip := net.ParseIP(ip)
 	ok = pip != nil && r.rg.Contains(pip)
-	return
-}
-
-func (r *rangeIPM) toMap() (i map[string]interface{}) {
-	i = map[string]interface{}{
-		NameK: r.name,
-		cidrK: r.cidr,
-	}
-	return
-}
-
-func (r *rangeIPM) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
-	kf := []kFuncI{
-		{
-			NameK,
-			func(i interface{}) {
-				r.name = stringE(i, fe)
-			},
-		},
-		{
-			cidrK,
-			func(i interface{}) {
-				r.cidr = stringE(i, fe)
-			},
-		},
-		{
-			cidrK, // if previous keys exists this exists and
-			// r.init is executed
-			func(i interface{}) {
-				e = r.init()
-			},
-		},
-	}
-	fb := func() bool { return e == nil }
-	mapKF(kf, i, fe, fb)
 	return
 }

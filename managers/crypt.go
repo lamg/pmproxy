@@ -18,11 +18,12 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package managers
 
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"time"
 )
@@ -31,6 +32,11 @@ type crypt struct {
 	key        *rsa.PrivateKey
 	expiration time.Duration
 }
+
+const (
+	cryptMng = "crypt"
+	encrypt  = "encrypt"
+)
 
 func newCrypt(exp time.Duration) (c *crypt, e error) {
 	c = &crypt{
@@ -71,8 +77,12 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 		var ok bool
 		user, ok = token.Claims.(*claim)
 		if !ok {
-			e = invalidClaims()
+			e = fmt.Errorf("invalid claims")
 		}
 	}
+	return
+}
+
+func (c *crypt) exec(m *Cmd) (term bool) {
 	return
 }

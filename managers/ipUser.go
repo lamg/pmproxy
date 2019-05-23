@@ -21,6 +21,7 @@
 package managers
 
 import (
+	alg "github.com/lamg/algorithms"
 	"sync"
 )
 
@@ -33,7 +34,7 @@ type ipUser struct {
 	mäp *sync.Map
 }
 
-func newIPuser() (s *ipUser) {
+func newIpUser() (s *ipUser) {
 	s = &ipUser{
 		mäp: new(sync.Map),
 	}
@@ -52,6 +53,7 @@ func (p *ipUser) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
+	return
 }
 
 func (p *ipUser) open(ip, user string) {

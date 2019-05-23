@@ -1,4 +1,29 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package managers
+
+import (
+	alg "github.com/lamg/algorithms"
+	ld "github.com/lamg/ldaputil"
+)
 
 type adDB struct {
 	name string
@@ -14,28 +39,13 @@ type keyVal struct {
 	k, v string
 }
 
-func (d *adDB) fromMap(i interface{}) (e error) {
-	addr, suff, bdn, user, pass :=
-		keyVal{k: addrK}, keyVal{k: suffK}, keyVal{k: bdnK},
-		keyVal{k: userK}, keyVal{k: passK}
-	ks := []keyVal{addr, suff, bdn, user, pass}
-	mp, e := cast.ToStringMapE(i)
-	ib := func(i int) (b bool) {
-		ks[i].v, e = cast.ToStringE(mp[ks[i].k])
-		b = e != nil
-		return
-	}
-	alg.BLnSrch(ib, len(ks))
-	return
-}
-
 func (d *adDB) auth(user, pass string) (nuser string, e error) {
 	nuser, e = d.ldap.AuthAndNorm(user, pass)
 	return
 }
 
 func (d *adDB) userGroups(user string) (gs []string, e error) {
-	mp, e := ldap.FullRecordAcc(user)
+	mp, e := d.ldap.FullRecordAcc(user)
 	if e == nil {
 		gs, e = d.ldap.MembershipCNs(mp)
 	}
@@ -43,9 +53,9 @@ func (d *adDB) userGroups(user string) (gs []string, e error) {
 }
 
 func (d *adDB) userName(user string) (name string, e error) {
-	mp, e := ldap.FullRecordAcc(user)
+	mp, e := d.ldap.FullRecordAcc(user)
 	if e == nil {
-		name, e = ldap.FullName(mp)
+		name, e = d.ldap.FullName(mp)
 	}
 	return
 }

@@ -21,9 +21,8 @@
 package managers
 
 import (
-	"encoding/json"
-	ld "github.com/lamg/ldaputil"
-	"github.com/spf13/cast"
+	"fmt"
+	alg "github.com/lamg/algorithms"
 )
 
 const (
@@ -41,23 +40,9 @@ type mapDB struct {
 	userGroup map[string][]string
 }
 
-func (d *mapDB) fromMap(i interface{}) (e error) {
-	var mp map[string]interface{}
-	fs := []func(){
-		func() { mp, e = cast.ToStringMapE(i) },
-		func() {
-			upm, e = cast.ToStringMapStringE(mp[userPassK])
-		},
-		func() {
-			gm, e = cast.ToStringMapStringSliceE(mp[userGroupsK])
-		},
-	}
-	alg.TrueFF(fs, func() bool { return e == nil })
-}
-
 func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 	nuser = user
-	p, ok := upm[user]
+	p, ok := d.userPass[user]
 	if !ok {
 		e = fmt.Errorf("No user '%s'", user)
 	} else if p != pass {
@@ -67,21 +52,21 @@ func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 }
 
 func (d *mapDB) userGroups(user string) (gs []string, e error) {
-	gs, ok := gm[user]
+	gs, ok := d.userGroup[user]
 	if !ok {
 		e = fmt.Errorf("No user '%s'", user)
 	}
 	return
 }
 
-func (d *userDB) exec(c *Cmd) (term bool) {
+func (d *mapDB) exec(c *Cmd) (term bool) {
 	// TODO
-	kf = []alg.KFunc{
+	kf := []alg.KFunc{
 		{
 			authCmd,
 			func() {
-				c.User, c.e = d.auth(c.Credentials.User,
-					c.Credentials.Pass)
+				c.User, c.Err = d.auth(c.Cred.User,
+					c.Cred.Pass)
 				setKey(c, userK)
 				term = true
 			},
@@ -91,7 +76,7 @@ func (d *userDB) exec(c *Cmd) (term bool) {
 			func() {
 				term = hasKey(c, userK)
 				if term {
-					c.Groups, c.e = d.userGroups(c.User)
+					c.Groups, c.Err = d.userGroups(c.User)
 				} else {
 					c.Cmd, c.Manager = ipUserCmd, ipUserMng
 				}

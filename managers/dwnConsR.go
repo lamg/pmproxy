@@ -23,7 +23,7 @@ package managers
 import (
 	"encoding/json"
 	"github.com/c2h5oh/datasize"
-	"github.com/lamg/algorithms"
+	alg "github.com/lamg/algorithms"
 	"strings"
 	"sync"
 	"time"
@@ -41,119 +41,13 @@ type dwnConsR struct {
 	resetCycle time.Duration
 }
 
-func (d *dwnConsR) fromMap(i interface{}) (e error) {
-	fe := func(err error) { e = err }
-	var m map[string]string
-	kf := []kFuncI{
-		{
-			NameK,
-			func(i interface{}) {
-				d.name = stringE(i, fe)
-			},
-		},
-		{
-			UserDBK,
-			func(i interface{}) {
-				d.userDBN = stringE(i, fe)
-			},
-		},
-		{
-			LastResetK,
-			func(i interface{}) {
-				d.lastReset = stringDateE(i, fe)
-			},
-		},
-		{
-			ResetCycleK,
-			func(i interface{}) {
-				d.resetCycle = durationE(i, fe)
-			},
-		},
-		{
-			ResetCycleK,
-			func(i interface{}) {
-				d.userCons = new(sync.Map)
-				var mp map[string]uint64
-				var ne error
-				var bs []byte
-				fs := []func(){
-					func() { bs, ne = d.fileReader(d.name + ".json") },
-					func() { ne = json.Unmarshal(bs, &mp) },
-					func() {
-						for k, v := range mp {
-							d.userCons.Store(k, v)
-						}
-					},
-				}
-				trueFF(fs, func() bool { return ne == nil })
-				if ne != nil {
-					d.warning("dwnConsR reading consumption:" + ne.Error())
-				}
-			},
-		},
-		{
-			specKS,
-			func(i interface{}) {
-				d.spec = new(spec)
-				d.spec.fromMap(i)
-			},
-		},
-		{
-			QuotaMapK,
-			func(i interface{}) {
-				m = stringMapStringE(i, fe)
-			},
-		},
-		{
-			QuotaMapK,
-			func(i interface{}) {
-				d.groupQuotaM = new(sync.Map)
-				d.quotaCache = new(sync.Map)
-				for k, v := range m {
-					bts := new(datasize.ByteSize)
-					nv := cleanHumanReadable(v)
-					e = bts.UnmarshalText([]byte(nv))
-					if e != nil {
-						break
-					}
-					d.groupQuotaM.Store(k, bts.Bytes())
-				}
-			},
-		},
-	}
-	mapKF(kf, i, fe, func() bool { return e == nil })
-	return
-}
-
-func (d *dwnConsR) toMap() (i map[string]interface{}) {
-	i = map[string]interface{}{
-		NameK:       d.name,
-		UserDBK:     d.userDBN,
-		LastResetK:  d.lastReset.Format(time.RFC3339),
-		ResetCycleK: d.resetCycle.String(),
-		specKS:      d.spec.toMap(),
-		QuotaMapK: func() (m map[string]string) {
-			m = make(map[string]string)
-			d.groupQuotaM.Range(func(k, v interface{}) (ok bool) {
-				sz := datasize.ByteSize(v.(uint64))
-				m[k.(string)], ok = sz.HumanReadable(), true
-				return
-			})
-			return
-		}(),
-	}
-	mp := make(map[string]uint64)
-	d.userCons.Range(func(k, v interface{}) (b bool) {
-		ks, vu := k.(string), v.(uint64)
-		mp[ks] = vu
-		return
-	})
-	d.mapWriter(mp)
-	return
-}
+const (
+	groupsK = "groups"
+	adminsK = "admins"
+)
 
 func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
-	kf = []alg.KFunc{
+	kf := []alg.KFunc{
 		{
 			Get,
 			func() {
@@ -163,12 +57,12 @@ func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
 					gs := v.([]string)
 					name := c.Object[nameK].(string)
 					user := c.Object[userK].(string)
-					data, c.e = d.info(user, name, gs)
-					if c.e == nil {
-						c.bs, c.e = json.Marshal(data)
+					data, c.Err = d.info(user, name, gs)
+					if c.Err == nil {
+						c.Data, c.Err = json.Marshal(data)
 					}
 				} else {
-					c.Manager = c.userDBN
+					c.Manager = d.userDBN
 				}
 				term = ok
 			},
@@ -178,7 +72,7 @@ func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
 			func() {
 				v, ok := c.Object[adminsK]
 				if !ok {
-					c.Manager = globalPar
+					c.Manager = adminsK
 				}
 				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
@@ -186,40 +80,13 @@ func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
 			},
 		},
 		{
-			show,
+			Show,
 			func() {
-				c.bs, c.e = json.Marshal(d.toMap())
+				c.Data, c.Err = json.Marshal(d)
 			},
 		},
 	}
-	alg.ExecKF(kf)
-	return
-}
-
-func (d *dwnConsR) consR() (c *consR) {
-	c = &consR{
-		open: func(ip, user string) (ok bool) {
-			// the reset cycle property is maintained on demand,
-			// rather than at regular time lapses
-			d.keepResetCycle()
-			cons := uint64(0)
-			d.userCons.LoadOrStore(user, cons)
-			ok = true
-			return
-		},
-		can: func(ip, user string, down int) (ok bool) {
-			cons, b := d.userCons.Load(user)
-			limit := d.quota(user)
-			ok = b && cons.(uint64) <= limit
-			return
-		},
-		update: func(ip, user string, down int) {
-			v, _ := d.userCons.Load(user)
-			cons := v.(uint64)
-			d.userCons.Store(user, cons+uint64(down))
-		},
-		close: func(ip, user string) {},
-	}
+	alg.ExecF(kf, c.Cmd)
 	return
 }
 
@@ -235,17 +102,16 @@ func (d *dwnConsR) keepResetCycle() {
 	}
 }
 
-func (d *dwnConsR) quota(user string) (n uint64) {
+func (d *dwnConsR) quota(user string, gs []string) (n uint64) {
 	v, ok := d.quotaCache.Load(user)
 	if ok {
 		n = v.(uint64)
 	} else {
-		gs, _ := d.userGroup(user)
 		inf := func(i int) {
 			q := d.groupQuota(gs[i])
 			n = n + q
 		}
-		forall(inf, len(gs))
+		alg.Forall(inf, len(gs))
 		d.quotaCache.Store(user, n)
 	}
 	return
@@ -271,7 +137,7 @@ type UserInfo struct {
 
 func (d *dwnConsR) info(user, name string, gs []string) (
 	ui *UserInfo, e error) {
-	n := d.quota(user)
+	n := d.quota(user, gs)
 	q := datasize.ByteSize(n).HumanReadable()
 	ui = &UserInfo{
 		Quota:      q,
