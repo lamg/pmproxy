@@ -8,7 +8,7 @@ import (
 )
 
 func TestExec(t *testing.T) {
-	m := &Manager{mngs: new(sync.Map)}
+	m := &manager{mngs: new(sync.Map)}
 	ms := []struct {
 		name string
 		f    CmdF
@@ -33,11 +33,11 @@ func TestExec(t *testing.T) {
 	}
 
 	inf := func(i int) {
-		m.Add(ms[i].name, ms[i].f)
+		m.add(ms[i].name, ms[i].f)
 	}
 	alg.Forall(inf, len(ms))
 	c := &Cmd{Manager: "a"}
-	m.Exec(c)
+	m.exec(c)
 	require.Equal(t, "a", c.Manager)
 	require.Equal(t, "coco", c.User)
 }

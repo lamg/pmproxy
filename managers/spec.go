@@ -21,7 +21,6 @@
 package managers
 
 import (
-	"fmt"
 	pred "github.com/lamg/predicate"
 	"net/url"
 )
@@ -38,35 +37,6 @@ type spec struct {
 	Result *pred.Predicate `json:"result"`
 	ip     string
 	user   string
-}
-
-func (s *spec) fromMap(i interface{}) (e error) {
-	fe := func(d error) { e = d }
-	mp := stringMapE(i, fe)
-	if e == nil {
-		vp, vi := mp[proxyURLK], mp[ifaceK]
-		if vp != nil {
-			s.ProxyURL = vp.(string)
-		}
-		if vi != nil {
-			s.Iface = vi.(string)
-		}
-		if s.ProxyURL != "" {
-			fe(s.init())
-		}
-	}
-	if e == nil && s.Iface == "" {
-		e = fmt.Errorf("spec without interface")
-	}
-	return
-}
-
-func (s *spec) toMap() (i map[string]interface{}) {
-	i = map[string]interface{}{
-		ifaceK:    s.Iface,
-		proxyURLK: s.ProxyURL,
-	}
-	return
 }
 
 func (s *spec) init() (e error) {

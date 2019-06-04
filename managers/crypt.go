@@ -36,6 +36,9 @@ type crypt struct {
 const (
 	cryptMng = "crypt"
 	encrypt  = "encrypt"
+	decrypt  = "decrypt"
+	secretOk = "secretOk"
+	Renew    = "renew"
 )
 
 func newCrypt(exp time.Duration) (c *crypt, e error) {

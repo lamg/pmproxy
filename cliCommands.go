@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	alg "github.com/lamg/algorithms"
+	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -37,7 +38,7 @@ import (
 
 type PMClient struct {
 	Fs      afero.Fs
-	PostCmd func(string, *pm.Cmd) (*h.Response, error)
+	PostCmd func(string, *mng.Cmd) (*h.Response, error)
 }
 
 func (p *PMClient) Discover() (m cli.Command) {
@@ -68,7 +69,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 	return
 }
 
-func printDR(dr *pm.DiscoverRes) {
+func printDR(dr *DiscoverRes) {
 	fmt.Printf("Match result: %s\n", dr.Result)
 	for k, v := range dr.MatchMng {
 		var m string
@@ -215,7 +216,7 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 }
 
 func (p *PMClient) showMng(mng string) (objT *pm.ObjType, e error) {
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Manager: pm.ResourcesK,
 		Cmd:     pm.Get,
 		String:  mng,
@@ -241,7 +242,7 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 		e = fmt.Errorf("Unable to get sessionIPM")
 	}
 	if e == nil {
-		m := &pm.Cmd{
+		m := &mng.Cmd{
 			Cmd:     pm.Get,
 			Manager: sm,
 		}
@@ -257,7 +258,7 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 
 func (p *PMClient) discoverC(url,
 	remote string) (dr *pm.DiscoverRes, e error) {
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Cmd:     pm.Discover,
 		Manager: pm.ResourcesK,
 		String:  remote,
@@ -289,7 +290,7 @@ func (p *PMClient) discoverC(url,
 }
 
 func (p *PMClient) reset(manager, user string) (e error) {
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Manager: manager,
 		Cmd:     pm.Set,
 		String:  user,
@@ -308,7 +309,7 @@ func (p *PMClient) status(dwnMng string) (ui *pm.UserInfo, e error) {
 			dwnMng = li.DwnConsR
 		}
 	}
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Cmd:     pm.Get,
 		Manager: dwnMng,
 	}
@@ -321,7 +322,7 @@ func (p *PMClient) status(dwnMng string) (ui *pm.UserInfo, e error) {
 	return
 }
 
-func (p *PMClient) sendRecv(m *pm.Cmd,
+func (p *PMClient) sendRecv(m *mng.Cmd,
 	okf func([]byte) error) (e error) {
 	var li *loginInfo
 	var r *h.Response
@@ -334,7 +335,7 @@ func (p *PMClient) sendRecv(m *pm.Cmd,
 			r, e = p.PostCmd(li.Server, m)
 			if e != nil && strings.HasPrefix(e.Error(),
 				"token is expired") {
-				nm := &pm.Cmd{
+				nm := &mng.Cmd{
 					Cmd:     pm.Renew,
 					Manager: li.SessionIPM,
 					Secret:  li.Secret,
@@ -414,7 +415,7 @@ func (p *PMClient) fillConsR(li *loginInfo) (e error) {
 	var r *h.Response
 	fs := []func(){
 		func() {
-			m := &pm.Cmd{Manager: pm.ResourcesK, Cmd: pm.Discover}
+			m := &mng.Cmd{Manager: pm.ResourcesK, Cmd: pm.Discover}
 			r, e = p.PostCmd(li.Server, m)
 		},
 		func() { bs, e = ioutil.ReadAll(r.Body) },
@@ -441,7 +442,7 @@ func matchMngType(dr *pm.DiscoverRes, tÿpe string) (name string) {
 func (p *PMClient) loginSM(urls, sm, user,
 	pass string) (li *loginInfo,
 	e error) {
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Cred:    &pm.Credentials{User: user, Pass: pass},
 		Manager: sm,
 		Cmd:     pm.Open,
@@ -466,7 +467,7 @@ func (p *PMClient) loginSM(urls, sm, user,
 }
 
 func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Manager: pm.ResourcesK,
 		Cmd:     pm.Filter,
 		String:  pm.SessionIPMK,
@@ -490,7 +491,7 @@ func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
 }
 
 func (p *PMClient) logout() (e error) {
-	m := &pm.Cmd{
+	m := &mng.Cmd{
 		Cmd: pm.Clöse,
 	}
 	li, e := p.readSecret()
@@ -522,7 +523,7 @@ func (p *PMClient) readSecret() (li *loginInfo, e error) {
 	return
 }
 
-func PostCmd(urls string, c *pm.Cmd) (r *h.Response, e error) {
+func PostCmd(urls string, c *mng.Cmd) (r *h.Response, e error) {
 	h.DefaultTransport.(*h.Transport).TLSClientConfig =
 		&tls.Config{InsecureSkipVerify: true}
 	h.DefaultTransport.(*h.Transport).Proxy = nil

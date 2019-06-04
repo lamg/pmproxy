@@ -67,14 +67,14 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 			func() {
 				c.User, c.Err = d.auth(c.Cred.User,
 					c.Cred.Pass)
-				setKey(c, userK)
+				c.defKeys = append(c.defKeys, userK)
 				term = true
 			},
 		},
 		{
 			groupsCmd,
 			func() {
-				term = hasKey(c, userK)
+				term = c.defined(userK)
 				if term {
 					c.Groups, c.Err = d.userGroups(c.User)
 				} else {
@@ -85,7 +85,7 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 		{
 			nameCmd,
 			func() {
-				if hasKey(c, userK) {
+				if c.defined(userK) {
 
 				} else {
 
@@ -95,8 +95,4 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 	}
 	alg.ExecF(kf, c.Cmd)
 	return
-}
-
-func setKey(c *Cmd, key string) {
-	c.Object[key] = true
 }

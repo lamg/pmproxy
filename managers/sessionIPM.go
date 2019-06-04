@@ -21,7 +21,6 @@
 package managers
 
 import (
-	"encoding/json"
 	alg "github.com/lamg/algorithms"
 )
 
@@ -34,6 +33,7 @@ const (
 	Open         = "open"
 	Close        = "close"
 	authenticate = "authenticate"
+	Check        = "check"
 )
 
 func (m *sessionIPM) exec(c *Cmd) (term bool) {
@@ -57,30 +57,30 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		{
 			Close,
 			func() {
-				_, secretOk := c.Object[secretOkK]
-				if secretOk && c.e == nil {
-					c.Manager = crypt
+				ok := c.defined(secretOk)
+				if ok && c.Err == nil {
+					c.Manager = cryptMng
 					c.Cmd = decrypt
-				} else if secretOk {
-					c.Manager = ipUser
-					c.Cmd = delete
+				} else if ok {
+					c.Manager = ipUserMng
+					c.Cmd = ipUserDel
 				}
 			},
 		},
 		{
 			Get,
 			func() {
-				_, admDef := c.Object[isAdminK]
+				admDef := c.defined(isAdminK)
 				if admDef {
-					_, sessionsDef := c.Object[sessionsK]
+					sessionsDef := c.defined(sessionsK)
 					if !sessionsDef {
 						if c.IsAdmin {
-							c.Manager = ipUser
+							c.Manager = ipUserMng
 							term = false
 						}
 					}
 				} else {
-					c.Manager = admins
+					c.Manager = adminsMng
 					term = false
 				}
 			},
@@ -88,35 +88,35 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		{
 			Renew,
 			func() {
-				_, secretOk := c.Object[secretOkK] // FIXME a way to know
+				ok := c.defined(secretOk) // FIXME a way to know
 				// defined fields
-				if !secretOk {
-					c.Manager = crypt
+				if !ok {
+					c.Manager = cryptMng
 				}
 			},
 		},
 		{
-			check,
+			Check,
 			func() {
-				v, secretOk := c.Object[secretOkK]
-				_, userOk := c.Object[userK]
+				secretOk := c.defined(secretOk)
+				userOk := c.defined(userK)
 				if secretOk && userOk {
-					c.Ok = c.User == v.(string)
+					c.Ok = c.User == c.String
 				} else if !secretOk {
 					c.Cmd = decrypt
-					c.Manager = crypt
+					c.Manager = cryptMng
 				} else if !userOk {
 					c.Cmd = Get
-					c.Manager = ipUserK
+					c.Manager = ipUserMng
 				}
 			},
 		},
 		{
 			Match,
 			func() {
-				_, userOk := c.Object[userK]
+				userOk := c.defined(userK)
 				if !userOk {
-					c.Manager = ipUserK
+					c.Manager = ipUserMng
 					c.Cmd = Get
 				} else {
 					c.Ok = c.User != ""
@@ -125,88 +125,5 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
-}
-
-func (m *sessionIPM) toMap() (i map[string]interface{}) {
-	i = map[string]interface{}{
-		NameK:     m.name,
-		authNameK: m.authName,
-	}
-	return
-}
-
-func (m *sessionIPM) open(c *Credentials,
-	ip string) (bs []byte, e error) {
-	var a func(string, string) (string, error)
-	var user string
-	fs := []func(){
-		func() {
-			var ok bool
-			a, ok = m.nameAuth(m.authName)
-			if !ok {
-				e = NoKey(m.authName)
-			}
-		},
-		func() {
-			user, e = a(c.User, c.Pass)
-		},
-		func() {
-			var s string
-			s, e = m.cr.encrypt(user, m.authName)
-			bs = []byte(s)
-		},
-		func() {
-		},
-	}
-	trueFF(fs, func() bool { return e == nil })
-	return
-}
-
-func (m *sessionIPM) close(secret, ip string) (bs []byte,
-	e error) {
-	claim, e := m.cr.decrypt(secret)
-	if e == nil {
-		lusr, ok := m.iu.get(ip)
-		if ok && lusr == claim.User {
-			m.iu.del(ip)
-		}
-	}
-	return
-}
-
-func (m *sessionIPM) get(secret, ip string) (bs []byte,
-	e error) {
-	_, e = m.check(secret, ip)
-	if e == nil {
-		mp := map[string]string{}
-		m.iu.mäp.Range(func(k, v interface{}) (cont bool) {
-			mp[k.(string)] = v.(string)
-			cont = true
-			return
-		})
-		bs, e = json.Marshal(mp)
-	}
-	return
-}
-
-func (m *sessionIPM) renew(secret, ip string) (bs []byte, e error) {
-	user, e := m.check(secret, ip)
-	if e != nil {
-		var s string
-		s, e = m.cr.encrypt(user, m.authName)
-		bs = []byte(s)
-	}
-	return
-}
-
-func (m *sessionIPM) check(secret, ip string) (user string, e error) {
-	tkUser, e := m.cr.decrypt(secret)
-	user, ok := m.iu.get(ip)
-	if e == nil {
-		if !(ok && tkUser.User == user) {
-			e = userNotLoggedAt(tkUser.User, ip)
-		}
-	}
 	return
 }

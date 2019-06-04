@@ -2,6 +2,7 @@ package managers
 
 import (
 	"fmt"
+	alg "github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
 	"sync"
 	"time"
@@ -12,27 +13,34 @@ type manager struct {
 }
 
 type Cmd struct {
-	Cmd       string                 `json:"cmd"`
-	User      string                 `json:"user"`
-	Manager   string                 `json:"manager"`
-	Secret    string                 `json:"secret"`
-	IsAdmin   bool                   `json:"isAdmin"`
-	Cred      *Credentials           `json:"c.Errd"`
-	String    string                 `json:"string"`
-	Uint64    uint64                 `json:"uint64"`
-	Groups    []string               `json:"groups"`
-	Object    map[string]interface{} `json:"object"`
-	Ok        bool                   `json:"ok"`
-	IP        string                 `json:"ip"`
-	Data      []byte                 `json:"-"`
-	Err       error                  `json:"-"`
-	Operation *proxy.Operation       `json:"-"`
-	Result    *proxy.Result          `json:"-"`
+	Cmd       string           `json:"cmd"`
+	User      string           `json:"user"`
+	Manager   string           `json:"manager"`
+	Secret    string           `json:"secret"`
+	IsAdmin   bool             `json:"isAdmin"`
+	Cred      *Credentials     `json:"c.Errd"`
+	String    string           `json:"string"`
+	Uint64    uint64           `json:"uint64"`
+	Groups    []string         `json:"groups"`
+	Ok        bool             `json:"ok"`
+	IP        string           `json:"ip"`
+	Data      []byte           `json:"data"`
+	Err       error            `json:"-"`
+	Operation *proxy.Operation `json:"-"`
+	Result    *proxy.Result    `json:"-"`
+
+	defKeys []string
 }
 
 type Credentials struct {
 	User string `json:"user"`
 	Pass string `json:"pass"`
+}
+
+func (c *Cmd) defined(key string) (ok bool) {
+	ib := func(i int) bool { return c.defKeys[i] == key }
+	ok, _ = alg.BLnSrch(ib, len(c.defKeys))
+	return
 }
 
 type CmdF func(*Cmd) bool
@@ -84,20 +92,15 @@ func (m *manager) exec(c *Cmd) {
 	for len(mngs) != 0 && c.Err == nil {
 		term, prev = m.execStep(c)
 		if term {
-			next := pop(mngs)
+			last := len(mngs) - 1
+			next := mngs[last]
+			mngs = mngs[:last]
 			c.Manager = next.mng
 			c.Cmd = next.cmd
 		} else {
 			mngs = append(mngs, prev)
 		}
 	}
-}
-
-func pop(stack []*mngCmd) (n *mngCmd) {
-	last := len(stack) - 1
-	n = stack[last]
-	stack = stack[:last]
-	return
 }
 
 func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {
@@ -113,10 +116,5 @@ func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {
 
 func (m *manager) delete(name string) (e error) {
 	m.mngs.Delete(name)
-	return
-}
-
-func hasKey(c *Cmd, key string) (ok bool) {
-	_, ok = c.Object[key]
 	return
 }

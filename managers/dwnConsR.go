@@ -51,13 +51,10 @@ func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				v, ok := c.Object[groupsK]
+				ok := c.defined(groupsK)
 				var data *UserInfo
 				if ok {
-					gs := v.([]string)
-					name := c.Object[nameK].(string)
-					user := c.Object[userK].(string)
-					data, c.Err = d.info(user, name, gs)
+					data, c.Err = d.info(c.User, c.String, c.Groups)
 					if c.Err == nil {
 						c.Data, c.Err = json.Marshal(data)
 					}
@@ -70,11 +67,10 @@ func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
 		{
 			Set,
 			func() {
-				v, ok := c.Object[adminsK]
+				ok := c.defined(adminsK)
 				if !ok {
-					c.Manager = adminsK
-				}
-				if c.IsAdmin {
+					c.Manager, c.Cmd = adminsK, isAdminK
+				} else if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
 				}
 			},

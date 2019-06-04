@@ -28,6 +28,8 @@ import (
 const (
 	ipUserMng = "ipUserMng"
 	ipUserCmd = "ipUserCmd"
+	ipUserDel = "ipUserDel"
+	sessionsK = "sessions"
 )
 
 type ipUser struct {
@@ -46,7 +48,7 @@ func (p *ipUser) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				c.Object[userK] = true
+				c.defKeys = append(c.defKeys, userK)
 				c.User, _ = p.get(c.IP)
 				term = true
 			},
