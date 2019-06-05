@@ -18,13 +18,13 @@ func TestExec(t *testing.T) {
 			func(c *Cmd) (term bool) {
 				term = c.User != ""
 				if !term {
-					c.Manager = "ipUser"
+					c.Manager = ipUserMng
 				}
 				return
 			},
 		},
 		{
-			"ipUser",
+			ipUserMng,
 			func(c *Cmd) (term bool) {
 				c.User, term = "coco", true
 				return

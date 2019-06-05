@@ -46,7 +46,7 @@ const (
 	adminsK = "admins"
 )
 
-func (d *dwnConsR) managerKF(c *Cmd) (term bool) {
+func (d *dwnConsR) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
 			Get,

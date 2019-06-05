@@ -45,7 +45,7 @@ func (c *Cmd) defined(key string) (ok bool) {
 
 type CmdF func(*Cmd) bool
 
-func newmanager(exp time.Duration) (m *manager, e error) {
+func newManager(exp time.Duration) (m *manager, e error) {
 	m = &manager{mngs: new(sync.Map)}
 	iu := newIpUser()
 	cr, e := newCrypt(exp)
@@ -85,20 +85,21 @@ type mngCmd struct {
 
 func (m *manager) exec(c *Cmd) {
 	var mngs []*mngCmd
-	term, prev := m.execStep(c)
-	if !term {
-		mngs = []*mngCmd{prev}
-	}
-	for len(mngs) != 0 && c.Err == nil {
-		term, prev = m.execStep(c)
-		if term {
+	proc := true
+	for (proc || len(mngs) != 0) && c.Err == nil {
+		if proc {
+			term, prev := m.execStep(c)
+			if !term {
+				mngs = append(mngs, prev)
+			}
+			proc = !term
+		} else if len(mngs) != 0 {
 			last := len(mngs) - 1
 			next := mngs[last]
 			mngs = mngs[:last]
 			c.Manager = next.mng
 			c.Cmd = next.cmd
-		} else {
-			mngs = append(mngs, prev)
+			proc = true
 		}
 	}
 }
