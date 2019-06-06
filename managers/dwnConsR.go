@@ -22,8 +22,10 @@ package managers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/c2h5oh/datasize"
 	alg "github.com/lamg/algorithms"
+	"github.com/lamg/proxy"
 	"strings"
 	"sync"
 	"time"
@@ -81,8 +83,36 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 				c.Data, c.Err = json.Marshal(d)
 			},
 		},
+		{
+			HandleConn,
+			func() {
+				term, c.Result = true, new(proxy.Result)
+				if !c.defined(groupsK) {
+					c.Manager, c.Cmd, term = ipUserMng, Get, false
+				} else if c.Operation.Command == proxy.ReadRequest {
+					qt := d.quota(c.User, c.Groups)
+					cs := d.consumption(c.User)
+					if cs >= qt {
+						c.Result.Error = fmt.Errorf(
+							"Consumption reached quota %d", cs)
+					}
+				} else if c.Operation.Command == proxy.ReadReport {
+					cs := d.consumption(c.User)
+					ncs := cs + c.Uint64
+					d.userCons.Store(c.User, ncs)
+				}
+			},
+		},
 	}
 	alg.ExecF(kf, c.Cmd)
+	return
+}
+
+func (d *dwnConsR) consumption(user string) (n uint64) {
+	v, ok := d.userCons.Load(user)
+	if ok {
+		n = v.(uint64)
+	}
 	return
 }
 
@@ -142,13 +172,8 @@ func (d *dwnConsR) info(user, name string, gs []string) (
 		Groups:     gs,
 		Name:       name,
 	}
-	v, ok := d.userCons.Load(user)
-	var cons datasize.ByteSize
-	if ok {
-		cons = datasize.ByteSize(v.(uint64))
-	}
-	ui.Consumption = cons.HumanReadable()
-	ui.BytesCons = uint64(cons)
+	ui.BytesCons = d.consumption(user)
+	ui.Consumption = datasize.ByteSize(ui.BytesCons).HumanReadable()
 	return
 }
 

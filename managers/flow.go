@@ -18,7 +18,7 @@ type Cmd struct {
 	Manager   string           `json:"manager"`
 	Secret    string           `json:"secret"`
 	IsAdmin   bool             `json:"isAdmin"`
-	Cred      *Credentials     `json:"c.Errd"`
+	Cred      *Credentials     `json:"cred"`
 	String    string           `json:"string"`
 	Uint64    uint64           `json:"uint64"`
 	Groups    []string         `json:"groups"`
@@ -83,9 +83,9 @@ type mngCmd struct {
 	cmd string
 }
 
-func (m *manager) exec(c *Cmd) {
+func (m *manager) exec(c *Cmd) (proc bool) {
 	var mngs []*mngCmd
-	proc := true
+	proc = true
 	for (proc || len(mngs) != 0) && c.Err == nil {
 		if proc {
 			term, prev := m.execStep(c)
@@ -102,6 +102,7 @@ func (m *manager) exec(c *Cmd) {
 			proc = true
 		}
 	}
+	return
 }
 
 func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {

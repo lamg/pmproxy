@@ -8,3 +8,4 @@ The interface for interacting with it is the `exec` method, which receives a com
 - `Get` returns the user's alias and name, groups, quota and consumption. In case the command doesn't have field `Cmd.Groups` defined it will change the manager to the value of `dwnConsR.userDBN`, which is expected to set it according to the user logged at Cmd.IP.
 - `Set` sets the value of `Cmd.Uint64` as the consumption for the user sent at `Cmd.String`, if the command is sent by an administrator. If the value for `Cmd.IsAdmin` isn't defined it will change the manager for `adminsK` which is the one that has the administrators stored.
 - `Show` serializes with JSON format the `dwnConsR` instance, writing it to Cmd.Data
+- `HandleConn` sets `Cmd.Ok` meaning wether is possible continue with the connection operation sent in `Cmd.Operation`. When the operation is `proxy.ReadRequest`, the requested amount of bytes by the connection in the proxy comes in `Cmd.Uint64`

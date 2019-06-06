@@ -23,6 +23,7 @@ package managers
 import (
 	"fmt"
 	alg "github.com/lamg/algorithms"
+	"github.com/lamg/proxy"
 	"github.com/lamg/throttle"
 	"time"
 )
@@ -56,8 +57,10 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 		{
 			HandleConn,
 			func() {
-				b.connThr.Throttle()
-				c.Ok = true
+				if c.Operation.Command == proxy.ReadRequest {
+					b.connThr.Throttle()
+					c.Result = new(proxy.Result)
+				}
 			},
 		},
 	}
