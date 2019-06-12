@@ -1,3 +1,23 @@
+// Copyright © 2017-2019 Luis Ángel Méndez Gort
+
+// This file is part of PMProxy.
+
+// PMProxy is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Affero General
+// Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your
+// option) any later version.
+
+// PMProxy is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the
+// implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE. See the GNU Affero General Public
+// License for more details.
+
+// You should have received a copy of the GNU Affero General
+// Public License along with PMProxy.  If not, see
+// <https://www.gnu.org/licenses/>.
+
 package managers
 
 import (
@@ -29,6 +49,8 @@ type Cmd struct {
 	Operation *proxy.Operation `json:"-"`
 	Result    *proxy.Result    `json:"-"`
 
+	interp  map[string]bool
+	consR   []string
 	defKeys []string
 }
 
@@ -50,6 +72,7 @@ func newManager(exp time.Duration) (m *manager, e error) {
 	iu := newIpUser()
 	cr, e := newCrypt(exp)
 	if e == nil {
+		m.add(connectionsMng, newConnections().exec)
 		m.add(ipUserMng, iu.exec)
 		m.add(cryptMng, cr.exec)
 	}
@@ -70,12 +93,12 @@ const (
 )
 
 /*
-- each command when executed can be terminal or not. If not terminal,
-it means it must be executed by the manager now at Cmd.manager. If
-terminal it most be executed by the manager who originated it. Each
-manager must deal correctly with incoming and outgoing commands,
-according information present in them. The field Cmd.Object support
-storing and reading information produced by a sequence of executions.
+	- each command when executed can be terminal or not. If not terminal,
+	it means it must be executed by the manager now at Cmd.manager. If
+	terminal it most be executed by the manager who originated it. Each
+	manager must deal correctly with incoming and outgoing commands,
+	according information present in them. The field Cmd.Object support
+	storing and reading information produced by a sequence of executions.
 */
 
 type mngCmd struct {

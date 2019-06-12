@@ -20,27 +20,60 @@
 
 package managers
 
+/*
+# Download consupmtion restrictor
+
+The _Download consumption restrictor_ is a manager that limits the amount of data that users can download in determined period of time. It's implemented by `dwnConsR`. The fields `lastReset` and `resetCycle` determine the date when all consumptions in `userCons` are set to 0. `resetCycle` is the duration of the period, and `lastReset` is the date of the last reset, which is updated everytime consumptions are reseted. When a consumption reaches the assigned quota for that period of time, the manager notifies it through its interface.
+
+The interface for interacting with it is the `exec` method, which receives a command (`Cmd`) and processes it. Commands may be received without the information needed to be processed, in that case the method `exec` changes the field `Cmd.Manager` to have the name of the manager that can provide the absent information. Then the method `manager.exec` deals with delivering that command to the right manager, and returning it back to the manager that originated it.
+
+`dwnConsR` processes the following commands
+- `Get` returns the user's alias and name, groups, quota and consumption. In case the command doesn't have field `Cmd.Groups` defined it will change the manager to the value of `dwnConsR.userDBN`, which is expected to set it according to the user logged at Cmd.IP.
+- `Set` sets the value of `Cmd.Uint64` as the consumption for the user sent at `Cmd.String`, if the command is sent by an administrator. If the value for `Cmd.IsAdmin` isn't defined it will change the manager for `adminsK` which is the one that has the administrators stored.
+- `Show` serializes with JSON format the `dwnConsR` instance, writing it to Cmd.Data
+- `HandleConn` sets `Cmd.Ok` meaning if is possible continue with the connection operation sent in `Cmd.Operation`. When the operation is `proxy.ReadRequest`, the requested amount of bytes by the connection in the proxy comes in `Cmd.Uint64`
+*/
+
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/c2h5oh/datasize"
 	alg "github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
+	"github.com/spf13/afero"
+	"path"
 	"strings"
 	"sync"
 	"time"
 )
 
 type dwnConsR struct {
-	name        string
-	userDBN     string
-	spec        *spec
+	Name       string        `toml:"name"`
+	UserDBN    string        `toml:"userDBN"`
+	LastReset  time.Time     `toml:"lastReset"`
+	ResetCycle time.Duration `toml:"resetCycle"`
+
 	quotaCache  *sync.Map
 	groupQuotaM *sync.Map
 
-	userCons   *sync.Map
-	lastReset  time.Time
-	resetCycle time.Duration
+	userCons *sync.Map
+}
+
+func (d *dwnConsR) init(pth string, fs afero.Fs) (e error) {
+	d.quotaCache, d.groupQuotaM, d.userCons = new(sync.Map),
+		new(sync.Map), new(sync.Map)
+	bs, e := afero.ReadFile(fs, path.Join(pth, d.Name+".json"))
+	var cons map[string]uint64
+	f := []func(){
+		func() { e = json.Unmarshal(bs, &cons) },
+		func() {
+			for k, v := range cons {
+				d.userCons.Store(k, v)
+			}
+		},
+	}
+	alg.TrueFF(f, func() bool { return e == nil })
+	return
 }
 
 const (
@@ -61,7 +94,7 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 						c.Data, c.Err = json.Marshal(data)
 					}
 				} else {
-					c.Manager = d.userDBN
+					c.Manager = d.UserDBN
 				}
 				term = ok
 			},
@@ -103,6 +136,12 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 				}
 			},
 		},
+		{
+			match,
+			func() {
+				c.interp[d.Name], c.consR = true, append(c.consR, d.Name)
+			},
+		},
 	}
 	alg.ExecF(kf, c.Cmd)
 	return
@@ -121,10 +160,10 @@ func (d *dwnConsR) keepResetCycle() {
 	// time is greater or equal to d.lastReset + d.resetCycle,
 	// then all consumptions are set to 0
 	now := time.Now()
-	cy := now.Sub(d.lastReset)
-	if cy >= d.resetCycle {
+	cy := now.Sub(d.LastReset)
+	if cy >= d.ResetCycle {
 		d.userCons = new(sync.Map)
-		d.lastReset = d.lastReset.Add(d.resetCycle)
+		d.LastReset = d.LastReset.Add(d.ResetCycle)
 	}
 }
 

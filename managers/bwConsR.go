@@ -32,7 +32,6 @@ type bwConsR struct {
 	name    string
 	thrFrac float64
 	connThr *throttle.Throttle
-	spec    *spec
 }
 
 func (b *bwConsR) exec(c *Cmd) (term bool) {
@@ -61,6 +60,12 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 					b.connThr.Throttle()
 					c.Result = new(proxy.Result)
 				}
+			},
+		},
+		{
+			match,
+			func() {
+				c.interp[b.name], c.consR = true, append(c.consR, b.name)
 			},
 		},
 	}

@@ -21,38 +21,24 @@
 package managers
 
 import (
-	pred "github.com/lamg/predicate"
 	"net/url"
 )
 
-type spec struct {
-	Iface    string `json:"iface"`
-	ProxyURL string `json:"proxyURL"`
-	proxyURL *url.URL
-
-	// ConsRs is a map from type to description.
-	// Only a ConsR of each type is assigned, as the
-	// map structure implicitly determines
-	ConsRs []string        `json:"consRs"`
-	Result *pred.Predicate `json:"result"`
-	ip     string
-	user   string
+type proxyURLMng struct {
+	Name  string
+	proxy *url.URL
+	Proxy string
 }
 
-func (s *spec) init() (e error) {
-	s.proxyURL, e = url.Parse(s.ProxyURL)
+func (p *proxyURLMng) init() (e error) {
+	p.proxy, e = url.Parse(p.Proxy)
 	return
 }
 
-func join(s, t *spec, consR string) {
-	// the policy consists in replacing when empty
-	if s.ProxyURL == "" {
-		s.ProxyURL = t.ProxyURL
-		s.proxyURL = t.proxyURL
+func (u *proxyURLMng) exec(c *Cmd) (term bool) {
+	if c.Cmd == match {
+		c.Ok, c.Result.Proxy = true, u.proxy
 	}
-	if s.Iface == "" {
-		s.Iface = t.Iface
-	}
-	s.ConsRs = append(s.ConsRs, consR)
+	term = true
 	return
 }

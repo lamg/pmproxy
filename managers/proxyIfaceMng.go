@@ -20,43 +20,15 @@
 
 package managers
 
-import (
-	alg "github.com/lamg/algorithms"
-	"net"
-)
-
-type rangeIPM struct {
-	rg   *net.IPNet
-	cidr string
-	name string
+type proxyIfaceMng struct {
+	Name  string `toml:"name"`
+	Iface string `toml:"iface"`
 }
 
-func (r *rangeIPM) init() (e error) {
-	_, r.rg, e = net.ParseCIDR(r.cidr)
-	return
-}
-
-func (r *rangeIPM) exec(c *Cmd) (term bool) {
-	kf := []alg.KFunc{
-		{
-			Get,
-			func() {
-				c.Data = []byte(r.cidr)
-			},
-		},
-		{
-			match,
-			func() {
-				c.interp[r.name], term = r.match(c.IP), true
-			},
-		},
+func (p *proxyIfaceMng) exec(c *Cmd) (term bool) {
+	if c.Cmd == match {
+		c.Ok, c.Result.Iface = true, p.Iface
 	}
-	alg.ExecF(kf, c.Cmd)
-	return
-}
-
-func (r *rangeIPM) match(ip string) (ok bool) {
-	pip := net.ParseIP(ip)
-	ok = pip != nil && r.rg.Contains(pip)
+	term = true
 	return
 }

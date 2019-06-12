@@ -87,5 +87,6 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 }
 
 func (c *crypt) exec(m *Cmd) (term bool) {
+	// TODO
 	return
 }
