@@ -20,12 +20,34 @@
 
 package managers
 
-func idConsRExec(c *Cmd) (term bool) {
-	c.Ok, term = true, true
-	return
+import (
+	"github.com/pelletier/go-toml"
+	"github.com/stretchr/testify/require"
+	"testing"
+)
+
+func TestNewConf(t *testing.T) {
+	c := new(conf)
+	e := toml.Unmarshal([]byte(testCfg), c)
+	require.NoError(t, e)
+	pc := &conf{
+		Admins: []string{"coco", "pepe"},
+		ProxyIface: []proxyIfaceMng{
+			{Name: "tubo0", Iface: "eth0"},
+			{Name: "tubo1", Iface: "eth1"},
+		},
+	}
+	require.Equal(t, pc, c)
 }
 
-func negConsRExec(c *Cmd) (term bool) {
-	c.Ok, term = false, true
-	return
-}
+const testCfg = `
+admins = ["coco", "pepe"]
+
+[[proxyIface]]
+	name = "tubo0"
+	iface = "eth0"
+
+[[proxyIface]]
+	name = "tubo1"
+	iface = "eth1"
+`

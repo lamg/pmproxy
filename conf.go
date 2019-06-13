@@ -21,30 +21,55 @@
 package pmproxy
 
 import (
-	mng "github.com/lamg/pmproxy/managers"
+	alg "github.com/lamg/algorithms"
+	"github.com/pelletier/go-toml"
+	"github.com/spf13/afero"
+	"net"
+	"time"
 )
 
-func loadSrvConf(fs afero.Fs) (p *proxyConf, i *apiConf, e error) {
-	bs, e := afero.ReadFile(fs, "~/config/pmproxy/conf.toml")
-	if e == nil {
-		tr, e = toml.LoadBytes(bs)
-	}
-	if e == nil {
-		cmdChan, ctl, e := mng.Load(tr, fs)
-		if e == nil {
-			it := tr.Get("api").(*toml.Tree)
-			i = new(apiConf)
-			e = it.Unmarshal(i)
-		}
-		if e == nil {
-			pt := tr.Get("proxy").(*toml.Tree)
-			p = new(proxyConf)
-			e = pt.Unmarshal(p)
-		}
-	} else {
+const (
+	confDir  = ".config/pmproxy"
+	confFile = "server.toml"
+)
 
+func load(fs afero.Fs) (p *pmproxyConf, e error) {
+	p = new(pmproxyConf)
+	var exCrt, exKey bool
+	var certFl, keyFl, host string
+	f := []func(){
+		func() { home, e = os.UserHomeDir() },
+		func() {
+			confPath = path.Join(home, confDir, confFile)
+			bs, e = afero.ReadFile(confPath)
+		},
+		func() { e = toml.Unmarshal(bs, p) },
+		func() {
+			certFl = path.Join(home, confDir, p.api.HTTPSCert)
+			p.api.HTTPSCert = certFl
+			exCrt, e = afero.Exists(fs, certFl)
+		},
+		func() {
+			keyFl = path.Join(home, confDir, p.api.HTTPSKey)
+			p.api.HTTPSKey = keyFl
+			exKey, e = afero.Exists(fs, keyFl)
+		},
+		func() {
+			host, _, e = net.SplitHostPort(p.api.Server.Addr)
+		},
+		func() {
+			if !exCert || !exKey {
+				e = genCert(host, keyFl, certFl, fs)
+			}
+		},
 	}
+	alg.TrueFF(f, func() bool { return e == nil })
 	return
+}
+
+type pmproxyConf struct {
+	api   *apiConf   `toml:"api"`
+	proxy *proxyConf `toml:"proxy"`
 }
 
 type apiConf struct {
@@ -53,23 +78,11 @@ type apiConf struct {
 	WebStaticFilesDir string        `toml:"webStaticFilesDir"`
 	PersistInterval   time.Duration `toml:"persistInterval"`
 	Server            *srvConf      `toml:"server"`
-	cmdChan           mng.CmdF
-}
-
-func (a *apiConf) persist() (e error) {
-	c := &mng.Cmd{
-		Cmd: "persist",
-	}
-	a.cmdChan(c)
-	e = c.e
-	return
 }
 
 type proxyConf struct {
 	DialTimeout time.Duration `toml:"dialTimeout"`
 	Server      *srvConf      `toml:"server"`
-	ctl         proxy.ControlConn
-	now         func() time.Time
 }
 
 type srvConf struct {

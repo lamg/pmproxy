@@ -25,9 +25,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/BurntSushi/toml"
 	alg "github.com/lamg/algorithms"
 	mng "github.com/lamg/pmproxy/managers"
+	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -41,6 +41,16 @@ type PMClient struct {
 	PostCmd func(string, *mng.Cmd) (*h.Response, error)
 }
 
+type matchType struct {
+	Match bool   `json:"match"`
+	Type  string `json:"type"`
+}
+
+type DiscoverRes struct {
+	MatchMng map[string]matchType `json:"matchMng"`
+	Result   string               `json:"result"`
+}
+
 func (p *PMClient) Discover() (m cli.Command) {
 	m = cli.Command{
 		Name:    "discover",
@@ -49,7 +59,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 			" proxy server, for some url (optional)",
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
-			var dr *pm.DiscoverRes
+			var dr *DiscoverRes
 			if len(args) == 2 {
 				dr, e = p.discoverC(args[0], args[1])
 			} else if len(args) == 1 {
@@ -100,7 +110,7 @@ func (p *PMClient) Login() (m cli.Command) {
 				len(args),
 			)
 			if e != nil &&
-				e.Error() == pm.NoKey(sm).Error() {
+				e.Error() == mng.NoManager(sm).Error() {
 				p.filterSMs(args[0])
 			}
 			return
@@ -215,11 +225,12 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 	return
 }
 
-func (p *PMClient) showMng(mng string) (objT *pm.ObjType, e error) {
+func (p *PMClient) showMng(manager string) (objT *ObjType,
+	e error) {
 	m := &mng.Cmd{
-		Manager: pm.ResourcesK,
-		Cmd:     pm.Get,
-		String:  mng,
+		Manager: mng.MatchersMng,
+		Cmd:     mng.Get,
+		String:  manager,
 	}
 	okf := func(bs []byte) (d error) {
 		objT = new(pm.ObjType)

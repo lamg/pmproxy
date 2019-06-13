@@ -25,7 +25,6 @@ import (
 	alg "github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
 	"sync"
-	"time"
 )
 
 type manager struct {
@@ -67,10 +66,10 @@ func (c *Cmd) defined(key string) (ok bool) {
 
 type CmdF func(*Cmd) bool
 
-func newManager(exp time.Duration) (m *manager, e error) {
+func newManager(c *conf) (m *manager, e error) {
 	m = &manager{mngs: new(sync.Map)}
 	iu := newIpUser()
-	cr, e := newCrypt(exp)
+	cr, e := newCrypt(c.JWTExpiration)
 	if e == nil {
 		m.add(connectionsMng, newConnections().exec)
 		m.add(ipUserMng, iu.exec)
@@ -134,8 +133,13 @@ func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {
 	if ok {
 		term = v.(CmdF)(c)
 	} else {
-		c.Err = fmt.Errorf("manager '%s' not found", c.Manager)
+		c.Err = NoManager(c.Manager)
 	}
+	return
+}
+
+func NoManager(m string) (e error) {
+	e = fmt.Errorf("manager '%s' not found", m)
 	return
 }
 

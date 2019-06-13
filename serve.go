@@ -22,6 +22,8 @@ package pmproxy
 
 import (
 	"crypto/tls"
+	mng "github.com/lamg/pmproxy/managers"
+	"github.com/lamg/proxy"
 	"github.com/spf13/afero"
 	fh "github.com/valyala/fasthttp"
 	h "net/http"
@@ -32,15 +34,22 @@ import (
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
 func Serve() (e error) {
-	p, i, e := loadSrvConf(afero.NewOsFs())
+	fs := afero.NewOsFs()
+	p, e := load(fs)
+	var cmdChan mng.CmdF
+	var ctl proxy.ConnControl
+	var persist func() error
+	if e == nil {
+		cmdChan, ctl, persist, e = mng.Load(confDir, fs)
+	}
 	if e == nil {
 		fes := []func() error{
-			serveAPI(i),
-			serveProxy(p),
+			serveAPI(p.api, cmdChan),
+			serveProxy(p.proxy, ctl, time.Now),
 			func() (e error) {
 				for {
-					time.Sleep(i.PersistInterval)
-					i.persist()
+					time.Sleep(p.api.PersistInterval)
+					persist()
 				}
 				return
 			},
@@ -50,16 +59,17 @@ func Serve() (e error) {
 	return
 }
 
-func serveAPI(i *apiConf) (e error) {
+func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 	if i.Server.FastOrStd {
-		fhnd := fastIface(i.WebStaticFilesDir, i.cmdChan)
+		fhnd := fastIface(i.WebStaticFilesDir, cmdChan)
 		cropt := fasthttpcors.DefaultHandler()
 		fast := &fh.Server{
 			ReadTimeout:  i.Server.ReadTimeout,
 			WriteTimeout: i.Server.WriteTimeout,
 			Handler:      cropt.CorsMiddleware(fhnd),
 		}
-		e = fast.ListenAndServeTLS(i.Server.Addr, i.HTTPSCert, i.HTTPSKey)
+		e = fast.ListenAndServeTLS(i.Server.Addr, i.HTTPSCert,
+			i.HTTPSKey)
 	} else {
 		shnd := stdIface(i.WebStaticFilesDir, i.cmdChan)
 		cropt := cors.AllowAll()
@@ -76,7 +86,8 @@ func serveAPI(i *apiConf) (e error) {
 	return
 }
 
-func serveProxy(p *proxyConf) (e error) {
+func serveProxy(p *proxyConf, ctl proxy.ConnControl,
+	now func() time.Time) (e error) {
 	if p.Server.FastOrStd {
 		fast := &fh.Server{
 			ReadTimeout:  p.Server.ReadTimeout,
@@ -89,7 +100,7 @@ func serveProxy(p *proxyConf) (e error) {
 			ReadTimeout:  i.Server.ReadTimeout,
 			WriteTimeout: i.Server.WriteTimeout,
 			Addr:         p.Server.Addr,
-			Handler:      proxy.NewProxy(p.ctl, p.DialTimeout, p.now),
+			Handler:      proxy.NewProxy(ctl, p.DialTimeout, now),
 		}
 		e = std.ListenAndServe()
 	}
@@ -97,14 +108,14 @@ func serveProxy(p *proxyConf) (e error) {
 }
 
 func fastIface(staticFPath string,
-	mng func(*Cmd)) (hnd fh.RequestHandler) {
+	cmdChan mng.CmdF) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
 			Root: staticFPath,
 		}
 		fsHnd := fs.NewRequestHandler()
 		compatibleIface(
-			mng,
+			cmdChan,
 			string(ctx.Request.URI().Path()),
 			string(ctx.Method()),
 			ctx.RemoteAddr().String(),
@@ -130,10 +141,11 @@ func fastIface(staticFPath string,
 	return
 }
 
-func stdIface(staticFPath string, mng func(*Cmd)) (hnd h.HandlerFunc) {
+func stdIface(staticFPath string,
+	cmdChan mng.CmdF) (hnd h.HandlerFunc) {
 	hnd = func(w h.ResponseWriter, r *h.Request) {
 		compatibleIface(
-			mng,
+			cmdChan,
 			r.URL.Path,
 			r.Method,
 			r.RemoteAddr,
@@ -157,7 +169,7 @@ func stdIface(staticFPath string, mng func(*Cmd)) (hnd h.HandlerFunc) {
 	return
 }
 
-func compatibleIface(mng func(*Cmd), path, method,
+func compatibleIface(cmdChan mng.CmdF, path, method,
 	rAddr string, body func() ([]byte, error),
 	resp func([]byte), fileSrv, writeErr func(string)) {
 	m := new(Cmd)
@@ -173,13 +185,13 @@ func compatibleIface(mng func(*Cmd), path, method,
 			} else {
 				path = emptyPathIfLogin(path)
 				fileSrv(path)
-				m = &Cmd{Cmd: skip, Manager: ResourcesK}
+				m = &mng.Cmd{Cmd: skip, Manager: ResourcesK}
 			}
 		},
 		func() {
 			m.IP, _, e = net.SplitHostPort(rAddr)
 		},
-		func() { mng(m); e = m.e },
+		func() { cmdChan(m); e = m.e },
 		func() {
 			if m.bs != nil {
 				resp(m.bs)

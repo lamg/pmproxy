@@ -53,6 +53,8 @@ type dwnConsR struct {
 	LastReset  time.Time     `toml:"lastReset"`
 	ResetCycle time.Duration `toml:"resetCycle"`
 
+	mapPath     string
+	fs          afero.Fs
 	quotaCache  *sync.Map
 	groupQuotaM *sync.Map
 
@@ -62,17 +64,33 @@ type dwnConsR struct {
 func (d *dwnConsR) init(pth string, fs afero.Fs) (e error) {
 	d.quotaCache, d.groupQuotaM, d.userCons = new(sync.Map),
 		new(sync.Map), new(sync.Map)
-	bs, e := afero.ReadFile(fs, path.Join(pth, d.Name+".json"))
-	var cons map[string]uint64
-	f := []func(){
-		func() { e = json.Unmarshal(bs, &cons) },
-		func() {
-			for k, v := range cons {
-				d.userCons.Store(k, v)
-			}
-		},
+	d.mapPath, d.fs = path.Join(pth, d.Name+".json"), fs
+	bs, re := afero.ReadFile(fs, d.mapPath)
+	if re == nil {
+		var cons map[string]uint64
+		f := []func(){
+			func() { e = json.Unmarshal(bs, &cons) },
+			func() {
+				for k, v := range cons {
+					d.userCons.Store(k, v)
+				}
+			},
+		}
+		alg.TrueFF(f, func() bool { return e == nil })
 	}
-	alg.TrueFF(f, func() bool { return e == nil })
+	return
+}
+
+func (d *dwnConsR) persist() (e error) {
+	var m map[string]uint64
+	d.userCons.Range(func(k, v interface{}) (ok bool) {
+		m[k.(string)], ok = v.(uint64), true
+		return
+	})
+	bs, e := json.Marshal(m)
+	if e == nil {
+		e = afero.WriteFile(d.fs, d.mapPath, bs, 0644)
+	}
 	return
 }
 

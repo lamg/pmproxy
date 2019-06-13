@@ -32,6 +32,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	alg "github.com/lamg/algorithms"
 	"github.com/spf13/afero"
 	"math/big"
 	"net"
@@ -123,7 +124,7 @@ func genCert(host, srvKeyFl, srvCertFl string,
 			e = certToFile(srvCertFl, certBytes, fls)
 		},
 	}
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 

@@ -52,14 +52,14 @@ type restrCurr struct {
 
 const (
 	restrictorsK = "restrictors"
-	matchersMng  = "matchers"
+	MatchersMng  = "matchers"
 	match        = "match"
 )
 
 func (n *connections) exec(c *Cmd) (term bool) {
 	if c.Operation.Command == proxy.Open {
 		if !c.defined(restrictorsK) {
-			c.Cmd, c.Manager = match, matchersMng
+			c.Cmd, c.Manager = match, MatchersMng
 		} else {
 			rc := &restrCurr{restrictors: c.consR, current: 0}
 			n.ipRestr.Store(c.Operation.IP, rc)
@@ -75,7 +75,8 @@ func (n *connections) exec(c *Cmd) (term bool) {
 				if rc.current == len(rc.restrictors) {
 					term, rc.current = true, 0
 				} else {
-					c.Manager, c.Cmd = rc.restrictors[rc.current], HandleConn
+					c.Manager, c.Cmd = rc.restrictors[rc.current],
+						HandleConn
 				}
 			}
 		} else {
