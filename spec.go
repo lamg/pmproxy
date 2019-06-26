@@ -30,21 +30,17 @@ type spec struct {
 	Iface    string `json:"iface"`
 	ProxyURL string `json:"proxyURL"`
 	proxyURL *url.URL
-
-	// ConsRs is a map from type to description.
-	// Only a ConsR of each type is assigned, as the
-	// map structure implicitly determines
-	ConsRs []string        `json:"consRs"`
-	Result *pred.Predicate `json:"result"`
-	ip     string
-	user   string
+	ConsRs   []string        `json:"consRs"`
+	Result   *pred.Predicate `json:"result"`
+	ip       string
+	user     string
 }
 
 func (s *spec) fromMap(i interface{}) (e error) {
 	fe := func(d error) { e = d }
 	mp := stringMapE(i, fe)
 	if e == nil {
-		vp, vi := mp[proxyURLK], mp[ifaceK]
+		vp, vi, vc := mp[proxyURLK], mp[ifaceK], mp[consRK]
 		if vp != nil {
 			s.ProxyURL = vp.(string)
 		}
@@ -53,6 +49,9 @@ func (s *spec) fromMap(i interface{}) (e error) {
 		}
 		if s.ProxyURL != "" {
 			fe(s.init())
+		}
+		if vc != nil {
+			s.ConsRs = vc.([]string)
 		}
 	}
 	if e == nil && s.Iface == "" {
@@ -65,6 +64,7 @@ func (s *spec) toMap() (i map[string]interface{}) {
 	i = map[string]interface{}{
 		ifaceK:    s.Iface,
 		proxyURLK: s.ProxyURL,
+		consRK:    s.ConsRs,
 	}
 	return
 }

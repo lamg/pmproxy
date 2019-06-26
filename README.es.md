@@ -73,7 +73,24 @@ type UserInfo struct {
 | {Cmd:get,Secret:JWT,IsAdmin:true,String:user}| userInfo  |
 | {Cmd:get,Secret:JWT}                         | userInfo  |
 | {Cmd:set,Secret:JWT,IsAdmin:true,String:user,Uint64:cons} | ∅ |
-| {Cmd:show,Secret:JWT} | map[string]interface{}|
+| {Cmd:show,Secret:JWT} | dwnConsRMap |
+
+```go
+type downConsRMap struct {
+	Name string `json:"name"`
+	UserDB string `json:"userDB"`
+	LastReset string `json:"lastReset"`
+	ResetCycle string `json:"resetCycle"`
+	Spec *Spec `json:"spec"`
+	QuotaMap map[string]string `json:"quotaMap"`
+}
+
+type spec struct {
+	Iface    string `json:"iface"`
+	ProxyURL string `json:"proxyURL"`
+	ConsRs []string `json:"consRs"`
+}
+```
 
 - resources
 
