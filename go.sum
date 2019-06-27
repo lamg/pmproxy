@@ -27,6 +27,8 @@ github.com/lamg/algorithms v0.0.0-20190430214202-40179de47213 h1:KhiMSP7KVlV3Owt
 github.com/lamg/algorithms v0.0.0-20190430214202-40179de47213/go.mod h1:u5+jlrpBnP1V5wPssTWt/Wy3rUDs3m3sIDdXE2vpOZA=
 github.com/lamg/algorithms v0.0.0-20190430214428-a157e553e28e h1:0TAPoMimwgatt6CatSLrJVbUS9A3lwEUvVTog2l/zxI=
 github.com/lamg/algorithms v0.0.0-20190430214428-a157e553e28e/go.mod h1:u5+jlrpBnP1V5wPssTWt/Wy3rUDs3m3sIDdXE2vpOZA=
+github.com/lamg/algorithms v0.0.0-20190520212325-66184574b2d4 h1:ofC7luvIHqAq24TkjOA7AGttQo3gwPX37tWtYzYSBNA=
+github.com/lamg/algorithms v0.0.0-20190520212325-66184574b2d4/go.mod h1:iJSRjK+JlnHSXVoTzxs1gEqyM9+pJ6eRD6yvUnAv3Yo=
 github.com/lamg/ldaputil v0.1.0 h1:RRlvTehDJpRJkUNp/SgqxkXVXuWQgkUCb41L1VGAyFE=
 github.com/lamg/ldaputil v0.1.0/go.mod h1:vK75itx8r1akJnkYLx1AnHXANBquFGTUErMH0ViZNic=
 github.com/lamg/predicate v0.0.5-0.20190408010051-e1255993ca89 h1:asXpze9NsDp86bomiNgtcvlU2gd22+TV3r9Yot+hNDk=
@@ -46,6 +48,7 @@ github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTd
 github.com/spf13/cast v1.3.0 h1:oget//CVOEoFewqQxwr0Ej5yjygnqGkvggSE/gB35Q8=
 github.com/spf13/cast v1.3.0/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
 github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1w=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
