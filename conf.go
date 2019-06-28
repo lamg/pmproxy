@@ -25,6 +25,8 @@ import (
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"net"
+	"os"
+	"path"
 	"time"
 )
 
@@ -36,12 +38,13 @@ const (
 func load(fs afero.Fs) (p *pmproxyConf, e error) {
 	p = new(pmproxyConf)
 	var exCrt, exKey bool
-	var certFl, keyFl, host string
+	var certFl, keyFl, host, home string
+	var bs []byte
 	f := []func(){
 		func() { home, e = os.UserHomeDir() },
 		func() {
-			confPath = path.Join(home, confDir, confFile)
-			bs, e = afero.ReadFile(confPath)
+			confPath := path.Join(home, confDir, confFile)
+			bs, e = afero.ReadFile(fs, confPath)
 		},
 		func() { e = toml.Unmarshal(bs, p) },
 		func() {
@@ -58,7 +61,7 @@ func load(fs afero.Fs) (p *pmproxyConf, e error) {
 			host, _, e = net.SplitHostPort(p.api.Server.Addr)
 		},
 		func() {
-			if !exCert || !exKey {
+			if !exCrt || !exKey {
 				e = genCert(host, keyFl, certFl, fs)
 			}
 		},

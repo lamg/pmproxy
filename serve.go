@@ -21,11 +21,18 @@
 package pmproxy
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
+	"github.com/AdhityaRamadhanus/fasthttpcors"
+	alg "github.com/lamg/algorithms"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/lamg/proxy"
+	"github.com/rs/cors"
 	"github.com/spf13/afero"
 	fh "github.com/valyala/fasthttp"
+	"io/ioutil"
+	"net"
 	h "net/http"
 	"path"
 	"time"
@@ -44,8 +51,8 @@ func Serve() (e error) {
 	}
 	if e == nil {
 		fes := []func() error{
-			serveAPI(p.api, cmdChan),
-			serveProxy(p.proxy, ctl, time.Now),
+			func() error { return serveAPI(p.api, cmdChan) },
+			func() error { return serveProxy(p.proxy, ctl, time.Now) },
 			func() (e error) {
 				for {
 					time.Sleep(p.api.PersistInterval)
@@ -71,13 +78,13 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 		e = fast.ListenAndServeTLS(i.Server.Addr, i.HTTPSCert,
 			i.HTTPSKey)
 	} else {
-		shnd := stdIface(i.WebStaticFilesDir, i.cmdChan)
+		shnd := stdIface(i.WebStaticFilesDir, cmdChan)
 		cropt := cors.AllowAll()
 		std := &h.Server{
 			ReadTimeout:  i.Server.ReadTimeout,
 			WriteTimeout: i.Server.WriteTimeout,
 			Addr:         i.Server.Addr,
-			Handler:      cropt.Handler(shnd).ServeHTTP,
+			Handler:      cropt.Handler(shnd),
 			TLSNextProto: make(map[string]func(*h.Server,
 				*tls.Conn, h.Handler)),
 		}
@@ -92,13 +99,13 @@ func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 		fast := &fh.Server{
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
-			Handler:      proxy.NewFastProxy(p.ctl, p.DialTimeout, p.now),
+			Handler:      proxy.NewFastProxy(ctl, p.DialTimeout, now),
 		}
 		e = fast.ListenAndServe(p.Server.Addr)
 	} else {
 		std := &h.Server{
-			ReadTimeout:  i.Server.ReadTimeout,
-			WriteTimeout: i.Server.WriteTimeout,
+			ReadTimeout:  p.Server.ReadTimeout,
+			WriteTimeout: p.Server.WriteTimeout,
 			Addr:         p.Server.Addr,
 			Handler:      proxy.NewProxy(ctl, p.DialTimeout, now),
 		}
@@ -169,10 +176,14 @@ func stdIface(staticFPath string,
 	return
 }
 
+const (
+	ApiCmd = "/api/cmd"
+)
+
 func compatibleIface(cmdChan mng.CmdF, path, method,
 	rAddr string, body func() ([]byte, error),
 	resp func([]byte), fileSrv, writeErr func(string)) {
-	m := new(Cmd)
+	m := new(mng.Cmd)
 	var e error
 	var bs []byte
 	fs := []func(){
@@ -183,30 +194,21 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 			if path == ApiCmd && method == h.MethodPost {
 				e = json.Unmarshal(bs, m)
 			} else {
-				path = emptyPathIfLogin(path)
 				fileSrv(path)
-				m = &mng.Cmd{Cmd: skip, Manager: ResourcesK}
+				m = &mng.Cmd{Cmd: mng.Skip, Manager: mng.ResourcesK}
 			}
 		},
 		func() {
 			m.IP, _, e = net.SplitHostPort(rAddr)
 		},
-		func() { cmdChan(m); e = m.e },
+		func() { cmdChan(m); e = m.Err },
 		func() {
-			if m.bs != nil {
-				resp(m.bs)
+			if m.Data != nil {
+				resp(m.Data)
 			}
 		},
 	}
 	if !alg.TrueFF(fs, func() bool { return e == nil }) {
 		writeErr(e.Error())
 	}
-}
-
-func emptyPathIfLogin(pth string) (r string) {
-	r = pth
-	if pth == loginPref || pth == loginPrefSlash {
-		r = ""
-	}
-	return
 }

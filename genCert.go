@@ -142,7 +142,7 @@ func certToFile(fileName string,
 			})
 		},
 	}
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
@@ -164,7 +164,7 @@ func keyToFile(fileName string,
 			})
 		},
 	}
-	trueFF(fs, func() bool { return e == nil })
+	alg.TrueFF(fs, func() bool { return e == nil })
 	if file != nil {
 		file.Close()
 	}

@@ -24,12 +24,18 @@ import (
 	"bytes"
 	"encoding/json"
 	alg "github.com/lamg/algorithms"
+	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	h "net/http"
 	ht "net/http/httptest"
 	"testing"
-	"time"
+)
+
+const (
+	user0  = "user0"
+	pass0  = "pass0"
+	group0 = "group0"
 )
 
 func TestLogin(t *testing.T) {
@@ -48,7 +54,7 @@ func TestLogin(t *testing.T) {
 	}
 	ui, e := cl.status("")
 	require.NoError(t, e)
-	xui := &pm.UserInfo{
+	xui := &mng.UserInfo{
 		UserName:    user0,
 		Name:        user0,
 		Groups:      []string{group0},
@@ -70,17 +76,17 @@ func TestShowMng(t *testing.T) {
 	downWeek := "downWeek"
 	objT, e := cl.showMng(downWeek)
 	require.NoError(t, e)
-	require.Equal(t, DwnConsRK, objT.Type)
+	require.Equal(t, mng.DwnConsRK, objT.Type)
 	kvs := []struct {
 		key string
 		val interface{}
 	}{
-		{pm.NameK, downWeek},
-		{pm.LastResetK, "2019-04-13T20:00:00-04:00"},
-		{pm.ResetCycleK, "168h0m0s"},
-		{pm.UserDBK, "mapDB"},
+		{mng.NameK, downWeek},
+		{mng.LastResetK, "2019-04-13T20:00:00-04:00"},
+		{mng.ResetCycleK, "168h0m0s"},
+		{mng.UserDBK, "mapDB"},
 		{
-			pm.QuotaMapK,
+			mng.QuotaMapK,
 			map[string]interface{}{
 				"group0": "600.0 MB",
 				"group1": "1024.0 MB",
@@ -96,26 +102,20 @@ func TestShowMng(t *testing.T) {
 func TestConfUpdate(t *testing.T) {
 	fs, _, cf := basicConfT(t)
 	cf.Update()
-	bs, e := afero.ReadFile(fs, pm.ConfPath())
+	bs, e := afero.ReadFile(fs, mng.ConfPath())
 	require.NoError(t, e)
 	t.Log(string(bs))
 	// FIXME some objects aren't written
 }
 
-func basicConfT(t *testing.T) (fs afero.Fs, hnd h.HandlerFunc,
-	c *pm.conf) {
-	pth := pm.ConfPath()
+func basicConfT(t *testing.T) (fs afero.Fs, cmdChan mng.CmdF,
+	ctl proxy.ConnControl, prs func() error, e error) {
+	pth := mng.ConfPath()
 	fs = afero.NewMemMapFs()
-	pm.BasicConf(pth, fs)
+	mng.BasicConf(pth, fs)
 	ok, e := afero.Exists(fs, pth)
 	require.True(t, ok && e == nil)
-	nt, e := time.Parse(time.RFC3339, "2019-03-04T19:00:00-05:00")
-	require.NoError(t, e)
-	c, e = pm.NewConf(fs, func() time.Time { return nt })
-	require.NoError(t, e)
-	_, ifh, e := pm.NewHnds(c)
-	require.NoError(t, e)
-	hnd = ifh.ServeHTTP
+	mng.Load("", fs)
 	return
 }
 

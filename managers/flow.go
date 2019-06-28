@@ -58,6 +58,27 @@ type Credentials struct {
 	Pass string `json:"pass"`
 }
 
+type ObjType struct {
+	Object map[string]interface{} `json:"object"`
+	Type   string                 `json:"type"`
+}
+
+type MatchType struct {
+	Match bool   `json:"match"`
+	Type  string `json:"type"`
+}
+
+type DiscoverRes struct {
+	MatchMng map[string]MatchType `json:"matchMng"`
+	Result   string               `json:"result"`
+}
+
+const (
+	Discover   = "discover"
+	ResourcesK = "resources"
+	Filter     = "filter"
+)
+
 func (c *Cmd) defined(key string) (ok bool) {
 	ib := func(i int) bool { return c.defKeys[i] == key }
 	ok, _ = alg.BLnSrch(ib, len(c.defKeys))

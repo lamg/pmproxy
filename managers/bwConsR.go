@@ -34,6 +34,10 @@ type bwConsR struct {
 	connThr *throttle.Throttle
 }
 
+const (
+	BwConsRK = "bwConsR"
+)
+
 func (b *bwConsR) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{

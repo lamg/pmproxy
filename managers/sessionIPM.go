@@ -34,6 +34,7 @@ const (
 	Close        = "close"
 	authenticate = "authenticate"
 	Check        = "check"
+	SessionIPMK  = "sessionIPM"
 )
 
 func (m *sessionIPM) exec(c *Cmd) (term bool) {

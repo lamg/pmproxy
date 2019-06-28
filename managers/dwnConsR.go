@@ -61,6 +61,15 @@ type dwnConsR struct {
 	userCons *sync.Map
 }
 
+const (
+	DwnConsRK   = "downConsR"
+	NameK       = "name"
+	LastResetK  = "lastReset"
+	UserDBK     = "userDB"
+	QuotaMapK   = "quotaMap"
+	ResetCycleK = "resetCycle"
+)
+
 func (d *dwnConsR) init(pth string, fs afero.Fs) (e error) {
 	d.quotaCache, d.groupQuotaM, d.userCons = new(sync.Map),
 		new(sync.Map), new(sync.Map)

@@ -41,16 +41,6 @@ type PMClient struct {
 	PostCmd func(string, *mng.Cmd) (*h.Response, error)
 }
 
-type matchType struct {
-	Match bool   `json:"match"`
-	Type  string `json:"type"`
-}
-
-type DiscoverRes struct {
-	MatchMng map[string]matchType `json:"matchMng"`
-	Result   string               `json:"result"`
-}
-
 func (p *PMClient) Discover() (m cli.Command) {
 	m = cli.Command{
 		Name:    "discover",
@@ -59,7 +49,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 			" proxy server, for some url (optional)",
 		Action: func(c *cli.Context) (e error) {
 			args := c.Args()
-			var dr *DiscoverRes
+			var dr *mng.DiscoverRes
 			if len(args) == 2 {
 				dr, e = p.discoverC(args[0], args[1])
 			} else if len(args) == 1 {
@@ -79,7 +69,7 @@ func (p *PMClient) Discover() (m cli.Command) {
 	return
 }
 
-func printDR(dr *DiscoverRes) {
+func printDR(dr *mng.DiscoverRes) {
 	fmt.Printf("Match result: %s\n", dr.Result)
 	for k, v := range dr.MatchMng {
 		var m string
@@ -225,7 +215,7 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 	return
 }
 
-func (p *PMClient) showMng(manager string) (objT *ObjType,
+func (p *PMClient) showMng(manager string) (objT *mng.ObjType,
 	e error) {
 	m := &mng.Cmd{
 		Manager: mng.MatchersMng,
@@ -233,7 +223,7 @@ func (p *PMClient) showMng(manager string) (objT *ObjType,
 		String:  manager,
 	}
 	okf := func(bs []byte) (d error) {
-		objT = new(pm.ObjType)
+		objT = new(mng.ObjType)
 		d = json.Unmarshal(bs, objT)
 		return
 	}
@@ -254,7 +244,7 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 	}
 	if e == nil {
 		m := &mng.Cmd{
-			Cmd:     pm.Get,
+			Cmd:     mng.Get,
 			Manager: sm,
 		}
 		okf := func(bs []byte) (d error) {
@@ -268,10 +258,10 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 }
 
 func (p *PMClient) discoverC(url,
-	remote string) (dr *pm.DiscoverRes, e error) {
+	remote string) (dr *mng.DiscoverRes, e error) {
 	m := &mng.Cmd{
-		Cmd:     pm.Discover,
-		Manager: pm.ResourcesK,
+		Cmd:     mng.Discover,
+		Manager: mng.ResourcesK,
 		String:  remote,
 	}
 	var r *h.Response
@@ -290,7 +280,7 @@ func (p *PMClient) discoverC(url,
 		func() { r, e = p.PostCmd(url, m) },
 		func() { bs, e = ioutil.ReadAll(r.Body) },
 		func() {
-			dr = new(pm.DiscoverRes)
+			dr = new(mng.DiscoverRes)
 			e = json.Unmarshal(bs, dr)
 		},
 		func() {
@@ -303,7 +293,7 @@ func (p *PMClient) discoverC(url,
 func (p *PMClient) reset(manager, user string) (e error) {
 	m := &mng.Cmd{
 		Manager: manager,
-		Cmd:     pm.Set,
+		Cmd:     mng.Set,
 		String:  user,
 		Uint64:  1,
 	}
@@ -312,7 +302,7 @@ func (p *PMClient) reset(manager, user string) (e error) {
 	return
 }
 
-func (p *PMClient) status(dwnMng string) (ui *pm.UserInfo, e error) {
+func (p *PMClient) status(dwnMng string) (ui *mng.UserInfo, e error) {
 	if dwnMng == "" {
 		var li *loginInfo
 		li, e = p.readSecret()
@@ -321,11 +311,11 @@ func (p *PMClient) status(dwnMng string) (ui *pm.UserInfo, e error) {
 		}
 	}
 	m := &mng.Cmd{
-		Cmd:     pm.Get,
+		Cmd:     mng.Get,
 		Manager: dwnMng,
 	}
 	okf := func(bs []byte) (d error) {
-		ui = new(pm.UserInfo)
+		ui = new(mng.UserInfo)
 		d = json.Unmarshal(bs, ui)
 		return
 	}
@@ -347,7 +337,7 @@ func (p *PMClient) sendRecv(m *mng.Cmd,
 			if e != nil && strings.HasPrefix(e.Error(),
 				"token is expired") {
 				nm := &mng.Cmd{
-					Cmd:     pm.Renew,
+					Cmd:     mng.Renew,
 					Manager: li.SessionIPM,
 					Secret:  li.Secret,
 				}
@@ -421,26 +411,26 @@ func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 }
 
 func (p *PMClient) fillConsR(li *loginInfo) (e error) {
-	dr := new(pm.DiscoverRes)
+	dr := new(mng.DiscoverRes)
 	var bs []byte
 	var r *h.Response
 	fs := []func(){
 		func() {
-			m := &mng.Cmd{Manager: pm.ResourcesK, Cmd: pm.Discover}
+			m := &mng.Cmd{Manager: mng.ResourcesK, Cmd: mng.Discover}
 			r, e = p.PostCmd(li.Server, m)
 		},
 		func() { bs, e = ioutil.ReadAll(r.Body) },
 		func() { e = json.Unmarshal(bs, dr) },
 		func() {
-			li.DwnConsR = matchMngType(dr, pm.DwnConsRK)
-			li.BwConsR = matchMngType(dr, pm.BwConsRK)
+			li.DwnConsR = matchMngType(dr, mng.DwnConsRK)
+			li.BwConsR = matchMngType(dr, mng.BwConsRK)
 		},
 	}
 	alg.TrueFF(fs, func() bool { return e == nil })
 	return
 }
 
-func matchMngType(dr *pm.DiscoverRes, tÿpe string) (name string) {
+func matchMngType(dr *mng.DiscoverRes, tÿpe string) (name string) {
 	for k, v := range dr.MatchMng {
 		if v.Match && v.Type == tÿpe {
 			name = k
@@ -454,9 +444,9 @@ func (p *PMClient) loginSM(urls, sm, user,
 	pass string) (li *loginInfo,
 	e error) {
 	m := &mng.Cmd{
-		Cred:    &pm.Credentials{User: user, Pass: pass},
+		Cred:    &mng.Credentials{User: user, Pass: pass},
 		Manager: sm,
-		Cmd:     pm.Open,
+		Cmd:     mng.Open,
 	}
 	var r *h.Response
 	fs := []func(){
@@ -479,9 +469,9 @@ func (p *PMClient) loginSM(urls, sm, user,
 
 func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
 	m := &mng.Cmd{
-		Manager: pm.ResourcesK,
-		Cmd:     pm.Filter,
-		String:  pm.SessionIPMK,
+		Manager: mng.ResourcesK,
+		Cmd:     mng.Filter,
+		String:  mng.SessionIPMK,
 	}
 	var r *h.Response
 	fe := func(d error) { e = d }
@@ -503,7 +493,7 @@ func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
 
 func (p *PMClient) logout() (e error) {
 	m := &mng.Cmd{
-		Cmd: pm.Clöse,
+		Cmd: mng.Close,
 	}
 	li, e := p.readSecret()
 	if e == nil {
@@ -542,7 +532,7 @@ func PostCmd(urls string, c *mng.Cmd) (r *h.Response, e error) {
 	bs, e := json.Marshal(c)
 	if e == nil {
 		buff := bytes.NewBuffer(bs)
-		u := urls + pm.ApiCmd
+		u := urls + ApiCmd
 		r, e = h.Post(u, "text/json", buff)
 		if e == nil && r.StatusCode == h.StatusBadRequest {
 			bs, e = ioutil.ReadAll(r.Body)

@@ -37,14 +37,25 @@ import (
 )
 
 const (
-	confFile = "managers.toml"
+	defConfDir = ".config/pmproxy"
+	confFile   = "managers.toml"
 )
+
+func ConfPath() (r string) {
+	home, _ := os.UserHomeDir()
+	confFullDir := path.Join(home, defConfDir)
+	r = path.Join(confFullDir, confFile)
+	return
+}
 
 func Load(confDir string, fs afero.Fs) (
 	cmdChan CmdF,
 	ctl proxy.ConnControl,
 	persist func() error,
 	e error) {
+	if confDir == "" {
+		confDir = defConfDir
+	}
 	var home, confFullDir, confPath string
 	var bs []byte
 	c := new(conf)
