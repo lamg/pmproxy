@@ -21,7 +21,7 @@
 package main
 
 import (
-	"github.com/lamg/pmproxy/client"
+	"github.com/lamg/pmproxy"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"log"
@@ -29,9 +29,9 @@ import (
 )
 
 func main() {
-	cl := client.PMClient{
+	cl := pmproxy.PMClient{
 		Fs:      afero.NewOsFs(),
-		PostCmd: client.PostCmd,
+		PostCmd: pmproxy.PostCmd,
 	}
 	app := cli.NewApp()
 	app.Commands = []cli.Command{
