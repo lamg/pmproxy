@@ -45,6 +45,7 @@ func TestLogin(t *testing.T) {
 		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
 	e := cl.login("", "", user0, pass0)
+	require.NoError(t, e)
 	ok, e := afero.Exists(fs, loginSecretFile)
 	require.True(t, e == nil && ok)
 	dr, e := cl.discoverC("", "")

@@ -110,6 +110,13 @@ func Load(confDir string, fs afero.Fs) (
 }
 
 func BasicConf(pth string, fs afero.Fs) (e error) {
+	cf := &conf{
+		Admins: []string{"pepe"},
+	}
+	bs, e := toml.Marshal(cf)
+	if e == nil {
+		e = afero.WriteFile(fs, pth, bs, 0644)
+	}
 	return
 }
 
