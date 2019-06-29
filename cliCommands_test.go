@@ -100,28 +100,31 @@ func TestShowMng(t *testing.T) {
 }
 
 func TestConfUpdate(t *testing.T) {
-	fs, _, cf := basicConfT(t)
-	cf.Update()
+	fs, _, prs := basicConfT(t)
+	e := prs()
+	require.NoError(t, e)
 	bs, e := afero.ReadFile(fs, mng.ConfPath())
 	require.NoError(t, e)
 	t.Log(string(bs))
 	// FIXME some objects aren't written
 }
 
-func basicConfT(t *testing.T) (fs afero.Fs, cmdChan mng.CmdF,
-	ctl proxy.ConnControl, prs func() error, e error) {
+func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
+	prs func() error) {
 	pth := mng.ConfPath()
 	fs = afero.NewMemMapFs()
 	mng.BasicConf(pth, fs)
 	ok, e := afero.Exists(fs, pth)
 	require.True(t, ok && e == nil)
-	mng.Load("", fs)
+	ch, _, prs, e := mng.Load("", fs)
+	require.NoError(t, e)
+	ifh = stdIface("", ch)
 	return
 }
 
 func testPostCmd(addr string,
-	hnd h.HandlerFunc) func(string, *pm.Cmd) (*h.Response, error) {
-	return func(u string, m *pm.Cmd) (r *h.Response, e error) {
+	hnd h.HandlerFunc) func(string, *mng.Cmd) (*h.Response, error) {
+	return func(u string, m *mng.Cmd) (r *h.Response, e error) {
 		rec := ht.NewRecorder()
 		bs, e := json.Marshal(m)
 		if e == nil {

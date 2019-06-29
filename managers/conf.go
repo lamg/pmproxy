@@ -109,6 +109,10 @@ func Load(confDir string, fs afero.Fs) (
 	return
 }
 
+func BasicConf(pth string, fs afero.Fs) (e error) {
+	return
+}
+
 type conf struct {
 	JWTExpiration time.Duration   `toml:"jwtExpiration"`
 	Admins        []string        `toml:"admins"`
