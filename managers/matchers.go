@@ -7,6 +7,8 @@ This manager receives a `match` command and reduces the `matchers.rules` predica
 */
 
 import (
+	"encoding/json"
+	alg "github.com/lamg/algorithms"
 	pred "github.com/lamg/predicate"
 )
 
@@ -14,21 +16,47 @@ type matchers struct {
 	rules *pred.Predicate
 }
 
+const (
+	Match       = "match"
+	Discover    = "discover"
+	MatchersMng = "matchers"
+	Type        = "type"
+)
+
 func (m *matchers) exec(c *Cmd) (term bool) {
-	if c.Cmd == match {
-		term = true
-		interp := func(name string) (r, def bool) {
-			r, def = c.interp[name]
-			if !def {
-				c.Manager, term = name, false
-			}
-			return
+	term = true
+	interp := func(name string) (r, def bool) {
+		mt, def := c.interp[name]
+		if !def {
+			c.Manager, term = name, false
 		}
-		p := pred.Reduce(m.rules, interp)
-		if term {
-			c.Ok = p.String == pred.TrueStr
-			c.String = pred.String(p)
-		}
+		r = mt.Match
+		return
 	}
+	kf := []alg.KFunc{
+		{
+			Match,
+			func() {
+				p := pred.Reduce(m.rules, interp)
+				if term {
+					c.Data = []byte(pred.String(p))
+				}
+			},
+		},
+		{
+			Discover,
+			func() {
+				pred.Reduce(m.rules, interp)
+				c.Data, c.Err = json.Marshal(c.interp)
+			},
+		},
+		{
+			Show,
+			func() {
+				c.Data = []byte(pred.String(m.rules))
+			},
+		},
+	}
+	alg.ExecF(kf, c.Cmd)
 	return
 }

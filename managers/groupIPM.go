@@ -31,10 +31,6 @@ type groupIPM struct {
 	group   string
 }
 
-const (
-	Match = "match"
-)
-
 func (m *groupIPM) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
@@ -61,6 +57,12 @@ func (m *groupIPM) exec(c *Cmd) (term bool) {
 						len(c.Groups))
 					term = true
 				}
+			},
+		},
+		{
+			Type,
+			func() {
+				c.Data = []byte("groupIPM")
 			},
 		},
 	}

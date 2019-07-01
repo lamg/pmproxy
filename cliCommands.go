@@ -101,7 +101,7 @@ func (p *PMClient) Login() (m cli.Command) {
 			)
 			if e != nil &&
 				e.Error() == mng.NoManager(sm).Error() {
-				p.filterSMs(args[0])
+				// TODO discover
 			}
 			return
 		},
@@ -260,8 +260,8 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 func (p *PMClient) discoverC(url,
 	remote string) (dr *mng.DiscoverRes, e error) {
 	m := &mng.Cmd{
-		Cmd:     mng.Discover,
-		Manager: mng.ResourcesK,
+		Cmd:     mng.Match,
+		Manager: mng.MatchersMng,
 		String:  remote,
 	}
 	var r *h.Response
@@ -387,20 +387,8 @@ type loginInfo struct {
 
 func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 	var li *loginInfo
-	if sm == "" {
-		var ss []string
-		ss, e = p.filterSMs(urls)
-		if len(ss) != 0 {
-			li, e = p.loginSM(urls, ss[0], user, pass)
-		}
-		if e != nil && len(ss) != 0 {
-			e = fmt.Errorf("%s .Try one of %v", e.Error(), ss[1:])
-		}
-		// try login at first
-	} else {
-		li, e = p.loginSM(urls, sm, user, pass)
-		// try login at sm
-	}
+	li, e = p.loginSM(urls, sm, user, pass)
+	// try login at sm
 	if e == nil {
 		e = p.fillConsR(li)
 	}
@@ -416,7 +404,7 @@ func (p *PMClient) fillConsR(li *loginInfo) (e error) {
 	var r *h.Response
 	fs := []func(){
 		func() {
-			m := &mng.Cmd{Manager: mng.ResourcesK, Cmd: mng.Discover}
+			m := &mng.Cmd{Manager: mng.MatchersMng, Cmd: mng.Match}
 			r, e = p.PostCmd(li.Server, m)
 		},
 		func() { bs, e = ioutil.ReadAll(r.Body) },
@@ -459,30 +447,6 @@ func (p *PMClient) loginSM(urls, sm, user,
 		li = &loginInfo{
 			Server: urls, SessionIPM: sm, Secret: string(bs),
 		}
-		return
-	}
-	fs = append(fs,
-		doOK(okf, fe, func() *h.Response { return r })...)
-	alg.TrueFF(fs, func() bool { return e == nil })
-	return
-}
-
-func (p *PMClient) filterSMs(ürl string) (ss []string, e error) {
-	m := &mng.Cmd{
-		Manager: mng.ResourcesK,
-		Cmd:     mng.Filter,
-		String:  mng.SessionIPMK,
-	}
-	var r *h.Response
-	fe := func(d error) { e = d }
-	fs := []func(){
-		func() {
-			r, e = p.PostCmd(ürl, m)
-		},
-	}
-	ss = make([]string, 0)
-	okf := func(bs []byte) (e error) {
-		e = json.Unmarshal(bs, &ss)
 		return
 	}
 	fs = append(fs,

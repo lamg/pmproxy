@@ -81,7 +81,7 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 						}
 					}
 				} else {
-					c.Manager = adminsMng
+					c.Manager = ConstMng
 					term = false
 				}
 			},
@@ -122,6 +122,12 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 				} else {
 					c.Ok = c.User != ""
 				}
+			},
+		},
+		{
+			Type,
+			func() {
+				c.Data = []byte("sessionIPM")
 			},
 		},
 	}

@@ -28,11 +28,14 @@ This file loads the main managers: the resource matcher and the connection handl
 
 import (
 	alg "github.com/lamg/algorithms"
+	pred "github.com/lamg/predicate"
 	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"os"
 	"path"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -122,6 +125,7 @@ func BasicConf(pth string, fs afero.Fs) (e error) {
 
 type conf struct {
 	JWTExpiration time.Duration   `toml:"jwtExpiration"`
+	Rule          string          `toml:"rule"`
 	Admins        []string        `toml:"admins"`
 	DwnConsR      []dwnConsR      `toml:"dwnConsR"`
 	BwConsR       []bwConsR       `toml:"bwConsR"`
@@ -132,4 +136,26 @@ type conf struct {
 	ParentProxy   []proxyURLMng   `toml:"parentProxy"`
 	RangeIPM      []rangeIPM      `toml:"rangeIPM"`
 	SessionIPM    []sessionIPM    `toml:"sessionIPM"`
+	// managers which the majority of users will use for
+	// handling their connections
+	DefaultMngs []string `toml:"defaultMngs"`
+}
+
+func newManager(c *conf) (m *manager, e error) {
+	m = &manager{mngs: new(sync.Map)}
+	iu := newIpUser()
+	cr, e := newCrypt(c.JWTExpiration)
+	mt := new(matchers)
+	fs := []func(){
+		func() { mt.rules, e = pred.Parse(strings.NewReader(c.Rule)) },
+		func() {
+			m.add(connectionsMng, newConnections().exec)
+			m.add(ipUserMng, iu.exec)
+			m.add(cryptMng, cr.exec)
+			m.add(MatchersMng, mt.exec)
+		},
+	}
+	alg.TrueFF(fs, func() bool { return e == nil })
+	// TODO
+	return
 }

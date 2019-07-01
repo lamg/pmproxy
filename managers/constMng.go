@@ -9,19 +9,22 @@ The `managerKF` method defines the `Cmd.IsAdmin` value, according the presence o
 */
 
 import (
+	"encoding/json"
 	alg "github.com/lamg/algorithms"
 )
 
 const (
 	isAdminK  = "isAdmin"
-	adminsMng = "adminsMng"
+	DefaultsK = "defaults"
+	ConstMng  = "constMng"
 )
 
-type admins struct {
-	admins []string
+type constMng struct {
+	admins  []string
+	defMngs []string
 }
 
-func (m *admins) exec(c *Cmd) (term bool) {
+func (m *constMng) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
 			isAdminK,
@@ -38,8 +41,13 @@ func (m *admins) exec(c *Cmd) (term bool) {
 				}
 			},
 		},
+		{
+			DefaultsK,
+			func() {
+				c.Data, c.Err = json.Marshal(m.defMngs)
+			},
+		},
 	}
-	// TODO
 	alg.ExecF(kf, c.Cmd)
 	return
 }

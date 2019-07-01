@@ -31,6 +31,10 @@ type rangeIPM struct {
 	name string
 }
 
+const (
+	RangeIPMK = "rangeIPM"
+)
+
 func (r *rangeIPM) init() (e error) {
 	_, r.rg, e = net.ParseCIDR(r.cidr)
 	return
@@ -45,9 +49,20 @@ func (r *rangeIPM) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			match,
+			Match,
 			func() {
-				c.interp[r.name], term = r.match(c.IP), true
+				c.interp[r.name], term =
+					MatchType{
+						Match: r.match(c.IP),
+						Type:  RangeIPMK,
+					},
+					true
+			},
+		},
+		{
+			Type,
+			func() {
+				c.Data = []byte(RangeIPMK)
 			},
 		},
 	}

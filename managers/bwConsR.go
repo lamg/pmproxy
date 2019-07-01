@@ -67,9 +67,20 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			match,
+			Match,
 			func() {
-				c.interp[b.name], c.consR = true, append(c.consR, b.name)
+				c.interp[b.name], c.consR =
+					MatchType{
+						Match: true,
+						Type:  BwConsRK,
+					},
+					append(c.consR, b.name)
+			},
+		},
+		{
+			Type,
+			func() {
+				c.Data = []byte(BwConsRK)
 			},
 		},
 	}

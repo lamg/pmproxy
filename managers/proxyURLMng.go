@@ -36,7 +36,7 @@ func (p *proxyURLMng) init() (e error) {
 }
 
 func (u *proxyURLMng) exec(c *Cmd) (term bool) {
-	if c.Cmd == match {
+	if c.Cmd == Match {
 		c.Ok, c.Result.Proxy = true, u.proxy
 	}
 	term = true

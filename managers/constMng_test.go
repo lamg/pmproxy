@@ -7,14 +7,14 @@ import (
 	"testing"
 )
 
-func TestAdmins(t *testing.T) {
+func TestConstMng(t *testing.T) {
 	iu := newIpUser()
-	adms := &admins{
+	adms := &constMng{
 		admins: []string{"pepe", "coco"},
 	}
 	mng := &manager{mngs: new(sync.Map)}
 	mng.add(ipUserMng, iu.exec)
-	mng.add(adminsMng, adms.exec)
+	mng.add(ConstMng, adms.exec)
 	ts := []struct {
 		user  string
 		ip    string
@@ -26,7 +26,7 @@ func TestAdmins(t *testing.T) {
 	inf := func(i int) {
 		iu.open(ts[i].ip, ts[i].user)
 		c := &Cmd{
-			Manager: adminsMng,
+			Manager: ConstMng,
 			Cmd:     isAdminK,
 			IP:      ts[i].ip,
 		}

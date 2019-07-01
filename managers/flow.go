@@ -48,7 +48,7 @@ type Cmd struct {
 	Operation *proxy.Operation `json:"-"`
 	Result    *proxy.Result    `json:"-"`
 
-	interp  map[string]bool
+	interp  map[string]MatchType
 	consR   []string
 	defKeys []string
 }
@@ -73,12 +73,6 @@ type DiscoverRes struct {
 	Result   string               `json:"result"`
 }
 
-const (
-	Discover   = "discover"
-	ResourcesK = "resources"
-	Filter     = "filter"
-)
-
 func (c *Cmd) defined(key string) (ok bool) {
 	ib := func(i int) bool { return c.defKeys[i] == key }
 	ok, _ = alg.BLnSrch(ib, len(c.defKeys))
@@ -86,18 +80,6 @@ func (c *Cmd) defined(key string) (ok bool) {
 }
 
 type CmdF func(*Cmd) bool
-
-func newManager(c *conf) (m *manager, e error) {
-	m = &manager{mngs: new(sync.Map)}
-	iu := newIpUser()
-	cr, e := newCrypt(c.JWTExpiration)
-	if e == nil {
-		m.add(connectionsMng, newConnections().exec)
-		m.add(ipUserMng, iu.exec)
-		m.add(cryptMng, cr.exec)
-	}
-	return
-}
 
 func (m *manager) add(name string, f CmdF) {
 	m.mngs.Store(name, f)
@@ -149,12 +131,16 @@ func (m *manager) exec(c *Cmd) (proc bool) {
 }
 
 func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {
-	v, ok := m.mngs.Load(c.Manager)
-	prev = &mngCmd{mng: c.Manager, cmd: c.Cmd}
-	if ok {
-		term = v.(CmdF)(c)
+	if c.Cmd != Skip {
+		v, ok := m.mngs.Load(c.Manager)
+		prev = &mngCmd{mng: c.Manager, cmd: c.Cmd}
+		if ok {
+			term = v.(CmdF)(c)
+		} else {
+			c.Err = NoManager(c.Manager)
+		}
 	} else {
-		c.Err = NoManager(c.Manager)
+		term = true
 	}
 	return
 }
