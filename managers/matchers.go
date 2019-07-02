@@ -46,8 +46,11 @@ func (m *matchers) exec(c *Cmd) (term bool) {
 		{
 			Discover,
 			func() {
-				pred.Reduce(m.rules, interp)
-				c.Data, c.Err = json.Marshal(c.interp)
+				p := pred.Reduce(m.rules, interp)
+				dr := new(DiscoverRes)
+				dr.Result = pred.String(p)
+				dr.MatchMng = c.interp
+				c.Data, c.Err = json.Marshal(dr)
 			},
 		},
 		{

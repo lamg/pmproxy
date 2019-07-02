@@ -215,6 +215,14 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 	return
 }
 
+func (p *PMClient) defaults() (dr *mng.DiscoverRes, e error) {
+	// TODO
+	// discover
+	// get defaults if not connected
+	// filter
+	return
+}
+
 func (p *PMClient) showMng(manager string) (objT *mng.ObjType,
 	e error) {
 	m := &mng.Cmd{
@@ -260,7 +268,7 @@ func (p *PMClient) loggedUsers(sm string) (mp map[string]string,
 func (p *PMClient) discoverC(url,
 	remote string) (dr *mng.DiscoverRes, e error) {
 	m := &mng.Cmd{
-		Cmd:     mng.Match,
+		Cmd:     mng.Discover,
 		Manager: mng.MatchersMng,
 		String:  remote,
 	}
@@ -282,8 +290,6 @@ func (p *PMClient) discoverC(url,
 		func() {
 			dr = new(mng.DiscoverRes)
 			e = json.Unmarshal(bs, dr)
-		},
-		func() {
 		},
 	}
 	alg.TrueFF(fs, func() bool { return e == nil })

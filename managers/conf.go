@@ -44,10 +44,13 @@ const (
 	confFile   = "managers.toml"
 )
 
-func ConfPath() (r string) {
+func ConfPath(confDir string) (dir, file string) {
+	if confDir == "" {
+		confDir = defConfDir
+	}
 	home, _ := os.UserHomeDir()
-	confFullDir := path.Join(home, defConfDir)
-	r = path.Join(confFullDir, confFile)
+	dir = path.Join(home, confDir)
+	file = path.Join(dir, confFile)
 	return
 }
 
@@ -56,24 +59,19 @@ func Load(confDir string, fs afero.Fs) (
 	ctl proxy.ConnControl,
 	persist func() error,
 	e error) {
-	if confDir == "" {
-		confDir = defConfDir
-	}
-	var home, confFullDir, confPath string
 	var bs []byte
+	var fullDir, confFile string
 	c := new(conf)
 	var m *manager
 	f := []func(){
-		func() { home, e = os.UserHomeDir() },
 		func() {
-			confFullDir = path.Join(home, confDir)
-			confPath = path.Join(confFullDir, confFile)
-			bs, e = afero.ReadFile(fs, confPath)
+			fullDir, confFile = ConfPath(confDir)
+			bs, e = afero.ReadFile(fs, confFile)
 		},
 		func() { e = toml.Unmarshal(bs, c) },
 		func() {
 			ib := func(i int) (b bool) {
-				e = c.DwnConsR[i].init(confFullDir, fs)
+				e = c.DwnConsR[i].init(fullDir, fs)
 				b = e != nil
 				return
 			}
@@ -97,7 +95,7 @@ func Load(confDir string, fs afero.Fs) (
 				var bs []byte
 				g := []func(){
 					func() { bs, x = toml.Marshal(c) },
-					func() { x = afero.WriteFile(fs, confPath, bs, 0644) },
+					func() { x = afero.WriteFile(fs, confFile, bs, 0644) },
 					func() {
 						inf := func(i int) { x = c.DwnConsR[i].persist() }
 						alg.Forall(inf, len(c.DwnConsR))
@@ -115,6 +113,18 @@ func Load(confDir string, fs afero.Fs) (
 func BasicConf(pth string, fs afero.Fs) (e error) {
 	cf := &conf{
 		Admins: []string{"pepe"},
+		Rule:   "sessions",
+		SessionIPM: []sessionIPM{
+			{name: "sessions", authName: "mapDB"},
+		},
+		MapDB: []mapDB{
+			{
+				name:      "mapDB",
+				userPass:  map[string]string{"user0": "pass0"},
+				userGroup: map[string][]string{"user0": {"group0"}},
+			},
+		},
+		DefaultMngs: []string{"sessions"},
 	}
 	bs, e := toml.Marshal(cf)
 	if e == nil {
