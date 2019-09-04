@@ -29,3 +29,5 @@ require (
 	golang.org/x/tools v0.0.0-20190523174634-38d8bcfa38af // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 )
+
+go 1.13
