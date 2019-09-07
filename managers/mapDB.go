@@ -26,23 +26,18 @@ import (
 )
 
 const (
-	userK     = "user"
-	groupK    = "group"
-	nameK     = "name"
-	authCmd   = "auth"
-	groupsCmd = "groups"
-	nameCmd   = "name"
+	groupsK = "group"
 )
 
 type mapDB struct {
-	name      string
-	userPass  map[string]string
-	userGroup map[string][]string
+	Name      string              `toml:"name"`
+	UserPass  map[string]string   `toml:"userPass"`
+	UserGroup map[string][]string `toml:"userGroups"`
 }
 
 func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 	nuser = user
-	p, ok := d.userPass[user]
+	p, ok := d.UserPass[user]
 	if !ok {
 		e = fmt.Errorf("No user '%s'", user)
 	} else if p != pass {
@@ -52,7 +47,7 @@ func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 }
 
 func (d *mapDB) userGroups(user string) (gs []string, e error) {
-	gs, ok := d.userGroup[user]
+	gs, ok := d.UserGroup[user]
 	if !ok {
 		e = fmt.Errorf("No user '%s'", user)
 	}
@@ -60,10 +55,9 @@ func (d *mapDB) userGroups(user string) (gs []string, e error) {
 }
 
 func (d *mapDB) exec(c *Cmd) (term bool) {
-	// TODO
 	kf := []alg.KFunc{
 		{
-			authCmd,
+			Auth,
 			func() {
 				c.User, c.Err = d.auth(c.Cred.User,
 					c.Cred.Pass)
@@ -72,23 +66,13 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			groupsCmd,
+			Get,
 			func() {
 				term = c.defined(userK)
 				if term {
 					c.Groups, c.Err = d.userGroups(c.User)
 				} else {
 					c.Cmd, c.Manager = ipUserCmd, ipUserMng
-				}
-			},
-		},
-		{
-			nameCmd,
-			func() {
-				if c.defined(userK) {
-
-				} else {
-
 				}
 			},
 		},

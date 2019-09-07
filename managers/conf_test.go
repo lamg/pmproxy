@@ -21,33 +21,34 @@
 package managers
 
 import (
-	"github.com/pelletier/go-toml"
+	alg "github.com/lamg/algorithms"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestNewConf(t *testing.T) {
-	c := new(conf)
-	e := toml.Unmarshal([]byte(testCfg), c)
-	require.NoError(t, e)
-	pc := &conf{
-		Admins: []string{"coco", "pepe"},
-		ProxyIface: []proxyIfaceMng{
-			{Name: "tubo0", Iface: "eth0"},
-			{Name: "tubo1", Iface: "eth1"},
-		},
+func TestLoad(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	_, _, _, e := Load("", fs)
+	require.Error(t, e)
+	confPath, confFullDir, e := ConfPath()
+	fc := []string{cfg0}
+	inf := func(i int) {
+		e = afero.WriteFile(fs, confPath, []byte(fc[i]), 0644)
+		require.NoError(t, e)
+		_, _, _, e := Load(confFullDir, fs)
+		require.NoError(t, e)
 	}
-	require.Equal(t, pc, c)
+	alg.Forall(inf, len(fc))
 }
 
-const testCfg = `
-admins = ["coco", "pepe"]
+const cfg0 = `
+[mapDB]
+	name = "map"
 
-[[proxyIface]]
-	name = "tubo0"
-	iface = "eth0"
+[sessionIPM]
+	name = "sessions"
 
-[[proxyIface]]
-	name = "tubo1"
-	iface = "eth1"
+[dwnConsR]
+	name = "down"
 `

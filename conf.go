@@ -48,17 +48,17 @@ func load(fs afero.Fs) (p *pmproxyConf, e error) {
 		},
 		func() { e = toml.Unmarshal(bs, p) },
 		func() {
-			certFl = path.Join(home, confDir, p.api.HTTPSCert)
-			p.api.HTTPSCert = certFl
+			certFl = path.Join(home, confDir, p.Api.HTTPSCert)
+			p.Api.HTTPSCert = certFl
 			exCrt, e = afero.Exists(fs, certFl)
 		},
 		func() {
-			keyFl = path.Join(home, confDir, p.api.HTTPSKey)
-			p.api.HTTPSKey = keyFl
+			keyFl = path.Join(home, confDir, p.Api.HTTPSKey)
+			p.Api.HTTPSKey = keyFl
 			exKey, e = afero.Exists(fs, keyFl)
 		},
 		func() {
-			host, _, e = net.SplitHostPort(p.api.Server.Addr)
+			host, _, e = net.SplitHostPort(p.Api.Server.Addr)
 		},
 		func() {
 			if !exCrt || !exKey {
@@ -71,8 +71,8 @@ func load(fs afero.Fs) (p *pmproxyConf, e error) {
 }
 
 type pmproxyConf struct {
-	api   *apiConf   `toml:"api"`
-	proxy *proxyConf `toml:"proxy"`
+	Api   *apiConf   `toml:"api"`
+	Proxy *proxyConf `toml:"proxy"`
 }
 
 type apiConf struct {

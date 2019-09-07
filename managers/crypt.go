@@ -25,6 +25,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	alg "github.com/lamg/algorithms"
 	"time"
 )
 
@@ -87,6 +88,25 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 }
 
 func (c *crypt) exec(m *Cmd) (term bool) {
-	// TODO
+	kf := []alg.KFunc{
+		{
+			Encrypt,
+			func() {
+				m.Secret, m.Err = c.encrypt(m.User, "")
+			},
+		},
+		{
+			Decrypt,
+			func() {
+				var cl *claim
+				cl, m.Err = c.decrypt(m.Secret)
+				if m.Err == nil {
+					m.User = cl.User
+				}
+			},
+		},
+	}
+	alg.ExecF(kf, m.Cmd)
+	term = true
 	return
 }

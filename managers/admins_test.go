@@ -3,18 +3,17 @@ package managers
 import (
 	alg "github.com/lamg/algorithms"
 	"github.com/stretchr/testify/require"
-	"sync"
 	"testing"
 )
 
 func TestAdmins(t *testing.T) {
-	iu := newIpUser()
 	adms := &admins{
 		admins: []string{"pepe", "coco"},
 	}
-	mng := &manager{mngs: new(sync.Map)}
-	mng.add(ipUserMng, iu.exec)
-	mng.add(adminsMng, adms.exec)
+	mng := newManager()
+	mng.mngs.Store(adminsMng, adms.exec)
+	iu := newIpUser()
+	mng.mngs.Store(ipUserMng, iu.exec)
 	ts := []struct {
 		user  string
 		ip    string

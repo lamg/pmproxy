@@ -26,17 +26,18 @@ import (
 )
 
 type adDB struct {
-	name string
-	addr string
-	suff string
-	bdn  string
-	user string
-	pass string
+	Name string
+	Addr string
+	Suff string
+	Bdn  string
+	User string
+	Pass string
 	ldap *ld.Ldap
 }
 
-type keyVal struct {
-	k, v string
+func (a *adDB) init() (e error) {
+	a.ldap = ld.NewLdapWithAcc(a.Addr, a.Suff, a.Bdn, a.User, a.Pass)
+	return
 }
 
 func (d *adDB) auth(user, pass string) (nuser string, e error) {
@@ -61,13 +62,28 @@ func (d *adDB) userName(user string) (name string, e error) {
 }
 
 func (d *adDB) exec(c *Cmd) (term bool) {
-	// TODO
 	kf := []alg.KFunc{
 		{
-			authCmd, func() {},
+			Auth,
+			func() {
+				c.User, c.Err = d.auth(c.Cred.User, c.Cred.Pass)
+				term = true
+			},
 		},
-		{groupsCmd, func() {}},
-		{nameCmd, func() {}},
+		{
+			Get,
+			func() {
+				term = c.defined(userK)
+				if term {
+					c.Groups, c.Err = d.userGroups(c.User)
+					if c.Err == nil {
+						c.String, c.Err = d.userName(c.User)
+					}
+				} else {
+					c.Manager = ipUserMng
+				}
+			},
+		},
 	}
 	alg.ExecF(kf, c.Cmd)
 	return

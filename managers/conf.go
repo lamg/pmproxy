@@ -20,13 +20,8 @@
 
 package managers
 
-/*
-# Configuration
-
-This file loads the main managers: the resource matcher and the connection handler.
-*/
-
 import (
+	"fmt"
 	alg "github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
@@ -41,10 +36,10 @@ const (
 	confFile   = "managers.toml"
 )
 
-func ConfPath() (r string) {
-	home, _ := os.UserHomeDir()
-	confFullDir := path.Join(home, defConfDir)
-	r = path.Join(confFullDir, confFile)
+func ConfPath() (file, dir string, e error) {
+	home, e := os.UserHomeDir()
+	dir = path.Join(home, defConfDir)
+	file = path.Join(dir, confFile)
 	return
 }
 
@@ -56,28 +51,74 @@ func Load(confDir string, fs afero.Fs) (
 	if confDir == "" {
 		confDir = defConfDir
 	}
-	var home, confFullDir, confPath string
+	var confFullDir, confPath string
 	var bs []byte
 	c := new(conf)
 	var m *manager
 	f := []func(){
-		func() { home, e = os.UserHomeDir() },
+		func() { confPath, confFullDir, e = ConfPath() },
 		func() {
-			confFullDir = path.Join(home, confDir)
-			confPath = path.Join(confFullDir, confFile)
 			bs, e = afero.ReadFile(fs, confPath)
 		},
 		func() { e = toml.Unmarshal(bs, c) },
 		func() {
-			ib := func(i int) (b bool) {
-				e = c.DwnConsR[i].init(confFullDir, fs)
-				b = e != nil
-				return
+			// rules
+			// sessionIPM needs ipUserMng, AdDB or MapDB, cryptMng
+			//    (sessionIPM.Name must match a AdDB.Name or MapDB.Name)
+			// adms needs sessionIPM
+			// dwnConsR needs sessionIPM, AdDB or MapDB
+			m = newManager()
+			if c.SessionIPM != nil {
+				m.mngs.Store(ipUserMng, newIpUser().exec)
+				if c.AdDB != nil {
+					m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
+				} else if c.MapDB != nil {
+					m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
+				} else {
+					e = fmt.Errorf("SessionIPM ≠ nil ∧" +
+						" AdDB = nil ∧ MapDB = nil")
+				}
+				if e == nil {
+					var cr *crypt
+					cr, e = newCrypt(c.JWTExpiration)
+					if e == nil {
+						m.mngs.Store(cryptMng, cr.exec)
+					}
+				}
 			}
-			alg.BLnSrch(ib, len(c.DwnConsR))
 		},
-		func() { m, e = newManager(c) },
 		func() {
+			if c.DwnConsR != nil {
+				if c.AdDB != nil {
+					m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
+				} else if c.MapDB != nil {
+					m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
+				} else if c.SessionIPM != nil {
+					e = fmt.Errorf("DwnConsR ≠ nil ∧" +
+						" AdDB = nil ∧ MapDB = nil")
+				}
+			}
+		},
+		func() {
+			if c.SessionIPM == nil && c.DwnConsR != nil {
+				e = fmt.Errorf("DwnConsR ≠ nil ∧ SessionIPM = nil ")
+			} else if c.DwnConsR != nil {
+				e = c.DwnConsR.init(fs, confFullDir)
+			}
+		},
+		func() {
+			var rs *rules
+			rs, e = newRules(c.Rules)
+			if e == nil {
+				m.mngs.Store(RulesK, rs.exec)
+			} else {
+				m.mngs.Store(RulesK, func(c *Cmd) {
+					c.Ok, c.consR = true, make([]string, 0)
+				})
+			}
+		},
+		func() {
+			m.mngs.Store(connectionsMng, newConnections().exec)
 			cmdChan = m.exec
 			ctl = func(o *proxy.Operation) (r *proxy.Result) {
 				c := &Cmd{
@@ -96,8 +137,7 @@ func Load(confDir string, fs afero.Fs) (
 					func() { bs, x = toml.Marshal(c) },
 					func() { x = afero.WriteFile(fs, confPath, bs, 0644) },
 					func() {
-						inf := func(i int) { x = c.DwnConsR[i].persist() }
-						alg.Forall(inf, len(c.DwnConsR))
+						c.DwnConsR.persist()
 					},
 				}
 				alg.TrueFF(g, func() bool { return x == nil })
@@ -105,31 +145,21 @@ func Load(confDir string, fs afero.Fs) (
 			}
 		},
 	}
-	alg.TrueFF(f, func() bool { return e == nil })
-	return
-}
-
-func BasicConf(pth string, fs afero.Fs) (e error) {
-	cf := &conf{
-		Admins: []string{"pepe"},
-	}
-	bs, e := toml.Marshal(cf)
-	if e == nil {
-		e = afero.WriteFile(fs, pth, bs, 0644)
+	if !alg.TrueFF(f, func() bool { return e == nil }) {
+		e = fmt.Errorf("Loading configuration: %w", e)
 	}
 	return
 }
 
 type conf struct {
-	JWTExpiration time.Duration   `toml:"jwtExpiration"`
-	Admins        []string        `toml:"admins"`
-	DwnConsR      []dwnConsR      `toml:"dwnConsR"`
-	BwConsR       []bwConsR       `toml:"bwConsR"`
-	AdDB          []adDB          `toml:"adDB"`
-	MapDB         []mapDB         `toml:"mapDB"`
-	GroupIPM      []groupIPM      `toml:"groupIPM"`
-	ProxyIface    []proxyIfaceMng `toml:"proxyIface"`
-	ParentProxy   []proxyURLMng   `toml:"parentProxy"`
-	RangeIPM      []rangeIPM      `toml:"rangeIPM"`
-	SessionIPM    []sessionIPM    `toml:"sessionIPM"`
+	JWTExpiration time.Duration `toml:"jwtExpiration"`
+	Admins        []string      `toml:"admins"`
+	DwnConsR      *dwnConsR     `toml:"dwnConsR"`
+	AdDB          *adDB         `toml:"adDB"`
+	MapDB         *mapDB        `toml:"mapDB"`
+	ParentProxy   string        `toml:"parentProxy"`
+	NetIface      string        `toml:"netIface"`
+	RangeIPM      *rangeIPM     `toml:"rangeIPM"`
+	Rules         string        `toml:"rules" default:"true"`
+	SessionIPM    *sessionIPM   `toml:"sessionIPM"`
 }

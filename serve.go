@@ -51,11 +51,11 @@ func Serve() (e error) {
 	}
 	if e == nil {
 		fes := []func() error{
-			func() error { return serveAPI(p.api, cmdChan) },
-			func() error { return serveProxy(p.proxy, ctl, time.Now) },
+			func() error { return serveAPI(p.Api, cmdChan) },
+			func() error { return serveProxy(p.Proxy, ctl, time.Now) },
 			func() (e error) {
 				for {
-					time.Sleep(p.api.PersistInterval)
+					time.Sleep(p.Api.PersistInterval)
 					persist()
 				}
 				return

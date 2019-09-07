@@ -67,9 +67,11 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			match,
+			Match,
 			func() {
-				c.interp[b.name], c.consR = true, append(c.consR, b.name)
+				c.interp[b.name], c.consR =
+					&MatchType{Match: true, Type: "bwConsR"},
+					append(c.consR, b.name)
 			},
 		},
 	}

@@ -30,6 +30,7 @@ const (
 	ipUserCmd = "ipUserCmd"
 	ipUserDel = "ipUserDel"
 	sessionsK = "sessions"
+	userK     = "user"
 )
 
 type ipUser struct {

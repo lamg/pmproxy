@@ -25,16 +25,16 @@ import (
 )
 
 type sessionIPM struct {
-	name     string
-	authName string
+	Name string
+	Auth string
 }
 
 const (
-	Open         = "open"
-	Close        = "close"
-	authenticate = "authenticate"
-	Check        = "check"
-	SessionIPMK  = "sessionIPM"
+	Open        = "open"
+	Close       = "close"
+	Auth        = "authenticate"
+	Check       = "check"
+	SessionIPMK = "sessionIPM"
 )
 
 func (m *sessionIPM) exec(c *Cmd) (term bool) {
@@ -43,8 +43,8 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 			Open,
 			func() {
 				if c.User == "" {
-					c.Manager = m.authName
-					c.Cmd = authenticate
+					c.Manager = m.Auth
+					c.Cmd = Auth
 				} else if c.Err == nil && c.Secret == "" {
 					c.Manager = cryptMng
 					c.Cmd = encrypt
@@ -89,8 +89,7 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		{
 			Renew,
 			func() {
-				ok := c.defined(secretOk) // FIXME a way to know
-				// defined fields
+				ok := c.defined(secretOk)
 				if !ok {
 					c.Manager = cryptMng
 				}
@@ -115,12 +114,16 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		{
 			Match,
 			func() {
-				userOk := c.defined(userK)
-				if !userOk {
+				term = c.defined(userK)
+				if !term {
 					c.Manager = ipUserMng
 					c.Cmd = Get
 				} else {
 					c.Ok = c.User != ""
+					c.interp[m.Name] = &MatchType{
+						Type:  SessionIPMK,
+						Match: c.Ok,
+					}
 				}
 			},
 		},

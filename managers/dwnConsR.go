@@ -20,20 +20,6 @@
 
 package managers
 
-/*
-# Download consupmtion restrictor
-
-The _Download consumption restrictor_ is a manager that limits the amount of data that users can download in determined period of time. It's implemented by `dwnConsR`. The fields `lastReset` and `resetCycle` determine the date when all consumptions in `userCons` are set to 0. `resetCycle` is the duration of the period, and `lastReset` is the date of the last reset, which is updated everytime consumptions are reseted. When a consumption reaches the assigned quota for that period of time, the manager notifies it through its interface.
-
-The interface for interacting with it is the `exec` method, which receives a command (`Cmd`) and processes it. Commands may be received without the information needed to be processed, in that case the method `exec` changes the field `Cmd.Manager` to have the name of the manager that can provide the absent information. Then the method `manager.exec` deals with delivering that command to the right manager, and returning it back to the manager that originated it.
-
-`dwnConsR` processes the following commands
-- `Get` returns the user's alias and name, groups, quota and consumption. In case the command doesn't have field `Cmd.Groups` defined it will change the manager to the value of `dwnConsR.userDBN`, which is expected to set it according to the user logged at Cmd.IP.
-- `Set` sets the value of `Cmd.Uint64` as the consumption for the user sent at `Cmd.String`, if the command is sent by an administrator. If the value for `Cmd.IsAdmin` isn't defined it will change the manager for `adminsK` which is the one that has the administrators stored.
-- `Show` serializes with JSON format the `dwnConsR` instance, writing it to Cmd.Data
-- `HandleConn` sets `Cmd.Ok` meaning if is possible continue with the connection operation sent in `Cmd.Operation`. When the operation is `proxy.ReadRequest`, the requested amount of bytes by the connection in the proxy comes in `Cmd.Uint64`
-*/
-
 import (
 	"encoding/json"
 	"fmt"
@@ -50,8 +36,9 @@ import (
 type dwnConsR struct {
 	Name       string        `toml:"name"`
 	UserDBN    string        `toml:"userDBN"`
-	LastReset  time.Time     `toml:"lastReset"`
 	ResetCycle time.Duration `toml:"resetCycle"`
+
+	lastReset time.Time
 
 	mapPath     string
 	fs          afero.Fs
@@ -62,25 +49,26 @@ type dwnConsR struct {
 }
 
 const (
-	DwnConsRK   = "downConsR"
-	NameK       = "name"
-	LastResetK  = "lastReset"
-	UserDBK     = "userDB"
-	QuotaMapK   = "quotaMap"
-	ResetCycleK = "resetCycle"
+	DwnConsRK = "dwnConsR"
 )
 
-func (d *dwnConsR) init(pth string, fs afero.Fs) (e error) {
+type consMap struct {
+	LastReset    time.Time         `json:"lastReset"`
+	Consumptions map[string]uint64 `json:"consumptions"`
+}
+
+func (d *dwnConsR) init(fs afero.Fs, pth string) (e error) {
 	d.quotaCache, d.groupQuotaM, d.userCons = new(sync.Map),
 		new(sync.Map), new(sync.Map)
 	d.mapPath, d.fs = path.Join(pth, d.Name+".json"), fs
 	bs, re := afero.ReadFile(fs, d.mapPath)
 	if re == nil {
-		var cons map[string]uint64
+		cons := new(consMap)
 		f := []func(){
 			func() { e = json.Unmarshal(bs, &cons) },
 			func() {
-				for k, v := range cons {
+				d.lastReset = cons.LastReset
+				for k, v := range cons.Consumptions {
 					d.userCons.Store(k, v)
 				}
 			},
@@ -91,22 +79,20 @@ func (d *dwnConsR) init(pth string, fs afero.Fs) (e error) {
 }
 
 func (d *dwnConsR) persist() (e error) {
-	var m map[string]uint64
+	cons := &consMap{
+		Consumptions: make(map[string]uint64),
+		LastReset:    d.lastReset,
+	}
 	d.userCons.Range(func(k, v interface{}) (ok bool) {
-		m[k.(string)], ok = v.(uint64), true
+		cons.Consumptions[k.(string)], ok = v.(uint64), true
 		return
 	})
-	bs, e := json.Marshal(m)
+	bs, e := json.Marshal(cons)
 	if e == nil {
 		e = afero.WriteFile(d.fs, d.mapPath, bs, 0644)
 	}
 	return
 }
-
-const (
-	groupsK = "groups"
-	adminsK = "admins"
-)
 
 func (d *dwnConsR) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
@@ -129,9 +115,9 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 		{
 			Set,
 			func() {
-				ok := c.defined(adminsK)
+				ok := c.defined(isAdminK)
 				if !ok {
-					c.Manager, c.Cmd = adminsK, isAdminK
+					c.Manager, c.Cmd = adminsMng, isAdminK
 				} else if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
 				}
@@ -164,9 +150,11 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			match,
+			Match,
 			func() {
-				c.interp[d.Name], c.consR = true, append(c.consR, d.Name)
+				c.interp[d.Name], c.consR =
+					&MatchType{Match: true, Type: DwnConsRK},
+					append(c.consR, d.Name)
 			},
 		},
 	}
@@ -187,10 +175,10 @@ func (d *dwnConsR) keepResetCycle() {
 	// time is greater or equal to d.lastReset + d.resetCycle,
 	// then all consumptions are set to 0
 	now := time.Now()
-	cy := now.Sub(d.LastReset)
+	cy := now.Sub(d.lastReset)
 	if cy >= d.ResetCycle {
 		d.userCons = new(sync.Map)
-		d.LastReset = d.LastReset.Add(d.ResetCycle)
+		d.lastReset = d.lastReset.Add(d.ResetCycle)
 	}
 }
 

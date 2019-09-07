@@ -20,12 +20,6 @@
 
 package managers
 
-/*
-# Connections
-
-Connections is a manager for handling the commands sent by the proxy, i.e. those with `Cmd.Operation` defined. When `Cmd.Operation.Command` is `proxy.Open` if there are no consumption restrictors set, then a match command is sent to get at the next call those consumption restrictors set. At that point a connection is added to the dictionary, with IP as key and consumption restrictors as value. The following commands on that connection are processed by sending commands to the consumption restrictors associated with its origin IP.
-*/
-
 import (
 	"fmt"
 	"github.com/lamg/proxy"
@@ -50,16 +44,10 @@ type restrCurr struct {
 	current     int
 }
 
-const (
-	restrictorsK = "restrictors"
-	MatchersMng  = "matchers"
-	match        = "match"
-)
-
 func (n *connections) exec(c *Cmd) (term bool) {
 	if c.Operation.Command == proxy.Open {
-		if !c.defined(restrictorsK) {
-			c.Cmd, c.Manager = match, MatchersMng
+		if c.consR == nil {
+			c.Cmd, c.Manager = Match, RulesK
 		} else {
 			rc := &restrCurr{restrictors: c.consR, current: 0}
 			n.ipRestr.Store(c.Operation.IP, rc)
