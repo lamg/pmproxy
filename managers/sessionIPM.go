@@ -48,9 +48,10 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 				} else if c.Err == nil && c.Secret == "" {
 					c.Manager = cryptMng
 					c.Cmd = encrypt
-				} else {
+				} else if !c.defined(openedK) {
 					c.Manager = ipUserMng
 					c.Cmd = Open
+				} else {
 					term = true
 				}
 			},

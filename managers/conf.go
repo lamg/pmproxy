@@ -69,6 +69,7 @@ func Load(confDir string, fs afero.Fs) (
 			// dwnConsR needs sessionIPM, AdDB or MapDB
 			m = newManager()
 			if c.SessionIPM != nil {
+				m.mngs.Store(c.SessionIPM.Name, c.SessionIPM.exec)
 				m.mngs.Store(ipUserMng, newIpUser().exec)
 				if c.AdDB != nil {
 					m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
@@ -126,6 +127,7 @@ func Load(confDir string, fs afero.Fs) (
 					Cmd:       HandleConn,
 					Operation: o,
 					Result:    new(proxy.Result),
+					IP:        o.IP,
 				}
 				cmdChan(c)
 				r = c.Result
@@ -162,4 +164,5 @@ type conf struct {
 	RangeIPM      *rangeIPM     `toml:"rangeIPM"`
 	Rules         string        `toml:"rules" default:"true"`
 	SessionIPM    *sessionIPM   `toml:"sessionIPM"`
+	SyslogAddr    string        `toml:"syslogAddr"`
 }

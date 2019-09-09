@@ -31,6 +31,7 @@ const (
 	ipUserDel = "ipUserDel"
 	sessionsK = "sessions"
 	userK     = "user"
+	openedK   = "opened"
 )
 
 type ipUser struct {
@@ -51,11 +52,24 @@ func (p *ipUser) exec(c *Cmd) (term bool) {
 			func() {
 				c.defKeys = append(c.defKeys, userK)
 				c.User, _ = p.get(c.IP)
-				term = true
+			},
+		},
+		{
+			Open,
+			func() {
+				p.open(c.IP, c.User)
+				c.defKeys = append(c.defKeys, openedK)
+			},
+		},
+		{
+			Close,
+			func() {
+				p.del(c.Cmd)
 			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
+	term = true
 	return
 }
 

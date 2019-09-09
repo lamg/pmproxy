@@ -46,11 +46,16 @@ type restrCurr struct {
 
 func (n *connections) exec(c *Cmd) (term bool) {
 	if c.Operation.Command == proxy.Open {
-		if c.consR == nil {
+		if c.consR == nil && c.String == "" {
 			c.Cmd, c.Manager = Match, RulesK
 		} else {
-			rc := &restrCurr{restrictors: c.consR, current: 0}
-			n.ipRestr.Store(c.Operation.IP, rc)
+			if c.Ok {
+				rc := &restrCurr{restrictors: c.consR, current: 0}
+				n.ipRestr.Store(c.Operation.IP, rc)
+			} else {
+				c.Result.Error = fmt.Errorf("Rules evaluated to: %s",
+					c.String)
+			}
 			term = true
 		}
 	} else {
