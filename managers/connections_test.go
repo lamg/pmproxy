@@ -28,4 +28,5 @@ func TestConnections(t *testing.T) {
 		IP:      ht.DefaultRemoteAddr,
 	})
 	require.NoError(t, res.Error)
+	res = ctl(&proxy.Operation{})
 }

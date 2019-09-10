@@ -24,12 +24,16 @@ func (m *rules) exec(c *Cmd) (term bool) {
 	if c.Cmd == Match {
 		term = true
 		interp := func(name string) (r, def bool) {
-			var mt *MatchType
-			mt, def = c.interp[name]
-			if !def {
-				c.Manager, term = name, false
+			if name == pred.TrueStr || name == pred.FalseStr {
+				r, def = name == pred.TrueStr, true
 			} else {
-				r = mt.Match
+				var mt *MatchType
+				mt, def = c.interp[name]
+				if !def {
+					c.Manager, term = name, false
+				} else {
+					r = mt.Match
+				}
 			}
 			return
 		}

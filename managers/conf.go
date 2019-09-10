@@ -108,6 +108,9 @@ func Load(confDir string, fs afero.Fs) (
 			}
 		},
 		func() {
+			m.mngs.Store(c.DwnConsR.Name, c.DwnConsR.exec)
+		},
+		func() {
 			var rs *rules
 			rs, e = newRules(c.Rules)
 			if e == nil {

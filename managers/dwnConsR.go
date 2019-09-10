@@ -34,9 +34,10 @@ import (
 )
 
 type dwnConsR struct {
-	Name       string        `toml:"name"`
-	UserDBN    string        `toml:"userDBN"`
-	ResetCycle time.Duration `toml:"resetCycle"`
+	Name       string            `toml:"name"`
+	UserDBN    string            `toml:"userDBN"`
+	ResetCycle time.Duration     `toml:"resetCycle"`
+	GroupQuota map[string]string `toml:"groupQuota"`
 
 	lastReset time.Time
 
@@ -74,6 +75,15 @@ func (d *dwnConsR) init(fs afero.Fs, pth string) (e error) {
 			},
 		}
 		alg.TrueFF(f, func() bool { return e == nil })
+	}
+	for k, v := range d.GroupQuota {
+		var bz datasize.ByteSize
+		e = bz.UnmarshalText([]byte(v))
+		if e == nil {
+			d.groupQuotaM.Store(k, uint64(bz))
+		} else {
+			break
+		}
 	}
 	return
 }
@@ -116,6 +126,7 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 			Set,
 			func() {
 				ok := c.defined(isAdminK)
+				term = ok
 				if !ok {
 					c.Manager, c.Cmd = adminsMng, isAdminK
 				} else if c.IsAdmin {
@@ -127,6 +138,7 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 			Show,
 			func() {
 				c.Data, c.Err = json.Marshal(d)
+				term = true
 			},
 		},
 		{
@@ -152,9 +164,10 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 		{
 			Match,
 			func() {
-				c.interp[d.Name], c.consR =
+				c.interp[d.Name], c.consR, term =
 					&MatchType{Match: true, Type: DwnConsRK},
-					append(c.consR, d.Name)
+					append(c.consR, d.Name),
+					true
 			},
 		},
 	}

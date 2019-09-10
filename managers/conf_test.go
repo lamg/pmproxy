@@ -44,12 +44,14 @@ func TestLoad(t *testing.T) {
 }
 
 const cfg0 = `
-rules = "sessions"
+rules = "sessions ∧ down"
 
 [mapDB]
 	name = "map"
 	[mapDB.userPass]
 		user0 = "pass0"
+	[mapDB.userGroup]
+		user0 = "group0"
 
 [sessionIPM]
 	name = "sessions"
@@ -57,6 +59,8 @@ rules = "sessions"
 
 [dwnConsR]
 	name = "down"
+	[dwnConsR.groupQuota]
+		group0 = "1 GB"
 `
 
 func confTest(t *testing.T) (c CmdF, p proxy.ConnControl) {

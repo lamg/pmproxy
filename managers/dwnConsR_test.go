@@ -22,15 +22,27 @@ package managers
 
 import (
 	"github.com/c2h5oh/datasize"
+	"github.com/pelletier/go-toml"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestUnmarshal(t *testing.T) {
+func TestDwnConsR(t *testing.T) {
 	bts0 := 1024 * datasize.MB
 	str := bts0.HR()
 
 	bts := new(datasize.ByteSize)
 	e := bts.UnmarshalText([]byte(cleanHumanReadable(str)))
 	require.NoError(t, e)
+
+	c := new(conf)
+	e = toml.Unmarshal([]byte(cfg0), c)
+	require.NoError(t, e)
+	require.Equal(t, "1 GB", c.DwnConsR.GroupQuota["group0"])
+	fs := afero.NewMemMapFs()
+	e = c.DwnConsR.init(fs, "")
+	require.NoError(t, e)
+	q := c.DwnConsR.quota("user0", []string{"group0"})
+	require.Equal(t, uint64(datasize.GB), q)
 }
