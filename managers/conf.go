@@ -137,7 +137,7 @@ func Load(confDir string, fs afero.Fs) (
 				var bs []byte
 				g := []func(){
 					func() { bs, x = toml.Marshal(c) },
-					func() { x = afero.WriteFile(fs, confPath, bs, 0644) },
+					func() { x = afero.WriteFile(fs, confFile, bs, 0644) },
 					func() {
 						c.DwnConsR.persist()
 					},

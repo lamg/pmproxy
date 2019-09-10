@@ -26,17 +26,21 @@ import (
 )
 
 type groupIPM struct {
-	userDBN string
-	name    string
-	group   string
+	UserDBN string `toml:"userDBN"`
+	Name    string `toml:"name"`
+	Group   string `toml:"group"`
 }
+
+const (
+	GroupIPMK = "groupIPM"
+)
 
 func (m *groupIPM) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
 			Set,
 			func() {
-				m.group = c.String
+				m.Group = c.String
 			},
 		},
 		{
@@ -49,12 +53,16 @@ func (m *groupIPM) exec(c *Cmd) (term bool) {
 			Match,
 			func() {
 				if len(c.Groups) == 0 && c.Err == nil {
-					c.Manager = m.userDBN
+					c.Manager = m.UserDBN
 					term = false
 				} else if len(c.Groups) != 0 {
 					c.Ok, _ = alg.BLnSrch(
-						func(i int) bool { return m.group == c.Groups[i] },
+						func(i int) bool { return m.Group == c.Groups[i] },
 						len(c.Groups))
+					c.interp[m.Name] = &MatchType{
+						Type:  GroupIPMK,
+						Match: c.Ok,
+					}
 					term = true
 				}
 			},

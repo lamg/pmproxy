@@ -67,12 +67,6 @@ type DiscoverRes struct {
 	Result   string                `json:"result"`
 }
 
-const (
-	Discover   = "discover"
-	ResourcesK = "resources"
-	Filter     = "filter"
-)
-
 func (c *Cmd) defined(key string) (ok bool) {
 	ib := func(i int) bool { return c.defKeys[i] == key }
 	ok, _ = alg.BLnSrch(ib, len(c.defKeys))

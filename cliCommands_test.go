@@ -44,6 +44,7 @@ func TestLogin(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
+
 	e := cl.login("", "", user0, pass0)
 	require.NoError(t, e)
 	ok, e := afero.Exists(fs, loginSecretFile)
@@ -104,7 +105,8 @@ func TestConfUpdate(t *testing.T) {
 	fs, _, prs := basicConfT(t)
 	e := prs()
 	require.NoError(t, e)
-	bs, e := afero.ReadFile(fs, mng.ConfPath())
+	_, fl := mng.ConfPath("")
+	bs, e := afero.ReadFile(fs, fl)
 	require.NoError(t, e)
 	t.Log(string(bs))
 	// FIXME some objects aren't written
@@ -112,10 +114,10 @@ func TestConfUpdate(t *testing.T) {
 
 func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
 	prs func() error) {
-	pth := mng.ConfPath()
+	_, fl := mng.ConfPath("")
 	fs = afero.NewMemMapFs()
-	mng.BasicConf(pth, fs)
-	ok, e := afero.Exists(fs, pth)
+	mng.BasicConf(fl, fs)
+	ok, e := afero.Exists(fs, fl)
 	require.True(t, ok && e == nil)
 	ch, _, prs, e := mng.Load("", fs)
 	require.NoError(t, e)
