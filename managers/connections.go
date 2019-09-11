@@ -60,6 +60,7 @@ func (n *connections) exec(c *Cmd) (term bool) {
 		}
 	} else {
 		v, ok := n.ipRestr.Load(c.Operation.IP)
+		term = true
 		if ok {
 			if c.Operation.Command == proxy.Close {
 				n.ipRestr.Delete(c.Operation.IP)
@@ -68,8 +69,8 @@ func (n *connections) exec(c *Cmd) (term bool) {
 				if rc.current == len(rc.restrictors) {
 					term, rc.current = true, 0
 				} else {
-					c.Manager, c.Cmd = rc.restrictors[rc.current],
-						HandleConn
+					c.Manager, c.Cmd = rc.restrictors[rc.current], HandleConn
+					term, rc.current = false, rc.current+1
 				}
 			}
 		} else {

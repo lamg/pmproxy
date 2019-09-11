@@ -36,20 +36,29 @@ type mapDB struct {
 }
 
 func (d *mapDB) auth(user, pass string) (nuser string, e error) {
-	nuser = user
-	p, ok := d.UserPass[user]
-	if !ok {
-		e = fmt.Errorf("No user '%s'", user)
-	} else if p != pass {
-		e = fmt.Errorf("Incorrect password")
+	if len(d.UserPass) == 0 {
+		e = fmt.Errorf("Empty user-password map")
+	} else {
+		nuser = user
+		p, ok := d.UserPass[user]
+		if !ok {
+			e = fmt.Errorf("No user '%s'", user)
+		} else if p != pass {
+			e = fmt.Errorf("Incorrect password")
+		}
 	}
 	return
 }
 
 func (d *mapDB) userGroups(user string) (gs []string, e error) {
-	gs, ok := d.UserGroup[user]
-	if !ok {
-		e = fmt.Errorf("No user '%s'", user)
+	if len(d.UserGroup) == 0 {
+		e = fmt.Errorf("Empty user-groups map")
+	} else {
+		var ok bool
+		gs, ok = d.UserGroup[user]
+		if !ok {
+			e = fmt.Errorf("No user '%s'", user)
+		}
 	}
 	return
 }
@@ -71,8 +80,9 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 				term = c.defined(userK)
 				if term {
 					c.Groups, c.Err = d.userGroups(c.User)
+					c.defKeys = append(c.defKeys, groupsK)
 				} else {
-					c.Cmd, c.Manager = ipUserCmd, ipUserMng
+					c.Manager = ipUserMng
 				}
 			},
 		},

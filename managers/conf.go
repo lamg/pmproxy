@@ -131,6 +131,7 @@ func Load(confDir string, fs afero.Fs) (
 					Operation: o,
 					Result:    new(proxy.Result),
 					IP:        o.IP,
+					Uint64:    uint64(o.Amount),
 				}
 				cmdChan(c)
 				r = c.Result

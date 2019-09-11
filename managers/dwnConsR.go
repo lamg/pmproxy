@@ -146,7 +146,7 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 			func() {
 				term, c.Result = true, new(proxy.Result)
 				if !c.defined(groupsK) {
-					c.Manager, c.Cmd, term = ipUserMng, Get, false
+					c.Manager, c.Cmd, term = d.UserDBN, Get, false
 				} else if c.Operation.Command == proxy.ReadRequest {
 					qt := d.quota(c.User, c.Groups)
 					cs := d.consumption(c.User)

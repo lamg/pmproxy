@@ -22,9 +22,11 @@ package managers
 
 import (
 	"github.com/c2h5oh/datasize"
+	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+	ht "net/http/httptest"
 	"testing"
 )
 
@@ -39,10 +41,45 @@ func TestDwnConsR(t *testing.T) {
 	c := new(conf)
 	e = toml.Unmarshal([]byte(cfg0), c)
 	require.NoError(t, e)
-	require.Equal(t, "1 GB", c.DwnConsR.GroupQuota["group0"])
+	require.Equal(t, "1 KB", c.DwnConsR.GroupQuota["group0"])
 	fs := afero.NewMemMapFs()
 	e = c.DwnConsR.init(fs, "")
 	require.NoError(t, e)
 	q := c.DwnConsR.quota("user0", []string{"group0"})
-	require.Equal(t, uint64(datasize.GB), q)
+	require.Equal(t, uint64(datasize.KB), q)
+}
+
+func TestLimitConn(t *testing.T) {
+	cmf, ctl := confTest(t)
+	cm := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(cm)
+	require.NoError(t, cm.Err)
+	res := ctl(&proxy.Operation{
+		Command: proxy.Open,
+		IP:      ht.DefaultRemoteAddr,
+	})
+	require.NoError(t, res.Error)
+	res = ctl(&proxy.Operation{
+		Command: proxy.ReadRequest,
+		IP:      ht.DefaultRemoteAddr,
+		Amount:  1024,
+	})
+	require.NoError(t, res.Error)
+	res = ctl(&proxy.Operation{
+		Command: proxy.ReadReport,
+		IP:      ht.DefaultRemoteAddr,
+		Amount:  1024,
+	})
+	require.NoError(t, res.Error)
+	res = ctl(&proxy.Operation{
+		Command: proxy.ReadRequest,
+		IP:      ht.DefaultRemoteAddr,
+		Amount:  1,
+	})
+	require.Error(t, res.Error)
 }

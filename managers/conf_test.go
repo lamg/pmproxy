@@ -50,8 +50,8 @@ rules = "sessions ∧ down"
 	name = "map"
 	[mapDB.userPass]
 		user0 = "pass0"
-	[mapDB.userGroup]
-		user0 = "group0"
+	[mapDB.userGroups]
+		user0 = ["group0"]
 
 [sessionIPM]
 	name = "sessions"
@@ -59,8 +59,9 @@ rules = "sessions ∧ down"
 
 [dwnConsR]
 	name = "down"
+	userDBN = "map"
 	[dwnConsR.groupQuota]
-		group0 = "1 GB"
+		group0 = "1 KB"
 `
 
 func confTest(t *testing.T) (c CmdF, p proxy.ConnControl) {
