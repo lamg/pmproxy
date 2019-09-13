@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"fmt"
 	alg "github.com/lamg/algorithms"
 	"sync"
 )
@@ -50,26 +51,27 @@ func (p *ipUser) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				c.defKeys = append(c.defKeys, userK)
-				c.User, _ = p.get(c.IP)
+				var ok bool
+				c.User, ok = p.get(c.IP)
+				if !ok {
+					c.Err = fmt.Errorf("Not logged user at '%s'", c.IP)
+				}
 			},
 		},
 		{
 			Open,
 			func() {
 				p.open(c.IP, c.User)
-				c.defKeys = append(c.defKeys, openedK)
 			},
 		},
 		{
 			Close,
 			func() {
-				p.del(c.Cmd)
+				p.del(c.IP)
 			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	term = true
 	return
 }
 

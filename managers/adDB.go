@@ -67,20 +67,16 @@ func (d *adDB) exec(c *Cmd) (term bool) {
 			Auth,
 			func() {
 				c.User, c.Err = d.auth(c.Cred.User, c.Cred.Pass)
-				term = true
 			},
 		},
 		{
 			Get,
 			func() {
-				term = c.defined(userK)
-				if term {
+				if c.Ok {
+					// checks if previous manager signaled this step
+					// to be executed, since some of them determines that
+					// property at runtime, after initialization
 					c.Groups, c.Err = d.userGroups(c.User)
-					if c.Err == nil {
-						c.String, c.Err = d.userName(c.User)
-					}
-				} else {
-					c.Manager = ipUserMng
 				}
 			},
 		},

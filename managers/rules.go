@@ -21,7 +21,7 @@ func newRules(preds string) (r *rules, e error) {
 }
 
 func (m *rules) exec(c *Cmd) (term bool) {
-	if c.Cmd == Match {
+	if c.Cmd == Match || c.Cmd == Discover {
 		term = true
 		interp := func(name string) (r, def bool) {
 			if name == pred.TrueStr || name == pred.FalseStr {
@@ -41,11 +41,13 @@ func (m *rules) exec(c *Cmd) (term bool) {
 		if term {
 			c.Ok = p.String == pred.TrueStr
 			c.String = pred.String(p)
-			dr := &DiscoverRes{
-				MatchMng: c.interp,
-				Result:   c.String,
+			if c.Cmd == Discover {
+				dr := &DiscoverRes{
+					MatchMng: c.interp,
+					Result:   c.String,
+				}
+				c.Data, c.Err = json.Marshal(dr)
 			}
-			c.Data, c.Err = json.Marshal(dr)
 		}
 	}
 	return

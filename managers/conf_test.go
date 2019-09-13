@@ -45,11 +45,13 @@ func TestLoad(t *testing.T) {
 
 const cfg0 = `
 rules = "sessions ∧ down"
+admins = ["user0"]
 
 [mapDB]
 	name = "map"
 	[mapDB.userPass]
 		user0 = "pass0"
+		user1 = "pass1"
 	[mapDB.userGroups]
 		user0 = ["group0"]
 

@@ -53,53 +53,15 @@ func Load(confDir string, fs afero.Fs) (
 	}
 	var confFullDir, confPath string
 	var bs []byte
-	c := new(conf)
-	var m *manager
+	c, m := new(conf), newManager()
 	f := []func(){
 		func() { confPath, confFullDir, e = ConfPath() },
 		func() {
 			bs, e = afero.ReadFile(fs, confPath)
 		},
 		func() { e = toml.Unmarshal(bs, c) },
-		func() {
-			// rules
-			// sessionIPM needs ipUserMng, AdDB or MapDB, cryptMng
-			//    (sessionIPM.Name must match a AdDB.Name or MapDB.Name)
-			// adms needs sessionIPM
-			// dwnConsR needs sessionIPM, AdDB or MapDB
-			m = newManager()
-			if c.SessionIPM != nil {
-				m.mngs.Store(c.SessionIPM.Name, c.SessionIPM.exec)
-				m.mngs.Store(ipUserMng, newIpUser().exec)
-				if c.AdDB != nil {
-					m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
-				} else if c.MapDB != nil {
-					m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
-				} else {
-					e = fmt.Errorf("SessionIPM ≠ nil ∧" +
-						" AdDB = nil ∧ MapDB = nil")
-				}
-				if e == nil {
-					var cr *crypt
-					cr, e = newCrypt(c.JWTExpiration)
-					if e == nil {
-						m.mngs.Store(cryptMng, cr.exec)
-					}
-				}
-			}
-		},
-		func() {
-			if c.DwnConsR != nil {
-				if c.AdDB != nil {
-					m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
-				} else if c.MapDB != nil {
-					m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
-				} else if c.SessionIPM != nil {
-					e = fmt.Errorf("DwnConsR ≠ nil ∧" +
-						" AdDB = nil ∧ MapDB = nil")
-				}
-			}
-		},
+		func() { e = initSessionIPM(c, m) },
+		func() { e = initDwnConsR(c, m) },
 		func() {
 			if c.SessionIPM == nil && c.DwnConsR != nil {
 				e = fmt.Errorf("DwnConsR ≠ nil ∧ SessionIPM = nil ")
@@ -110,45 +72,13 @@ func Load(confDir string, fs afero.Fs) (
 		func() {
 			m.mngs.Store(c.DwnConsR.Name, c.DwnConsR.exec)
 		},
+		func() { e = initRules(c, m) },
 		func() {
-			var rs *rules
-			rs, e = newRules(c.Rules)
-			if e == nil {
-				m.mngs.Store(RulesK, rs.exec)
-			} else {
-				m.mngs.Store(RulesK, func(c *Cmd) {
-					c.Ok, c.consR = true, make([]string, 0)
-				})
-			}
-		},
-		func() {
-			m.mngs.Store(connectionsMng, newConnections().exec)
+			initConnMng(c, m)
+			// TODO init connections
 			cmdChan = m.exec
-			ctl = func(o *proxy.Operation) (r *proxy.Result) {
-				c := &Cmd{
-					Manager:   connectionsMng,
-					Cmd:       HandleConn,
-					Operation: o,
-					Result:    new(proxy.Result),
-					IP:        o.IP,
-					Uint64:    uint64(o.Amount),
-				}
-				cmdChan(c)
-				r = c.Result
-				return
-			}
-			persist = func() (x error) {
-				var bs []byte
-				g := []func(){
-					func() { bs, x = toml.Marshal(c) },
-					func() { x = afero.WriteFile(fs, confFile, bs, 0644) },
-					func() {
-						c.DwnConsR.persist()
-					},
-				}
-				alg.TrueFF(g, func() bool { return x == nil })
-				return
-			}
+			ctl = proxyCtl(cmdChan)
+			persist = persistF(c, fs)
 		},
 	}
 	if !alg.TrueFF(f, func() bool { return e == nil }) {
@@ -169,4 +99,123 @@ type conf struct {
 	Rules         string        `toml:"rules" default:"true"`
 	SessionIPM    *sessionIPM   `toml:"sessionIPM"`
 	SyslogAddr    string        `toml:"syslogAddr"`
+}
+
+func initSessionIPM(c *conf, m *manager) (e error) {
+	// rules
+	// sessionIPM needs ipUserMng, AdDB or MapDB, cryptMng
+	//    (sessionIPM.Name must match a AdDB.Name or MapDB.Name)
+	// adms needs sessionIPM
+	// dwnConsR needs sessionIPM, AdDB or MapDB
+	if c.SessionIPM != nil {
+		m.mngs.Store(c.SessionIPM.Name, c.SessionIPM.exec)
+		m.mngs.Store(ipUserMng, newIpUser().exec)
+		var dbName string
+		if c.AdDB != nil {
+			m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
+			dbName = c.AdDB.Name
+		} else if c.MapDB != nil {
+			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
+			dbName = c.MapDB.Name
+		} else {
+			e = fmt.Errorf("SessionIPM ≠ nil ∧" +
+				" AdDB = nil ∧ MapDB = nil")
+		}
+		if e == nil {
+			var cr *crypt
+			cr, e = newCrypt(c.JWTExpiration)
+			if e == nil {
+				m.mngs.Store(cryptMng, cr.exec)
+				smPaths := smPaths(c.SessionIPM.Name, dbName)
+				m.paths = append(m.paths, smPaths...)
+			}
+		}
+	}
+	return
+}
+
+func initDwnConsR(c *conf, m *manager) (e error) {
+	if c.DwnConsR != nil {
+		if c.AdDB != nil {
+			m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
+		} else if c.MapDB != nil {
+			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
+		} else if c.SessionIPM != nil {
+			e = fmt.Errorf("DwnConsR ≠ nil ∧" +
+				" AdDB = nil ∧ MapDB = nil")
+		}
+	}
+	return
+}
+
+func initRules(c *conf, m *manager) (e error) {
+	var rs *rules
+	rs, e = newRules(c.Rules)
+	if e == nil {
+		m.mngs.Store(RulesK, rs.exec)
+	} else {
+		m.mngs.Store(RulesK, func(c *Cmd) {
+			c.Ok, c.consR = true, make([]string, 0)
+		})
+	}
+	return
+}
+
+func initConnMng(c *conf, m *manager) {
+	cs := newConnections()
+	ms := []mngPath{
+		{
+			name: c.DwnConsR.Name,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: c.DwnConsR.UserDBN, cmd: Get},
+			},
+		},
+	}
+	cps := connPaths(ms)
+	m.mngs.Store(connectionsMng, cs.exec)
+	m.paths = append(m.paths, cps...)
+}
+
+func proxyCtl(cmdChan CmdF) (
+	f func(*proxy.Operation) *proxy.Result,
+) {
+	f = func(o *proxy.Operation) (r *proxy.Result) {
+		c := &Cmd{
+			Manager:   connectionsMng,
+			Cmd:       HandleConn,
+			Operation: o,
+			Result:    new(proxy.Result),
+			IP:        o.IP,
+			Uint64:    uint64(o.Amount),
+		}
+		if o.Command == proxy.Open {
+			c.Cmd = Open
+		} else if o.Command == proxy.Close {
+			c.Cmd = Close
+		}
+		cmdChan(c)
+		r = c.Result
+		if c.Result.Error == nil && c.Err != nil {
+			r.Error = c.Err
+		}
+		return
+	}
+	return
+}
+
+func persistF(c *conf, fs afero.Fs) (f func() error) {
+	f = func() (x error) {
+		var bs []byte
+		g := []func(){
+			func() { bs, x = toml.Marshal(c) },
+			func() { x = afero.WriteFile(fs, confFile, bs, 0644) },
+			func() {
+				c.DwnConsR.persist()
+			},
+		}
+		alg.TrueFF(g, func() bool { return x == nil })
+		return
+	}
+	return
 }

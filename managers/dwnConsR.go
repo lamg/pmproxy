@@ -51,6 +51,7 @@ type dwnConsR struct {
 
 const (
 	DwnConsRK = "dwnConsR"
+	Filter    = "filter"
 )
 
 type consMap struct {
@@ -109,27 +110,17 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				ok := c.defined(groupsK)
 				var data *UserInfo
-				if ok {
-					data, c.Err = d.info(c.User, c.String, c.Groups)
-					if c.Err == nil {
-						c.Data, c.Err = json.Marshal(data)
-					}
-				} else {
-					c.Manager = d.UserDBN
+				data, c.Err = d.info(c.User, c.String, c.Groups)
+				if c.Err == nil {
+					c.Data, c.Err = json.Marshal(data)
 				}
-				term = ok
 			},
 		},
 		{
 			Set,
 			func() {
-				ok := c.defined(isAdminK)
-				term = ok
-				if !ok {
-					c.Manager, c.Cmd = adminsMng, isAdminK
-				} else if c.IsAdmin {
+				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
 				}
 			},
@@ -138,28 +129,20 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 			Show,
 			func() {
 				c.Data, c.Err = json.Marshal(d)
-				term = true
+			},
+		},
+		{
+			Filter,
+			func() {
+				c.Ok, _ = alg.BLnSrch(
+					func(i int) bool { return c.consR[i] == d.Name },
+					len(c.consR),
+				)
 			},
 		},
 		{
 			HandleConn,
-			func() {
-				term, c.Result = true, new(proxy.Result)
-				if !c.defined(groupsK) {
-					c.Manager, c.Cmd, term = d.UserDBN, Get, false
-				} else if c.Operation.Command == proxy.ReadRequest {
-					qt := d.quota(c.User, c.Groups)
-					cs := d.consumption(c.User)
-					if cs >= qt {
-						c.Result.Error = fmt.Errorf(
-							"Consumption reached quota %d", cs)
-					}
-				} else if c.Operation.Command == proxy.ReadReport {
-					cs := d.consumption(c.User)
-					ncs := cs + c.Uint64
-					d.userCons.Store(c.User, ncs)
-				}
-			},
+			func() { d.handleConn(c) },
 		},
 		{
 			Match,
@@ -173,6 +156,32 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 	}
 	alg.ExecF(kf, c.Cmd)
 	return
+}
+
+func (d *dwnConsR) handleConn(c *Cmd) {
+	if c.Ok {
+		// checks if previous manager signaled this step
+		// to be executed, since some of them determines that
+		// property at runtime, after initialization
+		_, ok := c.interp[d.Name]
+		if ok {
+			if c.Operation.Command == proxy.ReadRequest {
+				qt := d.quota(c.User, c.Groups)
+				cs := d.consumption(c.User)
+				if cs >= qt {
+					hcs := datasize.ByteSize(cs)
+					c.Result.Error = fmt.Errorf(
+						"Consumption reached quota %s",
+						hcs.HumanReadable())
+				}
+			} else if c.Operation.Command == proxy.ReadReport {
+				cs := d.consumption(c.User)
+				ncs := cs + c.Uint64
+				d.userCons.Store(c.User, ncs)
+			}
+		}
+	}
+
 }
 
 func (d *dwnConsR) consumption(user string) (n uint64) {

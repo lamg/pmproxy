@@ -21,7 +21,6 @@
 package managers
 
 import (
-	alg "github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
 )
 
@@ -42,9 +41,8 @@ type Cmd struct {
 	Operation *proxy.Operation `json:"-"`
 	Result    *proxy.Result    `json:"-"`
 
-	interp  map[string]*MatchType
-	consR   []string
-	defKeys []string
+	interp map[string]*MatchType
+	consR  []string
 }
 
 type Credentials struct {
@@ -67,12 +65,6 @@ type DiscoverRes struct {
 	Result   string                `json:"result"`
 }
 
-func (c *Cmd) defined(key string) (ok bool) {
-	ib := func(i int) bool { return c.defKeys[i] == key }
-	ok, _ = alg.BLnSrch(ib, len(c.defKeys))
-	return
-}
-
 type CmdF func(*Cmd) bool
 
 const (
@@ -84,4 +76,5 @@ const (
 	Match      = "match"
 	Encrypt    = "encrypt"
 	Decrypt    = "decrypt"
+	Discover   = "discover"
 )

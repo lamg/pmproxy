@@ -22,11 +22,19 @@ package managers
 
 import (
 	"fmt"
+	alg "github.com/lamg/algorithms"
 	"sync"
 )
 
 type manager struct {
-	mngs *sync.Map
+	mngs  *sync.Map
+	paths []mngPath
+}
+
+type mngPath struct {
+	name string
+	cmd  string
+	mngs []mngPath
 }
 
 func newManager() (m *manager) {
@@ -41,32 +49,33 @@ type mngCmd struct {
 
 func (m *manager) exec(c *Cmd) (proc bool) {
 	c.interp = make(map[string]*MatchType)
-	var mngs []*mngCmd
-	proc = true
-	for (proc || len(mngs) != 0) && c.Err == nil {
-		if proc {
-			term, prev := m.execStep(c)
-			if !term {
-				mngs = append(mngs, prev)
-			}
-			proc = !term
-		} else if len(mngs) != 0 {
-			last := len(mngs) - 1
-			next := mngs[last]
-			mngs = mngs[:last]
-			c.Manager = next.mng
-			c.Cmd = next.cmd
-			proc = true
+	ib := func(i int) (ok bool) {
+		pth := m.paths[i]
+		ok = pth.name == c.Manager && pth.cmd == c.Cmd
+		return
+	}
+	ok, n := alg.BLnSrch(ib, len(m.paths))
+	if ok {
+		fnd := m.paths[n]
+		ib0 := func(i int) (ok bool) {
+			curr := fnd.mngs[i]
+			c.Manager, c.Cmd = curr.name, curr.cmd
+			m.execStep(c)
+			ok = c.Err != nil
+			return
 		}
+		alg.BLnSrch(ib0, len(fnd.mngs))
+	} else {
+		c.Err = fmt.Errorf("Not found manager '%s'"+
+			" with command '%s'", c.Manager, c.Cmd)
 	}
 	return
 }
 
-func (m *manager) execStep(c *Cmd) (term bool, prev *mngCmd) {
-	prev = &mngCmd{mng: c.Manager, cmd: c.Cmd}
+func (m *manager) execStep(c *Cmd) {
 	v, ok := m.mngs.Load(c.Manager)
 	if ok {
-		term = v.(func(*Cmd) bool)(c)
+		v.(func(*Cmd) bool)(c)
 	} else {
 		c.Err = fmt.Errorf("Not found manager '%s'", c.Manager)
 	}

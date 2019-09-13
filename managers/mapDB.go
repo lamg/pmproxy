@@ -68,21 +68,17 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 		{
 			Auth,
 			func() {
-				c.User, c.Err = d.auth(c.Cred.User,
-					c.Cred.Pass)
-				c.defKeys = append(c.defKeys, userK)
-				term = true
+				c.User, c.Err = d.auth(c.Cred.User, c.Cred.Pass)
 			},
 		},
 		{
 			Get,
 			func() {
-				term = c.defined(userK)
-				if term {
+				if c.Ok {
+					// checks if previous manager signaled this step
+					// to be executed, since some of them determines that
+					// property at runtime, after initialization
 					c.Groups, c.Err = d.userGroups(c.User)
-					c.defKeys = append(c.defKeys, groupsK)
-				} else {
-					c.Manager = ipUserMng
 				}
 			},
 		},

@@ -40,95 +40,69 @@ const (
 func (m *sessionIPM) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
-			Open,
-			func() {
-				if c.User == "" {
-					c.Manager = m.Auth
-					c.Cmd = Auth
-				} else if c.Err == nil && c.Secret == "" {
-					c.Manager = cryptMng
-					c.Cmd = encrypt
-				} else if !c.defined(openedK) {
-					c.Manager = ipUserMng
-					c.Cmd = Open
-				} else {
-					term = true
-				}
-			},
-		},
-		{
-			Close,
-			func() {
-				ok := c.defined(secretOk)
-				if ok && c.Err == nil {
-					c.Manager = cryptMng
-					c.Cmd = decrypt
-				} else if ok {
-					c.Manager = ipUserMng
-					c.Cmd = ipUserDel
-				}
-			},
-		},
-		{
-			Get,
-			func() {
-				admDef := c.defined(isAdminK)
-				if admDef {
-					sessionsDef := c.defined(sessionsK)
-					if !sessionsDef {
-						if c.IsAdmin {
-							c.Manager = ipUserMng
-							term = false
-						}
-					}
-				} else {
-					c.Manager = adminsMng
-					term = false
-				}
-			},
-		},
-		{
-			Renew,
-			func() {
-				ok := c.defined(secretOk)
-				if !ok {
-					c.Manager = cryptMng
-				}
-			},
-		},
-		{
 			Check,
 			func() {
-				secretOk := c.defined(secretOk)
-				userOk := c.defined(userK)
-				if secretOk && userOk {
-					c.Ok = c.User == c.String
-				} else if !secretOk {
-					c.Cmd = decrypt
-					c.Manager = cryptMng
-				} else if !userOk {
-					c.Cmd = Get
-					c.Manager = ipUserMng
-				}
+				c.Ok = c.User == c.String
 			},
 		},
 		{
 			Match,
 			func() {
-				term = c.defined(userK)
-				if !term {
-					c.Manager = ipUserMng
-					c.Cmd = Get
-				} else {
-					c.Ok = c.User != ""
-					c.interp[m.Name] = &MatchType{
-						Type:  SessionIPMK,
-						Match: c.Ok,
-					}
+				c.Ok = c.User != ""
+				c.interp[m.Name] = &MatchType{
+					Type:  SessionIPMK,
+					Match: c.Ok,
 				}
 			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
+	return
+}
+
+func smPaths(smName, dbName string) (ms []mngPath) {
+	ms = []mngPath{
+		{
+			name: smName,
+			cmd:  Open,
+			mngs: []mngPath{
+				{name: dbName, cmd: Auth},
+				{name: cryptMng, cmd: encrypt},
+				{name: ipUserMng, cmd: Open},
+			},
+		},
+		{
+			name: smName,
+			cmd:  Close,
+			mngs: []mngPath{
+				{name: cryptMng, cmd: decrypt},
+				{name: ipUserMng, cmd: Close},
+			},
+		},
+		{
+			name: smName,
+			cmd:  Renew,
+			mngs: []mngPath{
+				{name: cryptMng, cmd: Renew},
+			},
+		},
+		{
+			name: smName,
+			cmd:  Check,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: cryptMng, cmd: decrypt},
+				{name: smName, cmd: Check},
+			},
+		},
+		{
+			name: smName,
+			cmd:  Match,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: smName, cmd: Match},
+			},
+		},
+	}
 	return
 }

@@ -22,7 +22,7 @@ package managers
 
 import (
 	"fmt"
-	"github.com/lamg/proxy"
+	alg "github.com/lamg/algorithms"
 	"sync"
 )
 
@@ -39,43 +39,80 @@ func newConnections() (c *connections) {
 	return
 }
 
-type restrCurr struct {
-	restrictors []string
-	current     int
+func (n *connections) exec(c *Cmd) (term bool) {
+	kf := []alg.KFunc{
+		{
+			Open,
+			func() {
+				if c.Ok {
+					n.ipRestr.Store(c.IP, c.consR)
+				} else {
+					c.Result.Error = fmt.Errorf("Rules evaluated to: %s",
+						c.String)
+				}
+			},
+		},
+		{
+			Close,
+			func() { n.ipRestr.Delete(c.IP) },
+		},
+		{
+			HandleConn,
+			func() {
+				v, ok := n.ipRestr.Load(c.IP)
+				if ok {
+					c.consR = v.([]string)
+				} else {
+					c.Err = fmt.Errorf("No connection at %s", c.IP)
+				}
+			},
+		},
+	}
+	alg.ExecF(kf, c.Cmd)
+	return
 }
 
-func (n *connections) exec(c *Cmd) (term bool) {
-	if c.Operation.Command == proxy.Open {
-		if c.consR == nil && c.String == "" {
-			c.Cmd, c.Manager = Match, RulesK
-		} else {
-			if c.Ok {
-				rc := &restrCurr{restrictors: c.consR, current: 0}
-				n.ipRestr.Store(c.Operation.IP, rc)
-			} else {
-				c.Result.Error = fmt.Errorf("Rules evaluated to: %s",
-					c.String)
-			}
-			term = true
-		}
-	} else {
-		v, ok := n.ipRestr.Load(c.Operation.IP)
-		term = true
-		if ok {
-			if c.Operation.Command == proxy.Close {
-				n.ipRestr.Delete(c.Operation.IP)
-			} else {
-				rc := v.(*restrCurr)
-				if rc.current == len(rc.restrictors) {
-					term, rc.current = true, 0
-				} else {
-					c.Manager, c.Cmd = rc.restrictors[rc.current], HandleConn
-					term, rc.current = false, rc.current+1
-				}
-			}
-		} else {
-			c.Err = fmt.Errorf("No connection at %s", c.Operation.IP)
-		}
+func connPaths(avlRestr []mngPath) (ps []mngPath) {
+	avm := make([]mngPath, 1)
+	// since the specific consumption restrictors determined by a
+	// match to a connection must be applied, and this is done at
+	// runtime, after initialization, a mechanism is devised for
+	// performing this action. As the path of a command through
+	// managers is determined at initialization, there is a conflict
+	// with the previous requirement. The solution was to include
+	// all paths for a command through all consumption restrictors,
+	// while filtering which one should be applied.
+	// The filtering occurs by intercalating a filter command sent
+	// to each consumption restrictor (searching it's name in
+	// c.consR), and then with that result (c.Ok) the following
+	// managers determine if they should execute the command sent.
+	avm[0] = mngPath{name: connectionsMng, cmd: HandleConn}
+	for _, j := range avlRestr {
+		avm = append(avm, mngPath{name: j.name, cmd: Filter})
+		avm = append(avm, j.mngs...)
+		avm = append(avm, mngPath{name: j.name, cmd: HandleConn})
+	}
+	ps = []mngPath{
+		{
+			name: connectionsMng,
+			cmd:  Open,
+			mngs: []mngPath{
+				{name: RulesK, cmd: Match},
+				{name: connectionsMng, cmd: Open},
+			},
+		},
+		{
+			name: connectionsMng,
+			cmd:  Close,
+			mngs: []mngPath{
+				{name: connectionsMng, cmd: Close},
+			},
+		},
+		{
+			name: connectionsMng,
+			cmd:  HandleConn,
+			mngs: avm,
+		},
 	}
 	return
 }
