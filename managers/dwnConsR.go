@@ -147,10 +147,9 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 		{
 			Match,
 			func() {
-				c.interp[d.Name], c.consR, term =
+				c.interp[d.Name], c.consR =
 					&MatchType{Match: true, Type: DwnConsRK},
-					append(c.consR, d.Name),
-					true
+					append(c.consR, d.Name)
 			},
 		},
 	}

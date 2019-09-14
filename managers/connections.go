@@ -47,7 +47,7 @@ func (n *connections) exec(c *Cmd) (term bool) {
 				if c.Ok {
 					n.ipRestr.Store(c.IP, c.consR)
 				} else {
-					c.Result.Error = fmt.Errorf("Rules evaluated to: %s",
+					c.Result.Error = fmt.Errorf("Rules evaluated to '%s'",
 						c.String)
 				}
 			},
@@ -73,19 +73,15 @@ func (n *connections) exec(c *Cmd) (term bool) {
 }
 
 func connPaths(avlRestr []mngPath) (ps []mngPath) {
+	// depends on matching restrictors, and those are determined
+	// after initialization, with a specific Cmd instance.
+	// The solution is intercalating a Filter command for each
+	// available restrictor, its dependencies and finally a
+	// HandleConn command to each one.
+	// The Filter command leaves in the Cmd instance a value of
+	// true in Cmd.Ok if that restrictor is meant to handle that
+	// connection
 	avm := make([]mngPath, 1)
-	// since the specific consumption restrictors determined by a
-	// match to a connection must be applied, and this is done at
-	// runtime, after initialization, a mechanism is devised for
-	// performing this action. As the path of a command through
-	// managers is determined at initialization, there is a conflict
-	// with the previous requirement. The solution was to include
-	// all paths for a command through all consumption restrictors,
-	// while filtering which one should be applied.
-	// The filtering occurs by intercalating a filter command sent
-	// to each consumption restrictor (searching it's name in
-	// c.consR), and then with that result (c.Ok) the following
-	// managers determine if they should execute the command sent.
 	avm[0] = mngPath{name: connectionsMng, cmd: HandleConn}
 	for _, j := range avlRestr {
 		avm = append(avm, mngPath{name: j.name, cmd: Filter})

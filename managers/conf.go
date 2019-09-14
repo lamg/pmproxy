@@ -149,6 +149,7 @@ func initDwnConsR(c *conf, m *manager) (e error) {
 }
 
 func initRules(c *conf, m *manager) (e error) {
+	// TODO send all matchers to get the manager paths for rules
 	var rs *rules
 	rs, e = newRules(c.Rules)
 	if e == nil {
