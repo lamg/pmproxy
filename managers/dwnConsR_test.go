@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/c2h5oh/datasize"
 	"github.com/lamg/proxy"
@@ -85,4 +86,35 @@ func TestLimitConn(t *testing.T) {
 	require.Equal(t,
 		fmt.Errorf("Consumption reached quota %s", "1024 B"),
 		res.Error)
+}
+
+func TestDwnConsRCmd(t *testing.T) {
+	cmf, _ := confTest(t)
+	open := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(open)
+	require.NoError(t, open.Err)
+	get := &Cmd{
+		Manager: "down",
+		Cmd:     Get,
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(get)
+	require.NoError(t, get.Err)
+	ui := new(UserInfo)
+	e := json.Unmarshal(get.Data, ui)
+	require.NoError(t, e)
+	rui := &UserInfo{
+		UserName:    "user0",
+		Groups:      []string{"group0"},
+		Quota:       "1024 B",
+		BytesQuota:  1024,
+		BytesCons:   0,
+		Consumption: "0 B",
+	}
+	require.Equal(t, rui, ui)
 }

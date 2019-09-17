@@ -235,11 +235,11 @@ func (d *dwnConsR) info(user, name string, gs []string) (
 	n := d.quota(user, gs)
 	q := datasize.ByteSize(n).HumanReadable()
 	ui = &UserInfo{
-		Quota:      q,
 		UserName:   user,
-		BytesQuota: n,
 		Groups:     gs,
 		Name:       name,
+		Quota:      q,
+		BytesQuota: n,
 	}
 	ui.BytesCons = d.consumption(user)
 	ui.Consumption = datasize.ByteSize(ui.BytesCons).HumanReadable()
