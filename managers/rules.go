@@ -31,6 +31,9 @@ func (m *rules) exec(c *Cmd) (term bool) {
 				mt, def = c.interp[name]
 				if def {
 					r = mt.Match
+					if r && mt.Type == DwnConsRK {
+						c.consR = append(c.consR, name)
+					}
 				}
 			}
 			return
@@ -53,9 +56,8 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 	// depends on the matchers required to evaluate the predicate
 	// for the specific instance of Cmd, which is defined at after
 	// initialization. The solution is make the command go through
-	// all matchers, and it dependencies,before sending it to rules
+	// all matchers, and its dependencies,before sending it to rules
 	mts, sps := make([]string, 0), []*pred.Predicate{m.predicate}
-	fmt.Println(m.predicate, m.predicate.A, m.predicate.B)
 	for len(sps) != 0 {
 		last := len(sps) - 1
 		p := sps[last]
@@ -80,24 +82,30 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 		ipm: []mngPath{{name: ipm, cmd: Match}},
 	}
 	paths := make([]mngPath, 0, len(mts))
-	fmt.Println(mts)
 	for _, j := range mts {
 		pth, ok := matchers[j]
 		if ok {
 			paths = append(paths, pth...)
 		}
 	}
+	matchDeps := append(paths, mngPath{name: RulesK, cmd: Match})
+	fmt.Println(matchDeps)
+	discoverDeps := append(paths,
+		mngPath{name: RulesK, cmd: Discover})
+	fmt.Println(discoverDeps)
 	ms = []mngPath{
 		{
 			name: RulesK,
 			cmd:  Match,
-			mngs: append(paths, mngPath{name: RulesK, cmd: Match}),
+			mngs: matchDeps,
 		},
 		{
 			name: RulesK,
 			cmd:  Discover,
-			mngs: append(paths, mngPath{name: RulesK, cmd: Discover}),
+			mngs: discoverDeps,
 		},
 	}
+	fmt.Println(ms[0].mngs)
+	fmt.Println(ms[1].mngs)
 	return
 }

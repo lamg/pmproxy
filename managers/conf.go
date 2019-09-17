@@ -188,7 +188,6 @@ func initConnMng(c *conf, m *manager, rdeps []mngPath) {
 			},
 		},
 	}
-	fmt.Println(rdeps)
 	cps := connPaths(ms, rdeps)
 	m.mngs.Store(connectionsMng, cs.exec)
 	m.paths = append(m.paths, cps...)
