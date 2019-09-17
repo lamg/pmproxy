@@ -27,7 +27,7 @@ import (
 	"testing"
 )
 
-func TestSessionIPM(t *testing.T) {
+func TestSessionIPMOpen(t *testing.T) {
 	cmf, ctl, jtk := openTest(t)
 	cm := &Cmd{
 		Manager: "sessions",
@@ -59,4 +59,16 @@ func openTest(t *testing.T) (cmf CmdF, ctl proxy.ConnControl,
 	require.NoError(t, open.Err)
 	jtk = open.Secret
 	return
+}
+
+func TestSessionIPMCheck(t *testing.T) {
+	cmf, _, jtk := openTest(t)
+	check := &Cmd{
+		Manager: "sessions",
+		Cmd:     Check,
+		Secret:  jtk,
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(check)
+	require.NoError(t, check.Err)
 }
