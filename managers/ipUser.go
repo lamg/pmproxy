@@ -21,7 +21,6 @@
 package managers
 
 import (
-	"fmt"
 	alg "github.com/lamg/algorithms"
 	"sync"
 )
@@ -50,25 +49,15 @@ func (p *ipUser) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
 			Get,
-			func() {
-				var ok bool
-				c.User, ok = p.get(c.IP)
-				if !ok {
-					c.Err = fmt.Errorf("Not logged user at '%s'", c.IP)
-				}
-			},
+			func() { c.User, _ = p.get(c.IP) },
 		},
 		{
 			Open,
-			func() {
-				p.open(c.IP, c.User)
-			},
+			func() { p.open(c.IP, c.User) },
 		},
 		{
 			Close,
-			func() {
-				p.del(c.IP)
-			},
+			func() { p.del(c.IP) },
 		},
 	}
 	alg.ExecF(kf, c.Cmd)

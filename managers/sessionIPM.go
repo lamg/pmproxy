@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"fmt"
 	alg "github.com/lamg/algorithms"
 )
 
@@ -43,6 +44,9 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 			Check,
 			func() {
 				c.Ok = c.User == c.String
+				if !c.Ok {
+					fmt.Errorf("Check failed: '%s' ≠ '%s'", c.User, c.String)
+				}
 			},
 		},
 		{
