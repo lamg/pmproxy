@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"fmt"
 	"github.com/c2h5oh/datasize"
 	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
@@ -81,5 +82,7 @@ func TestLimitConn(t *testing.T) {
 		IP:      ht.DefaultRemoteAddr,
 		Amount:  1,
 	})
-	require.Error(t, res.Error)
+	require.Equal(t,
+		fmt.Errorf("Consumption reached quota %s", "1024 B"),
+		res.Error)
 }
