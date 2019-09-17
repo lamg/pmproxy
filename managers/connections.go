@@ -72,7 +72,7 @@ func (n *connections) exec(c *Cmd) (term bool) {
 	return
 }
 
-func connPaths(avlRestr []mngPath) (ps []mngPath) {
+func connPaths(avlRestr, rulesDeps []mngPath) (ps []mngPath) {
 	// depends on matching restrictors, and those are determined
 	// after initialization, with a specific Cmd instance.
 	// The solution is intercalating a Filter command for each
@@ -92,10 +92,8 @@ func connPaths(avlRestr []mngPath) (ps []mngPath) {
 		{
 			name: connectionsMng,
 			cmd:  Open,
-			mngs: []mngPath{
-				{name: RulesK, cmd: Match},
-				{name: connectionsMng, cmd: Open},
-			},
+			mngs: append(rulesDeps,
+				mngPath{name: connectionsMng, cmd: Open}),
 		},
 		{
 			name: connectionsMng,

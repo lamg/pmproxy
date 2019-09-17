@@ -2,7 +2,7 @@ package managers
 
 import (
 	"encoding/json"
-	alg "github.com/lamg/algorithms"
+	"fmt"
 	pred "github.com/lamg/predicate"
 	"strings"
 )
@@ -49,12 +49,13 @@ func (m *rules) exec(c *Cmd) (term bool) {
 	return
 }
 
-func (m *rules) mngPaths(allMatch []mngPath) (ms []mngPath) {
+func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 	// depends on the matchers required to evaluate the predicate
 	// for the specific instance of Cmd, which is defined at after
 	// initialization. The solution is make the command go through
 	// all matchers, and it dependencies,before sending it to rules
 	mts, sps := make([]string, 0), []*pred.Predicate{m.predicate}
+	fmt.Println(m.predicate, m.predicate.A, m.predicate.B)
 	for len(sps) != 0 {
 		last := len(sps) - 1
 		p := sps[last]
@@ -70,18 +71,33 @@ func (m *rules) mngPaths(allMatch []mngPath) (ms []mngPath) {
 			}
 		}
 	}
-	ms = make([]mngPath, 0, len(mts))
+	matchers := map[string][]mngPath{
+		sm: []mngPath{
+			{name: ipUserMng, cmd: Get},
+			{name: sm, cmd: Match},
+		},
+		dw:  []mngPath{{name: dw, cmd: Match}},
+		ipm: []mngPath{{name: ipm, cmd: Match}},
+	}
+	paths := make([]mngPath, 0, len(mts))
+	fmt.Println(mts)
 	for _, j := range mts {
-		ib := func(i int) bool {
-			return allMatch[i].cmd == Match && allMatch[i].name == j
-		}
-		ok, n := alg.BLnSrch(ib, len(allMatch))
+		pth, ok := matchers[j]
 		if ok {
-			for _, l := range allMatch[n].mngs {
-				ms = append(ms, l)
-			}
-			ms = append(ms, mngPath{name: j, cmd: Match})
+			paths = append(paths, pth...)
 		}
+	}
+	ms = []mngPath{
+		{
+			name: RulesK,
+			cmd:  Match,
+			mngs: append(paths, mngPath{name: RulesK, cmd: Match}),
+		},
+		{
+			name: RulesK,
+			cmd:  Discover,
+			mngs: append(paths, mngPath{name: RulesK, cmd: Discover}),
+		},
 	}
 	return
 }

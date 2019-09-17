@@ -57,9 +57,11 @@ func (m *manager) exec(c *Cmd) (proc bool) {
 	ok, n := alg.BLnSrch(ib, len(m.paths))
 	if ok {
 		fnd := m.paths[n]
+		println("found:", fnd.name, fnd.cmd)
 		ib0 := func(i int) (ok bool) {
 			curr := fnd.mngs[i]
 			c.Manager, c.Cmd = curr.name, curr.cmd
+			println("exec:", c.Manager, c.Cmd)
 			m.execStep(c)
 			ok = c.Err != nil
 			return

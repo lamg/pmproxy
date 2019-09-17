@@ -27,8 +27,8 @@ import (
 
 type rangeIPM struct {
 	rg   *net.IPNet
-	cidr string
-	name string
+	Cidr string `toml:"cidr"`
+	Name string `toml:"name"`
 }
 
 const (
@@ -36,7 +36,7 @@ const (
 )
 
 func (r *rangeIPM) init() (e error) {
-	_, r.rg, e = net.ParseCIDR(r.cidr)
+	_, r.rg, e = net.ParseCIDR(r.Cidr)
 	return
 }
 
@@ -45,13 +45,13 @@ func (r *rangeIPM) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				c.Data = []byte(r.cidr)
+				c.Data = []byte(r.Cidr)
 			},
 		},
 		{
 			Match,
 			func() {
-				c.interp[r.name], term =
+				c.interp[r.Name], term =
 					&MatchType{Match: r.match(c.IP), Type: RangeIPMK},
 					true
 			},

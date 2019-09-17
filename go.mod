@@ -10,7 +10,7 @@ require (
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/lamg/algorithms v0.0.0-20190520212325-66184574b2d4
 	github.com/lamg/ldaputil v0.1.0
-	github.com/lamg/predicate v0.0.5-0.20190408010051-e1255993ca89
+	github.com/lamg/predicate v0.0.5-0.20190916230822-cc513a18ae03
 	github.com/lamg/proxy v0.0.0-20190522175835-d3c807e5ff88
 	github.com/lamg/rtimespan v0.1.0
 	github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f

@@ -72,10 +72,8 @@ func Load(confDir string, fs afero.Fs) (
 		func() {
 			m.mngs.Store(c.DwnConsR.Name, c.DwnConsR.exec)
 		},
-		func() { e = initRules(c, m) },
+		func() { e = initRulesAndConns(c, m) },
 		func() {
-			initConnMng(c, m)
-			// TODO init connections
 			cmdChan = m.exec
 			ctl = proxyCtl(cmdChan)
 			persist = persistF(c, fs)
@@ -110,13 +108,10 @@ func initSessionIPM(c *conf, m *manager) (e error) {
 	if c.SessionIPM != nil {
 		m.mngs.Store(c.SessionIPM.Name, c.SessionIPM.exec)
 		m.mngs.Store(ipUserMng, newIpUser().exec)
-		var dbName string
 		if c.AdDB != nil {
 			m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
-			dbName = c.AdDB.Name
 		} else if c.MapDB != nil {
 			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
-			dbName = c.MapDB.Name
 		} else {
 			e = fmt.Errorf("SessionIPM ≠ nil ∧" +
 				" AdDB = nil ∧ MapDB = nil")
@@ -126,7 +121,7 @@ func initSessionIPM(c *conf, m *manager) (e error) {
 			cr, e = newCrypt(c.JWTExpiration)
 			if e == nil {
 				m.mngs.Store(cryptMng, cr.exec)
-				smPaths := smPaths(c.SessionIPM.Name, dbName)
+				smPaths := c.SessionIPM.paths()
 				m.paths = append(m.paths, smPaths...)
 			}
 		}
@@ -144,16 +139,36 @@ func initDwnConsR(c *conf, m *manager) (e error) {
 			e = fmt.Errorf("DwnConsR ≠ nil ∧" +
 				" AdDB = nil ∧ MapDB = nil")
 		}
+		if e == nil {
+			ds := c.DwnConsR.paths()
+			m.paths = append(m.paths, ds...)
+		}
 	}
 	return
 }
 
-func initRules(c *conf, m *manager) (e error) {
-	// TODO send all matchers to get the manager paths for rules
+func initRulesAndConns(c *conf, m *manager) (e error) {
 	var rs *rules
 	rs, e = newRules(c.Rules)
 	if e == nil {
 		m.mngs.Store(RulesK, rs.exec)
+		var sm, dw, ipm string
+		if c.SessionIPM != nil {
+			sm = c.SessionIPM.Name
+		}
+		if c.DwnConsR != nil {
+			dw = c.DwnConsR.Name
+		}
+		if c.RangeIPM != nil {
+			ipm = c.RangeIPM.Name
+		}
+		ms := rs.paths(sm, dw, ipm)
+		m.paths = append(m.paths, ms...)
+		n := 0
+		if ms[n].cmd == Discover {
+			n = 1
+		}
+		initConnMng(c, m, ms[n].mngs)
 	} else {
 		m.mngs.Store(RulesK, func(c *Cmd) {
 			c.Ok, c.consR = true, make([]string, 0)
@@ -162,7 +177,7 @@ func initRules(c *conf, m *manager) (e error) {
 	return
 }
 
-func initConnMng(c *conf, m *manager) {
+func initConnMng(c *conf, m *manager, rdeps []mngPath) {
 	cs := newConnections()
 	ms := []mngPath{
 		{
@@ -173,7 +188,8 @@ func initConnMng(c *conf, m *manager) {
 			},
 		},
 	}
-	cps := connPaths(ms)
+	fmt.Println(rdeps)
+	cps := connPaths(ms, rdeps)
 	m.mngs.Store(connectionsMng, cs.exec)
 	m.paths = append(m.paths, cps...)
 }

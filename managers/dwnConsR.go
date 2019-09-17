@@ -256,3 +256,32 @@ func cleanHumanReadable(hr string) (cl string) {
 	cl = strings.Replace(hr, ".0", "", -1)
 	return
 }
+
+func (d *dwnConsR) paths() (ms []mngPath) {
+	ms = []mngPath{
+		{
+			name: d.Name,
+			cmd:  Get,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: d.UserDBN, cmd: Get},
+				{name: d.Name, cmd: Get},
+			},
+		},
+		{
+			name: d.Name,
+			cmd:  Set,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: adminsMng, cmd: isAdminK},
+				{name: d.Name, cmd: Set},
+			},
+		},
+		{
+			name: d.Name,
+			cmd:  Show,
+			mngs: []mngPath{{name: d.Name, cmd: Show}},
+		},
+	}
+	return
+}

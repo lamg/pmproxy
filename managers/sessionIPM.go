@@ -25,8 +25,8 @@ import (
 )
 
 type sessionIPM struct {
-	Name string
-	Auth string
+	Name string `toml:"name"`
+	Auth string `toml:"auth"`
 }
 
 const (
@@ -60,19 +60,19 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 	return
 }
 
-func smPaths(smName, dbName string) (ms []mngPath) {
+func (m *sessionIPM) paths() (ms []mngPath) {
 	ms = []mngPath{
 		{
-			name: smName,
+			name: m.Name,
 			cmd:  Open,
 			mngs: []mngPath{
-				{name: dbName, cmd: Auth},
+				{name: m.Auth, cmd: Auth},
 				{name: cryptMng, cmd: encrypt},
 				{name: ipUserMng, cmd: Open},
 			},
 		},
 		{
-			name: smName,
+			name: m.Name,
 			cmd:  Close,
 			mngs: []mngPath{
 				{name: cryptMng, cmd: decrypt},
@@ -80,27 +80,19 @@ func smPaths(smName, dbName string) (ms []mngPath) {
 			},
 		},
 		{
-			name: smName,
+			name: m.Name,
 			cmd:  Renew,
 			mngs: []mngPath{
 				{name: cryptMng, cmd: Renew},
 			},
 		},
 		{
-			name: smName,
+			name: m.Name,
 			cmd:  Check,
 			mngs: []mngPath{
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: decrypt},
-				{name: smName, cmd: Check},
-			},
-		},
-		{
-			name: smName,
-			cmd:  Match,
-			mngs: []mngPath{
-				{name: ipUserMng, cmd: Get},
-				{name: smName, cmd: Match},
+				{name: m.Name, cmd: Check},
 			},
 		},
 	}
