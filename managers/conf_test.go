@@ -54,6 +54,7 @@ admins = ["user0"]
 		user1 = "pass1"
 	[mapDB.userGroups]
 		user0 = ["group0"]
+		user1 = ["group1"]
 
 [sessionIPM]
 	name = "sessions"
@@ -64,6 +65,7 @@ admins = ["user0"]
 	userDBN = "map"
 	[dwnConsR.groupQuota]
 		group0 = "1 KB"
+		group1 = "512 B"
 `
 
 func confTest(t *testing.T) (c CmdF, p proxy.ConnControl) {

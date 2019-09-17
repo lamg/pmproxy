@@ -28,3 +28,17 @@ func (m *admins) exec(c *Cmd) (term bool) {
 	alg.ExecF(kf, c.Cmd)
 	return
 }
+
+func (m *admins) paths() (ms []mngPath) {
+	ms = []mngPath{
+		{
+			name: adminsMng,
+			cmd:  isAdminK,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: adminsMng, cmd: isAdminK},
+			},
+		},
+	}
+	return
+}

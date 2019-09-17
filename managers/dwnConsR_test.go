@@ -32,7 +32,7 @@ import (
 	"testing"
 )
 
-func TestDwnConsR(t *testing.T) {
+func TestDwnConsRInit(t *testing.T) {
 	bts0 := 1024 * datasize.MB
 	str := bts0.HR()
 
@@ -51,16 +51,8 @@ func TestDwnConsR(t *testing.T) {
 	require.Equal(t, uint64(datasize.KB), q)
 }
 
-func TestLimitConn(t *testing.T) {
-	cmf, ctl := confTest(t)
-	cm := &Cmd{
-		Manager: "sessions",
-		Cmd:     Open,
-		Cred:    &Credentials{User: "user0", Pass: "pass0"},
-		IP:      ht.DefaultRemoteAddr,
-	}
-	cmf(cm)
-	require.NoError(t, cm.Err)
+func TestDwnConsRHandleConn(t *testing.T) {
+	_, ctl, _ := openTest(t)
 	res := ctl(&proxy.Operation{
 		Command: proxy.Open,
 		IP:      ht.DefaultRemoteAddr,
@@ -88,16 +80,8 @@ func TestLimitConn(t *testing.T) {
 		res.Error)
 }
 
-func TestDwnConsRCmd(t *testing.T) {
-	cmf, _ := confTest(t)
-	open := &Cmd{
-		Manager: "sessions",
-		Cmd:     Open,
-		Cred:    &Credentials{User: "user0", Pass: "pass0"},
-		IP:      ht.DefaultRemoteAddr,
-	}
-	cmf(open)
-	require.NoError(t, open.Err)
+func TestDwnConsRGet(t *testing.T) {
+	cmf, _, _ := openTest(t)
 	get := &Cmd{
 		Manager: "down",
 		Cmd:     Get,
@@ -115,6 +99,46 @@ func TestDwnConsRCmd(t *testing.T) {
 		BytesQuota:  1024,
 		BytesCons:   0,
 		Consumption: "0 B",
+	}
+	require.Equal(t, rui, ui)
+}
+
+func TestDwnConsRSet(t *testing.T) {
+	cmf, _, _ := openTest(t)
+	set := &Cmd{
+		Manager: "down",
+		Cmd:     Set,
+		String:  "user1",
+		Uint64:  19,
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(set)
+	require.NoError(t, set.Err)
+	open := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user1", Pass: "pass1"},
+		IP:      "192.168.1.1",
+	}
+	cmf(open)
+	require.NoError(t, open.Err)
+	get := &Cmd{
+		Manager: "down",
+		Cmd:     Get,
+		IP:      open.IP,
+	}
+	cmf(get)
+	require.NoError(t, get.Err)
+	ui := new(UserInfo)
+	e := json.Unmarshal(get.Data, ui)
+	require.NoError(t, e)
+	rui := &UserInfo{
+		UserName:    open.Cred.User,
+		Groups:      []string{"group1"},
+		Quota:       "512 B",
+		BytesQuota:  512,
+		Consumption: "19 B",
+		BytesCons:   19,
 	}
 	require.Equal(t, rui, ui)
 }

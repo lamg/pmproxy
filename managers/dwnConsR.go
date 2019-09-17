@@ -122,6 +122,9 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 			func() {
 				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
+				} else {
+					c.Err = fmt.Errorf("User '%s' isn't administrator",
+						c.User)
 				}
 			},
 		},

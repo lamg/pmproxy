@@ -28,17 +28,13 @@ import (
 )
 
 func TestSessionIPM(t *testing.T) {
-	cmf, ctl := confTest(t)
-	sm := "sessions"
+	cmf, ctl, jtk := openTest(t)
 	cm := &Cmd{
-		Manager: sm,
-		Cmd:     Open,
-		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+		Manager: "sessions",
+		Cmd:     Close,
+		Secret:  jtk,
 		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(cm)
-	require.NoError(t, cm.Err)
-	cm.Manager, cm.Cmd = sm, Close
 	cmf(cm)
 	require.NoError(t, cm.Err)
 	res := ctl(&proxy.Operation{
@@ -48,4 +44,19 @@ func TestSessionIPM(t *testing.T) {
 	})
 	require.Error(t, res.Error)
 	t.Log(res.Error)
+}
+
+func openTest(t *testing.T) (cmf CmdF, ctl proxy.ConnControl,
+	jtk string) {
+	cmf, ctl = confTest(t)
+	open := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(open)
+	require.NoError(t, open.Err)
+	jtk = open.Secret
+	return
 }

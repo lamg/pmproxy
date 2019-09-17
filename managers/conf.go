@@ -62,6 +62,7 @@ func Load(confDir string, fs afero.Fs) (
 		func() { e = toml.Unmarshal(bs, c) },
 		func() { e = initSessionIPM(c, m) },
 		func() { e = initDwnConsR(c, m) },
+		func() { initAdmins(c, m) },
 		func() {
 			if c.SessionIPM == nil && c.DwnConsR != nil {
 				e = fmt.Errorf("DwnConsR ≠ nil ∧ SessionIPM = nil ")
@@ -191,6 +192,12 @@ func initConnMng(c *conf, m *manager, rdeps []mngPath) {
 	cps := connPaths(ms, rdeps)
 	m.mngs.Store(connectionsMng, cs.exec)
 	m.paths = append(m.paths, cps...)
+}
+
+func initAdmins(c *conf, m *manager) {
+	adm := &admins{admins: c.Admins}
+	m.mngs.Store(adminsMng, adm.exec)
+	m.paths = append(m.paths, adm.paths()...)
 }
 
 func proxyCtl(cmdChan CmdF) (
