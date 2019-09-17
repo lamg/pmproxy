@@ -77,13 +77,15 @@ func (d *dwnConsR) init(fs afero.Fs, pth string) (e error) {
 		}
 		alg.TrueFF(f, func() bool { return e == nil })
 	}
-	for k, v := range d.GroupQuota {
-		var bz datasize.ByteSize
-		e = bz.UnmarshalText([]byte(v))
-		if e == nil {
-			d.groupQuotaM.Store(k, uint64(bz))
-		} else {
-			break
+	if e == nil {
+		for k, v := range d.GroupQuota {
+			var bz datasize.ByteSize
+			e = bz.UnmarshalText([]byte(v))
+			if e == nil {
+				d.groupQuotaM.Store(k, uint64(bz))
+			} else {
+				break
+			}
 		}
 	}
 	return

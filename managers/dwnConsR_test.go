@@ -45,10 +45,17 @@ func TestDwnConsRInit(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, "1 KB", c.DwnConsR.GroupQuota["group0"])
 	fs := afero.NewMemMapFs()
-	e = c.DwnConsR.init(fs, "")
+	consMap := `{
+	"lastReset":"2011-01-01T00:00:00Z",
+	"consumptions":{"user0":512,"user1":256}
+}`
+	afero.WriteFile(fs, "/down.json", []byte(consMap), 0644)
+	e = c.DwnConsR.init(fs, "/")
 	require.NoError(t, e)
 	q := c.DwnConsR.quota("user0", []string{"group0"})
 	require.Equal(t, uint64(datasize.KB), q)
+	cons := c.DwnConsR.consumption("user0")
+	require.Equal(t, uint64(512), cons)
 }
 
 func TestDwnConsRHandleConn(t *testing.T) {
