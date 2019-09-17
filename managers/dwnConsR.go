@@ -160,25 +160,21 @@ func (d *dwnConsR) handleConn(c *Cmd) {
 		// checks if previous manager signaled this step
 		// to be executed, since some of them determines that
 		// property at runtime, after initialization
-		_, ok := c.interp[d.Name]
-		if ok {
-			if c.Operation.Command == proxy.ReadRequest {
-				qt := d.quota(c.User, c.Groups)
-				cs := d.consumption(c.User)
-				if cs >= qt {
-					hcs := datasize.ByteSize(cs)
-					c.Result.Error = fmt.Errorf(
-						"Consumption reached quota %s",
-						hcs.HumanReadable())
-				}
-			} else if c.Operation.Command == proxy.ReadReport {
-				cs := d.consumption(c.User)
-				ncs := cs + c.Uint64
-				d.userCons.Store(c.User, ncs)
+		if c.Operation.Command == proxy.ReadRequest {
+			qt := d.quota(c.User, c.Groups)
+			cs := d.consumption(c.User)
+			if cs >= qt {
+				hcs := datasize.ByteSize(cs)
+				c.Result.Error = fmt.Errorf(
+					"Consumption reached quota %s",
+					hcs.HumanReadable())
 			}
+		} else if c.Operation.Command == proxy.ReadReport {
+			cs := d.consumption(c.User)
+			ncs := cs + c.Uint64
+			d.userCons.Store(c.User, ncs)
 		}
 	}
-
 }
 
 func (d *dwnConsR) consumption(user string) (n uint64) {
