@@ -46,4 +46,17 @@ func TestDiscover(t *testing.T) {
 	}
 	require.Equal(t, interp, dr.MatchMng)
 	require.Equal(t, 0, len(c.consR))
+	open := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(open)
+	require.NoError(t, open.Err)
+	cmf(c)
+	e = json.Unmarshal(c.Data, dr)
+	interp["sessions"].Match = true
+	require.Equal(t, interp, dr.MatchMng)
+	require.Equal(t, []string{"down"}, c.consR)
 }
