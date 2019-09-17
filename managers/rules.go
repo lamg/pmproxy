@@ -2,7 +2,6 @@ package managers
 
 import (
 	"encoding/json"
-	"fmt"
 	pred "github.com/lamg/predicate"
 	"strings"
 )
@@ -81,7 +80,7 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 		dw:  []mngPath{{name: dw, cmd: Match}},
 		ipm: []mngPath{{name: ipm, cmd: Match}},
 	}
-	paths := make([]mngPath, 0, len(mts))
+	paths := make([]mngPath, 0)
 	for _, j := range mts {
 		pth, ok := matchers[j]
 		if ok {
@@ -89,10 +88,8 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 		}
 	}
 	matchDeps := append(paths, mngPath{name: RulesK, cmd: Match})
-	fmt.Println(matchDeps)
 	discoverDeps := append(paths,
 		mngPath{name: RulesK, cmd: Discover})
-	fmt.Println(discoverDeps)
 	ms = []mngPath{
 		{
 			name: RulesK,
@@ -105,7 +102,5 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 			mngs: discoverDeps,
 		},
 	}
-	fmt.Println(ms[0].mngs)
-	fmt.Println(ms[1].mngs)
 	return
 }
