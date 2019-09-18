@@ -77,7 +77,11 @@ func Load(confDir string, fs afero.Fs) (
 		func() {
 			cmdChan = m.exec
 			ctl = proxyCtl(cmdChan)
-			persist = persistF(c, fs)
+			if c.DwnConsR != nil {
+				persist = c.DwnConsR.persist
+			} else {
+				persist = func() (e error) { return }
+			}
 		},
 	}
 	if !alg.TrueFF(f, func() bool { return e == nil }) {
@@ -223,22 +227,6 @@ func proxyCtl(cmdChan CmdF) (
 		if c.Result.Error == nil && c.Err != nil {
 			r.Error = c.Err
 		}
-		return
-	}
-	return
-}
-
-func persistF(c *conf, fs afero.Fs) (f func() error) {
-	f = func() (x error) {
-		var bs []byte
-		g := []func(){
-			func() { bs, x = toml.Marshal(c) },
-			func() { x = afero.WriteFile(fs, confFile, bs, 0644) },
-			func() {
-				c.DwnConsR.persist()
-			},
-		}
-		alg.TrueFF(g, func() bool { return x == nil })
 		return
 	}
 	return
