@@ -49,7 +49,7 @@ func (p *PMClient) Login() (m cli.Command) {
 				len(args),
 			)
 			if e != nil &&
-				e.Error() == mng.NoManager(sm).Error() {
+				e.Error() == fmt.Sprintf("No manager %s", sm) {
 				// TODO discover
 			}
 			return

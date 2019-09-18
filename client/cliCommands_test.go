@@ -23,6 +23,7 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/lamg/pmproxy"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -84,12 +85,11 @@ func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
 	fl, _, e := mng.ConfPath()
 	require.NoError(t, e)
 	fs = afero.NewMemMapFs()
-	mng.BasicConf(fl, fs)
-	ok, e := afero.Exists(fs, fl)
-	require.True(t, ok && e == nil)
+	e = afero.WriteFile(fs, fl, []byte(conf0), 0644)
+	require.NoError(t, e)
 	ch, _, prs, e := mng.Load("", fs)
 	require.NoError(t, e)
-	ifh = stdIface("", ch)
+	ifh = pmproxy.StdIface("", ch)
 	return
 }
 
@@ -110,3 +110,29 @@ func testPostCmd(addr string,
 	}
 	// TODO
 }
+
+const conf0 = `
+rules = "sessions ∧ down"
+admins = ["user0"]
+
+[mapDB]
+	name = "map"
+	[mapDB.userPass]
+		user0 = "pass0"
+		user1 = "pass1"
+	[mapDB.userGroups]
+		user0 = ["group0"]
+		user1 = ["group1"]
+
+[sessionIPM]
+	name = "sessions"
+	auth = "map"
+
+[dwnConsR]
+	name = "down"
+	userDBN = "map"
+	resetCycle = "168h"
+	[dwnConsR.groupQuota]
+		group0 = "1 KB"
+		group1 = "512 B"
+`

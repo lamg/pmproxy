@@ -68,7 +68,7 @@ func Serve() (e error) {
 
 func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 	if i.Server.FastOrStd {
-		fhnd := fastIface(i.WebStaticFilesDir, cmdChan)
+		fhnd := FastIface(i.WebStaticFilesDir, cmdChan)
 		cropt := fasthttpcors.DefaultHandler()
 		fast := &fh.Server{
 			ReadTimeout:  i.Server.ReadTimeout,
@@ -78,7 +78,7 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 		e = fast.ListenAndServeTLS(i.Server.Addr, i.HTTPSCert,
 			i.HTTPSKey)
 	} else {
-		shnd := stdIface(i.WebStaticFilesDir, cmdChan)
+		shnd := StdIface(i.WebStaticFilesDir, cmdChan)
 		cropt := cors.AllowAll()
 		std := &h.Server{
 			ReadTimeout:  i.Server.ReadTimeout,
@@ -114,7 +114,7 @@ func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 	return
 }
 
-func fastIface(staticFPath string,
+func FastIface(staticFPath string,
 	cmdChan mng.CmdF) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
@@ -148,7 +148,7 @@ func fastIface(staticFPath string,
 	return
 }
 
-func stdIface(staticFPath string,
+func StdIface(staticFPath string,
 	cmdChan mng.CmdF) (hnd h.HandlerFunc) {
 	hnd = func(w h.ResponseWriter, r *h.Request) {
 		compatibleIface(
