@@ -26,6 +26,7 @@ import (
 	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
+	"net/url"
 	"os"
 	"path"
 	"time"
@@ -60,6 +61,7 @@ func Load(confDir string, fs afero.Fs) (
 			bs, e = afero.ReadFile(fs, confPath)
 		},
 		func() { e = toml.Unmarshal(bs, c) },
+		func() { c.parentProxy, e = url.Parse(c.ParentProxy) },
 		func() { e = initSessionIPM(c, m) },
 		func() { e = initDwnConsR(c, m) },
 		func() { initAdmins(c, m) },
@@ -76,7 +78,7 @@ func Load(confDir string, fs afero.Fs) (
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
-			ctl = proxyCtl(cmdChan)
+			ctl = proxyCtl(c, cmdChan)
 			if c.DwnConsR != nil {
 				persist = c.DwnConsR.persist
 			} else {
@@ -102,6 +104,8 @@ type conf struct {
 	Rules         string        `toml:"rules" default:"true"`
 	SessionIPM    *sessionIPM   `toml:"sessionIPM"`
 	SyslogAddr    string        `toml:"syslogAddr"`
+
+	parentProxy *url.URL
 }
 
 func initSessionIPM(c *conf, m *manager) (e error) {
@@ -205,7 +209,7 @@ func initAdmins(c *conf, m *manager) {
 	m.paths = append(m.paths, adm.paths()...)
 }
 
-func proxyCtl(cmdChan CmdF) (
+func proxyCtl(cf *conf, cmdChan CmdF) (
 	f func(*proxy.Operation) *proxy.Result,
 ) {
 	f = func(o *proxy.Operation) (r *proxy.Result) {
@@ -224,6 +228,7 @@ func proxyCtl(cmdChan CmdF) (
 		}
 		cmdChan(c)
 		r = c.Result
+		r.Iface, r.Proxy = cf.NetIface, cf.parentProxy
 		if c.Result.Error == nil && c.Err != nil {
 			r.Error = c.Err
 		}
