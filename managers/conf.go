@@ -143,6 +143,7 @@ func initDwnConsR(c *conf, m *manager) (e error) {
 		if e == nil {
 			ds := c.DwnConsR.paths()
 			m.paths = append(m.paths, ds...)
+			c.DwnConsR.now = time.Now
 		}
 	}
 	return

@@ -47,6 +47,8 @@ type dwnConsR struct {
 	groupQuotaM *sync.Map
 
 	userCons *sync.Map
+
+	now func() time.Time
 }
 
 const (
@@ -92,6 +94,7 @@ func (d *dwnConsR) init(fs afero.Fs, pth string) (e error) {
 }
 
 func (d *dwnConsR) persist() (e error) {
+	d.keepResetCycle()
 	cons := &consMap{
 		Consumptions: make(map[string]uint64),
 		LastReset:    d.lastReset,
@@ -194,11 +197,12 @@ func (d *dwnConsR) keepResetCycle() {
 	// this method maintains the property that if the current
 	// time is greater or equal to d.lastReset + d.resetCycle,
 	// then all consumptions are set to 0
-	now := time.Now()
+	now := d.now()
 	cy := now.Sub(d.lastReset)
 	if cy >= d.ResetCycle {
+		tms := cy / d.ResetCycle
 		d.userCons = new(sync.Map)
-		d.lastReset = d.lastReset.Add(d.ResetCycle)
+		d.lastReset = d.lastReset.Add(tms * d.ResetCycle)
 	}
 }
 

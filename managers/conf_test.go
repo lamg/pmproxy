@@ -63,6 +63,7 @@ admins = ["user0"]
 [dwnConsR]
 	name = "down"
 	userDBN = "map"
+	resetCycle = "168h"
 	[dwnConsR.groupQuota]
 		group0 = "1 KB"
 		group1 = "512 B"

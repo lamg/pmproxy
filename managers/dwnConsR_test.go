@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	ht "net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestDwnConsRInit(t *testing.T) {
@@ -45,17 +46,30 @@ func TestDwnConsRInit(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, "1 KB", c.DwnConsR.GroupQuota["group0"])
 	fs := afero.NewMemMapFs()
-	consMap := `{
-	"lastReset":"2011-01-01T00:00:00Z",
-	"consumptions":{"user0":512,"user1":256}
-}`
-	afero.WriteFile(fs, "/down.json", []byte(consMap), 0644)
+	consFile := "/" + c.DwnConsR.Name + ".json"
+	afero.WriteFile(fs, consFile, []byte(testConsMap), 0644)
 	e = c.DwnConsR.init(fs, "/")
 	require.NoError(t, e)
 	q := c.DwnConsR.quota("user0", []string{"group0"})
 	require.Equal(t, uint64(datasize.KB), q)
 	cons := c.DwnConsR.consumption("user0")
 	require.Equal(t, uint64(512), cons)
+
+	// persist test
+	nw, e := time.Parse(time.RFC3339, "2019-09-18T00:00:00Z")
+	require.NoError(t, e)
+	c.DwnConsR.now = func() time.Time { return nw }
+	e = c.DwnConsR.persist()
+	require.NoError(t, e)
+	bs, e := afero.ReadFile(fs, consFile)
+	require.NoError(t, e)
+	cmp := new(consMap)
+	e = json.Unmarshal(bs, cmp)
+	require.NoError(t, e)
+	nrd, e := time.Parse(time.RFC3339, "2019-09-14T00:00:00Z")
+	require.NoError(t, e)
+	require.Equal(t, nrd, cmp.LastReset)
+	require.Equal(t, 0, len(cmp.Consumptions))
 }
 
 func TestDwnConsRHandleConn(t *testing.T) {
@@ -149,3 +163,9 @@ func TestDwnConsRSet(t *testing.T) {
 	}
 	require.Equal(t, rui, ui)
 }
+
+const testConsMap = `
+{
+	"lastReset":"2019-09-07T00:00:00Z",
+	"consumptions":{"user0":512,"user1":256}
+}`
