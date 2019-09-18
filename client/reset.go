@@ -18,33 +18,39 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package main
+package pmproxy
 
-import (
-	"github.com/lamg/pmproxy/client"
-	"github.com/spf13/afero"
-	"github.com/urfave/cli"
-	"log"
-	"os"
-)
+func (p *PMClient) ResetConsumption() (m cli.Command) {
+	var dwn string
+	m = cli.Command{
+		Name:    "reset",
+		Aliases: []string{"r"},
+		Usage:   "Resets an user's consumption",
+		Flags:   managerFlag(&dwn, ""),
+		Action: func(c *cli.Context) (e error) {
+			args := c.Args()
+			li, e := p.readSecret()
+			if e == nil {
+				e = checkArgExec(
+					func() error { return p.reset(li.DwnConsR, args[0]) },
+					1,
+					len(args),
+				)
+			}
+			return
+		},
+	}
+	return
+}
 
-func main() {
-	cl := client.PMClient{
-		Fs:      afero.NewOsFs(),
-		PostCmd: client.PostCmd,
+func (p *PMClient) reset(manager, user string) (e error) {
+	m := &mng.Cmd{
+		Manager: manager,
+		Cmd:     mng.Set,
+		String:  user,
+		Uint64:  1,
 	}
-	app := cli.NewApp()
-	app.Commands = []cli.Command{
-		cl.Discover(),
-		cl.Login(),
-		cl.Logout(),
-		cl.LoggedUsers(),
-		cl.UserStatus(),
-		cl.ResetConsumption(),
-		cl.ShowMng(),
-	}
-	e := app.Run(os.Args)
-	if e != nil {
-		log.Fatal(e)
-	}
+	okf := func(bs []byte) (d error) { return }
+	e = p.sendRecv(m, okf)
+	return
 }

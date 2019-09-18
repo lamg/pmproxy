@@ -39,6 +39,7 @@ type mngPath struct {
 
 func newManager() (m *manager) {
 	m = &manager{mngs: new(sync.Map)}
+	m.paths = append(m.paths, mngPath{name: Skip})
 	return
 }
 

@@ -195,10 +195,7 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 				e = json.Unmarshal(bs, m)
 			} else {
 				fileSrv(path)
-				m = &mng.Cmd{
-					Cmd:     mng.Skip,
-					Manager: "",
-				}
+				m = &mng.Cmd{Manager: mng.Skip}
 			}
 		},
 		func() {

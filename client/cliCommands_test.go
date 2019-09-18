@@ -75,41 +75,9 @@ func TestShowMng(t *testing.T) {
 		PostCmd: testPostCmd("192.168.1.1", ifh),
 	}
 	cl.login("", "", user0, pass0)
-	downWeek := "downWeek"
-	objT, e := cl.showMng(downWeek)
+	objT, e := cl.showMng("down")
 	require.NoError(t, e)
 	require.Equal(t, mng.DwnConsRK, objT.Type)
-	kvs := []struct {
-		key string
-		val interface{}
-	}{
-		{mng.NameK, downWeek},
-		{mng.LastResetK, "2019-04-13T20:00:00-04:00"},
-		{mng.ResetCycleK, "168h0m0s"},
-		{mng.UserDBK, "mapDB"},
-		{
-			mng.QuotaMapK,
-			map[string]interface{}{
-				"group0": "600.0 MB",
-				"group1": "1024.0 MB",
-			},
-		},
-	}
-	inf := func(i int) {
-		require.Equal(t, kvs[i].val, objT.Object[kvs[i].key])
-	}
-	alg.Forall(inf, len(kvs))
-}
-
-func TestConfUpdate(t *testing.T) {
-	fs, _, prs := basicConfT(t)
-	e := prs()
-	require.NoError(t, e)
-	_, fl := mng.ConfPath("")
-	bs, e := afero.ReadFile(fs, fl)
-	require.NoError(t, e)
-	t.Log(string(bs))
-	// FIXME some objects aren't written
 }
 
 func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,

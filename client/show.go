@@ -18,33 +18,43 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package main
+package pmproxy
 
-import (
-	"github.com/lamg/pmproxy/client"
-	"github.com/spf13/afero"
-	"github.com/urfave/cli"
-	"log"
-	"os"
-)
+func (p *PMClient) ShowMng() (m cli.Command) {
+	m = cli.Command{
+		Name:    "show",
+		Aliases: []string{"sh"},
+		Action: func(c *cli.Context) (e error) {
+			args := c.Args()
+			e = checkArgExec(
+				func() (d error) {
+					objT, d := p.showMng(args[0])
+					if d == nil {
+						enc := toml.NewEncoder(os.Stdout)
+						e = enc.Encode(objT)
+					}
+					return
+				},
+				1,
+				len(args),
+			)
+			return
+		},
+	}
+	return
+}
 
-func main() {
-	cl := client.PMClient{
-		Fs:      afero.NewOsFs(),
-		PostCmd: client.PostCmd,
+func (p *PMClient) showMng(manager string) (objT *mng.ObjType,
+	e error) {
+	m := &mng.Cmd{
+		Manager: manager,
+		Cmd:     mng.Show,
 	}
-	app := cli.NewApp()
-	app.Commands = []cli.Command{
-		cl.Discover(),
-		cl.Login(),
-		cl.Logout(),
-		cl.LoggedUsers(),
-		cl.UserStatus(),
-		cl.ResetConsumption(),
-		cl.ShowMng(),
+	okf := func(bs []byte) (d error) {
+		objT = new(mng.ObjType)
+		d = json.Unmarshal(bs, objT)
+		return
 	}
-	e := app.Run(os.Args)
-	if e != nil {
-		log.Fatal(e)
-	}
+	e = p.sendRecv(m, okf)
+	return
 }
