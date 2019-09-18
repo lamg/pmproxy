@@ -20,6 +20,14 @@
 
 package pmproxy
 
+import (
+	"encoding/json"
+	mng "github.com/lamg/pmproxy/managers"
+	"github.com/pelletier/go-toml"
+	"github.com/urfave/cli"
+	"os"
+)
+
 func (p *PMClient) ShowMng() (m cli.Command) {
 	m = cli.Command{
 		Name:    "show",

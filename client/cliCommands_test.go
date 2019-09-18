@@ -23,7 +23,6 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
-	alg "github.com/lamg/algorithms"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -82,7 +81,8 @@ func TestShowMng(t *testing.T) {
 
 func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
 	prs func() error) {
-	_, fl := mng.ConfPath("")
+	fl, _, e := mng.ConfPath()
+	require.NoError(t, e)
 	fs = afero.NewMemMapFs()
 	mng.BasicConf(fl, fs)
 	ok, e := afero.Exists(fs, fl)

@@ -20,6 +20,17 @@
 
 package pmproxy
 
+import (
+	"encoding/json"
+	"fmt"
+	alg "github.com/lamg/algorithms"
+	mng "github.com/lamg/pmproxy/managers"
+	"github.com/spf13/afero"
+	"github.com/urfave/cli"
+	"io/ioutil"
+	h "net/http"
+)
+
 func (p *PMClient) Login() (m cli.Command) {
 	var sm string
 	m = cli.Command{

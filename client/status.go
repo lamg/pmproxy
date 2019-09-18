@@ -20,6 +20,13 @@
 
 package pmproxy
 
+import (
+	"encoding/json"
+	"fmt"
+	mng "github.com/lamg/pmproxy/managers"
+	"github.com/urfave/cli"
+)
+
 func (p *PMClient) UserStatus() (m cli.Command) {
 	var dwn string
 	m = cli.Command{

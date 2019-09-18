@@ -26,13 +26,12 @@ import (
 	"encoding/json"
 	"fmt"
 	alg "github.com/lamg/algorithms"
+	"github.com/lamg/pmproxy"
 	mng "github.com/lamg/pmproxy/managers"
-	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	h "net/http"
-	"os"
 	"strings"
 )
 
@@ -112,7 +111,7 @@ func PostCmd(urls string, c *mng.Cmd) (r *h.Response, e error) {
 	bs, e := json.Marshal(c)
 	if e == nil {
 		buff := bytes.NewBuffer(bs)
-		u := urls + ApiCmd
+		u := urls + pmproxy.ApiCmd
 		r, e = h.Post(u, "text/json", buff)
 		if e == nil && r.StatusCode == h.StatusBadRequest {
 			bs, e = ioutil.ReadAll(r.Body)

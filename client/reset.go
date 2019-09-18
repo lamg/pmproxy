@@ -20,6 +20,11 @@
 
 package pmproxy
 
+import (
+	mng "github.com/lamg/pmproxy/managers"
+	"github.com/urfave/cli"
+)
+
 func (p *PMClient) ResetConsumption() (m cli.Command) {
 	var dwn string
 	m = cli.Command{

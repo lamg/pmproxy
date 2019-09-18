@@ -22,10 +22,12 @@ package pmproxy
 
 import (
 	"encoding/json"
-	"github.com/lamg/pmproxy/managers"
-	"github.com/spf13/afero"
+	"fmt"
+	alg "github.com/lamg/algorithms"
+	mng "github.com/lamg/pmproxy/managers"
 	"github.com/urfave/cli"
-	"net/http"
+	"io/ioutil"
+	h "net/http"
 )
 
 func (p *PMClient) Discover() (m cli.Command) {
