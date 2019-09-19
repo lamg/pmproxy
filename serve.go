@@ -139,9 +139,14 @@ func FastIface(staticFPath string,
 				ctx.URI().SetPath(file)
 				fsHnd(ctx)
 			},
-			func(err string) {
+			func(err error) {
+				bs, e := json.Marshal(err)
 				ctx.Response.SetStatusCode(h.StatusBadRequest)
-				ctx.Response.SetBodyString(err)
+				if e == nil {
+					ctx.Response.SetBody(bs)
+				} else {
+					ctx.Response.SetBodyString(err.Error())
+				}
 			},
 		)
 	}
@@ -168,8 +173,15 @@ func StdIface(staticFPath string,
 				pth := path.Join(staticFPath, file)
 				h.ServeFile(w, r, pth)
 			},
-			func(err string) {
-				h.Error(w, err, h.StatusBadRequest)
+			func(err error) {
+				bs, e := json.Marshal(err)
+				var res string
+				if e == nil {
+					res = string(bs)
+				} else {
+					res = err.Error()
+				}
+				h.Error(w, res, h.StatusBadRequest)
 			},
 		)
 	}
@@ -182,7 +194,7 @@ const (
 
 func compatibleIface(cmdChan mng.CmdF, path, method,
 	rAddr string, body func() ([]byte, error),
-	resp func([]byte), fileSrv, writeErr func(string)) {
+	resp func([]byte), fileSrv func(string), writeErr func(error)) {
 	m := new(mng.Cmd)
 	var e error
 	var bs []byte
@@ -209,6 +221,6 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 		},
 	}
 	if !alg.TrueFF(fs, func() bool { return e == nil }) {
-		writeErr(e.Error())
+		writeErr(e)
 	}
 }

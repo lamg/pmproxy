@@ -105,6 +105,7 @@ func testPostCmd(addr string,
 			q.RemoteAddr = addr + ":1919"
 			hnd(rec, q)
 			r = rec.Result()
+			e = unmarshalErr(r.Body)
 		}
 		return
 	}

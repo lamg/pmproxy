@@ -30,6 +30,7 @@ import (
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
+	"io"
 	"io/ioutil"
 	h "net/http"
 	"strings"
@@ -114,11 +115,36 @@ func PostCmd(urls string, c *mng.Cmd) (r *h.Response, e error) {
 		u := urls + pmproxy.ApiCmd
 		r, e = h.Post(u, "text/json", buff)
 		if e == nil && r.StatusCode == h.StatusBadRequest {
-			bs, e = ioutil.ReadAll(r.Body)
-			if e == nil {
-				e = fmt.Errorf("%s", string(bs))
-			}
+			unmarshalErr(r.Body)
 		}
+	}
+	return
+}
+
+func unmarshalErr(rc io.ReadCloser) (e error) {
+	bs, e := ioutil.ReadAll(rc)
+	if e == nil {
+		rc.Close()
+		me := new(mng.ManagerErr)
+		ce := new(mng.CheckErr)
+		fe := new(mng.ForbiddenByRulesErr)
+		ne := new(mng.NoConnErr)
+		na := new(mng.NoAdmErr)
+		qr := new(mng.QuotaReachedErr)
+		var re error
+		fs := []func(){
+			func() { re = json.Unmarshal(bs, me); e = me },
+			func() { re = json.Unmarshal(bs, ce); e = ce },
+			func() { re = json.Unmarshal(bs, fe); e = fe },
+			func() { re = json.Unmarshal(bs, ne); e = ne },
+			func() { re = json.Unmarshal(bs, na); e = na },
+			func() { re = json.Unmarshal(bs, qr); e = qr },
+			func() { e = fmt.Errorf("%s", string(bs)) },
+		}
+		alg.BLnSrch(
+			func(i int) bool { fs[i](); return re == nil },
+			len(fs),
+		)
 	}
 	return
 }

@@ -32,13 +32,13 @@ type manager struct {
 }
 
 type ManagerErr struct {
-	mng string
-	cmd string
+	Mng string
+	Cmd string
 }
 
 func (m *ManagerErr) Error() (s string) {
 	s = fmt.Sprintf("manager not found: '%s' with command '%s'",
-		m.mng, m.cmd)
+		m.Mng, m.Cmd)
 	return
 }
 
@@ -78,7 +78,7 @@ func (m *manager) exec(c *Cmd) (proc bool) {
 		}
 		alg.BLnSrch(ib0, len(fnd.mngs))
 	} else {
-		c.Err = &ManagerErr{mng: c.Manager, cmd: c.Cmd}
+		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}
 	return
 }
@@ -88,7 +88,7 @@ func (m *manager) execStep(c *Cmd) {
 	if ok {
 		v.(func(*Cmd) bool)(c)
 	} else {
-		c.Err = &ManagerErr{mng: c.Manager, cmd: c.Cmd}
+		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}
 	return
 }

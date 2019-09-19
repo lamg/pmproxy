@@ -57,11 +57,11 @@ const (
 )
 
 type NoAdmErr struct {
-	user string
+	User string
 }
 
 func (a *NoAdmErr) Error() (s string) {
-	s = fmt.Sprintf("User '%s' isn't administrator", a.user)
+	s = fmt.Sprintf("User '%s' isn't administrator", a.User)
 	return
 }
 
@@ -137,7 +137,7 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
 				} else {
-					c.Err = &NoAdmErr{user: c.User}
+					c.Err = &NoAdmErr{User: c.User}
 				}
 			},
 		},
