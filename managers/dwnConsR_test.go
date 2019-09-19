@@ -22,7 +22,7 @@ package managers
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/c2h5oh/datasize"
 	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
@@ -96,9 +96,9 @@ func TestDwnConsRHandleConn(t *testing.T) {
 		IP:      ht.DefaultRemoteAddr,
 		Amount:  1,
 	})
-	require.Equal(t,
-		fmt.Errorf("Consumption reached quota %s", "1024 B"),
-		res.Error)
+	var qr *QuotaReachedErr
+	require.True(t, errors.As(res.Error, &qr))
+	require.Equal(t, "1024 B", qr.Quota)
 }
 
 func TestDwnConsRGet(t *testing.T) {

@@ -21,7 +21,7 @@
 package managers
 
 import (
-	"fmt"
+	"errors"
 	"github.com/lamg/proxy"
 	"github.com/stretchr/testify/require"
 	ht "net/http/httptest"
@@ -43,9 +43,9 @@ func TestSessionIPMOpen(t *testing.T) {
 		IP:      ht.DefaultRemoteAddr,
 		Amount:  14,
 	})
-	require.Equal(t,
-		fmt.Errorf("No connection at %s", ht.DefaultRemoteAddr),
-		res.Error)
+	var nc *NoConnErr
+	require.True(t, errors.As(res.Error, &nc))
+	require.Equal(t, ht.DefaultRemoteAddr, nc.IP)
 }
 
 func openTest(t *testing.T) (cmf CmdF, ctl proxy.ConnControl,

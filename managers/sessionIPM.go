@@ -38,6 +38,17 @@ const (
 	SessionIPMK = "sessionIPM"
 )
 
+type CheckErr struct {
+	Logged    string
+	Decrypted string
+}
+
+func (c *CheckErr) Error() (s string) {
+	s = fmt.Sprintf("Check failed: '%s' ≠ '%s'", c.Logged,
+		c.Decrypted)
+	return
+}
+
 func (m *sessionIPM) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
@@ -45,7 +56,7 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 			func() {
 				c.Ok = c.User == c.String
 				if !c.Ok {
-					fmt.Errorf("Check failed: '%s' ≠ '%s'", c.User, c.String)
+					c.Err = &CheckErr{Logged: c.User, Decrypted: c.String}
 				}
 			},
 		},

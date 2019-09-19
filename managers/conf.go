@@ -67,7 +67,11 @@ func Load(confDir string, fs afero.Fs) (
 		func() { initAdmins(c, m) },
 		func() {
 			if c.SessionIPM == nil && c.DwnConsR != nil {
-				e = fmt.Errorf("DwnConsR ≠ nil ∧ SessionIPM = nil ")
+				e = &DependencyErr{
+					name:   c.DwnConsR.Name,
+					tÿpe:   DwnConsRK,
+					absent: []string{SessionIPMK},
+				}
 			} else if c.DwnConsR != nil {
 				e = c.DwnConsR.init(fs, confFullDir)
 			}
@@ -122,8 +126,11 @@ func initSessionIPM(c *conf, m *manager) (e error) {
 		} else if c.MapDB != nil {
 			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
 		} else {
-			e = fmt.Errorf("SessionIPM ≠ nil ∧" +
-				" AdDB = nil ∧ MapDB = nil")
+			e = &DependencyErr{
+				name:   c.SessionIPM.Name,
+				tÿpe:   SessionIPMK,
+				absent: []string{"adDB", "mapDB"},
+			}
 		}
 		if e == nil {
 			var cr *crypt
@@ -145,8 +152,11 @@ func initDwnConsR(c *conf, m *manager) (e error) {
 		} else if c.MapDB != nil {
 			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
 		} else if c.SessionIPM != nil {
-			e = fmt.Errorf("DwnConsR ≠ nil ∧" +
-				" AdDB = nil ∧ MapDB = nil")
+			e = &DependencyErr{
+				name:   c.DwnConsR.Name,
+				tÿpe:   DwnConsRK,
+				absent: []string{"mapDB", "adDB"},
+			}
 		}
 		if e == nil {
 			ds := c.DwnConsR.paths()
@@ -234,5 +244,17 @@ func proxyCtl(cf *conf, cmdChan CmdF) (
 		}
 		return
 	}
+	return
+}
+
+type DependencyErr struct {
+	absent []string
+	tÿpe   string
+	name   string
+}
+
+func (d *DependencyErr) Error() (s string) {
+	s = fmt.Sprintf("%s:%s ≠ nil ∧ (all %v nil)", d.name, d.tÿpe,
+		d.absent)
 	return
 }

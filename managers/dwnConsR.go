@@ -56,6 +56,15 @@ const (
 	Filter    = "filter"
 )
 
+type NoAdmErr struct {
+	user string
+}
+
+func (a *NoAdmErr) Error() (s string) {
+	s = fmt.Sprintf("User '%s' isn't administrator", a.user)
+	return
+}
+
 type consMap struct {
 	LastReset    time.Time         `json:"lastReset"`
 	Consumptions map[string]uint64 `json:"consumptions"`
@@ -128,8 +137,7 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 				if c.IsAdmin {
 					d.userCons.Store(c.String, c.Uint64)
 				} else {
-					c.Err = fmt.Errorf("User '%s' isn't administrator",
-						c.User)
+					c.Err = &NoAdmErr{user: c.User}
 				}
 			},
 		},
@@ -163,6 +171,15 @@ func (d *dwnConsR) exec(c *Cmd) (term bool) {
 	return
 }
 
+type QuotaReachedErr struct {
+	Quota string
+}
+
+func (r *QuotaReachedErr) Error() (s string) {
+	s = fmt.Sprintf("Consumption reached quota %s", r.Quota)
+	return
+}
+
 func (d *dwnConsR) handleConn(c *Cmd) {
 	if c.Ok {
 		// checks if previous manager signaled this step
@@ -173,9 +190,9 @@ func (d *dwnConsR) handleConn(c *Cmd) {
 			cs := d.consumption(c.User)
 			if cs >= qt {
 				hcs := datasize.ByteSize(cs)
-				c.Result.Error = fmt.Errorf(
-					"Consumption reached quota %s",
-					hcs.HumanReadable())
+				c.Result.Error = &QuotaReachedErr{
+					Quota: hcs.HumanReadable(),
+				}
 			}
 		} else if c.Operation.Command == proxy.ReadReport {
 			cs := d.consumption(c.User)

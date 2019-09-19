@@ -42,6 +42,8 @@ const (
 	Renew    = "renew"
 )
 
+var ErrClaims = fmt.Errorf("invalid claims")
+
 func newCrypt(exp time.Duration) (c *crypt, e error) {
 	c = &crypt{
 		expiration: exp,
@@ -81,7 +83,7 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 		var ok bool
 		user, ok = token.Claims.(*claim)
 		if !ok {
-			e = fmt.Errorf("invalid claims")
+			e = ErrClaims
 		}
 	}
 	return
@@ -90,18 +92,18 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 func (c *crypt) exec(m *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
-			Encrypt,
+			encrypt,
 			func() {
 				m.Secret, m.Err = c.encrypt(m.User, "")
 			},
 		},
 		{
-			Decrypt,
+			decrypt,
 			func() {
 				var cl *claim
 				cl, m.Err = c.decrypt(m.Secret)
 				if m.Err == nil {
-					m.User = cl.User
+					m.String = cl.User
 				}
 			},
 		},

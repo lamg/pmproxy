@@ -63,12 +63,21 @@ func (n *connections) exec(c *Cmd) (term bool) {
 				if ok {
 					c.consR = v.([]string)
 				} else {
-					c.Err = fmt.Errorf("No connection at %s", c.IP)
+					c.Err = &NoConnErr{IP: c.IP}
 				}
 			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
+	return
+}
+
+type NoConnErr struct {
+	IP string
+}
+
+func (c *NoConnErr) Error() (s string) {
+	s = fmt.Sprintf("No connection at '%s'", c.IP)
 	return
 }
 

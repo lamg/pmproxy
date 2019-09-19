@@ -31,6 +31,17 @@ type manager struct {
 	paths []mngPath
 }
 
+type ManagerErr struct {
+	mng string
+	cmd string
+}
+
+func (m *ManagerErr) Error() (s string) {
+	s = fmt.Sprintf("manager not found: '%s' with command '%s'",
+		m.mng, m.cmd)
+	return
+}
+
 type mngPath struct {
 	name string
 	cmd  string
@@ -67,8 +78,7 @@ func (m *manager) exec(c *Cmd) (proc bool) {
 		}
 		alg.BLnSrch(ib0, len(fnd.mngs))
 	} else {
-		c.Err = fmt.Errorf("Not found manager '%s'"+
-			" with command '%s'", c.Manager, c.Cmd)
+		c.Err = &ManagerErr{mng: c.Manager, cmd: c.Cmd}
 	}
 	return
 }
@@ -78,7 +88,7 @@ func (m *manager) execStep(c *Cmd) {
 	if ok {
 		v.(func(*Cmd) bool)(c)
 	} else {
-		c.Err = fmt.Errorf("Not found manager '%s'", c.Manager)
+		c.Err = &ManagerErr{mng: c.Manager, cmd: c.Cmd}
 	}
 	return
 }
