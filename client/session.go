@@ -22,6 +22,7 @@ package pmproxy
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	alg "github.com/lamg/algorithms"
 	mng "github.com/lamg/pmproxy/managers"
@@ -48,10 +49,6 @@ func (p *PMClient) Login() (m cli.Command) {
 				3,
 				len(args),
 			)
-			var me *mng.ManagerErr
-			if e != nil && errors.As(e, &me) {
-				// TODO discover
-			}
 			return
 		},
 	}
@@ -66,12 +63,36 @@ type loginInfo struct {
 	Secret     string `json:"secret"`
 }
 
+type availableMngErr struct {
+	mngs []string
+}
+
+func (v *availableMngErr) Error() (s string) {
+	fmt.Sprintf("manager unavailable: use one of %v", v.mngs)
+	return
+}
+
 func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 	var li *loginInfo
 	li, e = p.loginSM(urls, sm, user, pass)
 	// try login at sm
 	if e == nil {
 		e = p.fillConsR(li)
+	} else {
+		var me *mng.ManagerErr
+		var dr *mng.DiscoverRes
+		if errors.As(e, &me) {
+			dr, e = p.discoverC(urls, "")
+		}
+		if dr != nil {
+			sms := []string{}
+			for k, v := range dr.MatchMng {
+				if v.Type == mng.SessionIPMK && v.Match {
+					sms = append(sms, k)
+				}
+			}
+			e = &availableMngErr{mngs: sms}
+		}
 	}
 	if e == nil {
 		e = p.writeSecret(li)
