@@ -39,6 +39,15 @@ func newConnections() (c *connections) {
 	return
 }
 
+type ForbiddenByRulesErr struct {
+	Result string
+}
+
+func (c *ForbiddenByRulesErr) Error() (s string) {
+	s = fmt.Sprintf("Forbidden: rules evaluated to '%s'", c.Result)
+	return
+}
+
 func (n *connections) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
@@ -47,8 +56,7 @@ func (n *connections) exec(c *Cmd) (term bool) {
 				if c.Ok {
 					n.ipRestr.Store(c.IP, c.consR)
 				} else {
-					c.Result.Error = fmt.Errorf("Rules evaluated to '%s'",
-						c.String)
+					c.Result.Error = &ForbiddenByRulesErr{Result: c.String}
 				}
 			},
 		},
