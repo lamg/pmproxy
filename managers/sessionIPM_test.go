@@ -59,7 +59,7 @@ func openTest(t *testing.T) (cmf CmdF, ctl proxy.ConnControl,
 	}
 	cmf(open)
 	require.NoError(t, open.Err)
-	jtk = open.Secret
+	jtk = string(open.Data)
 	return
 }
 

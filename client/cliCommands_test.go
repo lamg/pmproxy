@@ -45,7 +45,7 @@ func TestLogin(t *testing.T) {
 	fs, ifh, _ := basicConfT(t)
 	cl := &PMClient{
 		Fs:      fs,
-		PostCmd: testPostCmd("127.0.0.1", ifh),
+		PostCmd: testPostCmd(ht.DefaultRemoteAddr, ifh),
 	}
 	e := cl.login(pmpurl, "", user0, pass0)
 	var avm *availableMngErr
@@ -74,12 +74,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestShowMng(t *testing.T) {
-	fs, ifh, _ := basicConfT(t)
-	cl := &PMClient{
-		Fs:      fs,
-		PostCmd: testPostCmd(ht.DefaultRemoteAddr, ifh),
-	}
-	cl.login(pmpurl, "sessions", user0, pass0)
+	_, cl := loginTest(t)
 	dj, e := cl.showMng("down")
 	require.NoError(t, e)
 	down := new(mng.DwnConsR)
@@ -98,12 +93,7 @@ func TestShowMng(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	fs, ifh, _ := basicConfT(t)
-	cl := &PMClient{
-		Fs:      fs,
-		PostCmd: testPostCmd(ht.DefaultRemoteAddr, ifh),
-	}
-	cl.login(pmpurl, "sessions", user0, pass0)
+	_, cl := loginTest(t)
 	user1, down := "user1", "down"
 	cl.reset(down, user1)
 	ui, e := cl.status(down, user1)
@@ -118,6 +108,16 @@ func TestReset(t *testing.T) {
 		BytesCons:   1,
 	}
 	require.Equal(t, rui, ui)
+}
+
+func loginTest(t *testing.T) (fs afero.Fs, cl *PMClient) {
+	fs, ifh, _ := basicConfT(t)
+	cl = &PMClient{
+		Fs:      fs,
+		PostCmd: testPostCmd(ht.DefaultRemoteAddr, ifh),
+	}
+	cl.login(pmpurl, "sessions", user0, pass0)
+	return
 }
 
 func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
@@ -151,13 +151,11 @@ func testPostCmd(addr string,
 		}
 		return
 	}
-	// TODO
 }
 
 const conf0 = `
 rules = "sessions ∧ down"
 admins = ["user0"]
-jwtExpiration = "2s"
 
 [mapDB]
 	name = "map"

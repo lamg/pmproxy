@@ -62,8 +62,8 @@ type claim struct {
 	jwt.StandardClaims
 }
 
-func (c *crypt) encrypt(user, db string) (s string, e error) {
-	expt := time.Now().Add(c.expiration)
+func (c *crypt) encrypt(user, db string) (bs []byte, e error) {
+	expt := jwt.TimeFunc().Add(c.expiration)
 	uc := &claim{
 		User: user,
 		DB:   db,
@@ -72,7 +72,11 @@ func (c *crypt) encrypt(user, db string) (s string, e error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), uc)
+	var s string
 	s, e = token.SignedString(c.key)
+	if e == nil {
+		bs = []byte(s)
+	}
 	return
 }
 
@@ -83,17 +87,20 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 			return
 		},
 	)
-	if token != nil {
+	if e == nil {
 		var ok bool
 		user, ok = token.Claims.(*claim)
 		if !ok {
 			e = ErrClaims
 		}
-	} else if e != nil {
+	} else {
 		var ve *jwt.ValidationError
 		if errors.As(e, &ve) {
 			if ve.Errors&jwt.ValidationErrorExpired == ve.Errors {
 				e = ErrExpired
+			}
+			if token != nil {
+				user, _ = token.Claims.(*claim)
 			}
 		}
 	}
@@ -105,7 +112,7 @@ func (c *crypt) exec(m *Cmd) (term bool) {
 		{
 			encrypt,
 			func() {
-				m.Secret, m.Err = c.encrypt(m.User, "")
+				m.Data, m.Err = c.encrypt(m.User, "")
 			},
 		},
 		{
@@ -115,6 +122,17 @@ func (c *crypt) exec(m *Cmd) (term bool) {
 				cl, m.Err = c.decrypt(m.Secret)
 				if m.Err == nil {
 					m.String = cl.User
+				}
+			},
+		},
+		{
+			Renew,
+			func() {
+				var cl *claim
+				cl, m.Err = c.decrypt(m.Secret)
+				if cl != nil && errors.Is(m.Err, ErrExpired) &&
+					cl.User == m.User {
+					m.Data, m.Err = c.encrypt(m.User, "")
 				}
 			},
 		},

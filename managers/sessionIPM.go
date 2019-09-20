@@ -98,6 +98,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			name: m.Name,
 			cmd:  Renew,
 			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Renew},
 			},
 		},
