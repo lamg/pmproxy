@@ -31,12 +31,14 @@ import (
 	h "net/http"
 	ht "net/http/httptest"
 	"testing"
+	"time"
 )
 
 const (
 	user0  = "user0"
 	pass0  = "pass0"
 	group0 = "group0"
+	pmpurl = "https://pmproxy.org"
 )
 
 func TestLogin(t *testing.T) {
@@ -45,7 +47,6 @@ func TestLogin(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
-	pmpurl := "https://pmproxy.org"
 	e := cl.login(pmpurl, "", user0, pass0)
 	var avm *availableMngErr
 	require.True(t, errors.As(e, &avm))
@@ -76,12 +77,24 @@ func TestShowMng(t *testing.T) {
 	fs, ifh, _ := basicConfT(t)
 	cl := &PMClient{
 		Fs:      fs,
-		PostCmd: testPostCmd("192.168.1.1", ifh),
+		PostCmd: testPostCmd(ht.DefaultRemoteAddr, ifh),
 	}
-	cl.login("https://pmproxy.org", "", user0, pass0)
-	objT, e := cl.showMng("down")
+	cl.login(pmpurl, "sessions", user0, pass0)
+	dj, e := cl.showMng("down")
 	require.NoError(t, e)
-	require.Equal(t, mng.DwnConsRK, objT.Type)
+	down := new(mng.DwnConsR)
+	e = json.Unmarshal([]byte(dj), down)
+	require.NoError(t, e)
+	exp := &mng.DwnConsR{
+		Name:       "down",
+		UserDBN:    "map",
+		ResetCycle: 168 * time.Hour,
+		GroupQuota: map[string]string{
+			"group0": "1 KB",
+			"group1": "512 B",
+		},
+	}
+	require.Equal(t, exp, down)
 }
 
 func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,

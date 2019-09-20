@@ -21,11 +21,9 @@
 package pmproxy
 
 import (
-	"encoding/json"
+	"fmt"
 	mng "github.com/lamg/pmproxy/managers"
-	"github.com/pelletier/go-toml"
 	"github.com/urfave/cli"
-	"os"
 )
 
 func (p *PMClient) ShowMng() (m cli.Command) {
@@ -36,11 +34,8 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 			args := c.Args()
 			e = checkArgExec(
 				func() (d error) {
-					objT, d := p.showMng(args[0])
-					if d == nil {
-						enc := toml.NewEncoder(os.Stdout)
-						e = enc.Encode(objT)
-					}
+					r, d := p.showMng(args[0])
+					fmt.Println(r)
 					return
 				},
 				1,
@@ -52,17 +47,12 @@ func (p *PMClient) ShowMng() (m cli.Command) {
 	return
 }
 
-func (p *PMClient) showMng(manager string) (objT *mng.ObjType,
-	e error) {
+func (p *PMClient) showMng(manager string) (r string, e error) {
 	m := &mng.Cmd{
 		Manager: manager,
 		Cmd:     mng.Show,
 	}
-	okf := func(bs []byte) (d error) {
-		objT = new(mng.ObjType)
-		d = json.Unmarshal(bs, objT)
-		return
-	}
+	okf := func(bs []byte) (d error) { r = string(bs); return }
 	e = p.sendRecv(m, okf)
 	return
 }

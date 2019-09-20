@@ -99,7 +99,7 @@ func Load(confDir string, fs afero.Fs) (
 type conf struct {
 	JWTExpiration time.Duration `toml:"jwtExpiration"`
 	Admins        []string      `toml:"admins"`
-	DwnConsR      *dwnConsR     `toml:"dwnConsR"`
+	DwnConsR      *DwnConsR     `toml:"dwnConsR"`
 	AdDB          *adDB         `toml:"adDB"`
 	MapDB         *mapDB        `toml:"mapDB"`
 	ParentProxy   string        `toml:"parentProxy"`

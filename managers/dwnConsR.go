@@ -33,7 +33,7 @@ import (
 	"time"
 )
 
-type dwnConsR struct {
+type DwnConsR struct {
 	Name       string            `toml:"name"`
 	UserDBN    string            `toml:"userDBN"`
 	ResetCycle time.Duration     `toml:"resetCycle"`
@@ -52,7 +52,7 @@ type dwnConsR struct {
 }
 
 const (
-	DwnConsRK = "dwnConsR"
+	DwnConsRK = "DwnConsR"
 	Filter    = "filter"
 )
 
@@ -70,7 +70,7 @@ type consMap struct {
 	Consumptions map[string]uint64 `json:"consumptions"`
 }
 
-func (d *dwnConsR) init(fs afero.Fs, pth string) (e error) {
+func (d *DwnConsR) init(fs afero.Fs, pth string) (e error) {
 	d.quotaCache, d.groupQuotaM, d.userCons = new(sync.Map),
 		new(sync.Map), new(sync.Map)
 	d.mapPath, d.fs = path.Join(pth, d.Name+".json"), fs
@@ -102,7 +102,7 @@ func (d *dwnConsR) init(fs afero.Fs, pth string) (e error) {
 	return
 }
 
-func (d *dwnConsR) persist() (e error) {
+func (d *DwnConsR) persist() (e error) {
 	d.keepResetCycle()
 	cons := &consMap{
 		Consumptions: make(map[string]uint64),
@@ -119,7 +119,7 @@ func (d *dwnConsR) persist() (e error) {
 	return
 }
 
-func (d *dwnConsR) exec(c *Cmd) (term bool) {
+func (d *DwnConsR) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
 			Get,
@@ -180,7 +180,7 @@ func (r *QuotaReachedErr) Error() (s string) {
 	return
 }
 
-func (d *dwnConsR) handleConn(c *Cmd) {
+func (d *DwnConsR) handleConn(c *Cmd) {
 	if c.Ok {
 		// checks if previous manager signaled this step
 		// to be executed, since some of them determines that
@@ -202,7 +202,7 @@ func (d *dwnConsR) handleConn(c *Cmd) {
 	}
 }
 
-func (d *dwnConsR) consumption(user string) (n uint64) {
+func (d *DwnConsR) consumption(user string) (n uint64) {
 	v, ok := d.userCons.Load(user)
 	if ok {
 		n = v.(uint64)
@@ -210,7 +210,7 @@ func (d *dwnConsR) consumption(user string) (n uint64) {
 	return
 }
 
-func (d *dwnConsR) keepResetCycle() {
+func (d *DwnConsR) keepResetCycle() {
 	// this method maintains the property that if the current
 	// time is greater or equal to d.lastReset + d.resetCycle,
 	// then all consumptions are set to 0
@@ -223,7 +223,7 @@ func (d *dwnConsR) keepResetCycle() {
 	}
 }
 
-func (d *dwnConsR) quota(user string, gs []string) (n uint64) {
+func (d *DwnConsR) quota(user string, gs []string) (n uint64) {
 	v, ok := d.quotaCache.Load(user)
 	if ok {
 		n = v.(uint64)
@@ -238,7 +238,7 @@ func (d *dwnConsR) quota(user string, gs []string) (n uint64) {
 	return
 }
 
-func (d *dwnConsR) groupQuota(g string) (q uint64) {
+func (d *DwnConsR) groupQuota(g string) (q uint64) {
 	v, ok := d.groupQuotaM.Load(g)
 	if ok {
 		q = v.(uint64)
@@ -256,7 +256,7 @@ type UserInfo struct {
 	BytesCons   uint64   `json:"bytesCons"`
 }
 
-func (d *dwnConsR) info(user, name string, gs []string) (
+func (d *DwnConsR) info(user, name string, gs []string) (
 	ui *UserInfo, e error) {
 	n := d.quota(user, gs)
 	q := datasize.ByteSize(n).HumanReadable()
@@ -277,7 +277,7 @@ func cleanHumanReadable(hr string) (cl string) {
 	return
 }
 
-func (d *dwnConsR) paths() (ms []mngPath) {
+func (d *DwnConsR) paths() (ms []mngPath) {
 	ms = []mngPath{
 		{
 			name: d.Name,

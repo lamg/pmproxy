@@ -50,11 +50,6 @@ type Credentials struct {
 	Pass string `json:"pass"`
 }
 
-type ObjType struct {
-	Object map[string]interface{} `json:"object"`
-	Type   string                 `json:"type"`
-}
-
 type MatchType struct {
 	Match bool   `json:"match"`
 	Type  string `json:"type"`
