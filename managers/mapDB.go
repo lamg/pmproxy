@@ -71,7 +71,10 @@ func (d *mapDB) exec(c *Cmd) (term bool) {
 		},
 		{
 			Get,
-			func() { c.Groups, c.Err = d.userGroups(c.User) },
+			func() {
+				c.Groups, c.Err = d.userGroups(c.User)
+				c.String = c.User
+			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)

@@ -23,6 +23,7 @@ package pmproxy
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/lamg/pmproxy"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
@@ -44,8 +45,11 @@ func TestLogin(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("127.0.0.1", ifh),
 	}
-
-	e := cl.login("", "", user0, pass0)
+	pmpurl := "https://pmproxy.org"
+	e := cl.login(pmpurl, "", user0, pass0)
+	var avm *availableMngErr
+	require.True(t, errors.As(e, &avm))
+	e = cl.login(pmpurl, avm.mngs[0], user0, pass0)
 	require.NoError(t, e)
 	ok, e := afero.Exists(fs, loginSecretFile)
 	require.True(t, e == nil && ok)
@@ -60,9 +64,9 @@ func TestLogin(t *testing.T) {
 		UserName:    user0,
 		Name:        user0,
 		Groups:      []string{group0},
-		Quota:       "600.0 MB",
+		Quota:       "1024 B",
 		Consumption: "0 B",
-		BytesQuota:  629145600,
+		BytesQuota:  1024,
 		BytesCons:   0,
 	}
 	require.Equal(t, xui, ui)
@@ -74,7 +78,7 @@ func TestShowMng(t *testing.T) {
 		Fs:      fs,
 		PostCmd: testPostCmd("192.168.1.1", ifh),
 	}
-	cl.login("", "", user0, pass0)
+	cl.login("https://pmproxy.org", "", user0, pass0)
 	objT, e := cl.showMng("down")
 	require.NoError(t, e)
 	require.Equal(t, mng.DwnConsRK, objT.Type)
@@ -105,7 +109,9 @@ func testPostCmd(addr string,
 			q.RemoteAddr = addr + ":1919"
 			hnd(rec, q)
 			r = rec.Result()
-			e = unmarshalErr(r.Body)
+			if e == nil && r.StatusCode == h.StatusBadRequest {
+				e = unmarshalErr(r.Body)
+			}
 		}
 		return
 	}

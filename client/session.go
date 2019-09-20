@@ -87,7 +87,7 @@ func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 		if dr != nil {
 			sms := []string{}
 			for k, v := range dr.MatchMng {
-				if v.Type == mng.SessionIPMK && v.Match {
+				if v.Type == mng.SessionIPMK {
 					sms = append(sms, k)
 				}
 			}
@@ -106,7 +106,7 @@ func (p *PMClient) fillConsR(li *loginInfo) (e error) {
 	var r *h.Response
 	fs := []func(){
 		func() {
-			m := &mng.Cmd{Manager: mng.RulesK, Cmd: mng.Match}
+			m := &mng.Cmd{Manager: mng.RulesK, Cmd: mng.Discover}
 			r, e = p.PostCmd(li.Server, m)
 		},
 		func() { bs, e = ioutil.ReadAll(r.Body) },
