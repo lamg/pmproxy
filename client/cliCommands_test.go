@@ -18,7 +18,7 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package client
 
 import (
 	"bytes"
@@ -157,6 +157,7 @@ func testPostCmd(addr string,
 const conf0 = `
 rules = "sessions ∧ down"
 admins = ["user0"]
+jwtExpiration = "2s"
 
 [mapDB]
 	name = "map"

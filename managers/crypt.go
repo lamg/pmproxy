@@ -23,6 +23,7 @@ package managers
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	alg "github.com/lamg/algorithms"
@@ -42,7 +43,10 @@ const (
 	Renew    = "renew"
 )
 
-var ErrClaims = fmt.Errorf("invalid claims")
+var (
+	ErrClaims  = fmt.Errorf("invalid claims")
+	ErrExpired = fmt.Errorf("expired token")
+)
 
 func newCrypt(exp time.Duration) (c *crypt, e error) {
 	c = &crypt{
@@ -84,6 +88,13 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 		user, ok = token.Claims.(*claim)
 		if !ok {
 			e = ErrClaims
+		}
+	} else if e != nil {
+		var ve *jwt.ValidationError
+		if errors.As(e, &ve) {
+			if ve.Errors&jwt.ValidationErrorExpired == ve.Errors {
+				e = ErrExpired
+			}
 		}
 	}
 	return

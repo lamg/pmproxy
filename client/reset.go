@@ -18,7 +18,7 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package client
 
 import (
 	mng "github.com/lamg/pmproxy/managers"

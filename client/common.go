@@ -18,12 +18,13 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package pmproxy
+package client
 
 import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	alg "github.com/lamg/algorithms"
 	"github.com/lamg/pmproxy"
@@ -33,7 +34,6 @@ import (
 	"io"
 	"io/ioutil"
 	h "net/http"
-	"strings"
 )
 
 type PMClient struct {
@@ -52,8 +52,7 @@ func (p *PMClient) sendRecv(m *mng.Cmd,
 		func() {
 			m.Secret = li.Secret
 			r, e = p.PostCmd(li.Server, m)
-			if e != nil && strings.HasPrefix(e.Error(),
-				"token is expired") {
+			if e != nil && errors.Is(e, mng.ErrExpired) {
 				nm := &mng.Cmd{
 					Cmd:     mng.Renew,
 					Manager: li.SessionIPM,
