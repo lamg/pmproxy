@@ -45,16 +45,12 @@ func (d *adDB) auth(user, pass string) (nuser string, e error) {
 	return
 }
 
-func (d *adDB) userGroups(user string) (gs []string, e error) {
+func (d *adDB) userInfo(user string) (name string, gs []string,
+	e error) {
 	mp, e := d.ldap.FullRecordAcc(user)
 	if e == nil {
 		gs, e = d.ldap.MembershipCNs(mp)
 	}
-	return
-}
-
-func (d *adDB) userName(user string) (name string, e error) {
-	mp, e := d.ldap.FullRecordAcc(user)
 	if e == nil {
 		name, e = d.ldap.FullName(mp)
 	}
@@ -72,12 +68,14 @@ func (d *adDB) exec(c *Cmd) (term bool) {
 		{
 			Get,
 			func() {
-				if c.Ok {
-					// checks if previous manager signaled this step
-					// to be executed, since some of them determines that
-					// property at runtime, after initialization
-					c.Groups, c.Err = d.userGroups(c.User)
-				}
+				c.String, c.Groups, c.Err = d.userInfo(c.User)
+			},
+		},
+		{
+			GetOther,
+			func() {
+				c.User = c.String
+				c.String, c.Groups, c.Err = d.userInfo(c.User)
 			},
 		},
 	}

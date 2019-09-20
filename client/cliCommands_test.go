@@ -59,7 +59,7 @@ func TestLogin(t *testing.T) {
 	if testing.Verbose() {
 		printDR(dr)
 	}
-	ui, e := cl.status("")
+	ui, e := cl.status("", "")
 	require.NoError(t, e)
 	xui := &mng.UserInfo{
 		UserName:    user0,
@@ -95,6 +95,29 @@ func TestShowMng(t *testing.T) {
 		},
 	}
 	require.Equal(t, exp, down)
+}
+
+func TestReset(t *testing.T) {
+	fs, ifh, _ := basicConfT(t)
+	cl := &PMClient{
+		Fs:      fs,
+		PostCmd: testPostCmd(ht.DefaultRemoteAddr, ifh),
+	}
+	cl.login(pmpurl, "sessions", user0, pass0)
+	user1, down := "user1", "down"
+	cl.reset(down, user1)
+	ui, e := cl.status(down, user1)
+	require.NoError(t, e)
+	rui := &mng.UserInfo{
+		Name:        user1,
+		UserName:    user1,
+		Groups:      []string{"group1"},
+		Quota:       "512 B",
+		BytesQuota:  512,
+		Consumption: "1 B",
+		BytesCons:   1,
+	}
+	require.Equal(t, rui, ui)
 }
 
 func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,

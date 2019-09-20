@@ -115,6 +115,7 @@ func TestDwnConsRGet(t *testing.T) {
 	require.NoError(t, e)
 	rui := &UserInfo{
 		UserName:    "user0",
+		Name:        "user0",
 		Groups:      []string{"group0"},
 		Quota:       "1024 B",
 		BytesQuota:  1024,
@@ -155,6 +156,7 @@ func TestDwnConsRSet(t *testing.T) {
 	require.NoError(t, e)
 	rui := &UserInfo{
 		UserName:    open.Cred.User,
+		Name:        open.Cred.User,
 		Groups:      []string{"group1"},
 		Quota:       "512 B",
 		BytesQuota:  512,

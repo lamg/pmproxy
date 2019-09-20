@@ -35,7 +35,14 @@ func (p *PMClient) UserStatus() (m cli.Command) {
 		Flags:   managerFlag(&dwn, ""),
 		Usage:   "Retrieves user status",
 		Action: func(c *cli.Context) (e error) {
-			ui, e := p.status(dwn)
+			user, args := "", c.Args()
+			// empty means the status is its own
+			// otherwise if it's administrator it can get other
+			// user's status
+			if args.Present() {
+				user = args.First()
+			}
+			ui, e := p.status(dwn, user)
 			if e == nil {
 				fmt.Printf("User: %s\n", ui.UserName)
 				fmt.Printf("Name: %s\n", ui.Name)
@@ -49,7 +56,7 @@ func (p *PMClient) UserStatus() (m cli.Command) {
 	return
 }
 
-func (p *PMClient) status(dwnMng string) (ui *mng.UserInfo, e error) {
+func (p *PMClient) status(dwnMng, user string) (ui *mng.UserInfo, e error) {
 	if dwnMng == "" {
 		var li *loginInfo
 		li, e = p.readSecret()
@@ -60,6 +67,10 @@ func (p *PMClient) status(dwnMng string) (ui *mng.UserInfo, e error) {
 	m := &mng.Cmd{
 		Cmd:     mng.Get,
 		Manager: dwnMng,
+	}
+	if user != "" {
+		m.Cmd = mng.GetOther
+		m.String = user
 	}
 	okf := func(bs []byte) (d error) {
 		ui = new(mng.UserInfo)

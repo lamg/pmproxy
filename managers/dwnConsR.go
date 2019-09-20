@@ -54,6 +54,7 @@ type DwnConsR struct {
 const (
 	DwnConsRK = "DwnConsR"
 	Filter    = "filter"
+	GetOther  = "getOther"
 )
 
 type NoAdmErr struct {
@@ -128,6 +129,20 @@ func (d *DwnConsR) exec(c *Cmd) (term bool) {
 				data, c.Err = d.info(c.User, c.String, c.Groups)
 				if c.Err == nil {
 					c.Data, c.Err = json.Marshal(data)
+				}
+			},
+		},
+		{
+			GetOther,
+			func() {
+				if c.IsAdmin {
+					var data *UserInfo
+					data, c.Err = d.info(c.User, c.String, c.Groups)
+					if c.Err == nil {
+						c.Data, c.Err = json.Marshal(data)
+					}
+				} else {
+					c.Err = &NoAdmErr{User: c.User}
 				}
 			},
 		},
@@ -286,6 +301,16 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 				{name: ipUserMng, cmd: Get},
 				{name: d.UserDBN, cmd: Get},
 				{name: d.Name, cmd: Get},
+			},
+		},
+		{
+			name: d.Name,
+			cmd:  GetOther,
+			mngs: []mngPath{
+				{name: ipUserMng, cmd: Get},
+				{name: adminsMng, cmd: isAdminK},
+				{name: d.UserDBN, cmd: GetOther},
+				{name: d.Name, cmd: GetOther},
 			},
 		},
 		{
