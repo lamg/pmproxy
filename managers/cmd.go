@@ -72,4 +72,5 @@ const (
 	Encrypt    = "encrypt"
 	Decrypt    = "decrypt"
 	Discover   = "discover"
+	RulesK     = "rules"
 )

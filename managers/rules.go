@@ -10,9 +10,7 @@ type rules struct {
 	predicate *pred.Predicate
 }
 
-const (
-	RulesK = "rules"
-)
+const ()
 
 func newRules(preds string) (r *rules, e error) {
 	r = new(rules)
