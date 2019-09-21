@@ -22,6 +22,7 @@ func newRules(preds string) (r *rules, e error) {
 
 func (m *rules) exec(c *Cmd) (term bool) {
 	if c.Cmd == Match || c.Cmd == Discover {
+		ninterp := make(map[string]*MatchType, len(c.interp))
 		interp := func(name string) (r, def bool) {
 			if name == pred.TrueStr || name == pred.FalseStr {
 				r, def = name == pred.TrueStr, true
@@ -29,6 +30,7 @@ func (m *rules) exec(c *Cmd) (term bool) {
 				var mt *MatchType
 				mt, def = c.interp[name]
 				if def {
+					ninterp[name] = mt
 					r = mt.Match
 					if r && mt.Type == DwnConsRK {
 						c.consR = append(c.consR, name)
@@ -38,6 +40,7 @@ func (m *rules) exec(c *Cmd) (term bool) {
 			return
 		}
 		p := pred.Reduce(m.predicate, interp)
+		c.interp = ninterp // hiding managers not reached by evaluation
 		c.Ok = p.String == pred.TrueStr
 		c.String = pred.String(p)
 		if c.Cmd == Discover {

@@ -42,7 +42,6 @@ func TestDiscover(t *testing.T) {
 	require.Equal(t, "false", dr.Result)
 	interp := map[string]*MatchType{
 		"sessions": &MatchType{Match: false, Type: SessionIPMK},
-		"down":     &MatchType{Match: true, Type: DwnConsRK},
 	}
 	require.Equal(t, interp, dr.MatchMng)
 	require.Equal(t, 0, len(c.consR))
@@ -57,6 +56,7 @@ func TestDiscover(t *testing.T) {
 	cmf(c)
 	e = json.Unmarshal(c.Data, dr)
 	interp["sessions"].Match = true
+	interp["down"] = &MatchType{Type: DwnConsRK, Match: true}
 	require.Equal(t, interp, dr.MatchMng)
 	require.Equal(t, []string{"down"}, c.consR)
 }
