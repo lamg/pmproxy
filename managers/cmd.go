@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"fmt"
 	"github.com/lamg/proxy"
 )
 
@@ -63,6 +64,10 @@ type DiscoverRes struct {
 type CmdF func(*Cmd) bool
 
 const (
+	Open       = "open"
+	Close      = "close"
+	Auth       = "authenticate"
+	Check      = "check"
 	Skip       = "skip"
 	Get        = "get"
 	Set        = "set"
@@ -72,5 +77,100 @@ const (
 	Encrypt    = "encrypt"
 	Decrypt    = "decrypt"
 	Discover   = "discover"
-	RulesK     = "rules"
+	Filter     = "filter"
+	GetOther   = "getOther"
+	isAdmin    = "isAdmin"
+	encrypt    = "encrypt"
+	decrypt    = "decrypt"
+	Renew      = "renew"
+
+	DwnConsRK   = "DwnConsR"
+	SessionIPMK = "sessionIPM"
+
+	RulesK         = "rules"
+	connectionsMng = "connections"
+	ipUserMng      = "ipUserMng"
+	adminsMng      = "adminsMng"
+	cryptMng       = "crypt"
 )
+
+type StringErr struct {
+	Message string `json:"message"`
+}
+
+func (s *StringErr) Error() (r string) {
+	r = s.Message
+	return
+}
+
+func (s *StringErr) Is(e error) (ok bool) {
+	ok = e != nil && s.Message == e.Error()
+	return
+}
+
+type CheckErr struct {
+	Logged    string
+	Decrypted string
+}
+
+func (c *CheckErr) Error() (s string) {
+	s = fmt.Sprintf("Check failed: '%s' ≠ '%s'", c.Logged,
+		c.Decrypted)
+	return
+}
+
+type ManagerErr struct {
+	Mng string
+	Cmd string
+}
+
+func (m *ManagerErr) Error() (s string) {
+	s = fmt.Sprintf("manager not found: '%s' with command '%s'",
+		m.Mng, m.Cmd)
+	return
+}
+
+type NoConnErr struct {
+	IP string
+}
+
+func (c *NoConnErr) Error() (s string) {
+	s = fmt.Sprintf("No connection at '%s'", c.IP)
+	return
+}
+
+type NoUser struct {
+	User string
+}
+
+func (u *NoUser) Error() (s string) {
+	s = fmt.Sprintf("No user '%s'", u.User)
+	return
+}
+
+type NoAdmErr struct {
+	User string
+}
+
+func (a *NoAdmErr) Error() (s string) {
+	s = fmt.Sprintf("User '%s' isn't administrator", a.User)
+	return
+}
+
+type QuotaReachedErr struct {
+	Quota string
+}
+
+func (r *QuotaReachedErr) Error() (s string) {
+	s = fmt.Sprintf("Consumption reached quota %s", r.Quota)
+	return
+}
+
+type ForbiddenByRulesErr struct {
+	Result string
+}
+
+func (c *ForbiddenByRulesErr) Error() (s string) {
+	s = fmt.Sprintf("Forbidden: rules evaluated to '%s'", c.Result)
+	return
+}

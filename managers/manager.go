@@ -21,7 +21,6 @@
 package managers
 
 import (
-	"fmt"
 	alg "github.com/lamg/algorithms"
 	"sync"
 )
@@ -29,17 +28,6 @@ import (
 type manager struct {
 	mngs  *sync.Map
 	paths []mngPath
-}
-
-type ManagerErr struct {
-	Mng string
-	Cmd string
-}
-
-func (m *ManagerErr) Error() (s string) {
-	s = fmt.Sprintf("manager not found: '%s' with command '%s'",
-		m.Mng, m.Cmd)
-	return
 }
 
 type mngPath struct {

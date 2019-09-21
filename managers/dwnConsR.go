@@ -22,7 +22,6 @@ package managers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/c2h5oh/datasize"
 	alg "github.com/lamg/algorithms"
 	"github.com/lamg/proxy"
@@ -49,21 +48,6 @@ type DwnConsR struct {
 	userCons *sync.Map
 
 	now func() time.Time
-}
-
-const (
-	DwnConsRK = "DwnConsR"
-	Filter    = "filter"
-	GetOther  = "getOther"
-)
-
-type NoAdmErr struct {
-	User string
-}
-
-func (a *NoAdmErr) Error() (s string) {
-	s = fmt.Sprintf("User '%s' isn't administrator", a.User)
-	return
 }
 
 type consMap struct {
@@ -186,15 +170,6 @@ func (d *DwnConsR) exec(c *Cmd) (term bool) {
 	return
 }
 
-type QuotaReachedErr struct {
-	Quota string
-}
-
-func (r *QuotaReachedErr) Error() (s string) {
-	s = fmt.Sprintf("Consumption reached quota %s", r.Quota)
-	return
-}
-
 func (d *DwnConsR) handleConn(c *Cmd) {
 	if c.Ok {
 		// checks if previous manager signaled this step
@@ -310,7 +285,7 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 			mngs: []mngPath{
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
-				{name: adminsMng, cmd: isAdminK},
+				{name: adminsMng, cmd: isAdmin},
 				{name: d.UserDBN, cmd: GetOther},
 				{name: d.Name, cmd: GetOther},
 			},
@@ -321,7 +296,7 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 			mngs: []mngPath{
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
-				{name: adminsMng, cmd: isAdminK},
+				{name: adminsMng, cmd: isAdmin},
 				{name: d.Name, cmd: Set},
 			},
 		},

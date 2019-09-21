@@ -25,15 +25,6 @@ import (
 	"sync"
 )
 
-const (
-	ipUserMng = "ipUserMng"
-	ipUserCmd = "ipUserCmd"
-	ipUserDel = "ipUserDel"
-	sessionsK = "sessions"
-	userK     = "user"
-	openedK   = "opened"
-)
-
 type ipUser struct {
 	mäp *sync.Map
 }

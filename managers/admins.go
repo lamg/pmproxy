@@ -4,10 +4,7 @@ import (
 	alg "github.com/lamg/algorithms"
 )
 
-const (
-	isAdminK  = "isAdmin"
-	adminsMng = "adminsMng"
-)
+const ()
 
 type admins struct {
 	admins []string
@@ -16,7 +13,7 @@ type admins struct {
 func (m *admins) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
-			isAdminK,
+			isAdmin,
 			func() {
 				c.IsAdmin, _ = alg.BLnSrch(
 					func(i int) bool { return m.admins[i] == c.User },
@@ -33,10 +30,10 @@ func (m *admins) paths() (ms []mngPath) {
 	ms = []mngPath{
 		{
 			name: adminsMng,
-			cmd:  isAdminK,
+			cmd:  isAdmin,
 			mngs: []mngPath{
 				{name: ipUserMng, cmd: Get},
-				{name: adminsMng, cmd: isAdminK},
+				{name: adminsMng, cmd: isAdmin},
 			},
 		},
 	}

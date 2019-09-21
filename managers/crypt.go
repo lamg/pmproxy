@@ -34,33 +34,11 @@ type crypt struct {
 	expiration time.Duration
 }
 
-const (
-	cryptMng = "crypt"
-	encrypt  = "encrypt"
-	decrypt  = "decrypt"
-	secretOk = "secretOk"
-	Renew    = "renew"
-)
-
 var (
 	ErrClaims  = &StringErr{"invalid claims"}
 	ErrExpired = &StringErr{"expired token"}
 	ErrEmpty   = &StringErr{"empty JWT"}
 )
-
-type StringErr struct {
-	Message string `json:"message"`
-}
-
-func (s *StringErr) Error() (r string) {
-	r = s.Message
-	return
-}
-
-func (s *StringErr) Is(e error) (ok bool) {
-	ok = e != nil && s.Message == e.Error()
-	return
-}
 
 func newCrypt(exp time.Duration) (c *crypt, e error) {
 	c = &crypt{

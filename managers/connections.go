@@ -21,7 +21,6 @@
 package managers
 
 import (
-	"fmt"
 	alg "github.com/lamg/algorithms"
 	"sync"
 )
@@ -30,21 +29,8 @@ type connections struct {
 	ipRestr *sync.Map
 }
 
-const (
-	connectionsMng = "connections"
-)
-
 func newConnections() (c *connections) {
 	c = &connections{ipRestr: new(sync.Map)}
-	return
-}
-
-type ForbiddenByRulesErr struct {
-	Result string
-}
-
-func (c *ForbiddenByRulesErr) Error() (s string) {
-	s = fmt.Sprintf("Forbidden: rules evaluated to '%s'", c.Result)
 	return
 }
 
@@ -77,15 +63,6 @@ func (n *connections) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
-}
-
-type NoConnErr struct {
-	IP string
-}
-
-func (c *NoConnErr) Error() (s string) {
-	s = fmt.Sprintf("No connection at '%s'", c.IP)
 	return
 }
 

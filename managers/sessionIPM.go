@@ -21,32 +21,12 @@
 package managers
 
 import (
-	"fmt"
 	alg "github.com/lamg/algorithms"
 )
 
 type sessionIPM struct {
 	Name string `toml:"name"`
 	Auth string `toml:"auth"`
-}
-
-const (
-	Open        = "open"
-	Close       = "close"
-	Auth        = "authenticate"
-	Check       = "check"
-	SessionIPMK = "sessionIPM"
-)
-
-type CheckErr struct {
-	Logged    string
-	Decrypted string
-}
-
-func (c *CheckErr) Error() (s string) {
-	s = fmt.Sprintf("Check failed: '%s' ≠ '%s'", c.Logged,
-		c.Decrypted)
-	return
 }
 
 func (m *sessionIPM) exec(c *Cmd) (term bool) {

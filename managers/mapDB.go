@@ -21,12 +21,7 @@
 package managers
 
 import (
-	"fmt"
 	alg "github.com/lamg/algorithms"
-)
-
-const (
-	groupsK = "group"
 )
 
 type mapDB struct {
@@ -37,14 +32,14 @@ type mapDB struct {
 
 func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 	if len(d.UserPass) == 0 {
-		e = fmt.Errorf("Empty user-password map")
+		e = &StringErr{"Empty user-password map"}
 	} else {
 		nuser = user
 		p, ok := d.UserPass[user]
 		if !ok {
-			e = fmt.Errorf("No user '%s'", user)
+			e = &NoUser{User: user}
 		} else if p != pass {
-			e = fmt.Errorf("Incorrect password")
+			e = &StringErr{"Incorrect password"}
 		}
 	}
 	return
@@ -52,12 +47,12 @@ func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 
 func (d *mapDB) userGroups(user string) (gs []string, e error) {
 	if len(d.UserGroup) == 0 {
-		e = fmt.Errorf("Empty user-groups map")
+		e = &StringErr{"Empty user-password map"}
 	} else {
 		var ok bool
 		gs, ok = d.UserGroup[user]
 		if !ok {
-			e = fmt.Errorf("No user '%s'", user)
+			e = &NoUser{User: user}
 		}
 	}
 	return
