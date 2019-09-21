@@ -83,6 +83,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			mngs: []mngPath{
 				{name: cryptMng, cmd: decrypt},
 				{name: ipUserMng, cmd: Close},
+				{name: connectionsMng, cmd: Close},
 			},
 		},
 		{

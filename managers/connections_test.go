@@ -39,16 +39,20 @@ func TestConnections(t *testing.T) {
 	require.True(t, errors.As(res.Error, &fr))
 	require.Equal(t, pred.FalseStr, fr.Result)
 
-	_, ctl, _ = openTest(t)
+	cmf, ctl, jtk := openTest(t)
 	res = ctl(&proxy.Operation{
 		Command: proxy.Open,
 		IP:      ht.DefaultRemoteAddr,
 	})
 	require.NoError(t, res.Error)
-	ctl(&proxy.Operation{
-		Command: proxy.Close,
+	c := &Cmd{
+		Cmd:     Close,
+		Manager: "sessions",
+		Secret:  jtk,
 		IP:      ht.DefaultRemoteAddr,
-	})
+	}
+	cmf(c)
+	require.NoError(t, c.Err)
 	res = ctl(&proxy.Operation{
 		Command: proxy.ReadRequest,
 		IP:      ht.DefaultRemoteAddr,
