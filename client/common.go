@@ -34,6 +34,7 @@ import (
 	"io"
 	"io/ioutil"
 	h "net/http"
+	"strings"
 )
 
 type PMClient struct {
@@ -114,7 +115,7 @@ func PostCmd(urls string, c *mng.Cmd) (r *h.Response, e error) {
 		u := urls + pmproxy.ApiCmd
 		r, e = h.Post(u, "text/json", buff)
 		if e == nil && r.StatusCode == h.StatusBadRequest {
-			unmarshalErr(r.Body)
+			e = unmarshalErr(r.Body)
 		}
 	}
 	return
@@ -131,9 +132,14 @@ func unmarshalErr(rc io.ReadCloser) (e error) {
 			new(mng.NoConnErr),
 			new(mng.NoAdmErr),
 			new(mng.QuotaReachedErr),
+			new(mng.StringErr),
 		}
+		rd := strings.NewReader(string(bs))
+		dec := json.NewDecoder(rd)
+		dec.DisallowUnknownFields()
 		ib := func(i int) bool {
-			re := json.Unmarshal(bs, errs[i])
+			re := dec.Decode(errs[i])
+			rd.Seek(io.SeekStart, 0)
 			return re == nil
 		}
 		ok, n := alg.BLnSrch(ib, len(errs))

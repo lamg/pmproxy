@@ -24,7 +24,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	alg "github.com/lamg/algorithms"
 	"time"
@@ -44,9 +43,23 @@ const (
 )
 
 var (
-	ErrClaims  = fmt.Errorf("invalid claims")
-	ErrExpired = fmt.Errorf("expired token")
+	ErrClaims  = &StringErr{"invalid claims"}
+	ErrExpired = &StringErr{"expired token"}
 )
+
+type StringErr struct {
+	Message string `json:"message"`
+}
+
+func (s *StringErr) Error() (r string) {
+	r = s.Message
+	return
+}
+
+func (s *StringErr) Is(e error) (ok bool) {
+	ok = e != nil && s.Message == e.Error()
+	return
+}
 
 func newCrypt(exp time.Duration) (c *crypt, e error) {
 	c = &crypt{
