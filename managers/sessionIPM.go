@@ -52,15 +52,6 @@ func (c *CheckErr) Error() (s string) {
 func (m *sessionIPM) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
-			Check,
-			func() {
-				c.Ok = c.User == c.String
-				if !c.Ok {
-					c.Err = &CheckErr{Logged: c.User, Decrypted: c.String}
-				}
-			},
-		},
-		{
 			Match,
 			func() {
 				c.Ok = c.User != ""
@@ -107,8 +98,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			cmd:  Check,
 			mngs: []mngPath{
 				{name: ipUserMng, cmd: Get},
-				{name: cryptMng, cmd: decrypt},
-				{name: m.Name, cmd: Check},
+				{name: cryptMng, cmd: Check},
 			},
 		},
 	}

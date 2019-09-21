@@ -102,11 +102,12 @@ func TestDwnConsRHandleConn(t *testing.T) {
 }
 
 func TestDwnConsRGet(t *testing.T) {
-	cmf, _, _ := openTest(t)
+	cmf, _, jtk := openTest(t)
 	get := &Cmd{
 		Manager: "down",
 		Cmd:     Get,
 		IP:      ht.DefaultRemoteAddr,
+		Secret:  jtk,
 	}
 	cmf(get)
 	require.NoError(t, get.Err)
@@ -126,13 +127,14 @@ func TestDwnConsRGet(t *testing.T) {
 }
 
 func TestDwnConsRSet(t *testing.T) {
-	cmf, _, _ := openTest(t)
+	cmf, _, jtk := openTest(t)
 	set := &Cmd{
 		Manager: "down",
 		Cmd:     Set,
 		String:  "user1",
 		Uint64:  19,
 		IP:      ht.DefaultRemoteAddr,
+		Secret:  jtk,
 	}
 	cmf(set)
 	require.NoError(t, set.Err)
@@ -148,6 +150,7 @@ func TestDwnConsRSet(t *testing.T) {
 		Manager: "down",
 		Cmd:     Get,
 		IP:      open.IP,
+		Secret:  string(open.Data),
 	}
 	cmf(get)
 	require.NoError(t, get.Err)

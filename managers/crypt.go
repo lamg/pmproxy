@@ -45,6 +45,7 @@ const (
 var (
 	ErrClaims  = &StringErr{"invalid claims"}
 	ErrExpired = &StringErr{"expired token"}
+	ErrEmpty   = &StringErr{"empty JWT"}
 )
 
 type StringErr struct {
@@ -111,6 +112,8 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 		if errors.As(e, &ve) {
 			if ve.Errors&jwt.ValidationErrorExpired == ve.Errors {
 				e = ErrExpired
+			} else if s == "" {
+				e = ErrEmpty
 			}
 			if token != nil {
 				user, _ = token.Claims.(*claim)
@@ -135,6 +138,16 @@ func (c *crypt) exec(m *Cmd) (term bool) {
 				cl, m.Err = c.decrypt(m.Secret)
 				if m.Err == nil {
 					m.String = cl.User
+				}
+			},
+		},
+		{
+			Check,
+			func() {
+				var cl *claim
+				cl, m.Err = c.decrypt(m.Secret)
+				if m.Err == nil && cl.User != m.User {
+					m.Err = &CheckErr{Logged: m.User, Decrypted: cl.User}
 				}
 			},
 		},
