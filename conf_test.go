@@ -64,15 +64,33 @@ func TestConcurrency(t *testing.T) {
 			ht.DefaultRemoteAddr,
 			[]req{
 				{
-					toApi:     mng.Cmd{},
-					fromProxy: proxy.Operation{Command: proxy.Open},
-					okf: func(c *mng.Cmd, r *proxy.Result) (ok bool) {
-						var fr *mng.ForbiddenByRulesErr
-						ok = errors.As(r.Error, &fr)
-						var nc *mng.ManagerErr
-						ok = ok && errors.As(c.Err, &nc)
-						return
+					fromProxy: &proxy.Operation{Command: proxy.Open},
+					okf:       falseRulesEval,
+				},
+				{
+					toApi: &mng.Cmd{
+						Manager: "sessions",
+						Cmd:     mng.Open,
+						Cred:    &mng.Credentials{User: "user0", Pass: "pass0"},
 					},
+					okf: okCmd,
+				},
+			},
+		},
+		{
+			"10.0.0.1",
+			[]req{
+				{
+					toApi: &mng.Cmd{
+						Manager: "sessions",
+						Cmd:     mng.Open,
+						Cred: &mng.Credentials{
+							User: "user1",
+							Pass: "pass1",
+						},
+					},
+					fromProxy: &proxy.Operation{Command: proxy.Open},
+					okf:       okCmdRes,
 				},
 			},
 		},
@@ -82,12 +100,17 @@ func TestConcurrency(t *testing.T) {
 		go func() {
 			inf0 := func(j int) {
 				req := clients[i].reqs[j]
-				c := &req.toApi
-				c.IP = clients[i].ip
-				cmf(c)
-				op := &req.fromProxy
-				op.IP = c.IP
-				res := ctl(op)
+				c := req.toApi
+				if c != nil {
+					c.IP = clients[i].ip
+					cmf(c)
+				}
+				op := req.fromProxy
+				var res *proxy.Result
+				if op != nil {
+					op.IP = clients[i].ip
+					res = ctl(op)
+				}
 				ok := req.okf(c, res)
 				rc <- reqBool{i: i, j: j, ok: ok}
 			}
@@ -109,9 +132,25 @@ type reqBool struct {
 }
 
 type req struct {
-	toApi     mng.Cmd
-	fromProxy proxy.Operation
+	toApi     *mng.Cmd
+	fromProxy *proxy.Operation
 	okf       func(*mng.Cmd, *proxy.Result) bool
+}
+
+func okCmd(c *mng.Cmd, r *proxy.Result) (ok bool) {
+	ok = c.Err == nil
+	return
+}
+
+func okCmdRes(c *mng.Cmd, r *proxy.Result) (ok bool) {
+	ok = c.Err == nil && r.Error == nil
+	return
+}
+
+func falseRulesEval(c *mng.Cmd, r *proxy.Result) (ok bool) {
+	var fr *mng.ForbiddenByRulesErr
+	ok = errors.As(r.Error, &fr)
+	return
 }
 
 const cfg = `
@@ -132,6 +171,7 @@ rules = "sessions ∧ down"
 	name = "map"
 	[mapDB.userPass]
 		user0 = "pass0"
+		user1 = "pass1"
 	[mapDB.userGroup]
 		user0 = ["group0"]
 `
