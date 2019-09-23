@@ -22,11 +22,12 @@ package main
 
 import (
 	"github.com/lamg/pmproxy"
+	"github.com/spf13/afero"
 	"log"
 )
 
 func main() {
-	e := pmproxy.Serve()
+	e := pmproxy.Serve(afero.NewOsFs())
 	if e != nil {
 		log.Fatal(e)
 	}

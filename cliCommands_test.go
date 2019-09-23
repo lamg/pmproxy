@@ -18,13 +18,12 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/lamg/pmproxy"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -129,7 +128,7 @@ func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
 	require.NoError(t, e)
 	ch, _, prs, e := mng.Load("", fs)
 	require.NoError(t, e)
-	ifh = pmproxy.StdIface("", ch)
+	ifh = StdIface("", ch)
 	return
 }
 

@@ -18,7 +18,7 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
 	"bytes"
@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	alg "github.com/lamg/algorithms"
-	"github.com/lamg/pmproxy"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli"
@@ -112,7 +111,7 @@ func PostCmd(urls string, c *mng.Cmd) (r *h.Response, e error) {
 	bs, e := json.Marshal(c)
 	if e == nil {
 		buff := bytes.NewBuffer(bs)
-		u := urls + pmproxy.ApiCmd
+		u := urls + ApiCmd
 		r, e = h.Post(u, "text/json", buff)
 		if e == nil && r.StatusCode == h.StatusBadRequest {
 			e = unmarshalErr(r.Body)

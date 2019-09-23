@@ -18,29 +18,37 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
+	"encoding/json"
+	"fmt"
 	mng "github.com/lamg/pmproxy/managers"
 	"github.com/urfave/cli"
 )
 
-func (p *PMClient) ResetConsumption() (m cli.Command) {
+func (p *PMClient) UserStatus() (m cli.Command) {
 	var dwn string
 	m = cli.Command{
-		Name:    "reset",
-		Aliases: []string{"r"},
-		Usage:   "Resets an user's consumption",
+		Name:    "status",
+		Aliases: []string{"s"},
 		Flags:   managerFlag(&dwn, ""),
+		Usage:   "Retrieves user status",
 		Action: func(c *cli.Context) (e error) {
-			args := c.Args()
-			li, e := p.readSecret()
+			user, args := "", c.Args()
+			// empty means the status is its own
+			// otherwise if it's administrator it can get other
+			// user's status
+			if args.Present() {
+				user = args.First()
+			}
+			ui, e := p.status(dwn, user)
 			if e == nil {
-				e = checkArgExec(
-					func() error { return p.reset(li.DwnConsR, args[0]) },
-					1,
-					len(args),
-				)
+				fmt.Printf("User: %s\n", ui.UserName)
+				fmt.Printf("Name: %s\n", ui.Name)
+				fmt.Printf("Groups: %v\n", ui.Groups)
+				fmt.Printf("Quota: %s Consumption: %s\n", ui.Quota,
+					ui.Consumption)
 			}
 			return
 		},
@@ -48,14 +56,27 @@ func (p *PMClient) ResetConsumption() (m cli.Command) {
 	return
 }
 
-func (p *PMClient) reset(manager, user string) (e error) {
-	m := &mng.Cmd{
-		Manager: manager,
-		Cmd:     mng.Set,
-		String:  user,
-		Uint64:  1,
+func (p *PMClient) status(dwnMng, user string) (ui *mng.UserInfo, e error) {
+	if dwnMng == "" {
+		var li *loginInfo
+		li, e = p.readSecret()
+		if e == nil {
+			dwnMng = li.DwnConsR
+		}
 	}
-	okf := func(bs []byte) (d error) { return }
+	m := &mng.Cmd{
+		Cmd:     mng.Get,
+		Manager: dwnMng,
+	}
+	if user != "" {
+		m.Cmd = mng.GetOther
+		m.String = user
+	}
+	okf := func(bs []byte) (d error) {
+		ui = new(mng.UserInfo)
+		d = json.Unmarshal(bs, ui)
+		return
+	}
 	e = p.sendRecv(m, okf)
 	return
 }

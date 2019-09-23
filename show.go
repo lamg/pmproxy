@@ -18,33 +18,41 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package main
+package pmproxy
 
 import (
-	"github.com/lamg/pmproxy/client"
-	"github.com/spf13/afero"
+	"fmt"
+	mng "github.com/lamg/pmproxy/managers"
 	"github.com/urfave/cli"
-	"log"
-	"os"
 )
 
-func main() {
-	cl := &client.PMClient{
-		Fs:      afero.NewOsFs(),
-		PostCmd: client.PostCmd,
+func (p *PMClient) ShowMng() (m cli.Command) {
+	m = cli.Command{
+		Name:    "show",
+		Aliases: []string{"sh"},
+		Action: func(c *cli.Context) (e error) {
+			args := c.Args()
+			e = checkArgExec(
+				func() (d error) {
+					r, d := p.showMng(args[0])
+					fmt.Println(r)
+					return
+				},
+				1,
+				len(args),
+			)
+			return
+		},
 	}
-	app := cli.NewApp()
-	app.Commands = []cli.Command{
-		cl.Discover(),
-		cl.Login(),
-		cl.Logout(),
-		cl.LoggedUsers(),
-		cl.UserStatus(),
-		cl.ResetConsumption(),
-		cl.ShowMng(),
+	return
+}
+
+func (p *PMClient) showMng(manager string) (r string, e error) {
+	m := &mng.Cmd{
+		Manager: manager,
+		Cmd:     mng.Show,
 	}
-	e := app.Run(os.Args)
-	if e != nil {
-		log.Fatal(e)
-	}
+	okf := func(bs []byte) (d error) { r = string(bs); return }
+	e = p.sendRecv(m, okf)
+	return
 }

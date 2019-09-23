@@ -18,22 +18,44 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	mng "github.com/lamg/pmproxy/managers"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"testing"
+	"github.com/urfave/cli"
 )
 
-func TestUnmarshalErr(t *testing.T) {
-	bs, e := json.Marshal(mng.ErrExpired)
-	require.NoError(t, e)
-	bf := bytes.NewBuffer(bs)
-	ne := unmarshalErr(ioutil.NopCloser(bf))
-	require.True(t, errors.Is(ne, mng.ErrExpired))
+func (p *PMClient) ResetConsumption() (m cli.Command) {
+	var dwn string
+	m = cli.Command{
+		Name:    "reset",
+		Aliases: []string{"r"},
+		Usage:   "Resets an user's consumption",
+		Flags:   managerFlag(&dwn, ""),
+		Action: func(c *cli.Context) (e error) {
+			args := c.Args()
+			li, e := p.readSecret()
+			if e == nil {
+				e = checkArgExec(
+					func() error { return p.reset(li.DwnConsR, args[0]) },
+					1,
+					len(args),
+				)
+			}
+			return
+		},
+	}
+	return
+}
+
+func (p *PMClient) reset(manager, user string) (e error) {
+	m := &mng.Cmd{
+		Manager: manager,
+		Cmd:     mng.Set,
+		String:  user,
+		Uint64:  1,
+	}
+	okf := func(bs []byte) (d error) { return }
+	e = p.sendRecv(m, okf)
+	return
 }

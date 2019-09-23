@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 func TestConf(t *testing.T) {
@@ -134,3 +135,43 @@ rules = "sessions ∧ down"
 	[mapDB.userGroup]
 		user0 = ["group0"]
 `
+
+func TestServe(t *testing.T) {
+	// server configuration
+	home, e := os.UserHomeDir()
+	require.NoError(t, e)
+	fs := afero.NewMemMapFs()
+	e = afero.WriteFile(fs, path.Join(home, confDir, confFile),
+		[]byte(cfgExample), 0644)
+	require.NoError(t, e)
+	// managers configuration
+	cfile, _, e := mng.ConfPath()
+	require.NoError(t, e)
+	e = afero.WriteFile(fs, cfile, []byte(cfg), 0644)
+	require.NoError(t, e)
+
+	go Serve(fs)
+
+	cl := &PMClient{Fs: fs, PostCmd: PostCmd}
+	var dr *mng.DiscoverRes
+	times, lapse := 5, 200*time.Millisecond
+	ib := func(i int) (ok bool) {
+		time.Sleep(lapse)
+		dr, e = cl.discoverC("https://localhost:4443", "")
+		ok = e == nil
+		return
+	}
+	ok, _ := alg.BLnSrch(ib, times)
+	require.True(t, ok, "Server failed to start in %s",
+		time.Duration(time.Duration(times)*lapse).String())
+	expected := &mng.DiscoverRes{
+		Result: "false",
+		MatchMng: map[string]*mng.MatchType{
+			"sessions": &mng.MatchType{
+				Match: false,
+				Type:  mng.SessionIPMK,
+			},
+		},
+	}
+	require.Equal(t, expected, dr)
+}

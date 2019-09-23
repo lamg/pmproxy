@@ -18,41 +18,22 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
-package client
+package pmproxy
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/json"
+	"errors"
 	mng "github.com/lamg/pmproxy/managers"
-	"github.com/urfave/cli"
+	"github.com/stretchr/testify/require"
+	"io/ioutil"
+	"testing"
 )
 
-func (p *PMClient) ShowMng() (m cli.Command) {
-	m = cli.Command{
-		Name:    "show",
-		Aliases: []string{"sh"},
-		Action: func(c *cli.Context) (e error) {
-			args := c.Args()
-			e = checkArgExec(
-				func() (d error) {
-					r, d := p.showMng(args[0])
-					fmt.Println(r)
-					return
-				},
-				1,
-				len(args),
-			)
-			return
-		},
-	}
-	return
-}
-
-func (p *PMClient) showMng(manager string) (r string, e error) {
-	m := &mng.Cmd{
-		Manager: manager,
-		Cmd:     mng.Show,
-	}
-	okf := func(bs []byte) (d error) { r = string(bs); return }
-	e = p.sendRecv(m, okf)
-	return
+func TestUnmarshalErr(t *testing.T) {
+	bs, e := json.Marshal(mng.ErrExpired)
+	require.NoError(t, e)
+	bf := bytes.NewBuffer(bs)
+	ne := unmarshalErr(ioutil.NopCloser(bf))
+	require.True(t, errors.Is(ne, mng.ErrExpired))
 }

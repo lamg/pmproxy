@@ -40,8 +40,7 @@ import (
 
 // Serve starts the control interface and proxy servers,
 // according parameters in configuration
-func Serve() (e error) {
-	fs := afero.NewOsFs()
+func Serve(fs afero.Fs) (e error) {
 	p, e := load(fs)
 	var cmdChan mng.CmdF
 	var ctl proxy.ConnControl
