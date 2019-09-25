@@ -52,7 +52,7 @@ The previous content must be placed at `$HOME/.config/pmproxy/managers.toml`.
 
 Also there's a separate file for the servers (proxy and API) configuration, that must be placed at `$HOME/.config/pmproxy/server.toml`.An example content is:
 
-```
+```toml
 [api]
 	httpsCert="cert.pem"
 	httpsKey="key.pem"
