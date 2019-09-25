@@ -202,7 +202,7 @@ func TestServe(t *testing.T) {
 		return
 	}
 	ok, _ := alg.BLnSrch(ib, times)
-	println(e.Error())
+	t.Log(e.Error())
 	require.True(t, ok, "Server failed to start in %s",
 		time.Duration(time.Duration(times)*lapse).String())
 	expected := &mng.DiscoverRes{
