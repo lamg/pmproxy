@@ -15,6 +15,7 @@ The predicate contains references as identifiers, which point to _managers_ that
 - the client IP address
 - the time the request was made
 - and the requested URL
+
 return `true` or `false` when the predicate is evaluated with a specific request.
 
 There are also managers that once they are reached by the predicate evaluation always return `true`, but also set themselves as handlers of the connections made by that client.
