@@ -194,7 +194,7 @@ func TestServe(t *testing.T) {
 
 	cl := &PMClient{Fs: fs, PostCmd: PostCmd}
 	var dr *mng.DiscoverRes
-	times, lapse := 5, 200*time.Millisecond
+	times, lapse := 10, 200*time.Millisecond
 	ib := func(i int) (ok bool) {
 		time.Sleep(lapse)
 		dr, e = cl.discoverC("https://localhost:4443", "")
