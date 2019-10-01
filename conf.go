@@ -58,6 +58,8 @@ func load(fs afero.Fs) (p *pmproxyConf, e error) {
 			exKey, e = afero.Exists(fs, keyFl)
 		},
 		func() {
+			p.Api.WebStaticFilesDir = path.Join(home, confDir,
+				p.Api.WebStaticFilesDir)
 			host, _, e = net.SplitHostPort(p.Api.Server.Addr)
 		},
 		func() {
