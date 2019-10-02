@@ -117,6 +117,7 @@ func FastIface(staticFPath string,
 	cmdChan mng.CmdF) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
+			IndexNames:         []string{"index.html"},
 			Root:               staticFPath,
 			GenerateIndexPages: false,
 		}
@@ -136,9 +137,6 @@ func FastIface(staticFPath string,
 				ctx.Response.SetBody(bs)
 			},
 			func(file string) {
-				if file == "/" {
-					file = "index.html"
-				}
 				ctx.URI().SetPath(file)
 				fsHnd(ctx)
 			},

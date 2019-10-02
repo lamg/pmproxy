@@ -61,7 +61,11 @@ func Load(confDir string, fs afero.Fs) (
 			bs, e = afero.ReadFile(fs, confPath)
 		},
 		func() { e = toml.Unmarshal(bs, c) },
-		func() { c.parentProxy, e = url.Parse(c.ParentProxy) },
+		func() {
+			if c.ParentProxy != "" {
+				c.parentProxy, e = url.Parse(c.ParentProxy)
+			}
+		},
 		func() { e = initSessionIPM(c, m) },
 		func() { e = initDwnConsR(c, m) },
 		func() { initAdmins(c, m) },
