@@ -26,12 +26,12 @@ import (
 )
 
 type adDB struct {
-	Name string
-	Addr string
-	Suff string
-	Bdn  string
-	User string
-	Pass string
+	Name string `toml:"name"`
+	Addr string `toml:"addr"`
+	Suff string `toml:"suff"`
+	Bdn  string `toml:"bdn"`
+	User string `toml:"user"`
+	Pass string `toml:"pass"`
 	ldap *ld.Ldap
 }
 

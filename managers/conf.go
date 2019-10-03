@@ -62,6 +62,9 @@ func Load(confDir string, fs afero.Fs) (
 		},
 		func() { e = toml.Unmarshal(bs, c) },
 		func() {
+			if c.AdDB != nil {
+				c.AdDB.init()
+			}
 			if c.ParentProxy != "" {
 				c.parentProxy, e = url.Parse(c.ParentProxy)
 			}

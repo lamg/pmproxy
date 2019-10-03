@@ -107,6 +107,9 @@ func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 			WriteTimeout: p.Server.WriteTimeout,
 			Addr:         p.Server.Addr,
 			Handler:      proxy.NewProxy(ctl, p.DialTimeout, now),
+			// Disable HTTP/2.
+			TLSNextProto: make(map[string]func(*h.Server,
+				*tls.Conn, h.Handler)),
 		}
 		e = std.ListenAndServe()
 	}
