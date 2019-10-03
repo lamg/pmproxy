@@ -46,6 +46,8 @@ github.com/lamg/proxy v1.2.1-0.20191002210550-113ed2adc584 h1:Wy5supyIpH+NCF6zGO
 github.com/lamg/proxy v1.2.1-0.20191002210550-113ed2adc584/go.mod h1:LFuwcgNqQKV2JU+EsXsNQEhjsp9gV0jZ/InULR15jPU=
 github.com/lamg/proxy v1.2.1-0.20191002211631-01cb72272c5b h1:EZhctwzsK8orfISACbT996VAWCO4nG1hQkpKWSOaS3k=
 github.com/lamg/proxy v1.2.1-0.20191002211631-01cb72272c5b/go.mod h1:LFuwcgNqQKV2JU+EsXsNQEhjsp9gV0jZ/InULR15jPU=
+github.com/lamg/proxy v1.2.1-0.20191003185132-eb5593e6f2bf h1:jffH9ysNiBPS38Ul9SxHLPWNCJL+u0a01ZGVXU1iNyw=
+github.com/lamg/proxy v1.2.1-0.20191003185132-eb5593e6f2bf/go.mod h1:LFuwcgNqQKV2JU+EsXsNQEhjsp9gV0jZ/InULR15jPU=
 github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f h1:g8FzCgiLckKe695REpNINfRFvK7fze5tjeBeUUOGBF0=
 github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f/go.mod h1:ccF76DNsUXw+Ju3r6CLNRF1Exuo04CcKmtINK97Um3Y=
 github.com/pelletier/go-toml v1.4.0 h1:u3Z1r+oOXJIkxqw34zVhyPgjBsm6X2wn21NWs/HfSeg=
@@ -81,6 +83,8 @@ golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 h1:k7pJ2yAPLPgbskkFdhRCsA77k
 golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20191002035440-2ec189313ef0 h1:2mqDk8w/o6UmeUCu5Qiq2y7iMf6anbx+YA8d1JFoFrs=
 golang.org/x/net v0.0.0-20191002035440-2ec189313ef0/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+golang.org/x/net v0.0.0-20191003171128-d98b1b443823 h1:Ypyv6BNJh07T1pUSrehkLemqPKXhus2MkfktJ91kRh4=
+golang.org/x/net v0.0.0-20191003171128-d98b1b443823/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

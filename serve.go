@@ -98,7 +98,8 @@ func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 		fast := &fh.Server{
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
-			Handler:      proxy.NewFastProxy(ctl, p.DialTimeout, now),
+			Handler: proxy.NewFastProxy(ctl, p.DialTimeout,
+				now).RequestHandler,
 		}
 		e = fast.ListenAndServe(p.Server.Addr)
 	} else {
