@@ -240,8 +240,6 @@ func proxyCtl(cf *conf, cmdChan CmdF) (
 		}
 		if o.Command == proxy.Open {
 			c.Cmd = Open
-		} else if o.Command == proxy.Close {
-			c.Cmd = Close
 		}
 		cmdChan(c)
 		r = c.Result

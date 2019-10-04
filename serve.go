@@ -95,11 +95,11 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 	now func() time.Time) (e error) {
 	if p.Server.FastOrStd {
+		prx := proxy.NewFastProxy(ctl, p.DialTimeout, now)
 		fast := &fh.Server{
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
-			Handler: proxy.NewFastProxy(ctl, p.DialTimeout,
-				now).RequestHandler,
+			Handler:      prx.RequestHandler,
 		}
 		e = fast.ListenAndServe(p.Server.Addr)
 	} else {
