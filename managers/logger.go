@@ -18,6 +18,8 @@
 // Public License along with PMProxy.  If not, see
 // <https://www.gnu.org/licenses/>.
 
+// +build linux
+
 package managers
 
 import (
