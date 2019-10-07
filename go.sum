@@ -50,6 +50,8 @@ github.com/lamg/proxy v1.2.1-0.20191003185132-eb5593e6f2bf h1:jffH9ysNiBPS38Ul9S
 github.com/lamg/proxy v1.2.1-0.20191003185132-eb5593e6f2bf/go.mod h1:LFuwcgNqQKV2JU+EsXsNQEhjsp9gV0jZ/InULR15jPU=
 github.com/lamg/proxy v1.2.1-0.20191004222150-4f42d04b8aba h1:dYvn2V1Z0yxH6wU+1oJl2baJI3H7+spjXUljS2K6IbY=
 github.com/lamg/proxy v1.2.1-0.20191004222150-4f42d04b8aba/go.mod h1:LFuwcgNqQKV2JU+EsXsNQEhjsp9gV0jZ/InULR15jPU=
+github.com/lamg/proxy v1.2.1-0.20191007164654-ace1087daf2c h1:18KAL+tmUQEyfBPPj7nioi7igT6yg2Z8lcS06FkENgQ=
+github.com/lamg/proxy v1.2.1-0.20191007164654-ace1087daf2c/go.mod h1:LFuwcgNqQKV2JU+EsXsNQEhjsp9gV0jZ/InULR15jPU=
 github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f h1:g8FzCgiLckKe695REpNINfRFvK7fze5tjeBeUUOGBF0=
 github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f/go.mod h1:ccF76DNsUXw+Ju3r6CLNRF1Exuo04CcKmtINK97Um3Y=
 github.com/pelletier/go-toml v1.4.0 h1:u3Z1r+oOXJIkxqw34zVhyPgjBsm6X2wn21NWs/HfSeg=

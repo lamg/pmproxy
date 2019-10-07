@@ -8,7 +8,7 @@ require (
 	github.com/lamg/algorithms v0.0.0-20190520212325-66184574b2d4
 	github.com/lamg/ldaputil v0.1.0
 	github.com/lamg/predicate v0.0.5-0.20190916230822-cc513a18ae03
-	github.com/lamg/proxy v1.2.1-0.20191004222150-4f42d04b8aba
+	github.com/lamg/proxy v1.2.1-0.20191007164654-ace1087daf2c
 	github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f
 	github.com/pelletier/go-toml v1.4.0
 	github.com/rs/cors v1.6.0
