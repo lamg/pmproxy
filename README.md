@@ -101,12 +101,38 @@ Match result: true
 [✅] sessions:sessionIPM
 ```
 
-[![asciicast](https://asciinema.org/a/IlGgXc8gaBBOBrSQy88ZdeLan.svg)](https://asciinema.org/a/IlGgXc8gaBBOBrSQy88ZdeLan)
+## Deployment
+
+For a server with high traffic soon the amount of opened connections will increase up to the default limit for each process, therefore you need to configure a limit more suited for you needs. Using [systemd][7] units makes easier running, restarting or stopping the process, with a particular connection amount limit.
+
+As example you can put the following content in `/etc/systemd/system/pmproxy.service`:
+
+```conf
+[Unit]
+Description=PMProxy Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=49152
+WorkingDirectory=/root/.config/pmproxy
+ExecStart=/usr/local/bin/pmproxy
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+``` 
+
+which increases the limit number of opened files (`LimitNOFILE`) up to 49152, when usually it's 1024 (it can be found in `/etc/security/limits.conf`). Since opened connections count as opened files, this solves the previously mentioned problem.
+
+Also having [systemd][7] a configuration allows to see the logs with `journalctl -u pmproxy`. Otherwise `journalctl _PID=X`, where X is the `pmproxy` process ID, will do.
 
 [0]: https://img.shields.io/badge/License-AGPL%203%2B-blue.svg
 [1]: https://travis-ci.com/lamg/pmproxy.svg?branch=master
 [2]: https://travis-ci.com/lamg/pmproxy
-[3]: https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master
+[3]: https://coveralls.io/repos/github/lamg/pmproxy/badge.svg?branch=master&service=github
 [4]: https://coveralls.io/github/lamg/pmproxy?branch=master
 [5]: https://goreportcard.com/badge/github.com/lamg/pmproxy
 [6]: https://goreportcard.com/report/github.com/lamg/pmproxy
+[7]: https://en.wikipedia.org/wiki/Systemd
