@@ -27,10 +27,12 @@ import (
 
 type connections struct {
 	ipRestr *sync.Map
+	logger  *logger
 }
 
-func newConnections() (c *connections) {
+func newConnections(syslogAddr string) (c *connections, e error) {
 	c = &connections{ipRestr: new(sync.Map)}
+	c.logger, e = newLogger(syslogAddr)
 	return
 }
 
@@ -40,6 +42,11 @@ func (n *connections) exec(c *Cmd) (term bool) {
 			Open,
 			func() {
 				if c.Ok {
+					o := c.Operation
+					if c.User == "" {
+						c.User = "-"
+					}
+					n.logger.log(o.Method, o.URL, o.IP, c.User, o.Time)
 					n.ipRestr.Store(c.IP, c.consR)
 				} else {
 					c.Result.Error = &ForbiddenByRulesErr{Result: c.String}

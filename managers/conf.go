@@ -204,20 +204,23 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 	return
 }
 
-func initConnMng(c *conf, m *manager, rdeps []mngPath) {
-	cs := newConnections()
-	ms := []mngPath{
-		{
-			name: c.DwnConsR.Name,
-			mngs: []mngPath{
-				{name: ipUserMng, cmd: Get},
-				{name: c.DwnConsR.UserDBN, cmd: Get},
+func initConnMng(c *conf, m *manager, rdeps []mngPath) (e error) {
+	cs, e := newConnections(c.SyslogAddr)
+	if e == nil {
+		ms := []mngPath{
+			{
+				name: c.DwnConsR.Name,
+				mngs: []mngPath{
+					{name: ipUserMng, cmd: Get},
+					{name: c.DwnConsR.UserDBN, cmd: Get},
+				},
 			},
-		},
+		}
+		cps := connPaths(ms, rdeps)
+		m.mngs.Store(connectionsMng, cs.exec)
+		m.paths = append(m.paths, cps...)
 	}
-	cps := connPaths(ms, rdeps)
-	m.mngs.Store(connectionsMng, cs.exec)
-	m.paths = append(m.paths, cps...)
+	return
 }
 
 func initAdmins(c *conf, m *manager) {
