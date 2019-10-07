@@ -50,4 +50,7 @@ func TestExpiration(t *testing.T) {
 	require.NotEqual(t, 0, len(c1.Data))
 	require.NotEqual(t, c0.Secret, string(c1.Data))
 	jwt.TimeFunc = time.Now
+	c1.Cmd = Check
+	cr.exec(c1)
+	require.Equal(t, user, string(c1.Data))
 }

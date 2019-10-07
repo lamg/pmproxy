@@ -126,6 +126,8 @@ func (c *crypt) exec(m *Cmd) (term bool) {
 				cl, m.Err = c.decrypt(m.Secret)
 				if m.Err == nil && cl.User != m.User {
 					m.Err = &CheckErr{Logged: m.User, Decrypted: cl.User}
+				} else if m.Err == nil {
+					m.Data = []byte(cl.User)
 				}
 			},
 		},

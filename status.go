@@ -57,26 +57,39 @@ func (p *PMClient) UserStatus() (m cli.Command) {
 }
 
 func (p *PMClient) status(dwnMng, user string) (ui *mng.UserInfo, e error) {
+	var li *loginInfo
 	if dwnMng == "" {
-		var li *loginInfo
 		li, e = p.readSecret()
 		if e == nil {
 			dwnMng = li.DwnConsR
 		}
 	}
-	m := &mng.Cmd{
-		Cmd:     mng.Get,
-		Manager: dwnMng,
+	if dwnMng != "" {
+		m := &mng.Cmd{
+			Cmd:     mng.Get,
+			Manager: dwnMng,
+		}
+		if user != "" {
+			m.Cmd = mng.GetOther
+			m.String = user
+		}
+		okf := func(bs []byte) (d error) {
+			ui = new(mng.UserInfo)
+			d = json.Unmarshal(bs, ui)
+			return
+		}
+		e = p.sendRecv(m, okf)
+	} else if e == nil {
+		m := &mng.Cmd{
+			Cmd:     mng.Check,
+			Manager: li.SessionIPM,
+			Secret:  li.Secret,
+		}
+		okf := func(bs []byte) (d error) {
+			ui = &mng.UserInfo{UserName: string(bs)}
+			return
+		}
+		e = p.sendRecv(m, okf)
 	}
-	if user != "" {
-		m.Cmd = mng.GetOther
-		m.String = user
-	}
-	okf := func(bs []byte) (d error) {
-		ui = new(mng.UserInfo)
-		d = json.Unmarshal(bs, ui)
-		return
-	}
-	e = p.sendRecv(m, okf)
 	return
 }
