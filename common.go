@@ -52,6 +52,7 @@ func (p *PMClient) sendRecv(m *mng.Cmd,
 		func() {
 			m.Secret = li.Secret
 			r, e = p.PostCmd(li.Server, m)
+
 			if e != nil && errors.Is(e, mng.ErrExpired) {
 				nm := &mng.Cmd{
 					Cmd:     mng.Renew,
@@ -144,6 +145,8 @@ func unmarshalErr(rc io.ReadCloser) (e error) {
 		ok, n := alg.BLnSrch(ib, len(errs))
 		if ok {
 			e = errs[n]
+		} else {
+			e = fmt.Errorf("unmarshaled error: %s", string(bs))
 		}
 	}
 	return
@@ -165,7 +168,8 @@ func doOK(ok func([]byte) error, fe func(error),
 			if r.StatusCode == h.StatusOK {
 				e = ok(bs)
 			} else {
-				e = fmt.Errorf("%s", string(bs[:len(bs)-1])) //excluding EOL
+				//excluding EOL
+				e = fmt.Errorf("%s", string(bs[:len(bs)-1]))
 			}
 			fe(e)
 		},
