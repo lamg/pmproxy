@@ -84,7 +84,7 @@ const (
 	decrypt    = "decrypt"
 	Renew      = "renew"
 
-	DwnConsRK   = "DwnConsR"
+	DwnConsRK   = "dwnConsR"
 	SessionIPMK = "sessionIPM"
 
 	RulesK         = "rules"
