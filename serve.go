@@ -94,8 +94,9 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 
 func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 	now func() time.Time) (e error) {
+	nd := &proxy.NetworkDialer{Timeout: p.DialTimeout}
 	if p.Server.FastOrStd {
-		prx := proxy.NewFastProxy(ctl, p.DialTimeout, now)
+		prx := proxy.NewFastProxy(ctl, nd.Dialer, now)
 		fast := &fh.Server{
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
@@ -107,7 +108,7 @@ func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
 			Addr:         p.Server.Addr,
-			Handler:      proxy.NewProxy(ctl, p.DialTimeout, now),
+			Handler:      proxy.NewProxy(ctl, nd.Dialer, now),
 			// Disable HTTP/2.
 			TLSNextProto: make(map[string]func(*h.Server,
 				*tls.Conn, h.Handler)),
