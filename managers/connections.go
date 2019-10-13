@@ -30,41 +30,30 @@ type connections struct {
 	logger  *logger
 }
 
-func newConnections(syslogAddr string) (c *connections, e error) {
-	c = &connections{ipRestr: new(sync.Map)}
-	c.logger, e = newLogger(syslogAddr)
-	return
-}
-
 func (n *connections) exec(c *Cmd) (term bool) {
 	kf := []alg.KFunc{
 		{
-			Open,
-			func() {
-				if c.Ok {
-					o := c.Operation
-					if c.User == "" {
-						c.User = "-"
-					}
-					n.logger.log(o.Method, o.URL, o.IP, c.User, o.Time)
-					n.ipRestr.Store(c.IP, c.consR)
-				} else {
-					c.Result.Error = &ForbiddenByRulesErr{Result: c.String}
-				}
-			},
-		},
-		{
-			Close,
-			func() { n.ipRestr.Delete(c.IP) },
-		},
-		{
 			HandleConn,
 			func() {
-				v, ok := n.ipRestr.Load(c.IP)
-				if ok {
-					c.consR = v.([]string)
+				if c.operation == open {
+					if c.Ok {
+						if c.User == "" {
+							c.User = "-"
+						}
+						n.logger.log(c.rqp.Method, c.rqp.URL, c.IP, c.User)
+						n.ipRestr.Store(c.IP, c.consR)
+					} else {
+						c.Err = &ForbiddenByRulesErr{Result: c.String}
+					}
+				} else if c.operation == clöse {
+					n.ipRestr.Delete(c.IP)
 				} else {
-					c.Err = &NoConnErr{IP: c.IP}
+					v, ok := n.ipRestr.Load(c.IP)
+					if ok {
+						c.consR = v.([]string)
+					} else {
+						c.Err = &NoConnErr{IP: c.IP}
+					}
 				}
 			},
 		},

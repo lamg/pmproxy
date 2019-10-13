@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"github.com/c2h5oh/datasize"
 	alg "github.com/lamg/algorithms"
-	"github.com/lamg/proxy"
 	"github.com/spf13/afero"
 	"path"
 	"strings"
@@ -175,16 +174,16 @@ func (d *DwnConsR) handleConn(c *Cmd) {
 		// checks if previous manager signaled this step
 		// to be executed, since some of them determines that
 		// property at runtime, after initialization
-		if c.Operation.Command == proxy.ReadRequest {
+		if c.operation == readRequest {
 			qt := d.quota(c.User, c.Groups)
 			cs := d.consumption(c.User)
 			if cs >= qt {
 				hcs := datasize.ByteSize(cs)
-				c.Result.Error = &QuotaReachedErr{
+				c.Err = &QuotaReachedErr{
 					Quota: hcs.HumanReadable(),
 				}
 			}
-		} else if c.Operation.Command == proxy.ReadReport {
+		} else if c.operation == readReport {
 			cs := d.consumption(c.User)
 			ncs := cs + c.Uint64
 			d.userCons.Store(c.User, ncs)

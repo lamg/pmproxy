@@ -23,12 +23,12 @@ package managers
 import (
 	"fmt"
 	alg "github.com/lamg/algorithms"
-	"github.com/lamg/proxy"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"net/url"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
@@ -46,9 +46,10 @@ func ConfPath() (file, dir string, e error) {
 
 func Load(confDir string, fs afero.Fs) (
 	cmdChan CmdF,
-	ctl proxy.ConnControl,
+	dlr *Dialer,
 	persist func() error,
-	e error) {
+	e error,
+) {
 	if confDir == "" {
 		confDir = defConfDir
 	}
@@ -62,6 +63,7 @@ func Load(confDir string, fs afero.Fs) (
 		},
 		func() { e = toml.Unmarshal(bs, c) },
 		func() {
+			c.now = time.Now
 			if c.AdDB != nil {
 				c.AdDB.init()
 			}
@@ -89,7 +91,7 @@ func Load(confDir string, fs afero.Fs) (
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
-			ctl = proxyCtl(c, cmdChan)
+			dlr = &Dialer{cf: c, cmdf: cmdChan}
 			if c.DwnConsR != nil {
 				persist = c.DwnConsR.persist
 			} else {
@@ -117,6 +119,7 @@ type conf struct {
 	SyslogAddr    string        `toml:"syslogAddr"`
 
 	parentProxy *url.URL
+	now         func() time.Time
 }
 
 func initSessionIPM(c *conf, m *manager) (e error) {
@@ -168,7 +171,7 @@ func initDwnConsR(c *conf, m *manager) (e error) {
 		if e == nil {
 			ds := c.DwnConsR.paths()
 			m.paths = append(m.paths, ds...)
-			c.DwnConsR.now = time.Now
+			c.DwnConsR.now = c.now
 		}
 	}
 	return
@@ -205,7 +208,8 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 }
 
 func initConnMng(c *conf, m *manager, rdeps []mngPath) (e error) {
-	cs, e := newConnections(c.SyslogAddr)
+	cs := &connections{ipRestr: new(sync.Map)}
+	cs.logger, e = newLogger(c.SyslogAddr, c.now)
 	if e == nil {
 		ms := []mngPath{
 			{
@@ -227,32 +231,6 @@ func initAdmins(c *conf, m *manager) {
 	adm := &admins{admins: c.Admins}
 	m.mngs.Store(adminsMng, adm.exec)
 	m.paths = append(m.paths, adm.paths()...)
-}
-
-func proxyCtl(cf *conf, cmdChan CmdF) (
-	f func(*proxy.Operation) *proxy.Result,
-) {
-	f = func(o *proxy.Operation) (r *proxy.Result) {
-		c := &Cmd{
-			Manager:   connectionsMng,
-			Cmd:       HandleConn,
-			Operation: o,
-			Result:    new(proxy.Result),
-			IP:        o.IP,
-			Uint64:    uint64(o.Amount),
-		}
-		if o.Command == proxy.Open {
-			c.Cmd = Open
-		}
-		cmdChan(c)
-		r = c.Result
-		r.Iface, r.Proxy = cf.NetIface, cf.parentProxy
-		if c.Result.Error == nil && c.Err != nil {
-			r.Error = c.Err
-		}
-		return
-	}
-	return
 }
 
 type DependencyErr struct {

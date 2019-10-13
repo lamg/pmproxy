@@ -23,28 +23,38 @@ package managers
 import (
 	"fmt"
 	"github.com/lamg/proxy"
+	"net/url"
 )
 
 type Cmd struct {
-	Cmd       string           `json:"cmd"`
-	User      string           `json:"user"`
-	Manager   string           `json:"manager"`
-	Secret    string           `json:"secret"`
-	IsAdmin   bool             `json:"isAdmin"`
-	Cred      *Credentials     `json:"cred"`
-	String    string           `json:"string"`
-	Uint64    uint64           `json:"uint64"`
-	Groups    []string         `json:"groups"`
-	Ok        bool             `json:"ok"`
-	IP        string           `json:"ip"`
-	Data      []byte           `json:"data"`
-	Err       error            `json:"-"`
-	Operation *proxy.Operation `json:"-"`
-	Result    *proxy.Result    `json:"-"`
+	Cmd     string       `json:"cmd"`
+	User    string       `json:"user"`
+	Manager string       `json:"manager"`
+	Secret  string       `json:"secret"`
+	IsAdmin bool         `json:"isAdmin"`
+	Cred    *Credentials `json:"cred"`
+	String  string       `json:"string"`
+	Uint64  uint64       `json:"uint64"`
+	Groups  []string     `json:"groups"`
+	Ok      bool         `json:"ok"`
+	IP      string       `json:"ip"`
+	Data    []byte       `json:"data"`
+	Err     error        `json:"-"`
 
-	interp map[string]*MatchType
-	consR  []string
+	operation   int
+	rqp         *proxy.ReqParams
+	parentProxy *url.URL
+	interp      map[string]*MatchType
+	consR       []string
 }
+
+// values for Cmd.operation
+const (
+	open = iota
+	readRequest
+	readReport
+	clöse
+)
 
 type Credentials struct {
 	User string `json:"user"`
@@ -84,8 +94,10 @@ const (
 	decrypt    = "decrypt"
 	Renew      = "renew"
 
-	DwnConsRK   = "dwnConsR"
-	SessionIPMK = "sessionIPM"
+	DwnConsRK    = "dwnConsR"
+	SessionIPMK  = "sessionIPM"
+	IfaceK       = "iface"
+	ParentProxyK = "parentProxy"
 
 	RulesK         = "rules"
 	connectionsMng = "connections"

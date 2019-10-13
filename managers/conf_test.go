@@ -69,13 +69,13 @@ admins = ["user0"]
 		group1 = "512 B"
 `
 
-func confTest(t *testing.T) (c CmdF, p proxy.ConnControl) {
+func confTest(t *testing.T) (c CmdF, d *Dialer) {
 	fs := afero.NewMemMapFs()
 	confPath, fullDir, e := ConfPath()
 	require.NoError(t, e)
 	e = afero.WriteFile(fs, confPath, []byte(cfg0), 0644)
 	require.NoError(t, e)
-	c, p, _, e = Load(fullDir, fs)
+	c, d, _, e = Load(fullDir, fs)
 	require.NoError(t, e)
 	return
 }

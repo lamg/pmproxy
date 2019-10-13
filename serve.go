@@ -43,12 +43,13 @@ import (
 func Serve(fs afero.Fs) (e error) {
 	p, e := load(fs)
 	var cmdChan mng.CmdF
-	var ctl proxy.ConnControl
+	var dialer *mng.Dialer
 	var persist func() error
 	if e == nil {
-		cmdChan, ctl, persist, e = mng.Load(confDir, fs)
+		cmdChan, dialer, persist, e = mng.Load(confDir, fs)
 	}
 	if e == nil {
+		dialer.Timeout = p.Proxy.DialTimeout
 		fes := []func() error{
 			func() error { return serveAPI(p.Api, cmdChan) },
 			func() error { return serveProxy(p.Proxy, ctl, time.Now) },
@@ -92,11 +93,13 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 	return
 }
 
-func serveProxy(p *proxyConf, ctl proxy.ConnControl,
-	now func() time.Time) (e error) {
+func serveProxy(
+	p *proxyConf,
+	dial func(context.Context, string, string) (net.Conn, error),
+) (e error) {
 	nd := &proxy.NetworkDialer{Timeout: p.DialTimeout}
 	if p.Server.FastOrStd {
-		prx := proxy.NewFastProxy(ctl, nd.Dialer, now)
+		prx := proxy.NewFastProxy(dial)
 		fast := &fh.Server{
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
@@ -108,7 +111,7 @@ func serveProxy(p *proxyConf, ctl proxy.ConnControl,
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
 			Addr:         p.Server.Addr,
-			Handler:      proxy.NewProxy(ctl, nd.Dialer, now),
+			Handler:      proxy.NewProxy(dialer),
 			// Disable HTTP/2.
 			TLSNextProto: make(map[string]func(*h.Server,
 				*tls.Conn, h.Handler)),

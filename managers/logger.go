@@ -32,10 +32,12 @@ import (
 type logger struct {
 	addr   string
 	writer *syslog.Writer
+	now    func() time.Time
 }
 
-func newLogger(addr string) (l *logger, e error) {
-	l = &logger{addr: addr}
+func newLogger(addr string, now func() time.Time) (l *logger,
+	e error) {
+	l = &logger{addr: addr, now: now}
 	if addr != "" {
 		l.writer, e = syslog.Dial("tcp", addr, syslog.LOG_INFO,
 			"")
@@ -45,9 +47,9 @@ func newLogger(addr string) (l *logger, e error) {
 	return
 }
 
-func (l *logger) log(method, url, ip, user string,
-	d time.Time) (e error) {
+func (l *logger) log(method, url, ip, user string) (e error) {
 	// squid log format
+	d := l.now()
 	_, e = fmt.Fprintf(l.writer,
 		"%9d.000 %6d %s %s/%03d %d %s %s %s %s/%s %s",
 		d.Unix(), 0, ip, "TCP_MISS", h.StatusOK, 0,

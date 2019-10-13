@@ -35,10 +35,10 @@ func (p *proxyURLMng) init() (e error) {
 	return
 }
 
-func (u *proxyURLMng) exec(c *Cmd) (term bool) {
+func (u *proxyURLMng) exec(c *Cmd) {
 	if c.Cmd == Match {
-		c.Ok, c.Result.Proxy = true, u.proxy
+		c.Ok, c.parentProxy = true, u.proxy
+		c.interp[u.Name] = &MatchType{Type: ParentProxyK, Match: true}
 	}
-	term = true
 	return
 }
