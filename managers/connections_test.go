@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"context"
 	"errors"
 	pred "github.com/lamg/predicate"
 	"github.com/lamg/proxy"
@@ -30,21 +31,18 @@ import (
 )
 
 func TestConnections(t *testing.T) {
-	_, ctl := confTest(t)
-	res := ctl(&proxy.Operation{
-		Command: proxy.Open,
-		IP:      ht.DefaultRemoteAddr,
-	})
+	_, dlr := confTest(t)
+	rqp := &proxy.ReqParams{IP: ht.DefaultRemoteAddr}
+	ctx := context.WithValue(context.Background(),
+		proxy.ReqParamsK, rqp)
+	_, e := dlr.DialContext(ctx, tcp, od4)
 	var fr *ForbiddenByRulesErr
-	require.True(t, errors.As(res.Error, &fr))
+	require.True(t, errors.As(e, &fr))
 	require.Equal(t, pred.FalseStr, fr.Result)
 
-	cmf, ctl, jtk := openTest(t)
-	res = ctl(&proxy.Operation{
-		Command: proxy.Open,
-		IP:      ht.DefaultRemoteAddr,
-	})
-	require.NoError(t, res.Error)
+	cmf, dlr, jtk := openTest(t)
+	n, e := dlr.DialContext(ctx, tcp, od4)
+	require.NoError(t, e)
 	c := &Cmd{
 		Cmd:     Close,
 		Manager: "sessions",
@@ -53,11 +51,9 @@ func TestConnections(t *testing.T) {
 	}
 	cmf(c)
 	require.NoError(t, c.Err)
-	res = ctl(&proxy.Operation{
-		Command: proxy.ReadRequest,
-		IP:      ht.DefaultRemoteAddr,
-	})
+	bs := make([]byte, 10)
+	_, e = n.Read(bs)
 	var nc *NoConnErr
-	require.True(t, errors.As(res.Error, &nc))
+	require.True(t, errors.As(e, &nc))
 	require.Equal(t, ht.DefaultRemoteAddr, nc.IP)
 }

@@ -52,7 +52,9 @@ func Serve(fs afero.Fs) (e error) {
 		dialer.Timeout = p.Proxy.DialTimeout
 		fes := []func() error{
 			func() error { return serveAPI(p.Api, cmdChan) },
-			func() error { return serveProxy(p.Proxy, ctl, time.Now) },
+			func() error {
+				return serveProxy(p.Proxy, dialer.DialContext)
+			},
 			func() (e error) {
 				for {
 					time.Sleep(p.Api.PersistInterval)
@@ -93,11 +95,7 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 	return
 }
 
-func serveProxy(
-	p *proxyConf,
-	dial func(context.Context, string, string) (net.Conn, error),
-) (e error) {
-	nd := &proxy.NetworkDialer{Timeout: p.DialTimeout}
+func serveProxy(p *proxyConf, dial proxy.Dialer) (e error) {
 	if p.Server.FastOrStd {
 		prx := proxy.NewFastProxy(dial)
 		fast := &fh.Server{
@@ -111,7 +109,7 @@ func serveProxy(
 			ReadTimeout:  p.Server.ReadTimeout,
 			WriteTimeout: p.Server.WriteTimeout,
 			Addr:         p.Server.Addr,
-			Handler:      proxy.NewProxy(dialer),
+			Handler:      proxy.NewProxy(dial),
 			// Disable HTTP/2.
 			TLSNextProto: make(map[string]func(*h.Server,
 				*tls.Conn, h.Handler)),

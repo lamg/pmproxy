@@ -104,6 +104,8 @@ const (
 	ipUserMng      = "ipUserMng"
 	adminsMng      = "adminsMng"
 	cryptMng       = "crypt"
+
+	tcp = "tcp"
 )
 
 type StringErr struct {

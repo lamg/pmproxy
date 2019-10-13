@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"context"
 	"errors"
 	"github.com/lamg/proxy"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ import (
 )
 
 func TestSessionIPMOpen(t *testing.T) {
-	cmf, ctl, jtk := openTest(t)
+	cmf, dlr, jtk := openTest(t)
 	cm := &Cmd{
 		Manager: "sessions",
 		Cmd:     Close,
@@ -38,19 +39,18 @@ func TestSessionIPMOpen(t *testing.T) {
 	}
 	cmf(cm)
 	require.NoError(t, cm.Err)
-	res := ctl(&proxy.Operation{
-		Command: proxy.ReadRequest,
-		IP:      ht.DefaultRemoteAddr,
-		Amount:  14,
-	})
+	rqp := &proxy.ReqParams{IP: ht.DefaultRemoteAddr}
+	ctx := context.WithValue(context.Background(), proxy.ReqParamsK,
+		rqp)
+	_, e := dlr.DialContext(ctx, tcp, od4)
 	var nc *NoConnErr
-	require.True(t, errors.As(res.Error, &nc))
+	require.True(t, errors.As(e, &nc))
 	require.Equal(t, ht.DefaultRemoteAddr, nc.IP)
 }
 
-func openTest(t *testing.T) (cmf CmdF, ctl proxy.ConnControl,
+func openTest(t *testing.T) (cmf CmdF, dlr *Dialer,
 	jtk string) {
-	cmf, ctl = confTest(t)
+	cmf, dlr = confTest(t)
 	open := &Cmd{
 		Manager: "sessions",
 		Cmd:     Open,

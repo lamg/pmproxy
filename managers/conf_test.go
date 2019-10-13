@@ -22,7 +22,6 @@ package managers
 
 import (
 	alg "github.com/lamg/algorithms"
-	"github.com/lamg/proxy"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -76,6 +75,9 @@ func confTest(t *testing.T) (c CmdF, d *Dialer) {
 	e = afero.WriteFile(fs, confPath, []byte(cfg0), 0644)
 	require.NoError(t, e)
 	c, d, _, e = Load(fullDir, fs)
+	d.dialer = mockDialerF
 	require.NoError(t, e)
 	return
 }
+
+var od4 = "1.1.1.1"

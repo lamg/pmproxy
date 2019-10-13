@@ -1,6 +1,7 @@
 package pmproxy
 
 import (
+	"context"
 	"errors"
 	alg "github.com/lamg/algorithms"
 	mng "github.com/lamg/pmproxy/managers"
@@ -54,7 +55,7 @@ func TestConcurrency(t *testing.T) {
 	require.NoError(t, e)
 	e = afero.WriteFile(fs, cfile, []byte(cfg), 0644)
 	require.NoError(t, e)
-	cmf, ctl, _, e := mng.Load("", fs)
+	cmf, dlr, _, e := mng.Load("", fs)
 	require.NoError(t, e)
 	clients := []struct {
 		ip   string
@@ -64,8 +65,8 @@ func TestConcurrency(t *testing.T) {
 			ht.DefaultRemoteAddr,
 			[]req{
 				{
-					fromProxy: &proxy.Operation{Command: proxy.Open},
-					okf:       falseRulesEval,
+					toProxy: od4,
+					okf:     falseRulesEval,
 				},
 				{
 					toApi: &mng.Cmd{
@@ -89,8 +90,8 @@ func TestConcurrency(t *testing.T) {
 							Pass: "pass1",
 						},
 					},
-					fromProxy: &proxy.Operation{Command: proxy.Open},
-					okf:       okCmdRes,
+					toProxy: od4,
+					okf:     okCmdRes,
 				},
 			},
 		},
@@ -105,11 +106,12 @@ func TestConcurrency(t *testing.T) {
 					c.IP = clients[i].ip
 					cmf(c)
 				}
-				op := req.fromProxy
-				var res *proxy.Result
-				if op != nil {
-					op.IP = clients[i].ip
-					res = ctl(op)
+				var res error
+				if req.toProxy != "" {
+					rqp := &proxy.ReqParams{IP: clients[i].ip}
+					ctx := context.WithValue(context.Background(),
+						proxy.ReqParamsK, rqp)
+					_, res = dlr.DialContext(ctx, tcp, od4)
 				}
 				ok := req.okf(c, res)
 				rc <- reqBool{i: i, j: j, ok: ok}
@@ -126,30 +128,35 @@ func TestConcurrency(t *testing.T) {
 	}
 }
 
+const (
+	od4 = "1.1.1.1"
+	tcp = "tcp"
+)
+
 type reqBool struct {
 	ok   bool
 	i, j int
 }
 
 type req struct {
-	toApi     *mng.Cmd
-	fromProxy *proxy.Operation
-	okf       func(*mng.Cmd, *proxy.Result) bool
+	toApi   *mng.Cmd
+	toProxy string
+	okf     func(*mng.Cmd, error) bool
 }
 
-func okCmd(c *mng.Cmd, r *proxy.Result) (ok bool) {
+func okCmd(c *mng.Cmd, r error) (ok bool) {
 	ok = c.Err == nil
 	return
 }
 
-func okCmdRes(c *mng.Cmd, r *proxy.Result) (ok bool) {
-	ok = c.Err == nil && r.Error == nil
+func okCmdRes(c *mng.Cmd, r error) (ok bool) {
+	ok = c.Err == nil && r == nil
 	return
 }
 
-func falseRulesEval(c *mng.Cmd, r *proxy.Result) (ok bool) {
+func falseRulesEval(c *mng.Cmd, r error) (ok bool) {
 	var fr *mng.ForbiddenByRulesErr
-	ok = errors.As(r.Error, &fr)
+	ok = errors.As(r, &fr)
 	return
 }
 

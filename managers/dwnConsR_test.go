@@ -21,6 +21,7 @@
 package managers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/c2h5oh/datasize"
@@ -73,31 +74,20 @@ func TestDwnConsRInit(t *testing.T) {
 }
 
 func TestDwnConsRHandleConn(t *testing.T) {
-	_, ctl, _ := openTest(t)
-	res := ctl(&proxy.Operation{
-		Command: proxy.Open,
-		IP:      ht.DefaultRemoteAddr,
-	})
-	require.NoError(t, res.Error)
-	res = ctl(&proxy.Operation{
-		Command: proxy.ReadRequest,
-		IP:      ht.DefaultRemoteAddr,
-		Amount:  1024,
-	})
-	require.NoError(t, res.Error)
-	res = ctl(&proxy.Operation{
-		Command: proxy.ReadReport,
-		IP:      ht.DefaultRemoteAddr,
-		Amount:  1024,
-	})
-	require.NoError(t, res.Error)
-	res = ctl(&proxy.Operation{
-		Command: proxy.ReadRequest,
-		IP:      ht.DefaultRemoteAddr,
-		Amount:  1,
-	})
+	_, dlr, _ := openTest(t)
+	rqp := &proxy.ReqParams{
+		IP: ht.DefaultRemoteAddr,
+	}
+	ctx := context.WithValue(context.Background(), proxy.ReqParamsK,
+		rqp)
+	c, e := dlr.DialContext(ctx, tcp, od4)
+	require.NoError(t, e)
+	bs := make([]byte, 1024)
+	_, e = c.Read(bs)
+	require.NoError(t, e)
+	_, e = c.Read(bs)
 	var qr *QuotaReachedErr
-	require.True(t, errors.As(res.Error, &qr))
+	require.True(t, errors.As(e, &qr))
 	require.Equal(t, "1024 B", qr.Quota)
 }
 

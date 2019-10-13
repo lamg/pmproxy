@@ -23,6 +23,7 @@ package managers
 import (
 	"context"
 	"github.com/lamg/proxy"
+	gp "golang.org/x/net/proxy"
 	"net"
 	"time"
 )
@@ -31,6 +32,7 @@ type Dialer struct {
 	cf      *conf
 	cmdf    CmdF
 	Timeout time.Duration
+	dialer  func(string, time.Duration) gp.Dialer
 }
 
 func (d *Dialer) DialContext(ctx context.Context, network,
@@ -46,10 +48,7 @@ func (d *Dialer) DialContext(ctx context.Context, network,
 	d.cmdf(m)
 	e = m.Err
 	if e == nil {
-		dlr := &proxy.IfaceDialer{
-			Timeout:   d.Timeout,
-			Interface: d.cf.NetIface,
-		}
+		dlr := d.dialer(d.cf.NetIface, d.Timeout)
 		if d.cf.parentProxy != nil {
 			c, e = proxy.DialProxy(network, addr, d.cf.parentProxy, dlr)
 		} else {
@@ -96,5 +95,26 @@ func (c *ctlConn) operation(op, amount int) (e error) {
 	}
 	c.cmdf(m)
 	e = m.Err
+	return
+}
+
+func netDialerF(iface string, timeout time.Duration) (d gp.Dialer) {
+	d = &proxy.IfaceDialer{
+		Timeout:   timeout,
+		Interface: iface,
+	}
+	return
+}
+
+func mockDialerF(iface string,
+	timeout time.Duration) (d gp.Dialer) {
+	return
+}
+
+type mockDialer struct {
+}
+
+func (d *mockDialer) Dial(network, addr string) (c net.Conn,
+	e error) {
 	return
 }
