@@ -30,6 +30,7 @@ import (
 	"github.com/urfave/cli"
 	"io/ioutil"
 	h "net/http"
+	"os"
 )
 
 func (p *PMClient) Login() (m cli.Command) {
@@ -79,6 +80,7 @@ func (p *PMClient) login(urls, sm, user, pass string) (e error) {
 	if e == nil {
 		e = p.fillConsR(li)
 	} else {
+		fmt.Fprintf(os.Stderr, "Warning: %s\n", e.Error())
 		var me *mng.ManagerErr
 		var dr *mng.DiscoverRes
 		if errors.As(e, &me) {

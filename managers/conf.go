@@ -133,9 +133,13 @@ func initSessionIPM(c *conf, m *manager) (e error) {
 		m.mngs.Store(ipUserMng, newIpUser().exec)
 		if c.AdDB != nil {
 			m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
-		} else if c.MapDB != nil {
+		}
+		if c.MapDB != nil {
 			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
-		} else {
+		}
+		if (c.AdDB == nil && c.MapDB == nil) ||
+			(c.AdDB != nil && c.AdDB.Name != c.SessionIPM.Auth) ||
+			(c.MapDB != nil && c.MapDB.Name != c.SessionIPM.Auth) {
 			e = &DependencyErr{
 				name:   c.SessionIPM.Name,
 				tÿpe:   SessionIPMK,
@@ -231,16 +235,4 @@ func initAdmins(c *conf, m *manager) {
 	adm := &admins{admins: c.Admins}
 	m.mngs.Store(adminsMng, adm.exec)
 	m.paths = append(m.paths, adm.paths()...)
-}
-
-type DependencyErr struct {
-	absent []string
-	tÿpe   string
-	name   string
-}
-
-func (d *DependencyErr) Error() (s string) {
-	s = fmt.Sprintf("%s:%s ≠ nil ∧ (all %v nil)", d.name, d.tÿpe,
-		d.absent)
-	return
 }

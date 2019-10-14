@@ -180,3 +180,17 @@ func (c *ForbiddenByRulesErr) Error() (s string) {
 	s = fmt.Sprintf("Forbidden: rules evaluated to '%s'", c.Result)
 	return
 }
+
+type DependencyErr struct {
+	absent []string
+	tÿpe   string
+	name   string
+}
+
+func (d *DependencyErr) Error() (s string) {
+	s = fmt.Sprintf(
+		"%s:%s ≠ nil ∧ (all %v nil) ∨"+
+			" (no %v with authenticator %s)",
+		d.name, d.tÿpe, d.absent, d.absent, d.name)
+	return
+}
