@@ -72,8 +72,8 @@ func connPaths(avlRestr, rulesDeps []mngPath) (ps []mngPath) {
 	// true in Cmd.Ok if that restrictor is meant to handle that
 	// connection
 	avmReadRequest, avmReadReport :=
-		availableManagers(rulesDeps, readRequest),
-		availableManagers(rulesDeps, readReport)
+		availableManagers(avlRestr, readRequest),
+		availableManagers(avlRestr, readReport)
 	ps = []mngPath{
 		{
 			name: connectionsMng,

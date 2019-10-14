@@ -106,7 +106,7 @@ func NetDialerF(iface string, timeout time.Duration) (d gp.Dialer) {
 
 func MockDialerF(iface string,
 	timeout time.Duration) (d gp.Dialer) {
-	d = &mockDialer{}
+	d = new(mockDialer)
 	return
 }
 
@@ -115,5 +115,25 @@ type mockDialer struct {
 
 func (d *mockDialer) Dial(network, addr string) (c net.Conn,
 	e error) {
+	c = new(mockConn)
 	return
+}
+
+type mockConn struct{}
+
+func (c *mockConn) Read(p []byte) (int, error) {
+	return len(p), nil
+}
+func (c *mockConn) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (c *mockConn) Close() error                      { return nil }
+func (c *mockConn) LocalAddr() net.Addr               { return nil }
+func (c *mockConn) RemoteAddr() net.Addr              { return nil }
+func (c *mockConn) SetDeadline(t time.Time) error     { return nil }
+func (c *mockConn) SetReadDeadline(t time.Time) error { return nil }
+
+func (c *mockConn) SetWriteDeadline(t time.Time) error {
+	return nil
 }

@@ -146,11 +146,6 @@ func (d *DwnConsR) exec(c *Cmd) (term bool) {
 			},
 		},
 		{
-			Filter,
-			func() {
-			},
-		},
-		{
 			readRequest,
 			func() {
 				ok := d.filter(c)
