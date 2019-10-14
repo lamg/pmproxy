@@ -56,14 +56,8 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 				}
 			},
 		},
-		{
-			HandleConn,
-			func() {
-				if c.operation == readRequest {
-					b.connThr.Throttle()
-				}
-			},
-		},
+		{readRequest, func() { b.connThr.Throttle() }},
+		{readReport, func() {}},
 		{
 			Match,
 			func() {

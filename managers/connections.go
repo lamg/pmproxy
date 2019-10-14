@@ -31,32 +31,32 @@ type connections struct {
 }
 
 func (n *connections) exec(c *Cmd) (term bool) {
+	loadConsR := func() {
+		v, ok := n.ipRestr.Load(c.IP)
+		if ok {
+			c.consR = v.([]string)
+		} else {
+			c.Err = &NoConnErr{IP: c.IP}
+		}
+	}
 	kf := []alg.KFunc{
 		{
-			HandleConn,
+			Open,
 			func() {
-				if c.operation == open {
-					if c.Ok {
-						if c.User == "" {
-							c.User = "-"
-						}
-						n.logger.log(c.rqp.Method, c.rqp.URL, c.IP, c.User)
-						n.ipRestr.Store(c.IP, c.consR)
-					} else {
-						c.Err = &ForbiddenByRulesErr{Result: c.String}
+				if c.Ok {
+					if c.User == "" {
+						c.User = "-"
 					}
-				} else if c.operation == clöse {
-					n.ipRestr.Delete(c.IP)
+					n.logger.log(c.rqp.Method, c.rqp.URL, c.IP, c.User)
+					n.ipRestr.Store(c.IP, c.consR)
 				} else {
-					v, ok := n.ipRestr.Load(c.IP)
-					if ok {
-						c.consR = v.([]string)
-					} else {
-						c.Err = &NoConnErr{IP: c.IP}
-					}
+					c.Err = &ForbiddenByRulesErr{Result: c.String}
 				}
 			},
 		},
+		{Close, func() { n.ipRestr.Delete(c.IP) }},
+		{readRequest, loadConsR},
+		{readReport, loadConsR},
 	}
 	alg.ExecF(kf, c.Cmd)
 	return
@@ -67,17 +67,13 @@ func connPaths(avlRestr, rulesDeps []mngPath) (ps []mngPath) {
 	// after initialization, with a specific Cmd instance.
 	// The solution is intercalating a Filter command for each
 	// available restrictor, its dependencies and finally a
-	// HandleConn command to each one.
+	// readRequest and readReport command to each one.
 	// The Filter command leaves in the Cmd instance a value of
 	// true in Cmd.Ok if that restrictor is meant to handle that
 	// connection
-	avm := make([]mngPath, 1)
-	avm[0] = mngPath{name: connectionsMng, cmd: HandleConn}
-	for _, j := range avlRestr {
-		avm = append(avm, mngPath{name: j.name, cmd: Filter})
-		avm = append(avm, j.mngs...)
-		avm = append(avm, mngPath{name: j.name, cmd: HandleConn})
-	}
+	avmReadRequest, avmReadReport :=
+		availableManagers(rulesDeps, readRequest),
+		availableManagers(rulesDeps, readReport)
 	ps = []mngPath{
 		{
 			name: connectionsMng,
@@ -94,9 +90,28 @@ func connPaths(avlRestr, rulesDeps []mngPath) (ps []mngPath) {
 		},
 		{
 			name: connectionsMng,
-			cmd:  HandleConn,
-			mngs: avm,
+			cmd:  readRequest,
+			mngs: avmReadRequest,
 		},
+		{
+			name: connectionsMng,
+			cmd:  readReport,
+			mngs: avmReadReport,
+		},
+	}
+	return
+}
+
+func availableManagers(avlRestr []mngPath,
+	command string) (avm []mngPath) {
+	avm = make([]mngPath, 1)
+	avm[0] = mngPath{
+		name: connectionsMng,
+		cmd:  command,
+	}
+	for _, j := range avlRestr {
+		avm = append(avm, j.mngs...)
+		avm = append(avm, mngPath{name: j.name, cmd: command})
 	}
 	return
 }

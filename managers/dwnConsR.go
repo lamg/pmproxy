@@ -148,15 +148,34 @@ func (d *DwnConsR) exec(c *Cmd) (term bool) {
 		{
 			Filter,
 			func() {
-				c.Ok, _ = alg.BLnSrch(
-					func(i int) bool { return c.consR[i] == d.Name },
-					len(c.consR),
-				)
 			},
 		},
 		{
-			HandleConn,
-			func() { d.handleConn(c) },
+			readRequest,
+			func() {
+				ok := d.filter(c)
+				if ok {
+					qt := d.quota(c.User, c.Groups)
+					cs := d.consumption(c.User)
+					if cs >= qt {
+						hcs := datasize.ByteSize(cs)
+						c.Err = &QuotaReachedErr{
+							Quota: hcs.HumanReadable(),
+						}
+					}
+				}
+			},
+		},
+		{
+			readReport,
+			func() {
+				ok := d.filter(c)
+				if ok {
+					cs := d.consumption(c.User)
+					ncs := cs + c.Uint64
+					d.userCons.Store(c.User, ncs)
+				}
+			},
 		},
 		{
 			Match,
@@ -169,26 +188,16 @@ func (d *DwnConsR) exec(c *Cmd) (term bool) {
 	return
 }
 
-func (d *DwnConsR) handleConn(c *Cmd) {
-	if c.Ok {
-		// checks if previous manager signaled this step
-		// to be executed, since some of them determines that
-		// property at runtime, after initialization
-		if c.operation == readRequest {
-			qt := d.quota(c.User, c.Groups)
-			cs := d.consumption(c.User)
-			if cs >= qt {
-				hcs := datasize.ByteSize(cs)
-				c.Err = &QuotaReachedErr{
-					Quota: hcs.HumanReadable(),
-				}
-			}
-		} else if c.operation == readReport {
-			cs := d.consumption(c.User)
-			ncs := cs + c.Uint64
-			d.userCons.Store(c.User, ncs)
-		}
-	}
+func (d *DwnConsR) filter(c *Cmd) (ok bool) {
+	// filter is run previous to readRequest or readReport
+	// to indicate if this manager is suppossed to handle the
+	// sent command. This changes since each connection has
+	// a different consR assigned to it
+	ok, _ = alg.BLnSrch(
+		func(i int) bool { return c.consR[i] == d.Name },
+		len(c.consR),
+	)
+	return
 }
 
 func (d *DwnConsR) consumption(user string) (n uint64) {

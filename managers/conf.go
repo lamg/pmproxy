@@ -91,7 +91,7 @@ func Load(confDir string, fs afero.Fs) (
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
-			dlr = &Dialer{cf: c, cmdf: cmdChan, dialer: netDialerF}
+			dlr = &Dialer{cf: c, cmdf: cmdChan, Dialer: NetDialerF}
 			if c.DwnConsR != nil {
 				persist = c.DwnConsR.persist
 			} else {

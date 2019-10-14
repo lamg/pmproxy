@@ -75,7 +75,7 @@ func confTest(t *testing.T) (c CmdF, d *Dialer) {
 	e = afero.WriteFile(fs, confPath, []byte(cfg0), 0644)
 	require.NoError(t, e)
 	c, d, _, e = Load(fullDir, fs)
-	d.dialer = mockDialerF
+	d.Dialer = MockDialerF
 	require.NoError(t, e)
 	return
 }

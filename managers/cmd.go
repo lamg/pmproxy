@@ -41,20 +41,11 @@ type Cmd struct {
 	Data    []byte       `json:"data"`
 	Err     error        `json:"-"`
 
-	operation   int
 	rqp         *proxy.ReqParams
 	parentProxy *url.URL
 	interp      map[string]*MatchType
 	consR       []string
 }
-
-// values for Cmd.operation
-const (
-	open = iota
-	readRequest
-	readReport
-	clöse
-)
 
 type Credentials struct {
 	User string `json:"user"`
@@ -74,25 +65,26 @@ type DiscoverRes struct {
 type CmdF func(*Cmd) bool
 
 const (
-	Open       = "open"
-	Close      = "close"
-	Auth       = "authenticate"
-	Check      = "check"
-	Skip       = "skip"
-	Get        = "get"
-	Set        = "set"
-	HandleConn = "handleConn"
-	Show       = "show"
-	Match      = "match"
-	Encrypt    = "encrypt"
-	Decrypt    = "decrypt"
-	Discover   = "discover"
-	Filter     = "filter"
-	GetOther   = "getOther"
-	isAdmin    = "isAdmin"
-	encrypt    = "encrypt"
-	decrypt    = "decrypt"
-	Renew      = "renew"
+	Open        = "open"
+	Close       = "close"
+	Auth        = "authenticate"
+	Check       = "check"
+	Skip        = "skip"
+	Get         = "get"
+	Set         = "set"
+	readRequest = "readRequest"
+	readReport  = "readReport"
+	Show        = "show"
+	Match       = "match"
+	Encrypt     = "encrypt"
+	Decrypt     = "decrypt"
+	Discover    = "discover"
+	Filter      = "filter"
+	GetOther    = "getOther"
+	isAdmin     = "isAdmin"
+	encrypt     = "encrypt"
+	decrypt     = "decrypt"
+	Renew       = "renew"
 
 	DwnConsRK    = "dwnConsR"
 	SessionIPMK  = "sessionIPM"

@@ -56,6 +56,7 @@ func TestConcurrency(t *testing.T) {
 	e = afero.WriteFile(fs, cfile, []byte(cfg), 0644)
 	require.NoError(t, e)
 	cmf, dlr, _, e := mng.Load("", fs)
+	dlr.Dialer = mng.MockDialerF
 	require.NoError(t, e)
 	clients := []struct {
 		ip   string
@@ -129,7 +130,7 @@ func TestConcurrency(t *testing.T) {
 }
 
 const (
-	od4 = "1.1.1.1"
+	od4 = "1.1.1.1:443"
 	tcp = "tcp"
 )
 

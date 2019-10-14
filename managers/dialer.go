@@ -32,23 +32,22 @@ type Dialer struct {
 	cf      *conf
 	cmdf    CmdF
 	Timeout time.Duration
-	dialer  func(string, time.Duration) gp.Dialer
+	Dialer  func(string, time.Duration) gp.Dialer
 }
 
 func (d *Dialer) DialContext(ctx context.Context, network,
 	addr string) (c net.Conn, e error) {
 	rqp := ctx.Value(proxy.ReqParamsK).(*proxy.ReqParams)
 	m := &Cmd{
-		Manager:   connectionsMng,
-		Cmd:       HandleConn,
-		IP:        rqp.IP,
-		operation: open,
-		rqp:       rqp,
+		Manager: connectionsMng,
+		Cmd:     Open,
+		IP:      rqp.IP,
+		rqp:     rqp,
 	}
 	d.cmdf(m)
 	e = m.Err
 	if e == nil {
-		dlr := d.dialer(d.cf.NetIface, d.Timeout)
+		dlr := d.Dialer(d.cf.NetIface, d.Timeout)
 		if d.cf.parentProxy != nil {
 			c, e = proxy.DialProxy(network, addr, d.cf.parentProxy, dlr)
 		} else {
@@ -80,25 +79,24 @@ func (c *ctlConn) Read(p []byte) (n int, e error) {
 
 func (c *ctlConn) Close() (e error) {
 	e = c.Conn.Close()
-	c.operation(clöse, 0)
+	c.operation(Close, 0)
 	return
 }
 
-func (c *ctlConn) operation(op, amount int) (e error) {
+func (c *ctlConn) operation(op string, amount int) (e error) {
 	m := &Cmd{
-		Cmd:       HandleConn,
-		Manager:   connectionsMng,
-		IP:        c.rqp.IP,
-		Uint64:    uint64(amount),
-		operation: op,
-		rqp:       c.rqp,
+		Cmd:     op,
+		Manager: connectionsMng,
+		IP:      c.rqp.IP,
+		Uint64:  uint64(amount),
+		rqp:     c.rqp,
 	}
 	c.cmdf(m)
 	e = m.Err
 	return
 }
 
-func netDialerF(iface string, timeout time.Duration) (d gp.Dialer) {
+func NetDialerF(iface string, timeout time.Duration) (d gp.Dialer) {
 	d = &proxy.IfaceDialer{
 		Timeout:   timeout,
 		Interface: iface,
@@ -106,8 +104,9 @@ func netDialerF(iface string, timeout time.Duration) (d gp.Dialer) {
 	return
 }
 
-func mockDialerF(iface string,
+func MockDialerF(iface string,
 	timeout time.Duration) (d gp.Dialer) {
+	d = &mockDialer{}
 	return
 }
 
