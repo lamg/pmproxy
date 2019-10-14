@@ -189,8 +189,7 @@ type DependencyErr struct {
 
 func (d *DependencyErr) Error() (s string) {
 	s = fmt.Sprintf(
-		"%s:%s ≠ nil ∧ (all %v nil) ∨"+
-			" (no %v with authenticator %s)",
-		d.name, d.tÿpe, d.absent, d.absent, d.name)
+		"%s:%s ≠ nil ∧ (all %v nil) ∨ (no matching dependency name)",
+		d.name, d.tÿpe, d.absent)
 	return
 }

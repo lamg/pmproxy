@@ -138,8 +138,10 @@ func initSessionIPM(c *conf, m *manager) (e error) {
 			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
 		}
 		if (c.AdDB == nil && c.MapDB == nil) ||
-			(c.AdDB != nil && c.AdDB.Name != c.SessionIPM.Auth) ||
-			(c.MapDB != nil && c.MapDB.Name != c.SessionIPM.Auth) {
+			((c.AdDB != nil && c.AdDB.Name != c.SessionIPM.Auth) &&
+				(c.MapDB != nil && c.MapDB.Name != c.SessionIPM.Auth)) ||
+			(c.AdDB != nil && c.MapDB != nil &&
+				c.AdDB.Name == c.MapDB.Name) {
 			e = &DependencyErr{
 				name:   c.SessionIPM.Name,
 				tÿpe:   SessionIPMK,
