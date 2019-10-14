@@ -23,6 +23,7 @@ package managers
 import (
 	"context"
 	"errors"
+	pred "github.com/lamg/predicate"
 	"github.com/lamg/proxy"
 	"github.com/stretchr/testify/require"
 	ht "net/http/httptest"
@@ -43,9 +44,9 @@ func TestSessionIPMOpen(t *testing.T) {
 	ctx := context.WithValue(context.Background(), proxy.ReqParamsK,
 		rqp)
 	_, e := dlr.DialContext(ctx, tcp, od4)
-	var nc *NoConnErr
+	var nc *ForbiddenByRulesErr
 	require.True(t, errors.As(e, &nc))
-	require.Equal(t, ht.DefaultRemoteAddr, nc.IP)
+	require.Equal(t, pred.FalseStr, nc.Result)
 }
 
 func openTest(t *testing.T) (cmf CmdF, dlr *Dialer,

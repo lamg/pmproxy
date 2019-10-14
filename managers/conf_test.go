@@ -80,4 +80,4 @@ func confTest(t *testing.T) (c CmdF, d *Dialer) {
 	return
 }
 
-var od4 = "1.1.1.1"
+var od4 = "1.1.1.1:443"
