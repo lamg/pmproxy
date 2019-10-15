@@ -43,6 +43,15 @@ func TestConnections(t *testing.T) {
 	cmf, dlr, jtk := openTest(t)
 	n, e := dlr.DialContext(ctx, tcp, od4)
 	require.NoError(t, e)
+	n.Close()
+	chkClientConn := &Cmd{
+		Manager: connectionsMng,
+		Cmd:     readRequest,
+		IP:      ht.DefaultRemoteAddr,
+	}
+	cmf(chkClientConn)
+	require.NoError(t, chkClientConn.Err)
+	require.True(t, len(chkClientConn.consR) != 0)
 	c := &Cmd{
 		Cmd:     Close,
 		Manager: "sessions",
