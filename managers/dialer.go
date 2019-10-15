@@ -79,7 +79,6 @@ func (c *ctlConn) Read(p []byte) (n int, e error) {
 
 func (c *ctlConn) Close() (e error) {
 	e = c.Conn.Close()
-	c.operation(Close, 0)
 	return
 }
 
