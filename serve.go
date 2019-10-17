@@ -196,7 +196,8 @@ func StdIface(staticFPath string,
 }
 
 const (
-	ApiCmd = "/api/cmd"
+	ApiCmd        = "/api/cmd"
+	ExcludedRoute = "/dashboard"
 )
 
 func compatibleIface(cmdChan mng.CmdF, path, method,
@@ -213,6 +214,9 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 			if path == ApiCmd && method == h.MethodPost {
 				e = json.Unmarshal(bs, m)
 			} else {
+				if path == ExcludedRoute || path == ExcludedRoute+"/" {
+					path = ""
+				}
 				fileSrv(path)
 				m = &mng.Cmd{Manager: mng.Skip}
 			}
