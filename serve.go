@@ -70,7 +70,8 @@ func Serve(fs afero.Fs) (e error) {
 
 func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 	if i.Server.FastOrStd {
-		fhnd := FastIface(i.WebStaticFilesDir, cmdChan)
+		fhnd := FastIface(i.WebStaticFilesDir, cmdChan,
+			i.ExcludedRoutes)
 		cropt := fasthttpcors.DefaultHandler()
 		fast := &fh.Server{
 			ReadTimeout:  i.Server.ReadTimeout,
@@ -80,7 +81,7 @@ func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 		e = fast.ListenAndServeTLS(i.Server.Addr, i.HTTPSCert,
 			i.HTTPSKey)
 	} else {
-		shnd := StdIface(i.WebStaticFilesDir, cmdChan)
+		shnd := StdIface(i.WebStaticFilesDir, cmdChan, i.ExcludedRoutes)
 		cropt := cors.AllowAll()
 		std := &h.Server{
 			ReadTimeout:  i.Server.ReadTimeout,
@@ -120,7 +121,7 @@ func serveProxy(p *proxyConf, dial proxy.Dialer) (e error) {
 }
 
 func FastIface(staticFPath string,
-	cmdChan mng.CmdF) (hnd fh.RequestHandler) {
+	cmdChan mng.CmdF, excl []string) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
 			IndexNames:         []string{"index.html"},
@@ -155,13 +156,14 @@ func FastIface(staticFPath string,
 					ctx.Response.SetBodyString(err.Error())
 				}
 			},
+			excl,
 		)
 	}
 	return
 }
 
 func StdIface(staticFPath string,
-	cmdChan mng.CmdF) (hnd h.HandlerFunc) {
+	cmdChan mng.CmdF, excl []string) (hnd h.HandlerFunc) {
 	hnd = func(w h.ResponseWriter, r *h.Request) {
 		compatibleIface(
 			cmdChan,
@@ -190,19 +192,21 @@ func StdIface(staticFPath string,
 				}
 				h.Error(w, res, h.StatusBadRequest)
 			},
+			excl,
 		)
 	}
 	return
 }
 
 const (
-	ApiCmd        = "/api/cmd"
-	ExcludedRoute = "/dashboard"
+	ApiCmd = "/api/cmd"
 )
 
 func compatibleIface(cmdChan mng.CmdF, path, method,
 	rAddr string, body func() ([]byte, error),
-	resp func([]byte), fileSrv func(string), writeErr func(error)) {
+	resp func([]byte), fileSrv func(string), writeErr func(error),
+	excl []string,
+) {
 	m := new(mng.Cmd)
 	var e error
 	var bs []byte
@@ -214,7 +218,11 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 			if path == ApiCmd && method == h.MethodPost {
 				e = json.Unmarshal(bs, m)
 			} else {
-				if path == ExcludedRoute || path == ExcludedRoute+"/" {
+				ib := func(i int) bool {
+					return path == excl[i] || path == excl[i]+"/"
+				}
+				ok, _ := alg.BLnSrch(ib, len(excl))
+				if ok {
 					path = ""
 				}
 				fileSrv(path)

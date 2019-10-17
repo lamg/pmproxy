@@ -83,6 +83,7 @@ type apiConf struct {
 	WebStaticFilesDir string        `toml:"webStaticFilesDir"`
 	PersistInterval   time.Duration `toml:"persistInterval"`
 	Server            *srvConf      `toml:"server"`
+	ExcludedRoutes    []string      `toml:"excludedRoutes"`
 }
 
 type proxyConf struct {

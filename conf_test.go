@@ -26,10 +26,13 @@ func TestConf(t *testing.T) {
 	require.NoError(t, e)
 	require.NotNil(t, p.Proxy)
 	require.NotNil(t, p.Api)
+	require.Equal(t, []string{"/dashboard", "/auth/login", "/about"},
+		p.Api.ExcludedRoutes)
 }
 
 var cfgExample = `
 [api]
+	excludedRoutes=["/dashboard","/auth/login","/about"]
 	httpsCert="cert.pem"
 	httpsKey="key.pem"
 	webStaticFilesDir="staticFiles"
@@ -38,7 +41,7 @@ var cfgExample = `
 		readTimeout="30s"
 		writeTimeout="20s"
 		addr=":4443"
-		fastOrStd=true
+		fastOrStd=false
 
 [proxy]
 	dialTimeout="10s"
@@ -46,7 +49,8 @@ var cfgExample = `
 		readTimeout="30s"
 		writeTimeout="20s"
 		addr=":8081"
-		fastOrStd=true
+		fastOrStd=false
+
 `
 
 func TestConcurrency(t *testing.T) {

@@ -128,7 +128,7 @@ func basicConfT(t *testing.T) (fs afero.Fs, ifh h.HandlerFunc,
 	require.NoError(t, e)
 	ch, _, prs, e := mng.Load("", fs)
 	require.NoError(t, e)
-	ifh = StdIface("", ch)
+	ifh = StdIface("", ch, []string{})
 	return
 }
 
