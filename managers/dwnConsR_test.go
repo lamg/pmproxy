@@ -45,22 +45,23 @@ func TestDwnConsRInit(t *testing.T) {
 	c := new(conf)
 	e = toml.Unmarshal([]byte(cfg0), c)
 	require.NoError(t, e)
-	require.Equal(t, "1 KB", c.DwnConsR.GroupQuota["group0"])
+	down := c.DwnConsR[0]
+	require.Equal(t, "1 KB", down.GroupQuota["group0"])
 	fs := afero.NewMemMapFs()
-	consFile := "/" + c.DwnConsR.Name + ".json"
+	consFile := "/" + down.Name + ".json"
 	afero.WriteFile(fs, consFile, []byte(testConsMap), 0644)
-	e = c.DwnConsR.init(fs, "/")
+	e = down.init(fs, "/")
 	require.NoError(t, e)
-	q := c.DwnConsR.quota("user0", []string{"group0"})
+	q := down.quota("user0", []string{"group0"})
 	require.Equal(t, uint64(datasize.KB), q)
-	cons := c.DwnConsR.consumption("user0")
+	cons := down.consumption("user0")
 	require.Equal(t, uint64(512), cons)
 
 	// persist test
 	nw, e := time.Parse(time.RFC3339, "2019-09-18T00:00:00Z")
 	require.NoError(t, e)
-	c.DwnConsR.now = func() time.Time { return nw }
-	e = c.DwnConsR.persist()
+	down.now = func() time.Time { return nw }
+	e = down.persist()
 	require.NoError(t, e)
 	bs, e := afero.ReadFile(fs, consFile)
 	require.NoError(t, e)
