@@ -188,11 +188,11 @@ func falseRulesEval(c *mng.Cmd, r error) (ok bool) {
 const cfg = `
 rules = "sessions ∧ down"
 
-[sessionIPM]
+[[sessionIPM]]
 	name = "sessions"
 	auth = "map"
 
-[dwnConsR]
+[[dwnConsR]]
 	name = "down"
 	userDBN = "map"
 	resetCycle = "1h"

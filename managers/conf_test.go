@@ -55,11 +55,11 @@ admins = ["user0"]
 		user0 = ["group0"]
 		user1 = ["group1"]
 
-[sessionIPM]
+[[sessionIPM]]
 	name = "sessions"
 	auth = "map"
 
-[dwnConsR]
+[[dwnConsR]]
 	name = "down"
 	userDBN = "map"
 	resetCycle = "168h"

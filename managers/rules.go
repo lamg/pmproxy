@@ -2,6 +2,7 @@ package managers
 
 import (
 	"encoding/json"
+	alg "github.com/lamg/algorithms"
 	pred "github.com/lamg/predicate"
 	"strings"
 )
@@ -52,7 +53,7 @@ func (m *rules) exec(c *Cmd) (term bool) {
 	return
 }
 
-func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
+func (m *rules) paths(sm, dw, ipm []string) (ms []mngPath) {
 	// depends on the matchers required to evaluate the predicate
 	// for the specific instance of Cmd, which is defined at after
 	// initialization. The solution is make the command go through
@@ -73,14 +74,24 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 			}
 		}
 	}
-	matchers := map[string][]mngPath{
-		sm: []mngPath{
-			{name: ipUserMng, cmd: Get},
-			{name: sm, cmd: Match},
+	matchers := make(map[string][]mngPath)
+	mngPF := []func(string) []mngPath{
+		func(s string) []mngPath {
+			return []mngPath{
+				{name: ipUserMng, cmd: Get}, {name: s, cmd: Match}}
 		},
-		dw:  []mngPath{{name: dw, cmd: Match}},
-		ipm: []mngPath{{name: ipm, cmd: Match}},
+		func(s string) []mngPath {
+			return []mngPath{{name: s, cmd: Match}}
+		},
+		func(s string) []mngPath {
+			return []mngPath{{name: s, cmd: Match}}
+		},
 	}
+	names := [][]string{sm, dw, ipm}
+	alg.Forall(
+		func(i int) { matchersToMap(names[i], mngPF[i], matchers) },
+		len(names),
+	)
 	paths := make([]mngPath, 0)
 	for _, j := range mts {
 		pth, ok := matchers[j]
@@ -104,4 +115,9 @@ func (m *rules) paths(sm, dw, ipm string) (ms []mngPath) {
 		},
 	}
 	return
+}
+
+func matchersToMap(xs []string, ps func(string) []mngPath,
+	ms map[string][]mngPath) {
+	alg.Forall(func(i int) { ms[xs[i]] = ps(xs[i]) }, len(xs))
 }

@@ -75,25 +75,41 @@ func Load(confDir string, fs afero.Fs) (
 		func() { e = initDwnConsR(c, m) },
 		func() { initAdmins(c, m) },
 		func() {
-			if c.SessionIPM == nil && c.DwnConsR != nil {
+			if len(c.SessionIPM) == 0 && len(c.DwnConsR) != 0 {
 				e = &DependencyErr{
-					name:   c.DwnConsR.Name,
+					name:   c.DwnConsR[0].Name,
 					tÿpe:   DwnConsRK,
 					absent: []string{SessionIPMK},
 				}
-			} else if c.DwnConsR != nil {
-				e = c.DwnConsR.init(fs, confFullDir)
+			} else if len(c.DwnConsR) != 0 {
+				alg.BLnSrch(
+					func(i int) bool {
+						e = c.DwnConsR[i].init(fs, confFullDir)
+						return e != nil
+					},
+					len(c.DwnConsR),
+				)
 			}
 		},
 		func() {
-			m.mngs.Store(c.DwnConsR.Name, c.DwnConsR.exec)
+			alg.Forall(func(i int) {
+				m.mngs.Store(c.DwnConsR[i].Name, c.DwnConsR[i].exec)
+			},
+				len(c.DwnConsR),
+			)
 		},
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
 			dlr = &Dialer{cf: c, cmdf: cmdChan, Dialer: NetDialerF}
 			if c.DwnConsR != nil {
-				persist = c.DwnConsR.persist
+				persist = func() (err error) {
+					alg.Forall(
+						func(i int) { c.DwnConsR[i].persist() },
+						len(c.DwnConsR),
+					)
+					return
+				}
 			} else {
 				persist = func() (e error) { return }
 			}
@@ -108,14 +124,14 @@ func Load(confDir string, fs afero.Fs) (
 type conf struct {
 	JWTExpiration time.Duration `toml:"jwtExpiration"`
 	Admins        []string      `toml:"admins"`
-	DwnConsR      *DwnConsR     `toml:"dwnConsR"`
+	DwnConsR      []*DwnConsR   `toml:"dwnConsR"`
 	AdDB          *adDB         `toml:"adDB"`
 	MapDB         *mapDB        `toml:"mapDB"`
 	ParentProxy   string        `toml:"parentProxy"`
 	NetIface      string        `toml:"netIface"`
-	RangeIPM      *rangeIPM     `toml:"rangeIPM"`
+	RangeIPM      []*rangeIPM   `toml:"rangeIPM"`
 	Rules         string        `toml:"rules" default:"true"`
-	SessionIPM    *sessionIPM   `toml:"sessionIPM"`
+	SessionIPM    []*sessionIPM `toml:"sessionIPM"`
 	SyslogAddr    string        `toml:"syslogAddr"`
 
 	parentProxy *url.URL
@@ -128,56 +144,65 @@ func initSessionIPM(c *conf, m *manager) (e error) {
 	//    (sessionIPM.Name must match a AdDB.Name or MapDB.Name)
 	// adms needs sessionIPM
 	// dwnConsR needs sessionIPM, AdDB or MapDB
-	if c.SessionIPM != nil {
-		m.mngs.Store(c.SessionIPM.Name, c.SessionIPM.exec)
-		m.mngs.Store(ipUserMng, newIpUser().exec)
-		if c.AdDB != nil {
-			m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
-		}
-		if c.MapDB != nil {
-			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
-		}
-		if (c.AdDB == nil && c.MapDB == nil) ||
-			((c.AdDB != nil && c.AdDB.Name != c.SessionIPM.Auth) &&
-				(c.MapDB != nil && c.MapDB.Name != c.SessionIPM.Auth)) ||
-			(c.AdDB != nil && c.MapDB != nil &&
-				c.AdDB.Name == c.MapDB.Name) {
-			e = &DependencyErr{
-				name:   c.SessionIPM.Name,
-				tÿpe:   SessionIPMK,
-				absent: []string{"adDB", "mapDB"},
+	m.mngs.Store(ipUserMng, newIpUser().exec)
+	if c.AdDB != nil {
+		m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
+	}
+	if c.MapDB != nil {
+		m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
+	}
+	cr, e := newCrypt(c.JWTExpiration)
+	if e == nil {
+		m.mngs.Store(cryptMng, cr.exec)
+	}
+	alg.BLnSrch(
+		func(i int) bool {
+			m.mngs.Store(c.SessionIPM[i].Name, c.SessionIPM[i].exec)
+			if (c.AdDB == nil && c.MapDB == nil) ||
+				((c.AdDB != nil && c.AdDB.Name != c.SessionIPM[i].Auth) &&
+					(c.MapDB != nil &&
+						c.MapDB.Name != c.SessionIPM[i].Auth)) ||
+				(c.AdDB != nil && c.MapDB != nil &&
+					c.AdDB.Name == c.MapDB.Name) {
+				e = &DependencyErr{
+					name:   c.SessionIPM[i].Name,
+					tÿpe:   SessionIPMK,
+					absent: []string{"adDB", "mapDB"},
+				}
 			}
-		}
-		if e == nil {
-			var cr *crypt
-			cr, e = newCrypt(c.JWTExpiration)
 			if e == nil {
-				m.mngs.Store(cryptMng, cr.exec)
-				smPaths := c.SessionIPM.paths()
+				smPaths := c.SessionIPM[i].paths()
 				m.paths = append(m.paths, smPaths...)
 			}
-		}
-	}
+			return e != nil
+		},
+		len(c.SessionIPM),
+	)
 	return
 }
 
 func initDwnConsR(c *conf, m *manager) (e error) {
-	if c.DwnConsR != nil {
+	if len(c.DwnConsR) != 0 {
 		if c.AdDB != nil {
 			m.mngs.Store(c.AdDB.Name, c.AdDB.exec)
 		} else if c.MapDB != nil {
 			m.mngs.Store(c.MapDB.Name, c.MapDB.exec)
-		} else if c.SessionIPM != nil {
+		} else if len(c.SessionIPM) != 0 {
 			e = &DependencyErr{
-				name:   c.DwnConsR.Name,
+				name:   c.DwnConsR[0].Name,
 				tÿpe:   DwnConsRK,
 				absent: []string{"mapDB", "adDB"},
 			}
 		}
 		if e == nil {
-			ds := c.DwnConsR.paths()
-			m.paths = append(m.paths, ds...)
-			c.DwnConsR.now = c.now
+			alg.Forall(
+				func(i int) {
+					ds := c.DwnConsR[i].paths()
+					m.paths = append(m.paths, ds...)
+					c.DwnConsR[i].now = c.now
+				},
+				len(c.DwnConsR),
+			)
 		}
 	}
 	return
@@ -188,16 +213,16 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 	rs, e = newRules(c.Rules)
 	if e == nil {
 		m.mngs.Store(RulesK, rs.exec)
-		var sm, dw, ipm string
-		if c.SessionIPM != nil {
-			sm = c.SessionIPM.Name
-		}
-		if c.DwnConsR != nil {
-			dw = c.DwnConsR.Name
-		}
-		if c.RangeIPM != nil {
-			ipm = c.RangeIPM.Name
-		}
+		sm, dw, ipm :=
+			initStrSlice(
+				func() int { return len(c.SessionIPM) },
+				func(i int) string { return c.SessionIPM[i].Name }),
+			initStrSlice(
+				func() int { return len(c.DwnConsR) },
+				func(i int) string { return c.DwnConsR[i].Name }),
+			initStrSlice(
+				func() int { return len(c.RangeIPM) },
+				func(i int) string { return c.RangeIPM[i].Name })
 		ms := rs.paths(sm, dw, ipm)
 		m.paths = append(m.paths, ms...)
 		n := 0
@@ -213,19 +238,31 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 	return
 }
 
+func initStrSlice(length func() int,
+	str func(int) string) (r []string) {
+	n := length()
+	r = make([]string, n)
+	alg.Forall(func(i int) { r[i] = str(i) }, n)
+	return
+}
+
 func initConnMng(c *conf, m *manager, rdeps []mngPath) (e error) {
 	cs := &connections{ipRestr: new(sync.Map)}
 	cs.logger, e = newLogger(c.SyslogAddr, c.now)
 	if e == nil {
-		ms := []mngPath{
-			{
-				name: c.DwnConsR.Name,
-				mngs: []mngPath{
-					{name: ipUserMng, cmd: Get},
-					{name: c.DwnConsR.UserDBN, cmd: Get},
-				},
+		ms := make([]mngPath, len(c.DwnConsR))
+		alg.Forall(
+			func(i int) {
+				ms[i] = mngPath{
+					name: c.DwnConsR[i].Name,
+					mngs: []mngPath{
+						{name: ipUserMng, cmd: Get},
+						{name: c.DwnConsR[i].UserDBN, cmd: Get},
+					},
+				}
 			},
-		}
+			len(ms),
+		)
 		cps := connPaths(ms, rdeps)
 		m.mngs.Store(connectionsMng, cs.exec)
 		m.paths = append(m.paths, cps...)
