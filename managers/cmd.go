@@ -43,6 +43,7 @@ type Cmd struct {
 
 	rqp         *proxy.ReqParams
 	parentProxy *url.URL
+	iface       string
 	interp      map[string]*MatchType
 	consR       []string
 }

@@ -47,9 +47,9 @@ func (d *Dialer) DialContext(ctx context.Context, network,
 	d.cmdf(m)
 	e = m.Err
 	if e == nil {
-		dlr := d.Dialer(d.cf.NetIface, d.Timeout)
-		if d.cf.parentProxy != nil {
-			c, e = proxy.DialProxy(network, addr, d.cf.parentProxy, dlr)
+		dlr := d.Dialer(m.iface, d.Timeout)
+		if m.parentProxy != nil {
+			c, e = proxy.DialProxy(network, addr, m.parentProxy, dlr)
 		} else {
 			c, e = dlr.Dial(network, addr)
 		}

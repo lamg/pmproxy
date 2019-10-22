@@ -25,11 +25,10 @@ type proxyIfaceMng struct {
 	Iface string `toml:"iface"`
 }
 
-func (p *proxyIfaceMng) exec(c *Cmd) (term bool) {
+func (p *proxyIfaceMng) exec(c *Cmd) {
 	if c.Cmd == Match {
-		c.Ok, c.interp[p.Name] =
-			true, &MatchType{Type: IfaceK, Match: true}
+		c.Ok, c.interp[p.Name], c.iface =
+			true, &MatchType{Type: IfaceK, Match: true}, p.Iface
 	}
-	term = true
 	return
 }

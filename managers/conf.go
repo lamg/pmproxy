@@ -25,7 +25,6 @@ import (
 	alg "github.com/lamg/algorithms"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
-	"net/url"
 	"os"
 	"path"
 	"sync"
@@ -67,10 +66,9 @@ func Load(confDir string, fs afero.Fs) (
 			if c.AdDB != nil {
 				c.AdDB.init()
 			}
-			if c.ParentProxy != "" {
-				c.parentProxy, e = url.Parse(c.ParentProxy)
-			}
+			e = initParentProxy(c.ParentProxy, m)
 		},
+		func() { initNetIface(c.NetIface, m) },
 		func() { e = initSessionIPM(c, m) },
 		func() { e = initDwnConsR(c, m) },
 		func() { initAdmins(c, m) },
@@ -131,21 +129,56 @@ func Load(confDir string, fs afero.Fs) (
 }
 
 type conf struct {
-	JWTExpiration time.Duration `toml:"jwtExpiration"`
-	Admins        []string      `toml:"admins"`
-	DwnConsR      []*DwnConsR   `toml:"dwnConsR"`
-	AdDB          *adDB         `toml:"adDB"`
-	MapDB         *mapDB        `toml:"mapDB"`
-	ParentProxy   string        `toml:"parentProxy"`
-	NetIface      string        `toml:"netIface"`
-	RangeIPM      []*rangeIPM   `toml:"rangeIPM"`
-	Rules         string        `toml:"rules" default:"true"`
-	SessionIPM    []*sessionIPM `toml:"sessionIPM"`
-	SyslogAddr    string        `toml:"syslogAddr"`
-	TimeSpan      []*span       `toml:"timeSpan"`
+	JWTExpiration time.Duration    `toml:"jwtExpiration"`
+	Admins        []string         `toml:"admins"`
+	DwnConsR      []*DwnConsR      `toml:"dwnConsR"`
+	AdDB          *adDB            `toml:"adDB"`
+	MapDB         *mapDB           `toml:"mapDB"`
+	ParentProxy   []*proxyURLMng   `toml:"parentProxy"`
+	NetIface      []*proxyIfaceMng `toml:"netIface"`
+	RangeIPM      []*rangeIPM      `toml:"rangeIPM"`
+	Rules         string           `toml:"rules" default:"true"`
+	SessionIPM    []*sessionIPM    `toml:"sessionIPM"`
+	SyslogAddr    string           `toml:"syslogAddr"`
+	TimeSpan      []*span          `toml:"timeSpan"`
 
-	parentProxy *url.URL
-	now         func() time.Time
+	now func() time.Time
+}
+
+func initParentProxy(ps []*proxyURLMng, m *manager) (e error) {
+	ib := func(i int) bool {
+		e = ps[i].init()
+		return e != nil
+	}
+	alg.BLnSrch(ib, len(ps))
+	if e == nil {
+		pths := make([]mngPath, len(ps))
+		inf := func(i int) {
+			m.mngs.Store(ps[i].Name, ps[i].exec)
+			pths[i] = mngPath{
+				name: ps[i].Name,
+				cmd:  Match,
+				mngs: []mngPath{{cmd: Match, name: ps[i].Name}},
+			}
+		}
+		alg.Forall(inf, len(ps))
+		m.paths = append(m.paths, pths...)
+	}
+	return
+}
+
+func initNetIface(ns []*proxyIfaceMng, m *manager) {
+	pths := make([]mngPath, len(ns))
+	inf := func(i int) {
+		m.mngs.Store(ns[i].Name, ns[i].exec)
+		pths[i] = mngPath{
+			name: ns[i].Name,
+			cmd:  Match,
+			mngs: []mngPath{{cmd: Match, name: ns[i].Name}},
+		}
+	}
+	alg.Forall(inf, len(ns))
+	m.paths = append(m.paths, pths...)
 }
 
 func initSessionIPM(c *conf, m *manager) (e error) {

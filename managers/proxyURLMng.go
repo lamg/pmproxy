@@ -25,13 +25,14 @@ import (
 )
 
 type proxyURLMng struct {
-	Name  string
+	Name     string `toml:"name"`
+	ProxyURL string `toml:"proxyURL"`
+
 	proxy *url.URL
-	Proxy string
 }
 
 func (p *proxyURLMng) init() (e error) {
-	p.proxy, e = url.Parse(p.Proxy)
+	p.proxy, e = url.Parse(p.ProxyURL)
 	return
 }
 
@@ -40,5 +41,4 @@ func (u *proxyURLMng) exec(c *Cmd) {
 		c.Ok, c.parentProxy = true, u.proxy
 		c.interp[u.Name] = &MatchType{Type: ParentProxyK, Match: true}
 	}
-	return
 }
