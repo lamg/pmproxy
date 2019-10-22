@@ -69,6 +69,7 @@ func Load(confDir string, fs afero.Fs) (
 			e = initParentProxy(c.ParentProxy, m)
 		},
 		func() { initNetIface(c.NetIface, m) },
+		func() { e = initRangeIPM(c.RangeIPM, m) },
 		func() { e = initSessionIPM(c, m) },
 		func() { e = initDwnConsR(c, m) },
 		func() { initAdmins(c, m) },
@@ -89,22 +90,7 @@ func Load(confDir string, fs afero.Fs) (
 				)
 			}
 		},
-		func() {
-			pths := make([]mngPath, len(c.TimeSpan))
-			alg.Forall(
-				func(i int) {
-					c.TimeSpan[i].now = c.now
-					m.mngs.Store(c.TimeSpan[i].Name, c.TimeSpan[i].exec)
-					pths[i] = mngPath{
-						cmd:  Match,
-						name: c.TimeSpan[i].Name,
-						mngs: []mngPath{{cmd: Match, name: c.TimeSpan[i].Name}},
-					}
-				},
-				len(c.TimeSpan),
-			)
-			m.paths = append(m.paths, pths...)
-		},
+		func() { initTimeSpan(c.TimeSpan, m, c.now) },
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
@@ -143,6 +129,36 @@ type conf struct {
 	TimeSpan      []*span          `toml:"timeSpan"`
 
 	now func() time.Time
+}
+
+func initRangeIPM(rs []*rangeIPM, m *manager) (e error) {
+	ib := func(i int) bool {
+		e = rs[i].init()
+		return e != nil
+	}
+	alg.BLnSrch(ib, len(rs))
+	if e == nil {
+		inf := func(i int) { m.mngs.Store(rs[i].Name, rs[i].exec) }
+		alg.Forall(inf, len(rs))
+	}
+	return
+}
+
+func initTimeSpan(ts []*span, m *manager, now func() time.Time) {
+	pths := make([]mngPath, len(ts))
+	alg.Forall(
+		func(i int) {
+			ts[i].now = now
+			m.mngs.Store(ts[i].Name, ts[i].exec)
+			pths[i] = mngPath{
+				cmd:  Match,
+				name: ts[i].Name,
+				mngs: []mngPath{{cmd: Match, name: ts[i].Name}},
+			}
+		},
+		len(ts),
+	)
+	m.paths = append(m.paths, pths...)
 }
 
 func initParentProxy(ps []*proxyURLMng, m *manager) (e error) {
@@ -262,7 +278,7 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 	rs, e = newRules(c.Rules)
 	if e == nil {
 		m.mngs.Store(RulesK, rs.exec)
-		sm, dw, ipm :=
+		sm, dw, ipm, ps, ns :=
 			initStrSlice(
 				func() int { return len(c.SessionIPM) },
 				func(i int) string { return c.SessionIPM[i].Name }),
@@ -271,8 +287,14 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 				func(i int) string { return c.DwnConsR[i].Name }),
 			initStrSlice(
 				func() int { return len(c.RangeIPM) },
-				func(i int) string { return c.RangeIPM[i].Name })
-		ms := rs.paths(sm, dw, ipm)
+				func(i int) string { return c.RangeIPM[i].Name }),
+			initStrSlice(
+				func() int { return len(c.ParentProxy) },
+				func(i int) string { return c.ParentProxy[i].Name }),
+			initStrSlice(
+				func() int { return len(c.NetIface) },
+				func(i int) string { return c.NetIface[i].Name })
+		ms := rs.paths(sm, dw, ipm, ps, ns)
 		m.paths = append(m.paths, ms...)
 		n := 0
 		if ms[n].cmd == Discover {
