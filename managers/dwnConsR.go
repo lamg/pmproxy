@@ -103,7 +103,7 @@ func (d *DwnConsR) persist() (e error) {
 	return
 }
 
-func (d *DwnConsR) exec(c *Cmd) (term bool) {
+func (d *DwnConsR) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Get,
@@ -180,7 +180,6 @@ func (d *DwnConsR) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }
 
 func (d *DwnConsR) filter(c *Cmd) (ok bool) {

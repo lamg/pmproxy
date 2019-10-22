@@ -62,6 +62,8 @@ github.com/lamg/proxy v1.2.1-0.20191012222626-87a4ce4ac7fa h1:rT0TwhteKZCCGu49EX
 github.com/lamg/proxy v1.2.1-0.20191012222626-87a4ce4ac7fa/go.mod h1:9sbJfaEFu0aey/P73krYCtb7XP8brKoQhc47zlkysms=
 github.com/lamg/proxy v1.2.1-0.20191013154348-324ea428acd1 h1:yeNoq28e7h9D5xsitwAIGWRW01Yyn5XfWAvB9CdiWik=
 github.com/lamg/proxy v1.2.1-0.20191013154348-324ea428acd1/go.mod h1:9sbJfaEFu0aey/P73krYCtb7XP8brKoQhc47zlkysms=
+github.com/lamg/rtimespan v0.1.0 h1:RWt5jUZDM6+TWc9LbYc6GyAgRWK6N0dBbJxUs9uTPa0=
+github.com/lamg/rtimespan v0.1.0/go.mod h1:qORt8iToRjuSeTY9w5/NFsAKUquviGcwYCpFBwic2Eg=
 github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f h1:g8FzCgiLckKe695REpNINfRFvK7fze5tjeBeUUOGBF0=
 github.com/lamg/throttle v0.0.0-20190406185716-dcbf0403bb8f/go.mod h1:ccF76DNsUXw+Ju3r6CLNRF1Exuo04CcKmtINK97Um3Y=
 github.com/pelletier/go-toml v1.4.0 h1:u3Z1r+oOXJIkxqw34zVhyPgjBsm6X2wn21NWs/HfSeg=

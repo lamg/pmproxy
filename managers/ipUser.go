@@ -36,7 +36,7 @@ func newIpUser() (s *ipUser) {
 	return
 }
 
-func (p *ipUser) exec(c *Cmd) (term bool) {
+func (p *ipUser) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Get,
@@ -52,7 +52,6 @@ func (p *ipUser) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }
 
 func (p *ipUser) open(ip, user string) {

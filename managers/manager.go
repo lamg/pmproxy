@@ -28,6 +28,8 @@ import (
 type manager struct {
 	mngs  *sync.Map
 	paths []mngPath
+	// execution by a specific manager is only possible if it
+	// appears both in paths and mngs
 }
 
 type mngPath struct {
@@ -47,7 +49,7 @@ type mngCmd struct {
 	cmd string
 }
 
-func (m *manager) exec(c *Cmd) (proc bool) {
+func (m *manager) exec(c *Cmd) {
 	c.interp = make(map[string]*MatchType)
 	ib := func(i int) (ok bool) {
 		pth := m.paths[i]
@@ -74,7 +76,7 @@ func (m *manager) exec(c *Cmd) (proc bool) {
 func (m *manager) execStep(c *Cmd) {
 	v, ok := m.mngs.Load(c.Manager)
 	if ok {
-		v.(func(*Cmd) bool)(c)
+		v.(func(*Cmd))(c)
 	} else {
 		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}

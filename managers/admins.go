@@ -10,7 +10,7 @@ type admins struct {
 	admins []string
 }
 
-func (m *admins) exec(c *Cmd) (term bool) {
+func (m *admins) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			isAdmin,
@@ -23,7 +23,6 @@ func (m *admins) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }
 
 func (m *admins) paths() (ms []mngPath) {

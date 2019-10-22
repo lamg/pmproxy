@@ -57,7 +57,7 @@ func (d *adDB) userInfo(user string) (name string, gs []string,
 	return
 }
 
-func (d *adDB) exec(c *Cmd) (term bool) {
+func (d *adDB) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Auth,
@@ -80,5 +80,4 @@ func (d *adDB) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }

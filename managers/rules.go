@@ -19,7 +19,7 @@ func newRules(preds string) (r *rules, e error) {
 	return
 }
 
-func (m *rules) exec(c *Cmd) (term bool) {
+func (m *rules) exec(c *Cmd) {
 	if c.Cmd == Match || c.Cmd == Discover {
 		ninterp := make(map[string]*MatchType, len(c.interp))
 		interp := func(name string) (r, def bool) {
@@ -50,7 +50,6 @@ func (m *rules) exec(c *Cmd) (term bool) {
 			c.Data, c.Err = json.Marshal(dr)
 		}
 	}
-	return
 }
 
 func (m *rules) paths(sm, dw, ipm []string) (ms []mngPath) {

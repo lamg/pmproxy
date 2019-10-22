@@ -37,7 +37,7 @@ const (
 	BwConsRK = "bwConsR"
 )
 
-func (b *bwConsR) exec(c *Cmd) (term bool) {
+func (b *bwConsR) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Get,
@@ -67,7 +67,5 @@ func (b *bwConsR) exec(c *Cmd) (term bool) {
 			},
 		},
 	}
-	term = true
 	c.Ok = alg.ExecF(kf, c.Cmd)
-	return
 }

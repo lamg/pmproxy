@@ -92,11 +92,20 @@ func Load(confDir string, fs afero.Fs) (
 			}
 		},
 		func() {
-			alg.Forall(func(i int) {
-				m.mngs.Store(c.DwnConsR[i].Name, c.DwnConsR[i].exec)
-			},
-				len(c.DwnConsR),
+			pths := make([]mngPath, len(c.TimeSpan))
+			alg.Forall(
+				func(i int) {
+					c.TimeSpan[i].now = c.now
+					m.mngs.Store(c.TimeSpan[i].Name, c.TimeSpan[i].exec)
+					pths[i] = mngPath{
+						cmd:  Match,
+						name: c.TimeSpan[i].Name,
+						mngs: []mngPath{{cmd: Match, name: c.TimeSpan[i].Name}},
+					}
+				},
+				len(c.TimeSpan),
 			)
+			m.paths = append(m.paths, pths...)
 		},
 		func() { e = initRulesAndConns(c, m) },
 		func() {
@@ -133,6 +142,7 @@ type conf struct {
 	Rules         string        `toml:"rules" default:"true"`
 	SessionIPM    []*sessionIPM `toml:"sessionIPM"`
 	SyslogAddr    string        `toml:"syslogAddr"`
+	TimeSpan      []*span       `toml:"timeSpan"`
 
 	parentProxy *url.URL
 	now         func() time.Time
@@ -195,6 +205,12 @@ func initDwnConsR(c *conf, m *manager) (e error) {
 			}
 		}
 		if e == nil {
+			alg.Forall(
+				func(i int) {
+					m.mngs.Store(c.DwnConsR[i].Name, c.DwnConsR[i].exec)
+				},
+				len(c.DwnConsR),
+			)
 			alg.Forall(
 				func(i int) {
 					ds := c.DwnConsR[i].paths()

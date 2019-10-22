@@ -40,7 +40,7 @@ func (r *rangeIPM) init() (e error) {
 	return
 }
 
-func (r *rangeIPM) exec(c *Cmd) (term bool) {
+func (r *rangeIPM) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Get,
@@ -51,14 +51,14 @@ func (r *rangeIPM) exec(c *Cmd) (term bool) {
 		{
 			Match,
 			func() {
-				c.interp[r.Name], term =
-					&MatchType{Match: r.match(c.IP), Type: RangeIPMK},
-					true
+				c.interp[r.Name] = &MatchType{
+					Match: r.match(c.IP),
+					Type:  RangeIPMK,
+				}
 			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }
 
 func (r *rangeIPM) match(ip string) (ok bool) {

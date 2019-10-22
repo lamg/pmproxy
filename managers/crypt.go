@@ -101,7 +101,7 @@ func (c *crypt) decrypt(s string) (user *claim, e error) {
 	return
 }
 
-func (c *crypt) exec(m *Cmd) (term bool) {
+func (c *crypt) exec(m *Cmd) {
 	kf := []alg.KFunc{
 		{
 			encrypt,
@@ -144,6 +144,4 @@ func (c *crypt) exec(m *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, m.Cmd)
-	term = true
-	return
 }

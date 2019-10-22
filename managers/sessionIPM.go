@@ -29,7 +29,7 @@ type sessionIPM struct {
 	Auth string `toml:"auth"`
 }
 
-func (m *sessionIPM) exec(c *Cmd) (term bool) {
+func (m *sessionIPM) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Match,
@@ -43,7 +43,6 @@ func (m *sessionIPM) exec(c *Cmd) (term bool) {
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }
 
 func (m *sessionIPM) paths() (ms []mngPath) {

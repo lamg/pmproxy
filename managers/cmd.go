@@ -62,7 +62,7 @@ type DiscoverRes struct {
 	Result   string                `json:"result"`
 }
 
-type CmdF func(*Cmd) bool
+type CmdF func(*Cmd)
 
 const (
 	Open        = "open"
@@ -90,6 +90,7 @@ const (
 	SessionIPMK  = "sessionIPM"
 	IfaceK       = "iface"
 	ParentProxyK = "parentProxy"
+	SpanK        = "timeSpan"
 
 	RulesK         = "rules"
 	connectionsMng = "connections"

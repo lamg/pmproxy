@@ -30,7 +30,7 @@ type connections struct {
 	logger  *logger
 }
 
-func (n *connections) exec(c *Cmd) (term bool) {
+func (n *connections) exec(c *Cmd) {
 	loadConsR := func() {
 		v, ok := n.ipRestr.Load(c.IP)
 		if ok {
@@ -59,7 +59,6 @@ func (n *connections) exec(c *Cmd) (term bool) {
 		{readReport, loadConsR},
 	}
 	alg.ExecF(kf, c.Cmd)
-	return
 }
 
 func connPaths(avlRestr, rulesDeps []mngPath) (ps []mngPath) {
