@@ -35,8 +35,8 @@ type adDB struct {
 	ldap *ld.Ldap
 }
 
-func (a *adDB) init() (e error) {
-	a.ldap = ld.NewLdapWithAcc(a.Addr, a.Suff, a.Bdn, a.User, a.Pass)
+func (d *adDB) init() (e error) {
+	d.ldap = ld.NewLdapWithAcc(d.Addr, d.Suff, d.Bdn, d.User, d.Pass)
 	return
 }
 

@@ -22,9 +22,10 @@ package managers
 
 import (
 	"fmt"
+	"time"
+
 	alg "github.com/lamg/algorithms"
 	"github.com/lamg/throttle"
-	"time"
 )
 
 type bwConsR struct {
@@ -32,10 +33,6 @@ type bwConsR struct {
 	thrFrac float64
 	connThr *throttle.Throttle
 }
-
-const (
-	BwConsRK = "bwConsR"
-)
 
 func (b *bwConsR) exec(c *Cmd) {
 	kf := []alg.KFunc{

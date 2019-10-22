@@ -22,8 +22,9 @@ package managers
 
 import (
 	"fmt"
-	"github.com/lamg/proxy"
 	"net/url"
+
+	"github.com/lamg/proxy"
 )
 
 type Cmd struct {
@@ -92,6 +93,8 @@ const (
 	IfaceK       = "iface"
 	ParentProxyK = "parentProxy"
 	SpanK        = "timeSpan"
+	BwConsRK     = "bwConsR"
+	RangeIPMK    = "rangeIPM"
 
 	RulesK         = "rules"
 	connectionsMng = "connections"

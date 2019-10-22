@@ -21,8 +21,9 @@
 package managers
 
 import (
-	alg "github.com/lamg/algorithms"
 	"net"
+
+	alg "github.com/lamg/algorithms"
 )
 
 type rangeIPM struct {
@@ -30,10 +31,6 @@ type rangeIPM struct {
 	Cidr string `toml:"cidr"`
 	Name string `toml:"name"`
 }
-
-const (
-	RangeIPMK = "rangeIPM"
-)
 
 func (r *rangeIPM) init() (e error) {
 	_, r.rg, e = net.ParseCIDR(r.Cidr)
