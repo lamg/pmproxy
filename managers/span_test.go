@@ -33,6 +33,8 @@ func TestSpan(t *testing.T) {
 	require.NoError(t, e)
 	m, e := time.Parse(time.RFC3339, "2006-01-02T15:05:05-04:00")
 	s := c.TimeSpan[0]
+	require.False(t, s.Span.Infinite)
+	require.False(t, s.Span.AllTime)
 	s.now = func() time.Time { return m }
 	n := &Cmd{Cmd: Match, interp: make(map[string]*MatchType)}
 	s.exec(n)
@@ -69,5 +71,5 @@ rules = "night"
 		start=2006-01-02T15:04:05-04:00
 		active = "5m"
 		total = "10m"
-		infinite = true
+		times = 1 
 `
