@@ -24,6 +24,7 @@ import (
 	alg "github.com/lamg/algorithms"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+	"net/url"
 	"testing"
 )
 
@@ -103,5 +104,47 @@ rules = "(range0 ∧ iface0) ∨ (range1 ∧ proxy0)"
 `
 
 func TestIfaceAndParent(t *testing.T) {
-	//cmdf, dlr := confTest(t, cfg1)
+	proxyURL, e := url.Parse("socks5://proxy0.org:9050")
+	require.NoError(t, e)
+	cmdf, _ := confTest(t, cfg1)
+	cs := []struct {
+		c     *Cmd
+		proxy *url.URL
+		iface string
+		match bool
+	}{
+		{
+			c: &Cmd{
+				Cmd:     Match,
+				Manager: RulesK,
+				IP:      "10.1.0.1",
+			},
+			match: false,
+		},
+		{
+			c: &Cmd{
+				Cmd:     Match,
+				Manager: RulesK,
+				IP:      "10.2.1.1",
+			},
+			iface: "eth0",
+			match: true,
+		},
+		{
+			c: &Cmd{
+				Cmd:     Match,
+				Manager: RulesK,
+				IP:      "10.3.1.1",
+			},
+			proxy: proxyURL,
+			match: true,
+		},
+	}
+	inf := func(i int) {
+		cmdf(cs[i].c)
+		require.Equal(t, cs[i].match, cs[i].c.Ok)
+		require.Equal(t, cs[i].proxy, cs[i].c.parentProxy, "At %d", i)
+		require.Equal(t, cs[i].iface, cs[i].c.iface)
+	}
+	alg.Forall(inf, len(cs))
 }
