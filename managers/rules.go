@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	alg "github.com/lamg/algorithms"
 	pred "github.com/lamg/predicate"
+	"net/url"
 	"strings"
 )
 
@@ -22,6 +23,8 @@ func newRules(preds string) (r *rules, e error) {
 func (m *rules) exec(c *Cmd) {
 	if c.Cmd == Match || c.Cmd == Discover {
 		ninterp := make(map[string]*MatchType, len(c.interp))
+		var proxyURL *url.URL
+		var netIface string
 		interp := func(name string) (r, def bool) {
 			if name == pred.TrueStr || name == pred.FalseStr {
 				r, def = name == pred.TrueStr, true
@@ -31,8 +34,16 @@ func (m *rules) exec(c *Cmd) {
 				if def {
 					ninterp[name] = mt
 					r = mt.Match
-					if r && mt.Type == DwnConsRK {
-						c.consR = append(c.consR, name)
+					if r {
+						kf := []alg.KFunc{
+							{
+								DwnConsRK,
+								func() { c.consR = append(c.consR, name) },
+							},
+							{IfaceK, func() { netIface = c.iface }},
+							{ParentProxyK, func() { proxyURL = c.parentProxy }},
+						}
+						alg.ExecF(kf, mt.Type)
 					}
 				}
 			}
@@ -40,6 +51,7 @@ func (m *rules) exec(c *Cmd) {
 		}
 		p := pred.Reduce(m.predicate, interp)
 		c.interp = ninterp // hiding managers not reached by evaluation
+		c.parentProxy, c.iface = proxyURL, netIface
 		c.Ok = p.String == pred.TrueStr
 		c.String = pred.String(p)
 		if c.Cmd == Discover {
@@ -52,7 +64,7 @@ func (m *rules) exec(c *Cmd) {
 	}
 }
 
-func (m *rules) paths(sm, dw, ipm []string) (ms []mngPath) {
+func (m *rules) paths(sm, dw, ipm, ps, ns []string) (ms []mngPath) {
 	// depends on the matchers required to evaluate the predicate
 	// for the specific instance of Cmd, which is defined at after
 	// initialization. The solution is make the command go through
@@ -79,14 +91,12 @@ func (m *rules) paths(sm, dw, ipm []string) (ms []mngPath) {
 			return []mngPath{
 				{name: ipUserMng, cmd: Get}, {name: s, cmd: Match}}
 		},
-		func(s string) []mngPath {
-			return []mngPath{{name: s, cmd: Match}}
-		},
-		func(s string) []mngPath {
-			return []mngPath{{name: s, cmd: Match}}
-		},
+		simpleMatchPath,
+		simpleMatchPath,
+		simpleMatchPath,
+		simpleMatchPath,
 	}
-	names := [][]string{sm, dw, ipm}
+	names := [][]string{sm, dw, ipm, ps, ns}
 	alg.Forall(
 		func(i int) { matchersToMap(names[i], mngPF[i], matchers) },
 		len(names),
@@ -114,6 +124,10 @@ func (m *rules) paths(sm, dw, ipm []string) (ms []mngPath) {
 		},
 	}
 	return
+}
+
+func simpleMatchPath(s string) []mngPath {
+	return []mngPath{{name: s, cmd: Match}}
 }
 
 func matchersToMap(xs []string, ps func(string) []mngPath,
