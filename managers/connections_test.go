@@ -31,7 +31,7 @@ import (
 )
 
 func TestConnections(t *testing.T) {
-	_, dlr := confTest(t)
+	_, dlr := confTest(t, cfg0)
 	rqp := &proxy.ReqParams{IP: ht.DefaultRemoteAddr}
 	ctx := context.WithValue(context.Background(),
 		proxy.ReqParamsK, rqp)

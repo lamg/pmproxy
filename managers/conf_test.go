@@ -68,11 +68,11 @@ admins = ["user0"]
 		group1 = "512 B"
 `
 
-func confTest(t *testing.T) (c CmdF, d *Dialer) {
+func confTest(t *testing.T, conf string) (c CmdF, d *Dialer) {
 	fs := afero.NewMemMapFs()
 	confPath, fullDir, e := ConfPath()
 	require.NoError(t, e)
-	e = afero.WriteFile(fs, confPath, []byte(cfg0), 0644)
+	e = afero.WriteFile(fs, confPath, []byte(conf), 0644)
 	require.NoError(t, e)
 	c, d, _, e = Load(fullDir, fs)
 	d.Dialer = MockDialerF
@@ -81,3 +81,27 @@ func confTest(t *testing.T) (c CmdF, d *Dialer) {
 }
 
 var od4 = "1.1.1.1:443"
+
+const cfg1 = `
+rules = "(range0 ∧ iface0) ∨ (range1 ∧ proxy0)"
+
+[[rangeIPM]]
+	name = "range0"
+	cidr = "10.2.0.0/16"
+
+[[rangeIPM]]
+	name = "range1"
+	cidr = "10.3.0.0/16"
+
+[[parentProxy]]
+	name = "proxy0"
+	proxyURL = "socks5://proxy0.org:9050"
+
+[[netIface]]
+	name = "iface0"
+	iface = "eth0"
+`
+
+func TestIfaceAndParent(t *testing.T) {
+	//cmdf, dlr := confTest(t, cfg1)
+}

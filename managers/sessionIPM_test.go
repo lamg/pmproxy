@@ -51,7 +51,7 @@ func TestSessionIPMOpen(t *testing.T) {
 
 func openTest(t *testing.T) (cmf CmdF, dlr *Dialer,
 	jtk string) {
-	cmf, dlr = confTest(t)
+	cmf, dlr = confTest(t, cfg0)
 	open := &Cmd{
 		Manager: "sessions",
 		Cmd:     Open,

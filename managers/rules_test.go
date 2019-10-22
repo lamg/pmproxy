@@ -28,7 +28,7 @@ import (
 )
 
 func TestDiscover(t *testing.T) {
-	cmf, _ := confTest(t)
+	cmf, _ := confTest(t, cfg0)
 	c := &Cmd{
 		Manager: RulesK,
 		Cmd:     Discover,

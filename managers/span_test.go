@@ -22,7 +22,6 @@ package managers
 
 import (
 	"github.com/pelletier/go-toml"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -46,13 +45,7 @@ func TestSpan(t *testing.T) {
 	}
 	require.Equal(t, r, v)
 
-	fs := afero.NewMemMapFs()
-	confPath, fullDir, e := ConfPath()
-	require.NoError(t, e)
-	e = afero.WriteFile(fs, confPath, []byte(spanConf), 0644)
-	require.NoError(t, e)
-	cmdf, _, _, e := Load(fullDir, fs)
-	require.NoError(t, e)
+	cmdf, _ := confTest(t, spanConf)
 	n0 := &Cmd{
 		Cmd:     Match,
 		Manager: s.Name,
