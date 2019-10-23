@@ -22,7 +22,7 @@ There are also managers that once they are reached by the predicate evaluation a
 
 ## Configuration example
 
-The [sessionIPM](api-description.md/#sessionIPM) manager only returns `true` when the client, identified by its IP address, authenticated against it, with valid credentials according a configured database. The [dwnConsR](api-description.md/#dwnConsR) manager always returns `true`, but every downloaded amount by a client (identified by the IP address from which it authenticated) is accumulated until it reaches a quota. Then the connections by that client are denied, until a reset occurs manually or at regular time intervals.
+The [sessionIPM](manual.md/#sessionIPM) manager only returns `true` when the client, identified by its IP address, authenticated against it, with valid credentials according a configured database. The [dwnConsR](api-description.md/#dwnConsR) manager always returns `true`, but every downloaded amount by a client (identified by the IP address from which it authenticated) is accumulated until it reaches a quota. Then the connections by that client are denied, until a reset occurs manually or at regular time intervals.
 
 The following configuration will only allow connections from IPs authenticated by `session:sessionIPM`, and will have 1 GB for downloading each day:
 
@@ -63,7 +63,7 @@ Also there's a separate file for the servers (proxy and API) configuration, that
 		readTimeout="30s"
 		writeTimeout="20s"
 		addr=":4443"
-		fastOrStd=true
+		fastOrStd=false
 
 [proxy]
 	dialTimeout="10s"
@@ -71,7 +71,7 @@ Also there's a separate file for the servers (proxy and API) configuration, that
 		readTimeout="30s"
 		writeTimeout="20s"
 		addr=":8080"
-		fastOrStd=true
+		fastOrStd=false
 ```
 
 With the previous configuration the [pmproxy](cmd/pmproxy) command will start an HTTP proxy server at `:8080`, and an HTTPS [API](api-description.md) server at `:4443`. Then you can use your browser with `pmproxy-server-address:8080` as your HTTP proxy, and `https://pmproxy-server-address:4443` as argument to `pmcl` while discovering and querying assigned managers according the predicate. The `excludedRoutes` field is a list of routes that a web interface, served from the `webStaticFilesDir`, handles without requesting them to the server.
