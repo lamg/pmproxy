@@ -62,6 +62,7 @@ The fields with type `time.Duration` are represented by string literals in TOML 
 	+ `HTTPSCert` HTTPS cert file with path relative to the configuration directory
 	+ `HTTPSKey` HTTPS key file with path relative to the configuration directory
 	+ `WebStaticFilesDir` directory with static files to serve, useful for a web interface.
+	+ `PersistInterval` is the amount of time to wait between regular server state persistence operations.
 	+ `Server` server configuration described in the `srvConf` object above
 	+ `ExcludedRoutes` routes that the server will redirect to "/" instead of trying to serve a file with the requested path.
 
@@ -165,6 +166,116 @@ type consMap struct {
 - `LastReset` is the date of the last time all consumptions were set to 0, because the difference between the current time and `LastReset` was equal or greater than `ResetCycle`.
 - `Consumptions` is a mapping from users to accumulated consumptions in the period of time starting in `LastReset` with `ResetCycle` duration.
 
+In case that file doesn't exists it will be created with the current date as `LastReset` value, and the accumulated user consumptions as `Consumptions` value,  between the time the server was started and the time the first regular persist operation is executed. That time is specified by `apiConf.PersistInterval`. 
+
+#### `SessionIPM`
+
+It's an abbreviation of "session IP matcher", a predicate returning `true` when requests come from an IP previously authorized by the same instance getting the `Match` command. The authorization request is sent through the [API](##API description). The object is defined:
+
+```go
+type sessionIPM struct {
+	Name string `toml:"name"`
+	Auth string `toml:"auth"`
+}
+```
+
+- `Name` has the value of the identifier used to reference it from the predicate.
+- `Auth` has the name of the `adDB` or `mapDB` instance used to authenticate user credentials.
+
+#### `RangeIPM`
+
+It's an abbreviation of "range IP matcher", a predicate returning `true` when requests come from an IP belonging to the configured range. The object is defined:
+
+```go
+type rangeIPM struct {
+	Cidr string `toml:"cidr"`
+	Name string `toml:"name"`
+}
+```
+
+- `Cidr` is the IP range specified with [CIDR][0] format
+- `Name` is the value used as identifier for referencing it in the predicate
+
+#### `TimeSpan`
+
+Is a predicate. Returns `true` when the request is received between the configured time interval. The object is defined:
+
+```go
+type span struct {
+	Span *rt.RSpan `toml:"span"`
+	Name string    `toml:"name"`
+}
+```
+
+- `Name` is the value used as identifier for referencing it in the predicate.
+- `Span` is an [RSpan][1] object.
+
+#### `NetIface`
+
+Is a predicate and always returns `true`. If the evaluation reaches it, assigns a network interface for making the connection needed for processing the matching request. The object is defined:
+
+```go
+type proxyIfaceMng struct {
+	Name  string `toml:"name"`
+	Iface string `toml:"iface"`
+}
+```
+
+- `Name` is the value used as identifier for referencing it in the predicate.
+- `Iface` is the name of the network interface for making connections needed for processing matching requests.
+
+#### `ParentProxy`
+
+Is a predicate and always returns `true`. If the evaluation reaches it, assigns a parent proxy for making the connection needed for processing the matching request. The object is defined:
+
+```go
+type proxyURLMng struct {
+	Name     string `toml:"name"`
+	ProxyURL string `toml:"proxyURL"`
+}
+```
+
+- `Name` is the value used as identifier for referencing it in the predicate.
+- `ProxyURL` is the URL of the parent proxy for making the connection needed for processing the matching request. It can be an HTTP or SOCKS5 proxy, this must be reflected in the URL scheme.
+
+#### `MapDB`
+
+Is a dependency of `SessionIPM` and `DwnConsR`. To the former provides a means of authenticating credentials, to the latter a, one to many, mapping from users to groups. The object is defined:
+
+```go
+type mapDB struct {
+	Name      string              `toml:"name"`
+	UserPass  map[string]string   `toml:"userPass"`
+	UserGroup map[string][]string `toml:"userGroups"`
+}
+```
+
+- `Name` is the value used by a `SessionIPM` or `DwnConsR` instance for referencing it.
+- `UserPass` is an one to one mapping from users to passwords
+- `UserGroup` is an one to many mapping from users to groups
+
+#### `AdDB`
+
+Is a dependency of `SessionIPM` and `DwnConsR`. To the former provides a means of authenticating credentials, to the latter a, one to many, mapping from users to groups. However, unlike `MapDB` the authentication and user group mapping is provided by an external server, accessed through the LDAP protocol. The object is defined:
+
+```go
+type adDB struct {
+	Name string `toml:"name"`
+	Addr string `toml:"addr"`
+	Suff string `toml:"suff"`
+	Bdn  string `toml:"bdn"`
+	User string `toml:"user"`
+	Pass string `toml:"pass"`
+}
+```
+
+- `Name` is the value used by a `SessionIPM` or `DwnConsR` instance for referencing it.
+- `Addr` is the address of the LDAP server
+- `Suff` is the account [suffix][2].
+- `Bdn` is the LDAP [BDN][3].
+- `User` is the dedicated user for making queries to the LDAP server.
+- `Pass` corresponding password for `User`.
+
 ## API description
 
 Using the proxy server requires making queries to the API, which runs as an HTTPS server, processing `POST` requests sent to `/api/cmd`, under the URL configured to identify the server. The endpoint receives a JSON formatted `Cmd` object.
@@ -244,3 +355,5 @@ type UserInfo struct {
 	BytesCons   uint64   `json:"bytesCons"`
 }
 ```
+
+[0]: http://en.wikipedia/wiki/CIDR
