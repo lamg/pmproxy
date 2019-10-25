@@ -356,4 +356,16 @@ type UserInfo struct {
 }
 ```
 
+## Command line client
+
+## Developing
+
+PMProxy requires Go 1.13 or superior for compiling. The client and basic server code are in the root package, while the code related to _managers_, i.e, objects that control the connection behavior, are in the `managers` directory.
+
+Creating and controlling connections, opening sessions and almost the rest of operations occurr as commands sent to managers (see `Serve` procedure at `serve.go`). Every manager responds to several commands, as the API documentation shows, these may be sent by the proxy server itself when a client requests a WWW content, or by the API server when a client tries to manipulate directly the server state. The `Load` procedure at `managers/conf.go` defines how the proxy and API servers issue those calls to the managers. 
+
+There's a manager that dispatches all commands in the `managers/manager.go` file. When it's `exec` method is called with a `Cmd` instance it determines all the managers that need to handle that object in order to perform correctly the command. This is done by looking to the `manager.paths` field, which is populated when the server is loaded. All managers references are stored in `manager.mngs`, which is a mapping from names to `func(*Cmd)`, the particular `exec` method for each manager instance.
+
+For example, `DwnConsR` requires `Cmd.User`, `Cmd.String` and `Cmd.Groups` properly defined before calling its `Get` command through the `DwnConsR.exec` method. This means the `manager.exec` method must call the proper command in the configured `mapDB` or `adDB` object, referenced by `DwnConsR.UserDBN`, for having the right values in `Cmd.String` and `Cmd.Groups`; but before that it the command `Get` at `ipUser` manager must be called for having `Cmd.User` defined. This is detailed in the `DwnConsR.paths` procedure.
+
 [0]: http://en.wikipedia/wiki/CIDR
