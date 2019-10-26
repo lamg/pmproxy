@@ -22,18 +22,18 @@ There are also managers that once they are reached by the predicate evaluation a
 
 ## Configuration example
 
-The [sessionIPM](manual.md/#sessionIPM) manager only returns `true` when the client, identified by its IP address, authenticated against it, with valid credentials according a configured database. The [dwnConsR](api-description.md/#dwnConsR) manager always returns `true`, but every downloaded amount by a client (identified by the IP address from which it authenticated) is accumulated until it reaches a quota. Then the connections by that client are denied, until a reset occurs manually or at regular time intervals.
+The [sessionIPM](manual.md/#sessionIPM) manager only returns `true` when the client, identified by its IP address, authenticated against it, with valid credentials according a configured database. The [dwnConsR](manual.md/#dwnConsR) manager always returns `true`, but every downloaded amount by a client (identified by the IP address from which it authenticated) is accumulated until it reaches a quota. Then the connections by that client are denied, until a reset occurs manually or at regular time intervals.
 
 The following configuration will only allow connections from IPs authenticated by `session:sessionIPM`, and will have 1 GB for downloading each day:
 
 ```toml
 rule = "sessions ∧ down"
 
-[sessionIPM]
+[[sessionIPM]]
 	name = "sessions"
 	auth = "map"
 
-[dwnConsR]
+[[dwnConsR]]
 	name = "down"
 	userDBN = "map"
 	resetCycle = "24h"
