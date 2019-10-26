@@ -358,6 +358,16 @@ type UserInfo struct {
 
 ## Command line client
 
+The command line client, `pmcl`, queries the API in order to change the server state or get information about it. The following is the list of subcommands `pmcl` supports. 
+
+- `discover` or `d`: Since the IP, time determine resources available for a client, before using the proxy is wise to know which one of them are assigned and their state. It needs the API server address as argument (ex. "https://proxy.org"). Once the client opens a session the address argument is optional, if the command is run at the same directory the command for opening a session ran successfuly (there's a file created there with login information, including the API server address).
+- `login` or `l`: having with `-m` the name of a `SessionIPM` returned by `discover`, then user and password, it opens a session from the client's IP.
+- `logout` or `o`: in the same directory a successful `login` was made it closes the session.
+- `logged-users` or `lu`: prints a list of IP-user where every user opened a session at the associated IP. The manager is specified with `-m` or read from the file created in a successful login.
+- `status` or `s`: prints the user who opened a session at that directory, consumption and quota if a `DwnConsR` was assigned. Otherwise it accepts a manager with `-m`. If an additional argument is passed, it is interpreted as an user name for getting his information, but only if the logged user has administration privileges.
+- `reset` or `r`: in a directory where a successful `login` was made, resets the user's consumption, passing it as argument, if allowed and there's a `DwnConsR` assigned. Otherwise it can be specified with `-m`.
+- `show` or `sh`: shows the manager with the name passed as argument
+ 
 ## Developing
 
 PMProxy requires Go 1.13 or superior for compiling. The client and basic server code are in the root package, while the code related to _managers_, i.e, objects that control the connection behavior, are in the `managers` directory.
@@ -368,4 +378,7 @@ There's a manager that dispatches all commands in the `managers/manager.go` file
 
 For example, `DwnConsR` requires `Cmd.User`, `Cmd.String` and `Cmd.Groups` properly defined before calling its `Get` command through the `DwnConsR.exec` method. This means the `manager.exec` method must call the proper command in the configured `mapDB` or `adDB` object, referenced by `DwnConsR.UserDBN`, for having the right values in `Cmd.String` and `Cmd.Groups`; but before that it the command `Get` at `ipUser` manager must be called for having `Cmd.User` defined. This is detailed in the `DwnConsR.paths` procedure.
 
-[0]: http://en.wikipedia/wiki/CIDR
+[0]: https://en.wikipedia/wiki/CIDR
+[1]: https://godoc.org/github.com/lamg/rtimespan
+[2]: https://en.wikipedia/wiki/LDAP
+[3]: https://en.wikipedia/wiki/LDAP
