@@ -276,6 +276,49 @@ type adDB struct {
 - `User` is the dedicated user for making queries to the LDAP server.
 - `Pass` corresponding password for `User`.
 
+#### Example file
+
+```toml
+rule = "sessions ∧ ((day ∧ down) ∨ night)"
+
+[[sessionIPM]]
+	name = "sessions"
+	auth = "ad"
+
+[[dwnConsR]]
+	name = "down"
+	userDBN = "ad"
+	resetCycle = "24h"
+	[dwnConsR.groupQuota]
+		group0 = "1 GB"
+
+[adDB]
+	name = "ad"
+	addr = "ldap.org:636"
+	suff = "@account.org"
+	bdn = "dc=ldap,dc=org"
+	user = "ad-user"
+	pass = "secret"
+
+[[timeSpan]]
+	name = "day"
+	[timeSpan.Span]
+		start = 2006-01-02-T08:00:00-04:00
+		active = 	"12h"
+		total = "24h"
+		infinite = true
+
+[[timeSpan]]
+	name = "night"
+	[timeSpan.Span]
+		start = 2006-01-02-T20:00:00-04:00
+		active = "12h"
+		total = "24h"
+		infinite = true
+```
+
+With the previous configuration users have a quota of 1 Gb during the day, reseted every day. While at nights they connect without quota.
+
 ## API description
 
 Using the proxy server requires making queries to the API, which runs as an HTTPS server, processing `POST` requests sent to `/api/cmd`, under the URL configured to identify the server. The endpoint receives a JSON formatted `Cmd` object.
@@ -377,6 +420,34 @@ Creating and controlling connections, opening sessions and almost the rest of op
 There's a manager that dispatches all commands in the `managers/manager.go` file. When it's `exec` method is called with a `Cmd` instance it determines all the managers that need to handle that object in order to perform correctly the command. This is done by looking to the `manager.paths` field, which is populated when the server is loaded. All managers references are stored in `manager.mngs`, which is a mapping from names to `func(*Cmd)`, the particular `exec` method for each manager instance.
 
 For example, `DwnConsR` requires `Cmd.User`, `Cmd.String` and `Cmd.Groups` properly defined before calling its `Get` command through the `DwnConsR.exec` method. This means the `manager.exec` method must call the proper command in the configured `mapDB` or `adDB` object, referenced by `DwnConsR.UserDBN`, for having the right values in `Cmd.String` and `Cmd.Groups`; but before that it the command `Get` at `ipUser` manager must be called for having `Cmd.User` defined. This is detailed in the `DwnConsR.paths` procedure.
+
+## Deployment
+
+For a server with high traffic soon the amount of opened connections will increase up to the default limit for each process, therefore you need to configure a limit more suited for you needs. Using [systemd][4] units makes easier running, restarting or stopping the process, with a particular connection amount limit.
+
+As example you can put the following content in `/etc/systemd/system/pmproxy.service`:
+
+```conf
+[Unit]
+Description=PMProxy Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+LimitNOFILE=49152
+WorkingDirectory=/root/.config/pmproxy
+ExecStart=/usr/local/bin/pmproxy
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+``` 
+
+which increases the limit number of opened files (`LimitNOFILE`) up to 49152, when usually it's 1024 (it can be found in `/etc/security/limits.conf`). Since opened connections count as opened files, this solves the previously mentioned problem.
+
+Also having [systemd][7] a configuration allows to see the logs with `journalctl -u pmproxy`. Otherwise `journalctl _PID=X`, where X is the `pmproxy` process ID, will do.
+
 
 [0]: https://en.wikipedia/wiki/CIDR
 [1]: https://godoc.org/github.com/lamg/rtimespan
