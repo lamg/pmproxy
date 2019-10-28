@@ -170,7 +170,7 @@ In case that file doesn't exists it will be created with the current date as `La
 
 #### `SessionIPM`
 
-It's an abbreviation of "session IP matcher", a predicate returning `true` when requests come from an IP previously authorized by the same instance getting the `Match` command. The authorization request is sent through the [API](##api-description). The object is defined:
+It's an abbreviation of "session IP matcher", a predicate returning `true` when requests come from an IP previously authorized by the same instance getting the `Match` command. The authorization request is sent through the [API](#api-description). The object is defined:
 
 ```go
 type sessionIPM struct {
