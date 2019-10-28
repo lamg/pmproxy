@@ -126,11 +126,11 @@ type conf struct {
 
 #### `Rules`
 
-This field is a string representing a predicate with the format described in https://github.com/lamg/predicate. The identifiers in it are the name of the objects of type `DwnConsR`, `ParentProxy`, `NetIface`, `RangeIPM`, `SessionIPM` and `TimeSpan`. When the predicate is evaluated, every time a connection is opened, each object referenced in it by its name provides a `true` or `false` value. In case there isn't a corresponding object for an identifier in the predicate, the latter will be evaluated to an expression depending on that identifier, and the proxy will not allow that connection.
+This field is a string representing a predicate with the format described in https://github.com/lamg/predicate. The identifiers in it are the name of the objects at `DwnConsR`, `ParentProxy`, `NetIface`, `RangeIPM`, `SessionIPM` and `TimeSpan` fields. When the predicate is evaluated, every time a connection is opened, each object referenced in it by its name provides a `true` or `false` value. In case there isn't a corresponding object for an identifier in the predicate, the latter will be evaluated to an expression depending on that identifier, and the proxy will not allow that connection.
 
 Objects like `DwnConsR`, `ParentProxy` and `NetIface` always evaluate to `true` if the predicate evaluation reaches the identifiers equal to their names. In case the evaluation reaches them, they become associated to the connection for controlling or parameterizing it. 
 
-For example, with `night` and `day` predicates of type `TimeSpan`, matching connections made at night or day respectively, the following predicate will associate different objects of type `DwnConsR` (`dow0` or `down1`) to the connection made:
+For example, with `night` and `day` predicates of type `TimeSpan`, matching connections made at night or day respectively, the following predicate will associate different objects of type `DwnConsR` (`down0` or `down1`) to the connection made:
 
 `(night ∧ down0) ∨ (day ∧ down1)`
 
