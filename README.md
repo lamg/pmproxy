@@ -74,7 +74,7 @@ Also there's a separate file for the servers (proxy and API) configuration, that
 		fastOrStd=false
 ```
 
-With the previous configuration the [pmproxy](cmd/pmproxy) command will start an HTTP proxy server at `:8080`, and an HTTPS [API](manual.md/#API%20description) server at `:4443`. Then you can use your browser with `pmproxy-server-address:8080` as your HTTP proxy, and `https://pmproxy-server-address:4443` as argument to `pmcl` while discovering and querying assigned managers according the predicate. The `excludedRoutes` field is a list of routes that a web interface, served from the `webStaticFilesDir`, handles without requesting them to the server.
+With the previous configuration the [pmproxy](cmd/pmproxy) command will start an HTTP proxy server at `:8080`, and an HTTPS [API](manual.md/#api-description) server at `:4443`. Then you can use your browser with `pmproxy-server-address:8080` as your HTTP proxy, and `https://pmproxy-server-address:4443` as argument to `pmcl` while discovering and querying assigned managers according the predicate. The `excludedRoutes` field is a list of routes that a web interface, served from the `webStaticFilesDir`, handles without requesting them to the server.
 
 ## Client usage example
 
