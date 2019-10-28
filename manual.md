@@ -170,7 +170,7 @@ In case that file doesn't exists it will be created with the current date as `La
 
 #### `SessionIPM`
 
-It's an abbreviation of "session IP matcher", a predicate returning `true` when requests come from an IP previously authorized by the same instance getting the `Match` command. The authorization request is sent through the [API](##API description). The object is defined:
+It's an abbreviation of "session IP matcher", a predicate returning `true` when requests come from an IP previously authorized by the same instance getting the `Match` command. The authorization request is sent through the [API](##API%20description). The object is defined:
 
 ```go
 type sessionIPM struct {
@@ -271,7 +271,7 @@ type adDB struct {
 
 - `Name` is the value used by a `SessionIPM` or `DwnConsR` instance for referencing it.
 - `Addr` is the address of the LDAP server
-- `Suff` is the account [suffix][2].
+- `Suff` is the suffix every user name needs for login.
 - `Bdn` is the LDAP [BDN][3].
 - `User` is the dedicated user for making queries to the LDAP server.
 - `Pass` corresponding password for `User`.
@@ -423,7 +423,7 @@ For example, `DwnConsR` requires `Cmd.User`, `Cmd.String` and `Cmd.Groups` prope
 
 ## Deployment
 
-For a server with high traffic soon the amount of opened connections will increase up to the default limit for each process, therefore you need to configure a limit more suited for you needs. Using [systemd][4] units makes easier running, restarting or stopping the process, with a particular connection amount limit.
+For a server with high traffic soon the amount of opened connections will increase up to the default limit for each process, therefore you need to configure a limit more suited for you needs. Using [systemd][3] units makes easier running, restarting or stopping the process, with a particular connection amount limit.
 
 As example you can put the following content in `/etc/systemd/system/pmproxy.service`:
 
@@ -446,10 +446,10 @@ WantedBy=multi-user.target
 
 which increases the limit number of opened files (`LimitNOFILE`) up to 49152, when usually it's 1024 (it can be found in `/etc/security/limits.conf`). Since opened connections count as opened files, this solves the previously mentioned problem.
 
-Also having [systemd][7] a configuration allows to see the logs with `journalctl -u pmproxy`. Otherwise `journalctl _PID=X`, where X is the `pmproxy` process ID, will do.
+Also having [systemd][3] a configuration allows to see the logs with `journalctl -u pmproxy`. Otherwise `journalctl _PID=X`, where X is the `pmproxy` process ID, will do.
 
 
-[0]: https://en.wikipedia/wiki/CIDR
+[0]: https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing
 [1]: https://godoc.org/github.com/lamg/rtimespan
-[2]: https://en.wikipedia/wiki/LDAP
-[3]: https://en.wikipedia/wiki/LDAP
+[2]: https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol
+[3]: https://en.wikipedia.org/wiki/Systemd 
