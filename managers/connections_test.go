@@ -25,9 +25,11 @@ import (
 	"errors"
 	pred "github.com/lamg/predicate"
 	"github.com/lamg/proxy"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	ht "net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestConnections(t *testing.T) {
@@ -65,4 +67,36 @@ func TestConnections(t *testing.T) {
 	var nc *NoConnErr
 	require.True(t, errors.As(e, &nc))
 	require.Equal(t, ht.DefaultRemoteAddr, nc.IP)
+}
+
+func BenchmarkConnections(b *testing.B) {
+	fs := afero.NewMemMapFs()
+	confPath, fullDir, e := ConfPath()
+	require.NoError(b, e)
+	e = afero.WriteFile(fs, confPath, []byte(cfg0), 0644)
+	require.NoError(b, e)
+	cmf, dlr, _, e := Load(fullDir, fs)
+	dlr.Dialer = MockDialerF
+	require.NoError(b, e)
+
+	open := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		IP:      ht.DefaultRemoteAddr,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+	}
+	cmf(open)
+	require.NoError(b, open.Err)
+	rqp := &proxy.ReqParams{IP: ht.DefaultRemoteAddr}
+
+	ctx := context.WithValue(context.Background(),
+		proxy.ReqParamsK, rqp)
+	b.ResetTimer()
+	_, e = dlr.DialContext(ctx, tcp, od4)
+	require.NoError(b, e)
+}
+
+func BenchmarkBasicConnection(b *testing.B) {
+	dlr := MockDialerF("eth0", time.Second)
+	dlr.Dial(tcp, od4)
 }
