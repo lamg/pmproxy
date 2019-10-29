@@ -275,6 +275,7 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 			name: d.Name,
 			cmd:  Get,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
 				{name: d.UserDBN, cmd: Get},
@@ -285,6 +286,7 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 			name: d.Name,
 			cmd:  GetOther,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
 				{name: adminsMng, cmd: isAdmin},
@@ -296,6 +298,7 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 			name: d.Name,
 			cmd:  Set,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
 				{name: adminsMng, cmd: isAdmin},

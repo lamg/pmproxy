@@ -51,6 +51,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			name: m.Name,
 			cmd:  Open,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: m.Auth, cmd: Auth},
 				{name: cryptMng, cmd: encrypt},
 				{name: ipUserMng, cmd: Open},
@@ -60,6 +61,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			name: m.Name,
 			cmd:  Close,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: cryptMng, cmd: decrypt},
 				{name: ipUserMng, cmd: Close},
 				{name: connectionsMng, cmd: Close},
@@ -69,6 +71,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			name: m.Name,
 			cmd:  Renew,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Renew},
 			},
@@ -77,6 +80,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 			name: m.Name,
 			cmd:  Check,
 			mngs: []mngPath{
+				{name: adminsMng, cmd: Protect},
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
 			},

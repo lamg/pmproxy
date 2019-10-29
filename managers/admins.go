@@ -21,6 +21,7 @@ func (m *admins) exec(c *Cmd) {
 				)
 			},
 		},
+		{Protect, func() { c.internal = true }},
 	}
 	alg.ExecF(kf, c.Cmd)
 }

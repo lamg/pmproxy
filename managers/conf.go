@@ -327,6 +327,7 @@ func initConnMng(c *conf, m *manager, rdeps []mngPath) (e error) {
 				ms[i] = mngPath{
 					name: c.DwnConsR[i].Name,
 					mngs: []mngPath{
+						{name: adminsMng, cmd: Protect},
 						{name: ipUserMng, cmd: Get},
 						{name: c.DwnConsR[i].UserDBN, cmd: Get},
 					},

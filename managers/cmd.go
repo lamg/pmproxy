@@ -47,6 +47,7 @@ type Cmd struct {
 	iface       string
 	interp      map[string]*MatchType
 	consR       []string
+	internal    bool
 }
 
 type Credentials struct {
@@ -87,6 +88,7 @@ const (
 	encrypt     = "encrypt"
 	decrypt     = "decrypt"
 	Renew       = "renew"
+	Protect     = "protect"
 
 	DwnConsRK    = "dwnConsR"
 	SessionIPMK  = "sessionIPM"

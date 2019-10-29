@@ -37,21 +37,25 @@ func newIpUser() (s *ipUser) {
 }
 
 func (p *ipUser) exec(c *Cmd) {
-	kf := []alg.KFunc{
-		{
-			Get,
-			func() { c.User, _ = p.get(c.IP) },
-		},
-		{
-			Open,
-			func() { p.open(c.IP, c.User) },
-		},
-		{
-			Close,
-			func() { p.del(c.IP) },
-		},
+	if c.internal {
+		kf := []alg.KFunc{
+			{
+				Get,
+				func() { c.User, _ = p.get(c.IP) },
+			},
+			{
+				Open,
+				func() { p.open(c.IP, c.User) },
+			},
+			{
+				Close,
+				func() { p.del(c.IP) },
+			},
+		}
+		alg.ExecF(kf, c.Cmd)
+	} else {
+		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}
-	alg.ExecF(kf, c.Cmd)
 }
 
 func (p *ipUser) open(ip, user string) {

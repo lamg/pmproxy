@@ -89,7 +89,10 @@ func (m *rules) paths(sm, dw, ipm, ps, ns []string) (ms []mngPath) {
 	mngPF := []func(string) []mngPath{
 		func(s string) []mngPath {
 			return []mngPath{
-				{name: ipUserMng, cmd: Get}, {name: s, cmd: Match}}
+				{name: adminsMng, cmd: Protect},
+				{name: ipUserMng, cmd: Get},
+				{name: s, cmd: Match},
+			}
 		},
 		simpleMatchPath,
 		simpleMatchPath,
@@ -127,7 +130,9 @@ func (m *rules) paths(sm, dw, ipm, ps, ns []string) (ms []mngPath) {
 }
 
 func simpleMatchPath(s string) []mngPath {
-	return []mngPath{{name: s, cmd: Match}}
+	return []mngPath{
+		{name: s, cmd: Match},
+	}
 }
 
 func matchersToMap(xs []string, ps func(string) []mngPath,
