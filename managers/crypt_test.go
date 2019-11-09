@@ -38,19 +38,23 @@ func TestExpiration(t *testing.T) {
 		return
 	}
 	user := "user"
-	c := &Cmd{Cmd: encrypt, User: user}
+	c := &Cmd{Cmd: encrypt, loggedBy: &userSessionIPM{user: user}}
 	cr.exec(c)
-	require.NoError(t, c.Err)
-	c0 := &Cmd{Cmd: decrypt, Secret: string(c.Data)}
+	require.NoError(t, c.err)
+	c0 := &Cmd{Cmd: decrypt, Secret: string(c.data)}
 	cr.exec(c0)
-	require.True(t, errors.Is(c0.Err, ErrExpired), "%v", e)
-	c1 := &Cmd{Cmd: Renew, Secret: c0.Secret, User: user}
+	require.True(t, errors.Is(c0.err, ErrExpired), "%v", e)
+	c1 := &Cmd{
+		Cmd:      Renew,
+		Secret:   c0.Secret,
+		loggedBy: &userSessionIPM{user: user},
+	}
 	cr.exec(c1)
-	require.NoError(t, c1.Err)
-	require.NotEqual(t, 0, len(c1.Data))
-	require.NotEqual(t, c0.Secret, string(c1.Data))
+	require.NoError(t, c1.err)
+	require.NotEqual(t, 0, len(c1.data))
+	require.NotEqual(t, c0.Secret, string(c1.data))
 	jwt.TimeFunc = time.Now
 	c1.Cmd = Check
 	cr.exec(c1)
-	require.Equal(t, user, string(c1.Data))
+	require.Equal(t, user, string(c1.data))
 }

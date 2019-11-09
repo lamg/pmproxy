@@ -42,14 +42,14 @@ func (r *rangeIPM) exec(c *Cmd) {
 		{
 			Get,
 			func() {
-				c.Data = []byte(r.Cidr)
+				c.data = []byte(r.Cidr)
 			},
 		},
 		{
 			Match,
 			func() {
 				c.interp[r.Name] = &MatchType{
-					Match: r.match(c.IP),
+					Match: r.match(c.ip),
 					Type:  RangeIPMK,
 				}
 			},

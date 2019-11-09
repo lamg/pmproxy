@@ -36,10 +36,9 @@ func TestSessionIPMOpen(t *testing.T) {
 		Manager: "sessions",
 		Cmd:     Close,
 		Secret:  jtk,
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(cm)
-	require.NoError(t, cm.Err)
+	cmf(cm, ht.DefaultRemoteAddr)
+	require.NoError(t, cm.err)
 	rqp := &proxy.ReqParams{IP: ht.DefaultRemoteAddr}
 	ctx := context.WithValue(context.Background(), proxy.ReqParamsK,
 		rqp)
@@ -56,11 +55,10 @@ func openTest(t *testing.T) (cmf CmdF, dlr *Dialer,
 		Manager: "sessions",
 		Cmd:     Open,
 		Cred:    &Credentials{User: "user0", Pass: "pass0"},
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(open)
-	require.NoError(t, open.Err)
-	jtk = string(open.Data)
+	cmf(open, ht.DefaultRemoteAddr)
+	require.NoError(t, open.err)
+	jtk = string(open.data)
 	return
 }
 
@@ -70,8 +68,7 @@ func TestSessionIPMCheck(t *testing.T) {
 		Manager: "sessions",
 		Cmd:     Check,
 		Secret:  jtk,
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(check)
-	require.NoError(t, check.Err)
+	cmf(check, ht.DefaultRemoteAddr)
+	require.NoError(t, check.err)
 }

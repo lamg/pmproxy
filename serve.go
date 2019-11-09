@@ -70,7 +70,7 @@ func Serve(fs afero.Fs) (e error) {
 
 func serveAPI(i *apiConf, cmdChan mng.CmdF) (e error) {
 	if i.Server.FastOrStd {
-		fhnd := FastIface(i.WebStaticFilesDir, cmdChan,
+		fhnd := fastIface(i.WebStaticFilesDir, cmdChan,
 			i.ExcludedRoutes)
 		cropt := fasthttpcors.DefaultHandler()
 		fast := &fh.Server{
@@ -120,7 +120,7 @@ func serveProxy(p *proxyConf, dial proxy.Dialer) (e error) {
 	return
 }
 
-func FastIface(staticFPath string,
+func fastIface(staticFPath string,
 	cmdChan mng.CmdF, excl []string) (hnd fh.RequestHandler) {
 	hnd = func(ctx *fh.RequestCtx) {
 		fs := &fh.FS{
@@ -209,7 +209,8 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 ) {
 	m := new(mng.Cmd)
 	var e error
-	var bs []byte
+	var bs, data []byte
+	var ip string
 	fs := []func(){
 		func() {
 			bs, e = body()
@@ -230,12 +231,12 @@ func compatibleIface(cmdChan mng.CmdF, path, method,
 			}
 		},
 		func() {
-			m.IP, _, e = net.SplitHostPort(rAddr)
+			ip, _, e = net.SplitHostPort(rAddr)
 		},
-		func() { cmdChan(m); e = m.Err },
+		func() { data, e = cmdChan(m, ip) },
 		func() {
-			if m.Data != nil {
-				resp(m.Data)
+			if data != nil {
+				resp(data)
 			}
 		},
 	}

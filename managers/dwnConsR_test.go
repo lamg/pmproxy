@@ -97,13 +97,12 @@ func TestDwnConsRGet(t *testing.T) {
 	get := &Cmd{
 		Manager: "down",
 		Cmd:     Get,
-		IP:      ht.DefaultRemoteAddr,
 		Secret:  jtk,
 	}
-	cmf(get)
-	require.NoError(t, get.Err)
+	cmf(get, ht.DefaultRemoteAddr)
+	require.NoError(t, get.err)
 	ui := new(UserInfo)
-	e := json.Unmarshal(get.Data, ui)
+	e := json.Unmarshal(get.data, ui)
 	require.NoError(t, e)
 	rui := &UserInfo{
 		UserName:    "user0",
@@ -113,6 +112,7 @@ func TestDwnConsRGet(t *testing.T) {
 		BytesQuota:  1024,
 		BytesCons:   0,
 		Consumption: "0 B",
+		IsAdmin:     true,
 	}
 	require.Equal(t, rui, ui)
 }
@@ -122,31 +122,31 @@ func TestDwnConsRSet(t *testing.T) {
 	set := &Cmd{
 		Manager: "down",
 		Cmd:     Set,
-		String:  "user1",
-		Uint64:  19,
-		IP:      ht.DefaultRemoteAddr,
-		Secret:  jtk,
+		Info: &UserInfo{
+			UserName:  "user1",
+			BytesCons: 19,
+		},
+		Secret: jtk,
 	}
-	cmf(set)
-	require.NoError(t, set.Err)
+	cmf(set, ht.DefaultRemoteAddr)
+	require.NoError(t, set.err)
+	otherIP := "192.168.1.1"
 	open := &Cmd{
 		Manager: "sessions",
 		Cmd:     Open,
 		Cred:    &Credentials{User: "user1", Pass: "pass1"},
-		IP:      "192.168.1.1",
 	}
-	cmf(open)
-	require.NoError(t, open.Err)
+	cmf(open, otherIP)
+	require.NoError(t, open.err)
 	get := &Cmd{
 		Manager: "down",
 		Cmd:     Get,
-		IP:      open.IP,
-		Secret:  string(open.Data),
+		Secret:  string(open.data),
 	}
-	cmf(get)
-	require.NoError(t, get.Err)
+	cmf(get, otherIP)
+	require.NoError(t, get.err)
 	ui := new(UserInfo)
-	e := json.Unmarshal(get.Data, ui)
+	e := json.Unmarshal(get.data, ui)
 	require.NoError(t, e)
 	rui := &UserInfo{
 		UserName:    open.Cred.User,

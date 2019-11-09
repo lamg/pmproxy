@@ -39,7 +39,7 @@ func (b *bwConsR) exec(c *Cmd) {
 		{
 			Get,
 			func() {
-				c.Data = []byte(fmt.Sprintf("%.2f", b.thrFrac))
+				c.data = []byte(fmt.Sprintf("%.2f", b.thrFrac))
 			},
 		},
 		{
@@ -64,5 +64,5 @@ func (b *bwConsR) exec(c *Cmd) {
 			},
 		},
 	}
-	c.Ok = alg.ExecF(kf, c.Cmd)
+	c.ok = alg.ExecF(kf, c.Cmd)
 }

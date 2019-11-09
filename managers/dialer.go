@@ -41,11 +41,9 @@ func (d *Dialer) DialContext(ctx context.Context, network,
 	m := &Cmd{
 		Manager: connectionsMng,
 		Cmd:     Open,
-		IP:      rqp.IP,
 		rqp:     rqp,
 	}
-	d.cmdf(m)
-	e = m.Err
+	_, e = d.cmdf(m, rqp.IP)
 	if e == nil {
 		dlr := d.Dialer(m.iface, d.Timeout)
 		if m.parentProxy != nil {
@@ -86,12 +84,10 @@ func (c *ctlConn) operation(op string, amount int) (e error) {
 	m := &Cmd{
 		Cmd:     op,
 		Manager: connectionsMng,
-		IP:      c.rqp.IP,
-		Uint64:  uint64(amount),
+		Info:    &UserInfo{BytesCons: uint64(amount)},
 		rqp:     c.rqp,
 	}
-	c.cmdf(m)
-	e = m.Err
+	_, e = c.cmdf(m, c.rqp.IP)
 	return
 }
 

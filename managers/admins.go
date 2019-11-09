@@ -15,15 +15,21 @@ func (m *admins) exec(c *Cmd) {
 		{
 			isAdmin,
 			func() {
-				c.IsAdmin, _ = alg.BLnSrch(
-					func(i int) bool { return m.admins[i] == c.User },
-					len(m.admins),
-				)
+				c.isAdmin = m.isAdmin(c.loggedBy.user)
 			},
 		},
 		{Protect, func() { c.internal = true }},
+		{Get, func() { c.Info.IsAdmin = m.isAdmin(c.Info.UserName) }},
 	}
 	alg.ExecF(kf, c.Cmd)
+}
+
+func (m *admins) isAdmin(user string) (ok bool) {
+	ok, _ = alg.BLnSrch(
+		func(i int) bool { return m.admins[i] == user },
+		len(m.admins),
+	)
+	return
 }
 
 func (m *admins) paths() (ms []mngPath) {

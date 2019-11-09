@@ -21,7 +21,6 @@
 package managers
 
 import (
-	"encoding/json"
 	alg "github.com/lamg/algorithms"
 )
 
@@ -35,39 +34,27 @@ const (
 	GroupIPMK = "groupIPM"
 )
 
-func (m *groupIPM) exec(c *Cmd) (term bool) {
+func (m *groupIPM) exec(c *Cmd) {
 	kf := []alg.KFunc{
-		{
-			Set,
-			func() {
-				m.Group = c.String
-			},
-		},
-		{
-			Get,
-			func() {
-				c.Data, c.Err = json.Marshal(m)
-			},
-		},
 		{
 			Match,
 			func() {
-				if len(c.Groups) == 0 && c.Err == nil {
-					c.Manager = m.UserDBN
-					term = false
-				} else if len(c.Groups) != 0 {
-					c.Ok, _ = alg.BLnSrch(
-						func(i int) bool { return m.Group == c.Groups[i] },
-						len(c.Groups))
-					c.interp[m.Name] = &MatchType{
-						Type:  GroupIPMK,
-						Match: c.Ok,
-					}
-					term = true
+				ok, _ := alg.BLnSrch(
+					func(i int) bool { return m.Group == c.Info.Groups[i] },
+					len(c.Info.Groups),
+				)
+				c.interp[m.Name] = &MatchType{
+					Type:  GroupIPMK,
+					Match: ok,
 				}
 			},
 		},
 	}
 	alg.ExecF(kf, c.Cmd)
+	return
+}
+
+func (m *groupIPM) paths() (ms []mngPath) {
+	// TODO
 	return
 }

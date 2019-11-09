@@ -52,8 +52,10 @@ func (p *PMClient) reset(manager, user string) (e error) {
 	m := &mng.Cmd{
 		Manager: manager,
 		Cmd:     mng.Set,
-		String:  user,
-		Uint64:  1,
+		Info: &mng.UserInfo{
+			UserName:  user,
+			BytesCons: 1,
+		},
 	}
 	okf := func(bs []byte) (d error) { return }
 	e = p.sendRecv(m, okf)

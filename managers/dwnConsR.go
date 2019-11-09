@@ -108,41 +108,39 @@ func (d *DwnConsR) exec(c *Cmd) {
 		{
 			Get,
 			func() {
-				var data *UserInfo
-				data, c.Err = d.info(c.User, c.String, c.Groups)
-				if c.Err == nil {
-					c.Data, c.Err = json.Marshal(data)
+				c.err = d.info(c.Info)
+				if c.err == nil {
+					c.data, c.err = json.Marshal(c.Info)
 				}
 			},
 		},
 		{
 			GetOther,
 			func() {
-				if c.IsAdmin {
-					var data *UserInfo
-					data, c.Err = d.info(c.User, c.String, c.Groups)
-					if c.Err == nil {
-						c.Data, c.Err = json.Marshal(data)
+				if c.isAdmin {
+					c.err = d.info(c.Info)
+					if c.err == nil {
+						c.data, c.err = json.Marshal(c.Info)
 					}
 				} else {
-					c.Err = &NoAdmErr{User: c.User}
+					c.err = &NoAdmErr{User: c.loggedBy.user}
 				}
 			},
 		},
 		{
 			Set,
 			func() {
-				if c.IsAdmin {
-					d.userCons.Store(c.String, c.Uint64)
+				if c.isAdmin {
+					d.userCons.Store(c.Info.UserName, c.Info.BytesCons)
 				} else {
-					c.Err = &NoAdmErr{User: c.User}
+					c.err = &NoAdmErr{User: c.loggedBy.user}
 				}
 			},
 		},
 		{
 			Show,
 			func() {
-				c.Data, c.Err = json.Marshal(d)
+				c.data, c.err = json.Marshal(d)
 			},
 		},
 		{
@@ -150,11 +148,11 @@ func (d *DwnConsR) exec(c *Cmd) {
 			func() {
 				ok := d.filter(c)
 				if ok {
-					qt := d.quota(c.User, c.Groups)
-					cs := d.consumption(c.User)
+					qt := d.quota(c.loggedBy.user, c.Info.Groups)
+					cs := d.consumption(c.loggedBy.user)
 					if cs >= qt {
 						hcs := datasize.ByteSize(cs)
-						c.Err = &QuotaReachedErr{
+						c.err = &QuotaReachedErr{
 							Quota: hcs.HumanReadable(),
 						}
 					}
@@ -166,9 +164,9 @@ func (d *DwnConsR) exec(c *Cmd) {
 			func() {
 				ok := d.filter(c)
 				if ok {
-					cs := d.consumption(c.User)
-					ncs := cs + c.Uint64
-					d.userCons.Store(c.User, ncs)
+					cs := d.consumption(c.loggedBy.user)
+					ncs := cs + c.Info.BytesCons
+					d.userCons.Store(c.loggedBy.user, ncs)
 				}
 			},
 		},
@@ -238,29 +236,11 @@ func (d *DwnConsR) groupQuota(g string) (q uint64) {
 	return
 }
 
-type UserInfo struct {
-	Quota       string   `json:"quota"`
-	Groups      []string `json:"groups"`
-	Name        string   `json:"name"`
-	UserName    string   `json:"userName"`
-	Consumption string   `json:"consumption"`
-	BytesQuota  uint64   `json:"bytesQuota"`
-	BytesCons   uint64   `json:"bytesCons"`
-}
-
-func (d *DwnConsR) info(user, name string, gs []string) (
-	ui *UserInfo, e error) {
-	n := d.quota(user, gs)
-	q := datasize.ByteSize(n).HumanReadable()
-	ui = &UserInfo{
-		UserName:   user,
-		Groups:     gs,
-		Name:       name,
-		Quota:      q,
-		BytesQuota: n,
-	}
-	ui.BytesCons = d.consumption(user)
-	ui.Consumption = datasize.ByteSize(ui.BytesCons).HumanReadable()
+func (d *DwnConsR) info(inf *UserInfo) (e error) {
+	inf.BytesQuota = d.quota(inf.UserName, inf.Groups)
+	inf.Quota = datasize.ByteSize(inf.BytesQuota).HumanReadable()
+	inf.BytesCons = d.consumption(inf.UserName)
+	inf.Consumption = datasize.ByteSize(inf.BytesCons).HumanReadable()
 	return
 }
 
@@ -279,6 +259,7 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
 				{name: d.UserDBN, cmd: Get},
+				{name: adminsMng, cmd: Get},
 				{name: d.Name, cmd: Get},
 			},
 		},
@@ -289,8 +270,9 @@ func (d *DwnConsR) paths() (ms []mngPath) {
 				{name: adminsMng, cmd: Protect},
 				{name: ipUserMng, cmd: Get},
 				{name: cryptMng, cmd: Check},
-				{name: adminsMng, cmd: isAdmin},
 				{name: d.UserDBN, cmd: GetOther},
+				{name: adminsMng, cmd: Get},
+				{name: adminsMng, cmd: isAdmin},
 				{name: d.Name, cmd: GetOther},
 			},
 		},

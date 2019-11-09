@@ -29,25 +29,35 @@ import (
 
 type Cmd struct {
 	Cmd     string       `json:"cmd"`
-	User    string       `json:"user"`
 	Manager string       `json:"manager"`
 	Secret  string       `json:"secret"`
-	IsAdmin bool         `json:"isAdmin"`
 	Cred    *Credentials `json:"cred"`
-	String  string       `json:"string"`
-	Uint64  uint64       `json:"uint64"`
-	Groups  []string     `json:"groups"`
-	Ok      bool         `json:"ok"`
-	IP      string       `json:"ip"`
-	Data    []byte       `json:"data"`
-	Err     error        `json:"-"`
+	Info    *UserInfo    `json:"info"`
 
+	ok          bool
+	isAdmin     bool
+	data        []byte
+	ip          string
+	err         error
 	rqp         *proxy.ReqParams
 	parentProxy *url.URL
 	iface       string
 	interp      map[string]*MatchType
 	consR       []string
 	internal    bool
+	loggedBy    *userSessionIPM
+	result      string
+}
+
+type UserInfo struct {
+	Quota       string   `json:"quota"`
+	Groups      []string `json:"groups"`
+	Name        string   `json:"name"`
+	UserName    string   `json:"userName"`
+	Consumption string   `json:"consumption"`
+	BytesQuota  uint64   `json:"bytesQuota"`
+	BytesCons   uint64   `json:"bytesCons"`
+	IsAdmin     bool     `json:"isAdmin"`
 }
 
 type Credentials struct {
@@ -65,7 +75,7 @@ type DiscoverRes struct {
 	Result   string                `json:"result"`
 }
 
-type CmdF func(*Cmd)
+type CmdF func(*Cmd, string) ([]byte, error)
 
 const (
 	Open        = "open"

@@ -49,14 +49,14 @@ func TestExec(t *testing.T) {
 			c: &Cmd{
 				Cmd:     Match,
 				Manager: RulesK,
-				IP:      ht.DefaultRemoteAddr,
+				ip:      ht.DefaultRemoteAddr,
 			},
 			ok: false,
 		},
 	}
 	inf := func(i int) {
-		m.exec(ts[i].c)
-		require.Equal(t, ts[i].ok, ts[i].c.Ok)
+		m.exec(ts[i].c, ts[i].c.ip)
+		require.Equal(t, ts[i].ok, ts[i].c.ok)
 	}
 	alg.Forall(inf, len(ts))
 }

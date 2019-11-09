@@ -127,9 +127,9 @@ func TestConcurrency(t *testing.T) {
 			inf0 := func(j int) {
 				req := clients[i].reqs[j]
 				c := req.toApi
+				var err error
 				if c != nil {
-					c.IP = clients[i].ip
-					cmf(c)
+					_, err = cmf(c, clients[i].ip)
 				}
 				var res error
 				if req.toProxy != "" {
@@ -138,7 +138,7 @@ func TestConcurrency(t *testing.T) {
 						proxy.ReqParamsK, rqp)
 					_, res = dlr.DialContext(ctx, tcp, od4)
 				}
-				ok := req.okf(c, res)
+				ok := req.okf(err, res)
 				rc <- reqBool{i: i, j: j, ok: ok}
 			}
 			alg.Forall(inf0, len(clients[i].reqs))
@@ -166,20 +166,20 @@ type reqBool struct {
 type req struct {
 	toApi   *mng.Cmd
 	toProxy string
-	okf     func(*mng.Cmd, error) bool
+	okf     func(error, error) bool
 }
 
-func okCmd(c *mng.Cmd, r error) (ok bool) {
-	ok = c.Err == nil
+func okCmd(err, r error) (ok bool) {
+	ok = err == nil
 	return
 }
 
-func okCmdRes(c *mng.Cmd, r error) (ok bool) {
-	ok = c.Err == nil && r == nil
+func okCmdRes(err, r error) (ok bool) {
+	ok = err == nil && r == nil
 	return
 }
 
-func falseRulesEval(c *mng.Cmd, r error) (ok bool) {
+func falseRulesEval(err, r error) (ok bool) {
 	var fr *mng.ForbiddenByRulesErr
 	ok = errors.As(r, &fr)
 	return
