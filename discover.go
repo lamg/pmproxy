@@ -63,7 +63,6 @@ func (p *PMClient) discoverC(url,
 	m := &mng.Cmd{
 		Cmd:     mng.Discover,
 		Manager: mng.RulesK,
-		String:  remote,
 	}
 	var r *h.Response
 	var bs []byte

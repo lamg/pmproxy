@@ -27,7 +27,7 @@ type proxyIfaceMng struct {
 
 func (p *proxyIfaceMng) exec(c *Cmd) {
 	if c.Cmd == Match {
-		c.Ok, c.interp[p.Name], c.iface =
+		c.ok, c.interp[p.Name], c.iface =
 			true, &MatchType{Type: IfaceK, Match: true}, p.Iface
 	}
 	return

@@ -31,13 +31,15 @@ type sessionIPM struct {
 
 func (m *sessionIPM) exec(c *Cmd) {
 	kf := []alg.KFunc{
+		{Open, func() { c.loggedBy.sessionIPM = m.Name }},
 		{
 			Match,
 			func() {
-				c.Ok = c.User != ""
+				c.ok = c.loggedBy.user != "" &&
+					c.loggedBy.sessionIPM == m.Name
 				c.interp[m.Name] = &MatchType{
 					Type:  SessionIPMK,
-					Match: c.Ok,
+					Match: c.ok,
 				}
 			},
 		},
@@ -54,6 +56,7 @@ func (m *sessionIPM) paths() (ms []mngPath) {
 				{name: adminsMng, cmd: Protect},
 				{name: m.Auth, cmd: Auth},
 				{name: cryptMng, cmd: encrypt},
+				{name: m.Name, cmd: Open},
 				{name: ipUserMng, cmd: Open},
 			},
 		},

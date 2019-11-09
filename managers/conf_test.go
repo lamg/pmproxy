@@ -117,7 +117,7 @@ func TestIfaceAndParent(t *testing.T) {
 			c: &Cmd{
 				Cmd:     Match,
 				Manager: RulesK,
-				IP:      "10.1.0.1",
+				ip:      "10.1.0.1",
 			},
 			match: false,
 		},
@@ -125,7 +125,7 @@ func TestIfaceAndParent(t *testing.T) {
 			c: &Cmd{
 				Cmd:     Match,
 				Manager: RulesK,
-				IP:      "10.2.1.1",
+				ip:      "10.2.1.1",
 			},
 			iface: "eth0",
 			match: true,
@@ -134,15 +134,15 @@ func TestIfaceAndParent(t *testing.T) {
 			c: &Cmd{
 				Cmd:     Match,
 				Manager: RulesK,
-				IP:      "10.3.1.1",
+				ip:      "10.3.1.1",
 			},
 			proxy: proxyURL,
 			match: true,
 		},
 	}
 	inf := func(i int) {
-		cmdf(cs[i].c)
-		require.Equal(t, cs[i].match, cs[i].c.Ok)
+		cmdf(cs[i].c, cs[i].c.ip)
+		require.Equal(t, cs[i].match, cs[i].c.ok)
 		require.Equal(t, cs[i].proxy, cs[i].c.parentProxy, "At %d", i)
 		require.Equal(t, cs[i].iface, cs[i].c.iface)
 	}

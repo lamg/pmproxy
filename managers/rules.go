@@ -52,14 +52,14 @@ func (m *rules) exec(c *Cmd) {
 		p := pred.Reduce(m.predicate, interp)
 		c.interp = ninterp // hiding managers not reached by evaluation
 		c.parentProxy, c.iface = proxyURL, netIface
-		c.Ok = p.String == pred.TrueStr
-		c.String = pred.String(p)
+		c.ok = p.String == pred.TrueStr
+		c.result = pred.String(p)
 		if c.Cmd == Discover {
 			dr := &DiscoverRes{
 				MatchMng: c.interp,
-				Result:   c.String,
+				Result:   c.result,
 			}
-			c.Data, c.Err = json.Marshal(dr)
+			c.data, c.err = json.Marshal(dr)
 		}
 	}
 }

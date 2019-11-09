@@ -49,19 +49,17 @@ func TestConnections(t *testing.T) {
 	chkClientConn := &Cmd{
 		Manager: connectionsMng,
 		Cmd:     readRequest,
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(chkClientConn)
-	require.NoError(t, chkClientConn.Err)
+	cmf(chkClientConn, ht.DefaultRemoteAddr)
+	require.NoError(t, chkClientConn.err)
 	require.True(t, len(chkClientConn.consR) != 0)
 	c := &Cmd{
 		Cmd:     Close,
 		Manager: "sessions",
 		Secret:  jtk,
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(c)
-	require.NoError(t, c.Err)
+	cmf(c, ht.DefaultRemoteAddr)
+	require.NoError(t, c.err)
 	bs := make([]byte, 10)
 	_, e = n.Read(bs)
 	var nc *NoConnErr
@@ -82,11 +80,10 @@ func BenchmarkConnections(b *testing.B) {
 	open := &Cmd{
 		Manager: "sessions",
 		Cmd:     Open,
-		IP:      ht.DefaultRemoteAddr,
 		Cred:    &Credentials{User: "user0", Pass: "pass0"},
 	}
-	cmf(open)
-	require.NoError(b, open.Err)
+	cmf(open, ht.DefaultRemoteAddr)
+	require.NoError(b, open.err)
 	rqp := &proxy.ReqParams{IP: ht.DefaultRemoteAddr}
 
 	ctx := context.WithValue(context.Background(),

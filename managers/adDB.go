@@ -45,14 +45,13 @@ func (d *adDB) auth(user, pass string) (nuser string, e error) {
 	return
 }
 
-func (d *adDB) userInfo(user string) (name string, gs []string,
-	e error) {
-	mp, e := d.ldap.FullRecordAcc(user)
+func (d *adDB) userInfo(info *UserInfo) (e error) {
+	mp, e := d.ldap.FullRecordAcc(info.UserName)
 	if e == nil {
-		gs, e = d.ldap.MembershipCNs(mp)
+		info.Groups, e = d.ldap.MembershipCNs(mp)
 	}
 	if e == nil {
-		name, e = d.ldap.FullName(mp)
+		info.Name, e = d.ldap.FullName(mp)
 	}
 	return
 }
@@ -62,20 +61,21 @@ func (d *adDB) exec(c *Cmd) {
 		{
 			Auth,
 			func() {
-				c.User, c.Err = d.auth(c.Cred.User, c.Cred.Pass)
+				c.loggedBy = new(userSessionIPM)
+				c.loggedBy.user, c.err = d.auth(c.Cred.User, c.Cred.Pass)
 			},
 		},
 		{
 			Get,
 			func() {
-				c.String, c.Groups, c.Err = d.userInfo(c.User)
+				c.Info.UserName = c.loggedBy.user
+				c.err = d.userInfo(c.Info)
 			},
 		},
 		{
 			GetOther,
 			func() {
-				c.User = c.String
-				c.String, c.Groups, c.Err = d.userInfo(c.User)
+				c.err = d.userInfo(c.Info)
 			},
 		},
 	}

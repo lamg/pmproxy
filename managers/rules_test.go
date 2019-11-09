@@ -32,12 +32,11 @@ func TestDiscover(t *testing.T) {
 	c := &Cmd{
 		Manager: RulesK,
 		Cmd:     Discover,
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(c)
-	require.NoError(t, c.Err)
+	cmf(c, ht.DefaultRemoteAddr)
+	require.NoError(t, c.err)
 	dr := new(DiscoverRes)
-	e := json.Unmarshal(c.Data, dr)
+	e := json.Unmarshal(c.data, dr)
 	require.NoError(t, e)
 	require.Equal(t, "false", dr.Result)
 	interp := map[string]*MatchType{
@@ -49,14 +48,86 @@ func TestDiscover(t *testing.T) {
 		Manager: "sessions",
 		Cmd:     Open,
 		Cred:    &Credentials{User: "user0", Pass: "pass0"},
-		IP:      ht.DefaultRemoteAddr,
 	}
-	cmf(open)
-	require.NoError(t, open.Err)
-	cmf(c)
-	e = json.Unmarshal(c.Data, dr)
+	cmf(open, ht.DefaultRemoteAddr)
+	require.NoError(t, open.err)
+	cmf(c, ht.DefaultRemoteAddr)
+	e = json.Unmarshal(c.data, dr)
 	interp["sessions"].Match = true
 	interp["down"] = &MatchType{Type: DwnConsRK, Match: true}
 	require.Equal(t, interp, dr.MatchMng)
 	require.Equal(t, []string{"down"}, c.consR)
 }
+
+func TestMultipleSessionIPM(t *testing.T) {
+	cmf, _ := confTest(t, cfgMultSIPM)
+	open := &Cmd{
+		Manager: "s0",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+	}
+	cmf(open, ht.DefaultRemoteAddr)
+	require.NoError(t, open.err)
+	discover := &Cmd{
+		Manager: RulesK,
+		Cmd:     Discover,
+	}
+	cmf(discover, ht.DefaultRemoteAddr)
+	require.NoError(t, discover.err)
+	dr := new(DiscoverRes)
+	e := json.Unmarshal(discover.data, dr)
+	require.NoError(t, e)
+	require.Equal(t, "true", dr.Result)
+	interp := map[string]*MatchType{
+		"s0":       &MatchType{Match: true, Type: SessionIPMK},
+		"d0":       &MatchType{Match: true, Type: DwnConsRK},
+		"sessions": &MatchType{Match: false, Type: SessionIPMK},
+	}
+	require.Equal(t, interp, dr.MatchMng)
+}
+
+var cfgMultSIPM = `
+rules = "(sessions ∧ down) ∨ (s0 ∧ d0)"
+admins = ["adUser", "user0"]
+jwtExpiration = "1m"
+
+[adDB]
+	name = "ad"
+	addr = "10.1.0.0:636"
+	suff = "@pmproxy.org"
+	bdn = "dc=pmproxy,dc=org"
+	user = "adUser"
+	pass = "adPass"
+
+
+[mapDB]
+	name = "map"
+	[mapDB.userPass]
+		user0 = "pass0"
+		user1 = "pass1"
+	[mapDB.userGroups]
+		user0 = ["group0"]
+		user1 = ["group1"]
+
+[[sessionIPM]]
+	name = "sessions"
+	auth = "ad"
+
+[[dwnConsR]]
+	name = "down"
+	userDBN = "ad"
+	resetCycle = "168h"
+	[dwnConsR.groupQuota]
+		AD-Group = "1 GB"
+
+[[sessionIPM]]
+	name = "s0"
+	auth = "map"
+
+[[dwnConsR]]
+	name = "d0"
+	userDBN = "map"
+	resetCycle = "24h"
+	[dwnConsR.groupQuota]
+		group0 = "10 GB"
+`

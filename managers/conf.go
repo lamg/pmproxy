@@ -303,7 +303,7 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 		initConnMng(c, m, ms[n].mngs)
 	} else {
 		m.mngs.Store(RulesK, func(c *Cmd) {
-			c.Ok, c.consR = true, make([]string, 0)
+			c.ok, c.consR = true, make([]string, 0)
 		})
 	}
 	return

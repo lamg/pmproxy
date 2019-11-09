@@ -32,29 +32,30 @@ type connections struct {
 
 func (n *connections) exec(c *Cmd) {
 	loadConsR := func() {
-		v, ok := n.ipRestr.Load(c.IP)
+		v, ok := n.ipRestr.Load(c.ip)
 		if ok {
 			c.consR = v.([]string)
 		} else {
-			c.Err = &NoConnErr{IP: c.IP}
+			c.err = &NoConnErr{IP: c.ip}
 		}
 	}
 	kf := []alg.KFunc{
 		{
 			Open,
 			func() {
-				if c.Ok {
-					if c.User == "" {
-						c.User = "-"
+				if c.ok {
+					if c.Info.UserName == "" {
+						c.Info.UserName = "-"
 					}
-					n.logger.log(c.rqp.Method, c.rqp.URL, c.IP, c.User)
-					n.ipRestr.Store(c.IP, c.consR)
+					n.logger.log(c.rqp.Method, c.rqp.URL, c.ip,
+						c.Info.UserName)
+					n.ipRestr.Store(c.ip, c.consR)
 				} else {
-					c.Err = &ForbiddenByRulesErr{Result: c.String}
+					c.err = &ForbiddenByRulesErr{Result: c.result}
 				}
 			},
 		},
-		{Close, func() { n.ipRestr.Delete(c.IP) }},
+		{Close, func() { n.ipRestr.Delete(c.ip) }},
 		{readRequest, loadConsR},
 		{readReport, loadConsR},
 	}

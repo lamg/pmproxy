@@ -23,6 +23,7 @@ package managers
 import (
 	"github.com/pelletier/go-toml"
 	"github.com/stretchr/testify/require"
+	ht "net/http/httptest"
 	"testing"
 	"time"
 )
@@ -38,7 +39,7 @@ func TestSpan(t *testing.T) {
 	s.now = func() time.Time { return m }
 	n := &Cmd{Cmd: Match, interp: make(map[string]*MatchType)}
 	s.exec(n)
-	require.True(t, n.Ok)
+	require.True(t, n.ok)
 	v, ok := n.interp[s.Name]
 	require.True(t, ok)
 	r := &MatchType{
@@ -53,7 +54,7 @@ func TestSpan(t *testing.T) {
 		Manager: s.Name,
 		interp:  make(map[string]*MatchType),
 	}
-	cmdf(n0)
+	cmdf(n0, ht.DefaultRemoteAddr)
 	v0, ok0 := n0.interp[s.Name]
 	r0 := &MatchType{
 		Type:  SpanK,

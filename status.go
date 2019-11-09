@@ -71,7 +71,7 @@ func (p *PMClient) status(dwnMng, user string) (ui *mng.UserInfo, e error) {
 		}
 		if user != "" {
 			m.Cmd = mng.GetOther
-			m.String = user
+			m.Info = &mng.UserInfo{UserName: user}
 		}
 		okf := func(bs []byte) (d error) {
 			ui = new(mng.UserInfo)

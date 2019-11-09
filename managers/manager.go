@@ -49,8 +49,11 @@ type mngCmd struct {
 	cmd string
 }
 
-func (m *manager) exec(c *Cmd) {
-	c.interp = make(map[string]*MatchType)
+func (m *manager) exec(c *Cmd, ip string) (data []byte, e error) {
+	c.interp, c.ip = make(map[string]*MatchType), ip
+	if c.Info == nil {
+		c.Info = new(UserInfo)
+	}
 	ib := func(i int) (ok bool) {
 		pth := m.paths[i]
 		ok = pth.name == c.Manager && pth.cmd == c.Cmd
@@ -63,12 +66,13 @@ func (m *manager) exec(c *Cmd) {
 			curr := fnd.mngs[i]
 			c.Manager, c.Cmd = curr.name, curr.cmd
 			m.execStep(c)
-			ok = c.Err != nil
+			ok = c.err != nil
 			return
 		}
 		alg.BLnSrch(ib0, len(fnd.mngs))
+		data, e = c.data, c.err
 	} else {
-		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
+		e = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}
 	return
 }
@@ -78,7 +82,7 @@ func (m *manager) execStep(c *Cmd) {
 	if ok {
 		v.(func(*Cmd))(c)
 	} else {
-		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
+		c.err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}
 	return
 }

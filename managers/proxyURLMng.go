@@ -38,7 +38,7 @@ func (p *proxyURLMng) init() (e error) {
 
 func (u *proxyURLMng) exec(c *Cmd) {
 	if c.Cmd == Match {
-		c.Ok, c.parentProxy = true, u.proxy
+		c.ok, c.parentProxy = true, u.proxy
 		c.interp[u.Name] = &MatchType{Type: ParentProxyK, Match: true}
 	}
 }

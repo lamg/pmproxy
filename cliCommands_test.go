@@ -68,6 +68,7 @@ func TestLogin(t *testing.T) {
 		Consumption: "0 B",
 		BytesQuota:  1024,
 		BytesCons:   0,
+		IsAdmin:     true,
 	}
 	require.Equal(t, xui, ui)
 }
@@ -94,7 +95,8 @@ func TestShowMng(t *testing.T) {
 func TestReset(t *testing.T) {
 	_, cl := loginTest(t)
 	user1, down := "user1", "down"
-	cl.reset(down, user1)
+	e := cl.reset(down, user1)
+	require.NoError(t, e)
 	ui, e := cl.status(down, user1)
 	require.NoError(t, e)
 	rui := &mng.UserInfo{

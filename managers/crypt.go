@@ -106,16 +106,16 @@ func (c *crypt) exec(m *Cmd) {
 		{
 			encrypt,
 			func() {
-				m.Data, m.Err = c.encrypt(m.User, "")
+				m.data, m.err = c.encrypt(m.loggedBy.user, "")
 			},
 		},
 		{
 			decrypt,
 			func() {
 				var cl *claim
-				cl, m.Err = c.decrypt(m.Secret)
-				if m.Err == nil {
-					m.String = cl.User
+				cl, m.err = c.decrypt(m.Secret)
+				if m.err == nil {
+					m.Info.UserName = cl.User
 				}
 			},
 		},
@@ -123,11 +123,14 @@ func (c *crypt) exec(m *Cmd) {
 			Check,
 			func() {
 				var cl *claim
-				cl, m.Err = c.decrypt(m.Secret)
-				if m.Err == nil && cl.User != m.User {
-					m.Err = &CheckErr{Logged: m.User, Decrypted: cl.User}
-				} else if m.Err == nil {
-					m.Data = []byte(cl.User)
+				cl, m.err = c.decrypt(m.Secret)
+				if m.err == nil && cl.User != m.loggedBy.user {
+					m.err = &CheckErr{
+						Logged:    m.loggedBy.user,
+						Decrypted: cl.User,
+					}
+				} else if m.err == nil {
+					m.data = []byte(cl.User)
 				}
 			},
 		},
@@ -135,10 +138,10 @@ func (c *crypt) exec(m *Cmd) {
 			Renew,
 			func() {
 				var cl *claim
-				cl, m.Err = c.decrypt(m.Secret)
-				if cl != nil && errors.Is(m.Err, ErrExpired) &&
-					cl.User == m.User {
-					m.Data, m.Err = c.encrypt(m.User, "")
+				cl, m.err = c.decrypt(m.Secret)
+				if cl != nil && errors.Is(m.err, ErrExpired) &&
+					cl.User == m.loggedBy.user {
+					m.data, m.err = c.encrypt(m.loggedBy.user, "")
 				}
 			},
 		},

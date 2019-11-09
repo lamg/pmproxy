@@ -41,39 +41,50 @@ func (p *ipUser) exec(c *Cmd) {
 		kf := []alg.KFunc{
 			{
 				Get,
-				func() { c.User, _ = p.get(c.IP) },
+				func() { c.loggedBy, _ = p.get(c.ip) },
 			},
 			{
 				Open,
-				func() { p.open(c.IP, c.User) },
+				func() { p.open(c.ip, c.loggedBy) },
 			},
 			{
 				Close,
-				func() { p.del(c.IP) },
+				func() { p.del(c.ip) },
 			},
 		}
 		alg.ExecF(kf, c.Cmd)
 	} else {
-		c.Err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
+		c.err = &ManagerErr{Mng: c.Manager, Cmd: c.Cmd}
 	}
 }
 
-func (p *ipUser) open(ip, user string) {
+type userSessionIPM struct {
+	user       string
+	sessionIPM string
+}
+
+func (p *ipUser) open(ip string, loggedBy *userSessionIPM) {
 	var oldIP string
 	p.mäp.Range(func(k, v interface{}) (cont bool) {
-		cont = v.(string) != user
+		cont = v.(*userSessionIPM).user != loggedBy.user
+		if !cont {
+			oldIP = k.(string)
+		}
 		return
 	})
 	if oldIP != "" {
 		p.mäp.Delete(oldIP)
 	}
-	p.mäp.Store(ip, user)
+	p.mäp.Store(ip, loggedBy)
 }
 
-func (p *ipUser) get(ip string) (user string, ok bool) {
+func (p *ipUser) get(ip string) (loggedBy *userSessionIPM,
+	ok bool) {
 	v, ok := p.mäp.Load(ip)
 	if ok {
-		user = v.(string)
+		loggedBy = v.(*userSessionIPM)
+	} else {
+		loggedBy = new(userSessionIPM)
 	}
 	return
 }

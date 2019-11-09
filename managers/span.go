@@ -37,10 +37,10 @@ func (s *span) exec(c *Cmd) {
 		{
 			Match,
 			func() {
-				c.Ok = s.Span.ContainsTime(s.now())
+				c.ok = s.Span.ContainsTime(s.now())
 				c.interp[s.Name] = &MatchType{
 					Type:  SpanK,
-					Match: c.Ok,
+					Match: c.ok,
 				}
 			},
 		},

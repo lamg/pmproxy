@@ -45,14 +45,15 @@ func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 	return
 }
 
-func (d *mapDB) userGroups(user string) (gs []string, e error) {
+func (d *mapDB) userGroups(info *UserInfo) (e error) {
 	if len(d.UserGroup) == 0 {
 		e = &StringErr{"Empty user-password map"}
 	} else {
 		var ok bool
-		gs, ok = d.UserGroup[user]
+		info.Groups, ok = d.UserGroup[info.UserName]
+		info.Name = info.UserName
 		if !ok {
-			e = &NoUser{User: user}
+			e = &NoUser{User: info.UserName}
 		}
 	}
 	return
@@ -62,20 +63,22 @@ func (d *mapDB) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
 			Auth,
-			func() { c.User, c.Err = d.auth(c.Cred.User, c.Cred.Pass) },
+			func() {
+				c.loggedBy = new(userSessionIPM)
+				c.loggedBy.user, c.err = d.auth(c.Cred.User, c.Cred.Pass)
+			},
 		},
 		{
 			Get,
 			func() {
-				c.Groups, c.Err = d.userGroups(c.User)
-				c.String = c.User
+				c.Info.UserName = c.loggedBy.user
+				c.err = d.userGroups(c.Info)
 			},
 		},
 		{
 			GetOther,
 			func() {
-				c.Groups, c.Err = d.userGroups(c.String)
-				c.User = c.String
+				c.err = d.userGroups(c.Info)
 			},
 		},
 	}
