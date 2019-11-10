@@ -74,6 +74,7 @@ func TestMultipleSessionIPM(t *testing.T) {
 	}
 	cmf(discover, ht.DefaultRemoteAddr)
 	require.NoError(t, discover.err)
+	require.Equal(t, discover.consR, []string{"d0"})
 	dr := new(DiscoverRes)
 	e := json.Unmarshal(discover.data, dr)
 	require.NoError(t, e)

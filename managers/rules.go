@@ -32,25 +32,26 @@ func (m *rules) exec(c *Cmd) {
 				var mt *MatchType
 				mt, def = c.interp[name]
 				if def {
-					ninterp[name] = mt
-					r = mt.Match
-					if r {
-						kf := []alg.KFunc{
-							{
-								DwnConsRK,
-								func() { c.consR = append(c.consR, name) },
-							},
-							{IfaceK, func() { netIface = c.iface }},
-							{ParentProxyK, func() { proxyURL = c.parentProxy }},
-						}
-						alg.ExecF(kf, mt.Type)
-					}
+					ninterp[name], r = mt, mt.Match
 				}
 			}
 			return
 		}
 		p := pred.Reduce(m.predicate, interp)
 		c.interp = ninterp // hiding managers not reached by evaluation
+		for k, v := range c.interp {
+			if v.Match {
+				kf := []alg.KFunc{
+					{
+						DwnConsRK,
+						func() { c.consR = append(c.consR, k) },
+					},
+					{IfaceK, func() { netIface = c.iface }},
+					{ParentProxyK, func() { proxyURL = c.parentProxy }},
+				}
+				alg.ExecF(kf, v.Type)
+			}
+		}
 		c.parentProxy, c.iface = proxyURL, netIface
 		c.ok = p.String == pred.TrueStr
 		c.result = pred.String(p)
