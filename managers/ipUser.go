@@ -58,15 +58,15 @@ func (p *ipUser) exec(c *Cmd) {
 	}
 }
 
-type userSessionIPM struct {
-	user       string
-	sessionIPM string
+type userAuth struct {
+	user string
+	auth string
 }
 
-func (p *ipUser) open(ip string, loggedBy *userSessionIPM) {
+func (p *ipUser) open(ip string, loggedBy *userAuth) {
 	var oldIP string
 	p.mäp.Range(func(k, v interface{}) (cont bool) {
-		cont = v.(*userSessionIPM).user != loggedBy.user
+		cont = v.(*userAuth).user != loggedBy.user
 		if !cont {
 			oldIP = k.(string)
 		}
@@ -78,13 +78,13 @@ func (p *ipUser) open(ip string, loggedBy *userSessionIPM) {
 	p.mäp.Store(ip, loggedBy)
 }
 
-func (p *ipUser) get(ip string) (loggedBy *userSessionIPM,
+func (p *ipUser) get(ip string) (loggedBy *userAuth,
 	ok bool) {
 	v, ok := p.mäp.Load(ip)
 	if ok {
-		loggedBy = v.(*userSessionIPM)
+		loggedBy = v.(*userAuth)
 	} else {
-		loggedBy = new(userSessionIPM)
+		loggedBy = new(userAuth)
 	}
 	return
 }

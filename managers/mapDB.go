@@ -37,7 +37,7 @@ func (d *mapDB) auth(user, pass string) (nuser string, e error) {
 		nuser = user
 		p, ok := d.UserPass[user]
 		if !ok {
-			e = &NoUser{User: user}
+			e = &NoUser{User: user, DB: d.Name}
 		} else if p != pass {
 			e = &StringErr{"Incorrect password"}
 		}
@@ -64,15 +64,17 @@ func (d *mapDB) exec(c *Cmd) {
 		{
 			Auth,
 			func() {
-				c.loggedBy = new(userSessionIPM)
+				c.loggedBy = &userAuth{auth: d.Name}
 				c.loggedBy.user, c.err = d.auth(c.Cred.User, c.Cred.Pass)
 			},
 		},
 		{
 			Get,
 			func() {
-				c.Info.UserName = c.loggedBy.user
-				c.err = d.userGroups(c.Info)
+				if c.loggedBy.auth == d.Name {
+					c.Info.UserName = c.loggedBy.user
+					c.err = d.userGroups(c.Info)
+				}
 			},
 		},
 		{

@@ -38,7 +38,7 @@ func TestExpiration(t *testing.T) {
 		return
 	}
 	user := "user"
-	c := &Cmd{Cmd: encrypt, loggedBy: &userSessionIPM{user: user}}
+	c := &Cmd{Cmd: encrypt, loggedBy: &userAuth{user: user}}
 	cr.exec(c)
 	require.NoError(t, c.err)
 	c0 := &Cmd{Cmd: decrypt, Secret: string(c.data)}
@@ -47,7 +47,7 @@ func TestExpiration(t *testing.T) {
 	c1 := &Cmd{
 		Cmd:      Renew,
 		Secret:   c0.Secret,
-		loggedBy: &userSessionIPM{user: user},
+		loggedBy: &userAuth{user: user},
 	}
 	cr.exec(c1)
 	require.NoError(t, c1.err)

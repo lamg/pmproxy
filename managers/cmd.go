@@ -45,7 +45,7 @@ type Cmd struct {
 	interp      map[string]*MatchType
 	consR       []string
 	internal    bool
-	loggedBy    *userSessionIPM
+	loggedBy    *userAuth
 	result      string
 }
 
@@ -164,10 +164,11 @@ func (c *NoConnErr) Error() (s string) {
 
 type NoUser struct {
 	User string
+	DB   string
 }
 
 func (u *NoUser) Error() (s string) {
-	s = fmt.Sprintf("No user '%s'", u.User)
+	s = fmt.Sprintf("No user '%s' at DB '%s'", u.User, u.DB)
 	return
 }
 

@@ -61,15 +61,17 @@ func (d *adDB) exec(c *Cmd) {
 		{
 			Auth,
 			func() {
-				c.loggedBy = new(userSessionIPM)
+				c.loggedBy = &userAuth{auth: d.Name}
 				c.loggedBy.user, c.err = d.auth(c.Cred.User, c.Cred.Pass)
 			},
 		},
 		{
 			Get,
 			func() {
-				c.Info.UserName = c.loggedBy.user
-				c.err = d.userInfo(c.Info)
+				if c.loggedBy.auth == d.Name {
+					c.Info.UserName = c.loggedBy.user
+					c.err = d.userInfo(c.Info)
+				}
 			},
 		},
 		{
