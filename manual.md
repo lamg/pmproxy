@@ -380,11 +380,7 @@ An abbreviation of _download consumption restrictor_. It always allows clients i
 | -------------------------------------------- | --------- |
 | {Cmd:GetOther,Secret:JWT,String:user}        | userInfo  |
 | {Cmd:Get,Secret:JWT}                         | userInfo  |
-| {                                            |           |
-|		Cmd:Set,                                   |           |
-|		Secret:JWT,                                |    ∅      |
-|		Info:{UserName:user,BytesCons:consumption},|           |
-|	}                                            |           |
+| {Cmd:Set,Secret:JWT,Info:{UserName:user,BytesCons:consumption}} | ∅         |
 | {Cmd:Show}                    | DwnConsR in JSON format  |
 
 ```go
