@@ -325,15 +325,11 @@ Using the proxy server requires making queries to the API, which runs as an HTTP
 
 ```go
 type Cmd struct {
-	Cmd        string                 `json:"cmd"`
-	User       string                 `json:"user"`
-	Manager    string                 `json:"manager"`
-	RemoteAddr string                 `json:"remoteAddr"`
-	Secret     string                 `json:"secret"`
-	IsAdmin    bool                   `json:"isAdmin"`
-	Cred       *Credentials           `json:"cred"`
-	String     string                 `json:"string"`
-	Uint64     uint64                 `json:"uint64"`
+	Cmd     string       `json:"cmd"`
+	Manager string       `json:"manager"`
+	Secret  string       `json:"secret"`
+	Cred    *Credentials `json:"cred"`
+	Info    *UserInfo    `json:"info"`
 }
 
 type Credentials struct {
@@ -384,7 +380,11 @@ An abbreviation of _download consumption restrictor_. It always allows clients i
 | -------------------------------------------- | --------- |
 | {Cmd:GetOther,Secret:JWT,String:user}        | userInfo  |
 | {Cmd:Get,Secret:JWT}                         | userInfo  |
-| {Cmd:Set,Secret:JWT,String:user,Uint64:cons} | ∅         |
+| {                                            |           |
+|		Cmd:Set,                                   |           |
+|		Secret:JWT,                                |    ∅      |
+|		Info:{UserName:user,BytesCons:consumption},|           |
+|	}                                            |           |
 | {Cmd:Show}                    | DwnConsR in JSON format  |
 
 ```go
