@@ -44,11 +44,11 @@ func (n *connections) exec(c *Cmd) {
 			Open,
 			func() {
 				if c.ok {
-					if c.Info.UserName == "" {
-						c.Info.UserName = "-"
+					user := "-"
+					if c.loggedBy != nil {
+						user = c.loggedBy.user
 					}
-					n.logger.log(c.rqp.Method, c.rqp.URL, c.ip,
-						c.Info.UserName)
+					n.logger.log(c.rqp.Method, c.rqp.URL, c.ip, user)
 					n.ipRestr.Store(c.ip, c.consR)
 				} else {
 					c.err = &ForbiddenByRulesErr{Result: c.result}
