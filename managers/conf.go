@@ -92,6 +92,7 @@ func Load(confDir string, fs afero.Fs) (
 		},
 		func() { initTimeSpan(c.TimeSpan, m, c.now) },
 		func() { initGroupIPM(c.GroupIPM, m) },
+		func() { e = initHostMatcher(c.HostMatcher, m) },
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
@@ -120,6 +121,7 @@ type conf struct {
 	Admins        []string         `toml:"admins"`
 	DwnConsR      []*DwnConsR      `toml:"dwnConsR"`
 	GroupIPM      []*groupIPM      `toml:"groupIPM"`
+	HostMatcher   []*hostMatcher   `toml:"hostMatcher"`
 	AdDB          *adDB            `toml:"adDB"`
 	MapDB         *mapDB           `toml:"mapDB"`
 	ParentProxy   []*proxyURLMng   `toml:"parentProxy"`
@@ -142,6 +144,19 @@ func initRangeIPM(rs []*rangeIPM, m *manager) (e error) {
 	if e == nil {
 		inf := func(i int) { m.mngs.Store(rs[i].Name, rs[i].exec) }
 		alg.Forall(inf, len(rs))
+	}
+	return
+}
+
+func initHostMatcher(ms []*hostMatcher, m *manager) (e error) {
+	ib := func(i int) bool {
+		e = ms[i].init()
+		return e != nil
+	}
+	alg.BLnSrch(ib, len(ms))
+	if e == nil {
+		inf := func(i int) { m.mngs.Store(ms[i].Name, ms[i].exec) }
+		alg.Forall(inf, len(ms))
 	}
 	return
 }
@@ -286,7 +301,7 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 	rs, e = newRules(c.Rules)
 	if e == nil {
 		m.mngs.Store(RulesK, rs.exec)
-		sm, dw, ipm, ps, ns :=
+		sm, dw, ipm, ps, ns, hs :=
 			initStrSlice(
 				func() int { return len(c.SessionIPM) },
 				func(i int) string { return c.SessionIPM[i].Name }),
@@ -301,8 +316,11 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 				func(i int) string { return c.ParentProxy[i].Name }),
 			initStrSlice(
 				func() int { return len(c.NetIface) },
-				func(i int) string { return c.NetIface[i].Name })
-		ms := rs.paths(sm, dw, ipm, ps, ns, c.GroupIPM)
+				func(i int) string { return c.NetIface[i].Name }),
+			initStrSlice(
+				func() int { return len(c.HostMatcher) },
+				func(i int) string { return c.HostMatcher[i].Name })
+		ms := rs.paths(sm, dw, ipm, ps, ns, hs, c.GroupIPM)
 		m.paths = append(m.paths, ms...)
 		n := 0
 		if ms[n].cmd == Discover {

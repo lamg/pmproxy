@@ -83,7 +83,7 @@ func (m *rules) exec(c *Cmd) {
 	}
 }
 
-func (m *rules) paths(sm, dw, ipm, ps, ns []string,
+func (m *rules) paths(sm, dw, ipm, ps, ns, hs []string,
 	gs []*groupIPM) (ms []mngPath) {
 	// depends on the matchers required to evaluate the predicate
 	// for the specific instance of Cmd, which is defined at after
@@ -118,8 +118,9 @@ func (m *rules) paths(sm, dw, ipm, ps, ns []string,
 		simpleMatchPath,
 		simpleMatchPath,
 		simpleMatchPath,
+		simpleMatchPath,
 	}
-	names := [][]string{sm, dw, ipm, ps, ns}
+	names := [][]string{sm, dw, ipm, ps, ns, hs}
 	alg.Forall(
 		func(i int) { matchersToMap(names[i], mngPF[i], matchers) },
 		len(names),

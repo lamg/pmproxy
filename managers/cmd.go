@@ -108,6 +108,7 @@ const (
 	BwConsRK     = "bwConsR"
 	RangeIPMK    = "rangeIPM"
 	GroupIPMK    = "groupIPM"
+	HostMatcher  = "hostMatcher"
 
 	RulesK         = "rules"
 	connectionsMng = "connections"
