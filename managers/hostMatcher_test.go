@@ -80,3 +80,62 @@ const hostMatcherCfg = `
 		name = "h2"
 		pattern = "facebook\\.com"
 `
+
+func TestHostWithoutConsumption(t *testing.T) {
+	cmf, _ := confTest(t, hostNoConsConf)
+	open := &Cmd{
+		Manager: "sessions",
+		Cmd:     Open,
+		Cred:    &Credentials{User: "user0", Pass: "pass0"},
+	}
+	cmf(open, ht.DefaultRemoteAddr)
+	require.NoError(t, open.err)
+	req := &Cmd{
+		Manager: connectionsMng,
+		Cmd:     Open,
+		rqp: &proxy.ReqParams{
+			IP:  ht.DefaultRemoteAddr,
+			URL: "14ymedio.cu",
+		},
+	}
+	cmf(req, ht.DefaultRemoteAddr)
+	require.NoError(t, req.err)
+	require.Equal(t, 0, len(req.consR))
+
+	req0 := &Cmd{
+		Manager: connectionsMng,
+		Cmd:     Open,
+		rqp: &proxy.ReqParams{
+			IP:  ht.DefaultRemoteAddr,
+			URL: "google.com",
+		},
+	}
+	cmf(req0, ht.DefaultRemoteAddr)
+	require.Equal(t, []string{"down"}, req0.consR)
+}
+
+const hostNoConsConf = `
+	rules = "sessions ∧ (puntoCu ∨ down)"
+
+	[[hostMatcher]]
+		name = "puntoCu"
+		pattern = "\\.cu$"
+	
+	[[dwnConsR]]
+		name = "down"
+		userDBN = "map"
+		resetCycle = "24h"
+		[dwnConsR.GroupQuota]
+			group0 = "10 GB"
+	
+	[[sessionIPM]]
+		name = "sessions"
+		auth = "map"
+	
+	[mapDB]
+		name = "map"
+		[mapDB.userPass]
+			user0 = "pass0"
+		[mapDB.userGroups]
+			user0 = ["group0"]
+`
