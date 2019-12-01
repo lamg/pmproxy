@@ -276,6 +276,37 @@ type adDB struct {
 - `User` is the dedicated user for making queries to the LDAP server.
 - `Pass` corresponding password for `User`.
 
+
+#### `GroupIPM`
+
+Is a predicate, and has `SessionIPM` as dependency. It matches one of the user's groups, where the user is determinated by the IP originating the request. The user group comes from the configured database.
+
+```go
+type groupIPM struct {
+	UserDBN string `toml:"userDBN"`
+	Name    string `toml:"name"`
+	Group   string `toml:"group"`
+}
+```
+
+- UserDBN: configured database for getting the user's groups
+- Name: predicate name
+- Group: group to be searched among the user groups for matching if it's present
+
+#### `HostMatcher`
+
+Is a predicate. It matches the requested URL host using a regular expression.
+
+```go
+type hostMatcher struct {
+	Name    string `toml:"name"`
+	Pattern string `toml:"pattern"`
+}
+```
+
+- Name: name of the predicate
+- Pattern: regular expression for matching the request's URL host, with the [syntax described at Go's standard library][4]
+
 #### Example file
 
 ```toml
@@ -448,4 +479,5 @@ Also having [systemd][3] a configuration allows to see the logs with `journalctl
 [0]: https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing
 [1]: https://godoc.org/github.com/lamg/rtimespan
 [2]: https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol
-[3]: https://en.wikipedia.org/wiki/Systemd 
+[3]: https://en.wikipedia.org/wiki/Systemd
+[4]: https://godoc.org/regexp/syntax
