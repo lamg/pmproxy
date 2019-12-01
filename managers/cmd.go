@@ -107,6 +107,7 @@ const (
 	SpanK        = "timeSpan"
 	BwConsRK     = "bwConsR"
 	RangeIPMK    = "rangeIPM"
+	GroupIPMK    = "groupIPM"
 
 	RulesK         = "rules"
 	connectionsMng = "connections"

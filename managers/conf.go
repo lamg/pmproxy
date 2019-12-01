@@ -91,6 +91,7 @@ func Load(confDir string, fs afero.Fs) (
 			}
 		},
 		func() { initTimeSpan(c.TimeSpan, m, c.now) },
+		func() { initGroupIPM(c.GroupIPM, m) },
 		func() { e = initRulesAndConns(c, m) },
 		func() {
 			cmdChan = m.exec
@@ -118,6 +119,7 @@ type conf struct {
 	JWTExpiration time.Duration    `toml:"jwtExpiration"`
 	Admins        []string         `toml:"admins"`
 	DwnConsR      []*DwnConsR      `toml:"dwnConsR"`
+	GroupIPM      []*groupIPM      `toml:"groupIPM"`
 	AdDB          *adDB            `toml:"adDB"`
 	MapDB         *mapDB           `toml:"mapDB"`
 	ParentProxy   []*proxyURLMng   `toml:"parentProxy"`
@@ -142,6 +144,12 @@ func initRangeIPM(rs []*rangeIPM, m *manager) (e error) {
 		alg.Forall(inf, len(rs))
 	}
 	return
+}
+
+func initGroupIPM(gs []*groupIPM, m *manager) {
+	alg.Forall(
+		func(i int) { m.mngs.Store(gs[i].Name, gs[i].exec) }, len(gs),
+	)
 }
 
 func initTimeSpan(ts []*span, m *manager, now func() time.Time) {
@@ -294,7 +302,7 @@ func initRulesAndConns(c *conf, m *manager) (e error) {
 			initStrSlice(
 				func() int { return len(c.NetIface) },
 				func(i int) string { return c.NetIface[i].Name })
-		ms := rs.paths(sm, dw, ipm, ps, ns)
+		ms := rs.paths(sm, dw, ipm, ps, ns, c.GroupIPM)
 		m.paths = append(m.paths, ms...)
 		n := 0
 		if ms[n].cmd == Discover {

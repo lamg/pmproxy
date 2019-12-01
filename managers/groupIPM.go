@@ -30,10 +30,6 @@ type groupIPM struct {
 	Group   string `toml:"group"`
 }
 
-const (
-	GroupIPMK = "groupIPM"
-)
-
 func (m *groupIPM) exec(c *Cmd) {
 	kf := []alg.KFunc{
 		{
@@ -54,7 +50,11 @@ func (m *groupIPM) exec(c *Cmd) {
 	return
 }
 
-func (m *groupIPM) paths() (ms []mngPath) {
-	// TODO
-	return
+func (m *groupIPM) paths() []mngPath {
+	return []mngPath{
+		{name: adminsMng, cmd: Protect},
+		{name: ipUserMng, cmd: Get},
+		{name: m.UserDBN, cmd: Get},
+		{name: m.Name, cmd: Match},
+	}
 }

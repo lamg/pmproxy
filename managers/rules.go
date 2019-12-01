@@ -83,7 +83,8 @@ func (m *rules) exec(c *Cmd) {
 	}
 }
 
-func (m *rules) paths(sm, dw, ipm, ps, ns []string) (ms []mngPath) {
+func (m *rules) paths(sm, dw, ipm, ps, ns []string,
+	gs []*groupIPM) (ms []mngPath) {
 	// depends on the matchers required to evaluate the predicate
 	// for the specific instance of Cmd, which is defined at after
 	// initialization. The solution is make the command go through
@@ -122,6 +123,9 @@ func (m *rules) paths(sm, dw, ipm, ps, ns []string) (ms []mngPath) {
 	alg.Forall(
 		func(i int) { matchersToMap(names[i], mngPF[i], matchers) },
 		len(names),
+	)
+	alg.Forall(
+		func(i int) { matchers[gs[i].Name] = gs[i].paths() }, len(gs),
 	)
 	paths := make([]mngPath, 0)
 	for _, j := range mts {
