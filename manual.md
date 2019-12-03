@@ -314,27 +314,27 @@ Here's an example on how to use `hostMatcher` to avoid the consupmtion for URLs 
 ```toml
 rules = "sessions ∧ (puntoCu ∨ down)"
 
-	[[hostMatcher]]
-		name = "puntoCu"
-		pattern = "\\.cu$"
-	
-	[[dwnConsR]]
-		name = "down"
-		userDBN = "map"
-		resetCycle = "24h"
-		[dwnConsR.GroupQuota]
-			group0 = "10 GB"
-	
-	[[sessionIPM]]
-		name = "sessions"
-		auth = "map"
-	
-	[mapDB]
-		name = "map"
-		[mapDB.userPass]
-			user0 = "pass0"
-		[mapDB.userGroups]
-			user0 = ["group0"]
+[[hostMatcher]]
+	name = "puntoCu"
+	pattern = "\\.cu$"
+
+[[dwnConsR]]
+	name = "down"
+	userDBN = "map"
+	resetCycle = "24h"
+	[dwnConsR.GroupQuota]
+		group0 = "10 GB"
+
+[[sessionIPM]]
+	name = "sessions"
+	auth = "map"
+
+[mapDB]
+	name = "map"
+	[mapDB.userPass]
+		user0 = "pass0"
+	[mapDB.userGroups]
+		user0 = ["group0"]
 ```
 
 #### Example file
