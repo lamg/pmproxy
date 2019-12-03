@@ -108,6 +108,8 @@ type conf struct {
 	JWTExpiration time.Duration    `toml:"jwtExpiration"`
 	Admins        []string         `toml:"admins"`
 	DwnConsR      []*DwnConsR      `toml:"dwnConsR"`
+	GroupIPM      []*groupIPM      `toml:"groupIPM"`
+	HostMatcher   []*hostMatcher   `toml:"hostMatcher"`
 	AdDB          *adDB            `toml:"adDB"`
 	MapDB         *mapDB           `toml:"mapDB"`
 	ParentProxy   []*proxyURLMng   `toml:"parentProxy"`
