@@ -309,6 +309,34 @@ type hostMatcher struct {
 - Name: name of the predicate
 - Pattern: regular expression for matching the request's URL host, with the [syntax described at Go's standard library][4]
 
+Here's an example on how to use `hostMatcher` to avoid the consupmtion for URLs matching a pattern:
+
+```toml
+rules = "sessions ∧ (puntoCu ∨ down)"
+
+	[[hostMatcher]]
+		name = "puntoCu"
+		pattern = "\\.cu$"
+	
+	[[dwnConsR]]
+		name = "down"
+		userDBN = "map"
+		resetCycle = "24h"
+		[dwnConsR.GroupQuota]
+			group0 = "10 GB"
+	
+	[[sessionIPM]]
+		name = "sessions"
+		auth = "map"
+	
+	[mapDB]
+		name = "map"
+		[mapDB.userPass]
+			user0 = "pass0"
+		[mapDB.userGroups]
+			user0 = ["group0"]
+```
+
 #### Example file
 
 ```toml
