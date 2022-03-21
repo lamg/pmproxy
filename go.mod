@@ -16,9 +16,8 @@ require (
 	github.com/spf13/afero v1.2.2
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.20.0
-	github.com/valyala/fasthttp v1.6.0
-	golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9
-	golang.org/x/text v0.3.2 // indirect
+	github.com/valyala/fasthttp v1.34.0
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 )
 
